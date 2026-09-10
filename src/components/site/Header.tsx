@@ -33,7 +33,7 @@ export function Header() {
           <span className="bg-brand flex size-9 items-center justify-center rounded-xl shadow-soft transition-transform duration-300 group-hover:scale-105">
             <Sparkles className="size-4.5 text-primary-foreground" />
           </span>
-          <span className="font-display text-lg font-700 tracking-tight">Cloud Esther</span>
+          <span className="font-display text-lg font-bold tracking-tight">Cloud Esther</span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">

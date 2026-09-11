@@ -11,8 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
+import { Route as DemostracionRouteImport } from './routes/demostracion'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
 import { Route as PlanesRouteImport } from './routes/planes'
+import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frecuentes'
+import { Route as RegistroRouteImport } from './routes/registro'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +26,16 @@ const IndexRoute = IndexRouteImport.update({
 const CaracteristicasRoute = CaracteristicasRouteImport.update({
   id: '/caracteristicas',
   path: '/caracteristicas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemostracionRoute = DemostracionRouteImport.update({
+  id: '/demostracion',
+  path: '/demostracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NosotrosRoute = NosotrosRouteImport.update({
@@ -34,39 +48,90 @@ const PlanesRoute = PlanesRouteImport.update({
   path: '/planes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreguntasFrecuentesRoute = PreguntasFrecuentesRouteImport.update({
+  id: '/preguntas-frecuentes',
+  path: '/preguntas-frecuentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demostracion': typeof DemostracionRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
+  '/registro': typeof RegistroRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demostracion': typeof DemostracionRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
+  '/registro': typeof RegistroRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demostracion': typeof DemostracionRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
+  '/registro': typeof RegistroRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/caracteristicas' | '/nosotros' | '/planes'
+  fullPaths:
+    | '/'
+    | '/caracteristicas'
+    | '/demostracion'
+    | '/login'
+    | '/nosotros'
+    | '/planes'
+    | '/preguntas-frecuentes'
+    | '/registro'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/caracteristicas' | '/nosotros' | '/planes'
-  id: '__root__' | '/' | '/caracteristicas' | '/nosotros' | '/planes'
+  to:
+    | '/'
+    | '/caracteristicas'
+    | '/demostracion'
+    | '/login'
+    | '/nosotros'
+    | '/planes'
+    | '/preguntas-frecuentes'
+    | '/registro'
+  id:
+    | '__root__'
+    | '/'
+    | '/caracteristicas'
+    | '/demostracion'
+    | '/login'
+    | '/nosotros'
+    | '/planes'
+    | '/preguntas-frecuentes'
+    | '/registro'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CaracteristicasRoute: typeof CaracteristicasRoute
+  DemostracionRoute: typeof DemostracionRoute
+  LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
   PlanesRoute: typeof PlanesRoute
+  PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
+  RegistroRoute: typeof RegistroRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +150,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CaracteristicasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demostracion': {
+      id: '/demostracion'
+      path: '/demostracion'
+      fullPath: '/demostracion'
+      preLoaderRoute: typeof DemostracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nosotros': {
       id: '/nosotros'
       path: '/nosotros'
@@ -99,14 +178,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/preguntas-frecuentes': {
+      id: '/preguntas-frecuentes'
+      path: '/preguntas-frecuentes'
+      fullPath: '/preguntas-frecuentes'
+      preLoaderRoute: typeof PreguntasFrecuentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CaracteristicasRoute: CaracteristicasRoute,
+  DemostracionRoute: DemostracionRoute,
+  LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
   PlanesRoute: PlanesRoute,
+  PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
+  RegistroRoute: RegistroRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

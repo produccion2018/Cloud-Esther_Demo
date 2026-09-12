@@ -11,8 +11,8 @@ export function PlanCard({
 }: {
   plan: Plan;
   index: number;
-  cta?: string;
-  onSelect?: (plan: Plan) => void;
+  cta?: string | undefined;
+  onSelect?: ((plan: Plan) => void) | undefined;
 }) {
   return (
     <motion.div
@@ -80,8 +80,8 @@ export function PlanGrid({
   cta,
   onSelect,
 }: {
-  cta?: string;
-  onSelect?: (plan: Plan) => void;
+  cta?: string | undefined;
+  onSelect?: ((plan: Plan) => void) | undefined;
 }) {
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">

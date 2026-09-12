@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemostracionRouteImport } from './routes/demostracion'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const CaracteristicasRoute = CaracteristicasRouteImport.update({
   id: '/caracteristicas',
   path: '/caracteristicas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemostracionRoute = DemostracionRouteImport.update({
@@ -62,6 +68,7 @@ const RegistroRoute = RegistroRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/caracteristicas': typeof CaracteristicasRoute
+  '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/caracteristicas'
+    | '/demo'
     | '/demostracion'
     | '/login'
     | '/nosotros'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/caracteristicas'
+    | '/demo'
     | '/demostracion'
     | '/login'
     | '/nosotros'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/caracteristicas'
+    | '/demo'
     | '/demostracion'
     | '/login'
     | '/nosotros'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CaracteristicasRoute: typeof CaracteristicasRoute
+  DemoRoute: typeof DemoRoute
   DemostracionRoute: typeof DemostracionRoute
   LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/caracteristicas'
       fullPath: '/caracteristicas'
       preLoaderRoute: typeof CaracteristicasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demostracion': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CaracteristicasRoute: CaracteristicasRoute,
+  DemoRoute: DemoRoute,
   DemostracionRoute: DemostracionRoute,
   LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,

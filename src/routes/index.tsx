@@ -136,7 +136,7 @@ function Index() {
             </motion.div>
           </div>
 
-          <div className="lg:pl-6">
+          <div className="lg:pr-12 lg:pl-6">
             <DashboardMockup />
           </div>
         </div>

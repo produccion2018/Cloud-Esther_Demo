@@ -146,28 +146,28 @@ export function DashboardMockup() {
         icon={CalendarDays}
         label="Turnos"
         value="+18% semana"
-        className="-top-6 -left-8"
+        className="-top-10 -left-8"
         delay={0.9}
       />
       <FloatingBadge
         icon={Users}
         label="Pacientes"
         value="42 nuevos"
-        className="top-1/3 -right-10"
+        className="top-1/4 -right-12"
         delay={1.2}
       />
       <FloatingBadge
         icon={Stethoscope}
         label="Tratamientos"
         value="96 activos"
-        className="-bottom-6 -left-6"
+        className="-bottom-10 -left-6"
         delay={1.5}
       />
       <FloatingBadge
         icon={TrendingUp}
         label="Resumen"
         value="$2.4M mes"
-        className="-right-6 -bottom-8"
+        className="-right-10 -bottom-16"
         delay={1.8}
       />
     </div>

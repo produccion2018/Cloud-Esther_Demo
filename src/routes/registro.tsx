@@ -9,9 +9,10 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
 
 export const Route = createFileRoute("/registro")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    plan: typeof search.plan === "string" ? search.plan : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { plan?: string } => {
+    const plan = search["plan"];
+    return typeof plan === "string" ? { plan } : {};
+  },
   head: () => ({
     meta: [
       { title: "Probar demo | Cloud Esther" },

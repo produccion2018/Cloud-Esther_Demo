@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { PublicLayout, PageHero } from "@/components/site/PublicLayout";
 import { PlanGrid } from "@/components/site/PlanCards";
 import { Reveal } from "@/components/site/Reveal";
@@ -40,7 +41,16 @@ function Planes() {
 
       <section className="mx-auto max-w-7xl px-5 pb-24 lg:px-8">
         <Reveal className="text-center">
-          <h2 className="text-3xl font-bold lg:text-4xl">Compará los planes</h2>
+          <h2 className="text-3xl font-bold lg:text-4xl">
+            Compará los{" "}
+            <motion.span
+              className="bg-[linear-gradient(90deg,var(--color-primary),var(--color-brand),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent"
+              animate={{ backgroundPosition: ["0% center", "200% center"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            >
+              planes
+            </motion.span>
+          </h2>
           <p className="mt-4 text-muted-foreground">
             Todas las funciones incluidas en cada plan de Cloud Esther.
           </p>

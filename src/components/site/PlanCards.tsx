@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check, Building2, Users, Headphones, Layers } from "lucide-react";
+import { Check, Building2, Users, Headphones, Layers, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { plans, type Plan } from "@/lib/site-data";
 
@@ -14,6 +14,8 @@ export function PlanCard({
   cta?: string | undefined;
   onSelect?: ((plan: Plan) => void) | undefined;
 }) {
+  const isEnterprise = plan.id === "enterprise";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 28 }}
@@ -21,27 +23,48 @@ export function PlanCard({
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.55, delay: index * 0.09, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -8 }}
-      className={`card-premium relative flex flex-col p-6 transition-shadow duration-300 hover:shadow-glow ${
+      className={`card-premium relative flex flex-col p-6 pt-8 transition-shadow duration-300 hover:shadow-glow ${
         plan.featured ? "border-primary/40 ring-2 ring-primary/25" : ""
       }`}
     >
+      {isEnterprise && (
+        <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-br from-primary/25 via-transparent to-brand/25" />
+      )}
+
       {plan.featured && (
-        <span className="bg-brand absolute -top-3 left-6 rounded-full px-3 py-1 text-[10px] font-bold tracking-wide text-primary-foreground uppercase">
-          Más elegido
+        <div className="absolute -top-4 left-6 z-20">
+          <motion.span
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 rounded-full bg-primary/50 blur-md"
+          />
+          <span className="bg-brand relative block whitespace-nowrap rounded-full px-4 py-1.5 text-[10px] font-bold tracking-wide text-primary-foreground uppercase shadow-lift">
+            Más elegido
+          </span>
+        </div>
+      )}
+
+      {isEnterprise && (
+        <span className="relative inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/25 bg-lavender px-3 py-1 text-[10px] font-bold tracking-wide text-lavender-foreground uppercase">
+          <Crown className="size-3" /> Premium
         </span>
       )}
-      <h3 className="font-display text-xl font-bold">{plan.name}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
 
-      <div className="mt-5">
-        <span className="text-3xl font-bold">{plan.price}</span>
-        <span className="text-sm text-muted-foreground"> / mes</span>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Implementación inicial: {plan.setup}
-        </p>
+      <h3 className="relative mt-3 font-display text-xl font-bold">{plan.name}</h3>
+      <p className="relative mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
+
+      <div className="relative mt-5 flex items-baseline gap-1">
+        <span className="text-4xl font-extrabold tracking-tight lg:text-[2.75rem]">
+          {plan.price}
+        </span>
+        <span className="text-sm font-medium text-muted-foreground">/ mes</span>
       </div>
+      <p className="relative mt-1.5 text-xs text-muted-foreground">
+        Implementación inicial: <span className="font-medium text-foreground">{plan.setup}</span>
+      </p>
+      <p className="relative mt-0.5 text-[10px] text-muted-foreground/70">+ impuestos</p>
 
-      <div className="mt-5 grid gap-2 rounded-xl bg-muted/50 p-3 text-xs">
+      <div className="relative mt-5 grid gap-2 rounded-xl bg-muted/50 p-3 text-xs">
         <span className="flex items-center gap-2">
           <Building2 className="size-3.5 text-primary" /> {plan.branches}
         </span>
@@ -56,7 +79,7 @@ export function PlanCard({
         </span>
       </div>
 
-      <ul className="mt-5 flex-1 space-y-2.5">
+      <ul className="relative mt-5 flex-1 space-y-2.5">
         {plan.features.map((f) => (
           <li key={f} className="flex items-start gap-2 text-sm">
             <Check className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -66,8 +89,8 @@ export function PlanCard({
       </ul>
 
       <Button
-        className="mt-6 w-full"
-        variant={plan.featured ? "hero" : "outlineBrand"}
+        className="relative mt-6 w-full"
+        variant={plan.featured || isEnterprise ? "hero" : "outlineBrand"}
         onClick={() => onSelect?.(plan)}
       >
         {cta}

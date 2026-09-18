@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion, useInView, animate } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Target,
   Eye,
@@ -73,76 +72,6 @@ const stats = [
   { icon: Clock, k: "24/7", v: "disponibilidad en la nube" },
 ];
 
-function zeroedValue(value: string, match: RegExpMatchArray) {
-  const [, prefix, numStr, suffix] = match;
-  const decimals = numStr.includes(".") ? numStr.split(".")[1].length : 0;
-  return `${prefix}${(0).toFixed(decimals)}${suffix}`;
-}
-
-function StatCounter({ value }: { value: string }) {
-  const match = value.match(/^([^\d]*)(\d+(?:\.\d+)?)(.*)$/);
-  const ref = useRef<HTMLParagraphElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
-  const hasAnimated = useRef(false);
-  const [display, setDisplay] = useState(match ? zeroedValue(value, match) : value);
-
-  useEffect(() => {
-    if (!isInView || !match || hasAnimated.current) return;
-    hasAnimated.current = true;
-
-    const [, prefix, numStr, suffix] = match;
-    const target = parseFloat(numStr);
-    const decimals = numStr.includes(".") ? numStr.split(".")[1].length : 0;
-
-    const controls = animate(0, target, {
-      duration: 1.4,
-      ease: [0.22, 1, 0.36, 1],
-      onUpdate: (v) => setDisplay(`${prefix}${v.toFixed(decimals)}${suffix}`),
-    });
-
-    return () => controls.stop();
-  }, [isInView, match]);
-
-  return (
-    <p ref={ref} className="text-gradient font-display text-4xl font-bold">
-      {display}
-    </p>
-  );
-}
-
-/**
- * Texto con degradado animado en loop infinito.
- * Usa @keyframes CSS nativo (no framer-motion) porque animar
- * background-position vía JS sobre background-clip:text tiene un bug
- * de repintado en varios navegadores: el texto queda invisible hasta
- * que algo fuerza un repaint (ej. seleccionarlo). CSS puro no tiene ese problema.
- */
-function ShimmerText({ text }: { text: string }) {
-  return (
-    <span className="relative inline-block">
-      <style>{`
-        @keyframes ce-shimmer {
-          from { background-position: 0% center; }
-          to { background-position: 200% center; }
-        }
-      `}</style>
-      <span
-        className="inline-block bg-clip-text text-transparent"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, var(--color-primary), var(--color-brand), var(--color-primary))",
-          backgroundSize: "200% auto",
-          WebkitBackgroundClip: "text",
-          animation: "ce-shimmer 4s linear infinite",
-          willChange: "background-position",
-        }}
-      >
-        {text}
-      </span>
-    </span>
-  );
-}
-
 function Nosotros() {
   return (
     <PublicLayout>
@@ -166,7 +95,6 @@ function Nosotros() {
           className="pointer-events-none absolute -left-40 -top-40 size-[520px] rounded-full bg-violet-300/20 blur-[120px]"
         />
 
-<<<<<<< HEAD
         <motion.div
           animate={{
             x: [80, -70, 80],
@@ -351,90 +279,6 @@ function Nosotros() {
                   }}
                   className="mt-7 h-px rounded-full bg-gradient-to-r from-primary to-transparent"
                 />
-=======
-      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {[
-            {
-              icon: Target,
-              title: "Nuestra misión",
-              desc: "Ayudar a las clínicas a centralizar su gestión y trabajar de manera más eficiente.",
-            },
-            {
-              icon: Eye,
-              title: "Nuestra visión",
-              desc: "Construir una plataforma integral para la gestión moderna de clínicas odontológicas.",
-            },
-          ].map((b, i) => (
-            <Reveal key={b.title} delay={i * 0.12}>
-              <motion.div
-                whileHover={{ y: -6 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="card-premium h-full p-8 transition-shadow duration-300 hover:shadow-glow"
-              >
-                <div className="relative flex size-12 items-center justify-center">
-                  <motion.span
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.15, 0.5] }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-0 rounded-2xl bg-primary/40 blur-md"
-                  />
-                  <span className="bg-brand relative flex size-12 items-center justify-center rounded-2xl">
-                    <b.icon className="size-5.5 text-primary-foreground" />
-                  </span>
-                </div>
-                <h2 className="mt-5 text-2xl font-bold">{b.title}</h2>
-                <p className="mt-3 text-muted-foreground">{b.desc}</p>
-              </motion.div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <section className="bg-soft border-y border-border">
-        <div className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-          <Reveal className="text-center">
-            <h2 className="text-3xl font-bold lg:text-4xl">
-              ¿Por qué <ShimmerText text="Cloud Esther" />?
-            </h2>
-          </Reveal>
-          <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {values.map((v) => (
-              <StaggerItem key={v.title}>
-                <motion.div
-                  whileHover={{ y: -8 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                  className="card-premium h-full p-6 transition-shadow duration-300 hover:shadow-glow"
-                >
-                  <div className="relative flex size-11 items-center justify-center">
-                    <motion.span
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.15, 0.5] }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                      className="absolute inset-0 rounded-2xl bg-primary/40 blur-md"
-                    />
-                    <span className="bg-lavender relative flex size-11 items-center justify-center rounded-2xl ring-2 ring-primary/25">
-                      <v.icon className="size-5 text-primary" />
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold">{v.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{v.desc}</p>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerGroup>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s, i) => (
-            <Reveal key={s.v} delay={i * 0.1}>
-              <div className="card-premium p-7 text-center transition-shadow duration-300 hover:shadow-glow">
-                <span className="bg-lavender mx-auto flex size-10 items-center justify-center rounded-2xl">
-                  <s.icon className="size-4.5 text-primary" />
-                </span>
-                <StatCounter value={s.k} />
-                <p className="mt-2 text-sm text-muted-foreground">{s.v}</p>
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
               </div>
             </Reveal>
 
@@ -667,9 +511,9 @@ function Nosotros() {
             <motion.div
               animate={{
                 boxShadow: [
-                  "0 0 0 rgba(124,58,237,0)",
-                  "0 0 35px rgba(124,58,237,0.12)",
-                  "0 0 0 rgba(124,58,237,0)",
+                  "0 0 0 #7c3aed00",
+                  "0 0 35px #7c3aed1f",
+                  "0 0 0 #7c3aed00",
                 ],
               }}
               transition={{

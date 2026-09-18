@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-<<<<<<< HEAD
 import {
   BarChart3,
   CalendarDays,
@@ -11,9 +10,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-=======
-import { Menu, X } from "lucide-react";
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -23,7 +19,6 @@ const nav = [
   { label: "Nosotros", to: "/nosotros" },
 ];
 
-<<<<<<< HEAD
 const featureItems = [
   {
     label: "Agenda y turnos",
@@ -51,23 +46,6 @@ const featureItems = [
     icon: BarChart3,
   },
 ];
-=======
-function ToothIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M12 2c-2.2 0-3.5 1.1-4.6 1.1-1.4 0-2.9-1-4-.2-1.2.9-1.4 3-1.2 4.6.3 2.6 1.3 4.4 1.9 7.1.4 1.8.6 4.3 2.1 4.4 1.7.1 1.5-3.3 2.5-3.3s.8 3.4 2.5 3.3c1.5-.1 1.7-2.6 2.1-4.4.6-2.7 1.6-4.5 1.9-7.1.2-1.6 0-3.7-1.2-4.6-1.1-.8-2.6.2-4 .2C15.5 3.1 14.2 2 12 2z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -91,7 +69,6 @@ export function Header() {
   };
 
   return (
-<<<<<<< HEAD
     <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-5">
       <div
         className={`mx-auto max-w-7xl rounded-2xl border transition-all duration-300 ${
@@ -113,23 +90,6 @@ export function Header() {
               <span className="text-[15px] font-bold text-primary-foreground">
                 C
               </span>
-=======
-    <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled ? "border-b border-border bg-background/85 backdrop-blur-xl" : "bg-transparent"
-      }`}
-    >
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-5 py-4 lg:px-8">
-        <Link to="/" className="group flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <span className="bg-brand relative flex size-9 items-center justify-center rounded-xl shadow-soft transition-transform duration-300 group-hover:scale-105">
-            <span className="absolute inset-0 -z-10 rounded-xl bg-brand blur-md opacity-60 transition-opacity duration-300 group-hover:opacity-90" />
-            <ToothIcon className="size-4.5 text-primary-foreground" />
-          </span>
-          <span className="font-display bg-gradient-to-r from-foreground to-brand bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
-            Cloud Esther
-          </span>
-        </Link>
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
 
               <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
             </span>
@@ -145,7 +105,6 @@ export function Header() {
           <nav className="hidden items-center gap-1 lg:flex">
             {/* INICIO */}
             <Link
-<<<<<<< HEAD
               to="/"
               activeOptions={{ exact: true }}
               activeProps={{
@@ -155,19 +114,8 @@ export function Header() {
               className="group relative rounded-xl px-4 py-2.5 font-display text-[14px] font-medium tracking-[0.01em] text-muted-foreground transition-all duration-300 hover:-translate-y-[1px] hover:bg-lavender/75 hover:text-foreground hover:shadow-[0_5px_18px_rgba(124,58,237,0.08)] after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:scale-x-0 after:rounded-full after:bg-primary after:opacity-0 after:shadow-[0_0_12px_rgba(124,58,237,0.55)] after:transition-all after:duration-300 after:content-[''] hover:after:scale-x-100 hover:after:opacity-100"
             >
               <span className="relative z-10">Inicio</span>
-=======
-              key={item.to}
-              to={item.to}
-              className="group relative rounded-lg px-3.5 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
-              activeOptions={{ exact: item.to === "/" }}
-            >
-              {item.label}
-              <span className="absolute inset-x-3.5 -bottom-0.5 h-0.5 scale-x-0 rounded-full bg-brand transition-transform duration-300 group-hover:scale-x-100" />
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
             </Link>
 
-<<<<<<< HEAD
             {/* =================================================
                 CARACTERÍSTICAS
             ================================================= */}
@@ -336,23 +284,6 @@ export function Header() {
               )}
             </AnimatePresence>
           </button>
-=======
-        <div className="hidden items-center gap-2 lg:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/login">Iniciar sesión</Link>
-          </Button>
-          <Button asChild variant="outlineBrand" size="sm">
-            <Link to="/demostracion">Solicitar demostración</Link>
-          </Button>
-          <Button
-            asChild
-            variant="hero"
-            size="sm"
-            className="relative overflow-hidden shadow-[0_0_20px_-4px_theme(colors.brand.DEFAULT)] transition-shadow duration-300 hover:shadow-[0_0_28px_-2px_theme(colors.brand.DEFAULT)]"
-          >
-            <Link to="/registro">Probar demo</Link>
-          </Button>
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
         </div>
 
         {/* =======================================================

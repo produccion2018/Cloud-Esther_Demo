@@ -74,7 +74,6 @@ export const plans: Plan[] = [
     modules: "Módulos avanzados",
     features: [
       "Todo lo del plan Profesional",
-<<<<<<< HEAD
       "Odontograma",
       "Estudios y diagnóstico avanzado",
       "Comunicación con pacientes",
@@ -85,13 +84,6 @@ export const plans: Plan[] = [
       "Analítica avanzada",
       "Auditoría",
       "Integraciones avanzadas",
-=======
-      "Estudios y diagnóstico por imagen",
-      "Marketing y captación",
-      "Inventario e insumos",
-      "Recursos Humanos",
-      "Esther IA incluida",
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
     ],
   },
 
@@ -116,10 +108,6 @@ export const plans: Plan[] = [
       "Administración multiempresa",
       "Integraciones a medida",
       "Documentos y seguridad avanzada",
-<<<<<<< HEAD
-=======
-      "Auditoría completa y backups",
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
       "Gerente de cuenta asignado",
     ],
   },
@@ -135,7 +123,6 @@ export const plans: Plan[] = [
  * 3 = Enterprise
  */
 export const comparison: { feature: string; values: string[] }[] = [
-<<<<<<< HEAD
   { feature: "Dashboard", values: ["✓", "✓", "✓", "✓"] },
 
   { feature: "Agenda y turnos", values: ["✓", "✓", "✓", "✓"] },
@@ -156,31 +143,9 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Facturación y pagos", values: ["Simple", "✓", "✓", "✓"] },
 
-=======
-  // Clínico
-  { feature: "Dashboard", values: ["✓", "✓", "✓", "✓"] },
-  { feature: "Agenda", values: ["✓", "✓", "✓", "✓"] },
-  { feature: "Pacientes", values: ["✓", "✓", "✓", "✓"] },
-  { feature: "Gestión clínica", values: ["✓", "✓", "✓", "✓"] },
-  { feature: "Odontograma 3D", values: ["—", "✓", "✓", "✓"] },
-  { feature: "Turnos", values: ["✓", "✓", "✓", "✓"] },
-  { feature: "Estudios y diagnóstico", values: ["—", "—", "✓", "✓"] },
-  { feature: "Laboratorio", values: ["—", "✓", "✓", "✓"] },
-  // Operación
-  { feature: "Comunicación", values: ["—", "✓", "✓", "✓"] },
-  { feature: "Notificaciones", values: ["Básicas", "Avanzadas", "Avanzadas", "A medida"] },
-  { feature: "Marketing", values: ["—", "—", "✓", "✓"] },
-  { feature: "Portal del paciente", values: ["—", "✓", "✓", "✓"] },
-  { feature: "Inventario", values: ["—", "—", "✓", "✓"] },
-  { feature: "Insumos", values: ["—", "—", "✓", "✓"] },
-  { feature: "Recursos Humanos", values: ["—", "—", "✓", "✓"] },
-  // Administración
-  { feature: "Facturación", values: ["Simple", "✓", "✓", "✓"] },
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
   { feature: "Presupuestos", values: ["—", "✓", "✓", "✓"] },
 
   { feature: "Analítica", values: ["—", "✓", "Avanzada", "Avanzada"] },
-<<<<<<< HEAD
 
   { feature: "Notificaciones", values: ["Básicas", "Avanzadas", "Avanzadas", "A medida"] },
 
@@ -210,14 +175,6 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Multiempresa", values: ["—", "—", "—", "✓"] },
 
-=======
-  { feature: "Esther IA", values: ["—", "Limitada", "✓", "✓"] },
-  { feature: "Multiempresa", values: ["—", "—", "—", "✓"] },
-  { feature: "Integraciones", values: ["—", "Básicas", "✓", "A medida"] },
-  { feature: "Documentos y seguridad", values: ["—", "Básica", "✓", "Completa"] },
-  { feature: "Auditoría", values: ["—", "Básica", "✓", "Completa"] },
-  { feature: "Configuración", values: ["Básica", "✓", "✓", "A medida"] },
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
   { feature: "Soporte prioritario", values: ["—", "✓", "24/5", "24/7"] },
 ];
 
@@ -402,34 +359,4 @@ export const faqs = [
     q: "¿Cloud Esther tiene inteligencia artificial?",
     a: "Esther IA te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
   },
-<<<<<<< HEAD
-=======
-];
-
-export const modulesOfInterest = [
-  "Dashboard",
-  "Agenda y gestión de citas",
-  "Gestión de pacientes",
-  "Gestión clínica",
-  "Odontograma 3D",
-  "Turnos",
-  "Estudios y diagnóstico por imagen",
-  "Laboratorio",
-  "Comunicación con pacientes",
-  "Notificaciones",
-  "Marketing y captación",
-  "Portal del paciente",
-  "Inventario",
-  "Insumos",
-  "Equipo profesional y RRHH",
-  "Facturación y pagos",
-  "Presupuestos",
-  "Analítica y reportes",
-  "IA Esther",
-  "Administración multiempresa",
-  "Integraciones",
-  "Documentos y seguridad",
-  "Auditoría",
-  "Configuración",
->>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
 ];

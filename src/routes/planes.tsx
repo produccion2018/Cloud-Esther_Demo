@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+<<<<<<< HEAD
 import {
   Check,
   Sparkles,
@@ -8,6 +9,9 @@ import {
   Layers3,
 } from "lucide-react";
 import { PublicLayout } from "@/components/site/PublicLayout";
+=======
+import { PublicLayout, PageHero } from "@/components/site/PublicLayout";
+>>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
 import { PlanGrid } from "@/components/site/PlanCards";
 import { Reveal } from "@/components/site/Reveal";
 import {
@@ -404,6 +408,7 @@ function Planes() {
       ========================================================= */}
       <section className="mx-auto max-w-7xl px-5 pb-24 pt-20 lg:px-8">
         <Reveal className="text-center">
+<<<<<<< HEAD
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-lavender px-3.5 py-1.5 text-xs font-semibold text-lavender-foreground">
             <Check className="size-3.5" />
             Comparación completa
@@ -415,6 +420,20 @@ function Planes() {
 
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
             Mirá qué módulos y funcionalidades están incluidos en cada plan.
+=======
+          <h2 className="text-3xl font-bold lg:text-4xl">
+            Compará los{" "}
+            <motion.span
+              className="bg-[linear-gradient(90deg,var(--color-primary),var(--color-brand),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent"
+              animate={{ backgroundPosition: ["0% center", "200% center"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            >
+              planes
+            </motion.span>
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            Todas las funciones incluidas en cada plan de Cloud Esther.
+>>>>>>> fb8de4ffb137cdb7a974f1aca44a370239a610d5
           </p>
         </Reveal>
 

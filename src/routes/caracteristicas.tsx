@@ -111,8 +111,8 @@ const categories = [
 ];
 
 const titleLines = [
-  "Todo el poder de tu",
-  "clínica en un solo lugar.",
+  "Todo el poder de tu clínica,",
+  "en un solo lugar.",
 ] as const;
 
 const aiInsights = [
@@ -276,7 +276,21 @@ function Caracteristicas() {
           </motion.div>
 
           {/* TITULO */}
-          <div className="perspective-[1000px] mt-6 text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-6xl">
+          <div className="perspective-[1000px] relative mt-6 text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-7xl">
+            {/* Glow detrás del título */}
+            <motion.div
+              animate={{
+                opacity: [0.15, 0.35, 0.15],
+                scale: [0.92, 1.05, 0.92],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[220px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[90px]"
+            />
+
             <div>
               <AnimatedLetters
                 text={titleLines[0]}
@@ -284,12 +298,38 @@ function Caracteristicas() {
               />
             </div>
 
-            <div className="relative mt-1">
+            <div className="relative mt-1 inline-block">
               <AnimatedLetters
                 text={titleLines[1]}
                 delay={0.5}
                 gradient
               />
+
+              {/* Chispa decorativa */}
+              <motion.span
+                initial={{ opacity: 0, scale: 0.4, rotate: -20 }}
+                animate={{
+                  opacity: [0, 1, 1, 0],
+                  scale: [0.4, 1.1, 1, 0.4],
+                  rotate: [-20, 8, 0, -20],
+                }}
+                transition={{
+                  duration: 3.2,
+                  delay: 1.4,
+                  repeat: Infinity,
+                  repeatDelay: 2.5,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute -right-7 -top-3 text-primary sm:-right-9 sm:-top-4"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-5 fill-current sm:size-6"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2C8.5 2 6 4 6 7.5c0 2.2.6 3.8 1.1 5.6.5 1.7.9 3.6 1.1 6.1.1 1.2 1 2.1 1.9 1.7.7-.3.9-1.3 1.1-2.2.3-1.4.6-2.9 1.8-2.9s1.5 1.5 1.8 2.9c.2.9.4 1.9 1.1 2.2.9.4 1.8-.5 1.9-1.7.2-2.5.6-4.4 1.1-6.1.5-1.8 1.1-3.4 1.1-5.6C18 4 15.5 2 12 2z" />
+                </svg>
+              </motion.span>
 
               {/* Barrido de luz infinito */}
               <motion.span
@@ -299,16 +339,36 @@ function Caracteristicas() {
                 }}
                 animate={{
                   x: ["-120%", "120%"],
-                  opacity: [0, 0.65, 0],
+                  opacity: [0, 0.75, 0],
                 }}
                 transition={{
-                  duration: 2.2,
+                  duration: 1.9,
                   delay: 1.5,
                   repeat: Infinity,
-                  repeatDelay: 4,
+                  repeatDelay: 3,
                   ease: "easeInOut",
                 }}
-                className="pointer-events-none absolute inset-y-0 left-0 w-1/3 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/60 to-transparent blur-md"
+                className="pointer-events-none absolute inset-y-0 left-0 w-1/3 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/70 to-transparent blur-md"
+              />
+
+              {/* Segundo barrido, más sutil y desfasado */}
+              <motion.span
+                initial={{
+                  x: "-120%",
+                  opacity: 0,
+                }}
+                animate={{
+                  x: ["-120%", "120%"],
+                  opacity: [0, 0.35, 0],
+                }}
+                transition={{
+                  duration: 1.9,
+                  delay: 2.9,
+                  repeat: Infinity,
+                  repeatDelay: 3,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute inset-y-0 left-0 w-1/4 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/50 to-transparent blur-sm"
               />
             </div>
           </div>
@@ -429,14 +489,16 @@ function Caracteristicas() {
             <StaggerItem key={cat.title}>
               <motion.div
                 whileHover={{
-                  y: -4,
+                  y: -6,
+                  rotate: -0.4,
+                  scale: 1.015,
                 }}
                 transition={{
                   type: "spring",
                   stiffness: 300,
                   damping: 22,
                 }}
-                className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-primary/20 hover:shadow-[0_14px_35px_rgba(124,58,237,0.10)]"
+                className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-[0_18px_40px_rgba(124,58,237,0.14)]"
               >
                 {/* Número */}
                 <span className="pointer-events-none absolute right-4 top-1 text-6xl font-extrabold leading-none text-primary/[0.08] transition-all duration-500 group-hover:scale-110 group-hover:text-primary/[0.14]">
@@ -446,12 +508,29 @@ function Caracteristicas() {
                 {/* Glow */}
                 <div className="pointer-events-none absolute -right-10 -top-10 size-24 rounded-full bg-primary/10 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
+                {/* Brillo en barrido al pasar el mouse */}
+                <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+
+                {/* Borde con resplandor sutil */}
+                <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 shadow-[inset_0_0_0_1px_rgba(124,58,237,0.35)] transition-opacity duration-500 group-hover:opacity-100" />
+
                 <div className="relative flex items-center gap-3">
                   {/* Icono */}
                   <motion.span
+                    animate={{
+                      y: [0, -3, 0],
+                    }}
+                    transition={{
+                      default: { type: "spring", stiffness: 300, damping: 20 },
+                      y: {
+                        duration: 2.6 + index * 0.15,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                    }}
                     whileHover={{
-                      rotate: -4,
-                      scale: 1.08,
+                      rotate: -6,
+                      scale: 1.12,
                     }}
                     className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground"
                   >
@@ -482,6 +561,14 @@ function Caracteristicas() {
                   </div>
 
                   <motion.span
+                    animate={{
+                      x: [0, 3, 0],
+                    }}
+                    transition={{
+                      duration: 1.8,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
                     className="ml-auto translate-x-1 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
                   >
                     <ArrowRight className="size-4" />
@@ -617,29 +704,77 @@ function Caracteristicas() {
 
               {/* Panel IA */}
               <div className="relative">
-                <motion.span
-                  initial={{
-                    opacity: 0,
-                    scale: 0.6,
-                    y: -8,
-                  }}
-                  whileInView={{
-                    opacity: 1,
-                    scale: 1,
-                    y: 0,
-                  }}
-                  viewport={{
-                    once: true,
-                  }}
-                  transition={{
-                    duration: 0.5,
-                    type: "spring",
-                  }}
-                  className="absolute -top-4 right-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift"
-                >
-                  <Bot className="size-3.5" />
-                  En vivo
-                </motion.span>
+                <div className="absolute -top-5 right-3 z-10 flex items-center">
+                  {/* Anillos tipo radar detrás del badge */}
+                  <motion.span
+                    animate={{
+                      scale: [1, 2.1],
+                      opacity: [0.45, 0],
+                    }}
+                    transition={{
+                      duration: 2.2,
+                      repeat: Infinity,
+                      ease: "easeOut",
+                    }}
+                    className="absolute inset-0 rounded-full bg-brand"
+                  />
+                  <motion.span
+                    animate={{
+                      scale: [1, 2.1],
+                      opacity: [0.45, 0],
+                    }}
+                    transition={{
+                      duration: 2.2,
+                      repeat: Infinity,
+                      delay: 1.1,
+                      ease: "easeOut",
+                    }}
+                    className="absolute inset-0 rounded-full bg-brand"
+                  />
+
+                  <motion.span
+                    initial={{
+                      opacity: 0,
+                      scale: 0.6,
+                      y: -8,
+                    }}
+                    whileInView={{
+                      opacity: 1,
+                      scale: 1,
+                      y: 0,
+                    }}
+                    viewport={{
+                      once: true,
+                    }}
+                    animate={{
+                      boxShadow: [
+                        "0 0 0px rgba(124,58,237,0.35)",
+                        "0 0 20px rgba(124,58,237,0.6)",
+                        "0 0 0px rgba(124,58,237,0.35)",
+                      ],
+                    }}
+                    transition={{
+                      default: { duration: 0.5, type: "spring" },
+                      boxShadow: {
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                    }}
+                    className="relative inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-brand px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary-foreground"
+                  >
+                    <motion.span
+                      animate={{ opacity: [1, 0.25, 1] }}
+                      transition={{
+                        duration: 1.3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      className="size-1.5 rounded-full bg-white"
+                    />
+                    En vivo
+                  </motion.span>
+                </div>
 
                 <div className="rounded-3xl border border-primary/15 bg-card/60 p-4 backdrop-blur-sm">
                   {aiInsights.map((insight, index) => {

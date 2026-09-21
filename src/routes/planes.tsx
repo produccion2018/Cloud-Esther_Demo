@@ -314,12 +314,41 @@ function Planes() {
 
           {/* Ejemplo comercial */}
           <Reveal delay={0.08}>
-            <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-primary/15 bg-card/80 p-5 shadow-[0_18px_50px_rgba(88,28,135,0.08)] backdrop-blur-xl sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <motion.div
+              whileHover={{ y: -4 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              className="group relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-primary/15 bg-card/80 p-5 shadow-[0_18px_50px_rgba(88,28,135,0.08)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_22px_60px_rgba(88,28,135,0.14)] sm:p-6"
+            >
+              {/* Glow pulsante */}
+              <motion.div
+                animate={{
+                  opacity: [0.12, 0.28, 0.12],
+                  scale: [0.9, 1.08, 0.9],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/20 blur-[70px]"
+              />
+
+              {/* Brillo en barrido al pasar el mouse */}
+              <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <motion.span
+                    animate={{ rotate: [0, 8, -8, 0] }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"
+                  >
                     <Plus className="size-5 text-primary" />
-                  </span>
+                  </motion.span>
 
                   <div>
                     <p className="text-sm font-semibold">
@@ -331,11 +360,25 @@ function Planes() {
                   </div>
                 </div>
 
-                <span className="shrink-0 rounded-full bg-lavender px-3 py-1.5 text-xs font-semibold text-lavender-foreground">
+                <motion.span
+                  animate={{
+                    boxShadow: [
+                      "0 0 0px rgba(124,58,237,0.25)",
+                      "0 0 14px rgba(124,58,237,0.4)",
+                      "0 0 0px rgba(124,58,237,0.25)",
+                    ],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="shrink-0 rounded-full bg-lavender px-3 py-1.5 text-xs font-semibold text-lavender-foreground"
+                >
                   Sin cambiar de plan
-                </span>
+                </motion.span>
               </div>
-            </div>
+            </motion.div>
           </Reveal>
 
           {/* Module cards */}
@@ -351,12 +394,28 @@ function Planes() {
                   delay: Math.min(index * 0.05, 0.3),
                   ease: [0.22, 1, 0.36, 1],
                 }}
-                whileHover={{ y: -5 }}
-                className="group relative flex h-full flex-col rounded-2xl border border-border/70 bg-card/85 p-5 shadow-[0_12px_35px_rgba(88,28,135,0.05)] backdrop-blur-xl transition-shadow duration-300 hover:border-primary/25 hover:shadow-[0_18px_45px_rgba(88,28,135,0.11)]"
+                whileHover={{ y: -6, scale: 1.015 }}
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/85 p-5 shadow-[0_12px_35px_rgba(88,28,135,0.05)] backdrop-blur-xl transition-shadow duration-300 hover:border-primary/25 hover:shadow-[0_18px_45px_rgba(88,28,135,0.11)]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-lavender transition-transform duration-300 group-hover:scale-105">
-                    <Plus className="size-4.5 text-primary" />
+                {/* Brillo en barrido al pasar el mouse */}
+                <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+
+                <div className="relative flex items-start justify-between gap-3">
+                  <span className="relative flex size-10 items-center justify-center rounded-xl bg-lavender transition-all duration-300 group-hover:scale-105 group-hover:bg-primary">
+                    <motion.span
+                      animate={{
+                        scale: [1, 1.15, 1],
+                        opacity: [0.25, 0.05, 0.25],
+                      }}
+                      transition={{
+                        duration: 2.6 + index * 0.1,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      className="pointer-events-none absolute inset-0 rounded-xl bg-primary blur-md"
+                    />
+
+                    <Plus className="relative size-4.5 text-primary transition-colors duration-300 group-hover:text-primary-foreground" />
                   </span>
 
                   <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
@@ -364,15 +423,15 @@ function Planes() {
                   </span>
                 </div>
 
-                <h3 className="mt-4 text-base font-semibold">
+                <h3 className="relative mt-4 text-base font-semibold">
                   {module.name}
                 </h3>
 
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                <p className="relative mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
                   {module.description}
                 </p>
 
-                <div className="mt-5 border-t border-border/60 pt-4">
+                <div className="relative mt-5 border-t border-border/60 pt-4">
                   <div className="flex items-end justify-between gap-3">
                     <div>
                       <span className="text-xl font-bold text-foreground">
@@ -383,9 +442,21 @@ function Planes() {
                       </p>
                     </div>
 
-                    <ArrowRight className="size-4 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100" />
+                    <motion.span
+                      animate={{ x: [0, 3, 0] }}
+                      transition={{
+                        duration: 1.8,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <ArrowRight className="size-4 text-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    </motion.span>
                   </div>
                 </div>
+
+                {/* Línea inferior */}
+                <div className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-30 bg-gradient-to-r from-primary to-brand opacity-40 transition-all duration-500 group-hover:scale-x-100 group-hover:opacity-100" />
               </motion.div>
             ))}
           </div>
@@ -400,136 +471,159 @@ function Planes() {
       </section>
 
       {/* =========================================================
-          COMPARADOR
+          COMPARADOR — con fondo púrpura suave
       ========================================================= */}
-      <section className="mx-auto max-w-7xl px-5 pb-24 pt-20 lg:px-8">
-        <Reveal className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-lavender px-3.5 py-1.5 text-xs font-semibold text-lavender-foreground">
-            <Check className="size-3.5" />
-            Comparación completa
-          </span>
+      <section className="relative overflow-hidden bg-soft">
+        {/* Glow púrpura de fondo */}
+        <motion.div
+          animate={{
+            opacity: [0.15, 0.3, 0.15],
+            scale: [1, 1.08, 1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="pointer-events-none absolute left-1/2 top-0 size-[520px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]"
+        />
 
-          <h2 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
-            Compará los planes
-          </h2>
+        <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-20 lg:px-8">
+          <Reveal className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-lavender px-3.5 py-1.5 text-xs font-semibold text-lavender-foreground">
+              <Check className="size-3.5" />
+              Comparación completa
+            </span>
 
-          <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            Mirá qué módulos y funcionalidades están incluidos en cada plan.
-          </p>
-        </Reveal>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
+              Compará los planes
+            </h2>
 
-        <Reveal delay={0.1}>
-          <div className="relative mt-8 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-[0_20px_60px_rgba(88,28,135,0.08)] backdrop-blur-xl">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/5 to-transparent" />
+            <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+              Mirá qué módulos y funcionalidades están incluidos en cada plan.
+            </p>
+          </Reveal>
 
-            <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[780px] text-sm">
-                <thead>
-                  <tr className="border-b border-border/70">
-                    <th className="p-5 text-left font-semibold">
-                      Función
-                    </th>
+          <Reveal delay={0.1}>
+            <div className="relative mt-8 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-[0_20px_60px_rgba(88,28,135,0.08)] backdrop-blur-xl">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/5 to-transparent" />
 
-                    {plans.map((p) => (
-                      <th
-                        key={p.id}
-                        className={`p-5 text-center font-semibold ${
-                          p.featured ? "text-primary" : ""
-                        }`}
-                      >
-                        <div className="flex flex-col items-center gap-1">
-                          {p.featured && (
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-                              Más elegido
-                            </span>
-                          )}
-
-                          <span>{p.name}</span>
-                        </div>
+              <div className="relative overflow-x-auto">
+                <table className="w-full min-w-[780px] text-sm">
+                  <thead>
+                    <tr className="border-b border-border/70">
+                      <th className="p-5 text-left font-semibold">
+                        Función
                       </th>
-                    ))}
-                  </tr>
-                </thead>
 
-                <tbody>
-                  {comparison.map((row, i) => (
-                    <tr
-                      key={row.feature}
-                      className={`border-b border-border/60 transition-colors last:border-0 hover:bg-lavender/50 ${
-                        i % 2 ? "bg-muted/20" : ""
-                      }`}
-                    >
-                      <td className="p-4 font-medium">
-                        {row.feature}
-                      </td>
-
-                      {row.values.map((value, j) => (
-                        <td
-                          key={j}
-                          className={`p-4 text-center ${
-                            value === "—"
-                              ? "text-muted-foreground/50"
-                              : value === "Adicional"
-                                ? "text-primary"
-                                : "text-foreground"
+                      {plans.map((p) => (
+                        <th
+                          key={p.id}
+                          className={`p-5 text-center font-semibold ${
+                            p.featured ? "text-primary" : ""
                           }`}
                         >
-                          {value === "✓" ? (
-                            <span className="mx-auto flex size-6 items-center justify-center rounded-full bg-primary/10">
-                              <Check className="size-3.5 text-primary" />
-                            </span>
-                          ) : value === "Adicional" ? (
-                            <span className="inline-flex rounded-full bg-lavender px-2.5 py-1 text-[10px] font-semibold text-lavender-foreground">
-                              Disponible aparte
-                            </span>
-                          ) : (
-                            value
-                          )}
-                        </td>
+                          <div className="flex flex-col items-center gap-1">
+                            {p.featured && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                                Más elegido
+                              </span>
+                            )}
+
+                            <span>{p.name}</span>
+                          </div>
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Reveal>
+                  </thead>
 
-        {/* Final CTA */}
-        <Reveal delay={0.15}>
-          <div className="relative mx-auto mt-12 max-w-4xl overflow-hidden rounded-3xl border border-primary/15 bg-lavender/60 p-8 text-center shadow-[0_20px_60px_rgba(88,28,135,0.08)] lg:p-10">
-            <div className="pointer-events-none absolute left-1/2 top-0 size-64 -translate-x-1/2 rounded-full bg-primary/10 blur-[80px]" />
+                  <tbody>
+                    {comparison.map((row, i) => (
+                      <tr
+                        key={row.feature}
+                        className={`border-b border-border/60 transition-colors last:border-0 hover:bg-lavender/50 ${
+                          i % 2 ? "bg-muted/20" : ""
+                        }`}
+                      >
+                        <td className="p-4 font-medium">
+                          {row.feature}
+                        </td>
 
-            <div className="relative">
-              <Sparkles className="mx-auto size-7 text-primary" />
-
-              <h3 className="mt-4 text-2xl font-bold lg:text-3xl">
-                Tu clínica, a tu medida.
-              </h3>
-
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Elegí el plan que necesitás hoy y agregá nuevos módulos a
-                medida que tu clínica crece.
-              </p>
-
-              <div className="mt-6">
-                <motion.button
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() =>
-                    navigate({
-                      to: "/demostracion",
-                    })
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-shadow hover:shadow-primary/30"
-                >
-                  Solicitar demostración
-                  <ArrowRight className="size-4" />
-                </motion.button>
+                        {row.values.map((value, j) => (
+                          <td
+                            key={j}
+                            className={`p-4 text-center ${
+                              value === "—"
+                                ? "text-muted-foreground/50"
+                                : value === "Adicional"
+                                  ? "text-primary"
+                                  : "text-foreground"
+                            }`}
+                          >
+                            {value === "✓" ? (
+                              <span className="mx-auto flex size-6 items-center justify-center rounded-full bg-primary/10">
+                                <Check className="size-3.5 text-primary" />
+                              </span>
+                            ) : value === "Adicional" ? (
+                              <span className="inline-flex rounded-full bg-lavender px-2.5 py-1 text-[10px] font-semibold text-lavender-foreground">
+                                Disponible aparte
+                              </span>
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        </Reveal>
+          </Reveal>
+
+          {/* Final CTA */}
+          <Reveal delay={0.15}>
+            <div className="relative mx-auto mt-12 max-w-4xl overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-[#4c1d95] via-[#7c3aed] to-[#9333ea] p-8 text-center text-white shadow-[0_25px_70px_rgba(88,28,135,0.35)] lg:p-10">
+              <div className="pointer-events-none absolute -left-16 -top-16 size-64 rounded-full bg-white/10 blur-[90px]" />
+              <div className="pointer-events-none absolute -bottom-16 -right-16 size-64 rounded-full bg-white/10 blur-[90px]" />
+
+              <div className="relative">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="mx-auto size-7 fill-white"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2C8.5 2 6 4 6 7.5c0 2.2.6 3.8 1.1 5.6.5 1.7.9 3.6 1.1 6.1.1 1.2 1 2.1 1.9 1.7.7-.3.9-1.3 1.1-2.2.3-1.4.6-2.9 1.8-2.9s1.5 1.5 1.8 2.9c.2.9.4 1.9 1.1 2.2.9.4 1.8-.5 1.9-1.7.2-2.5.6-4.4 1.1-6.1.5-1.8 1.1-3.4 1.1-5.6C18 4 15.5 2 12 2z" />
+                </svg>
+
+                <h3 className="mt-4 text-2xl font-bold text-white lg:text-3xl">
+                  Tu clínica, a tu medida.
+                </h3>
+
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/80">
+                  Elegí el plan que necesitás hoy y agregá nuevos módulos a
+                  medida que tu clínica crece.
+                </p>
+
+                <div className="mt-6">
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() =>
+                      navigate({
+                        to: "/demostracion",
+                      })
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-primary shadow-lg shadow-black/10 transition-shadow hover:shadow-black/20"
+                  >
+                    Solicitar demostración
+                    <ArrowRight className="size-4" />
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
       </section>
     </PublicLayout>
   );

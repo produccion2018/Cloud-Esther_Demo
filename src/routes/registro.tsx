@@ -67,15 +67,20 @@ function Registro() {
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="clinica">Nombre de la clínica</Label>
-                      <Input id="clinica" required placeholder="Clínica Dental Sonrisa" />
+                      <Input id="clinica" required placeholder="Clínica Dental Esther" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contacto">Nombre de contacto</Label>
-                      <Input id="contacto" required placeholder="Dra. Paula Arriaga" />
+                      <Input id="contacto" required placeholder="Esther Méndez" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
-                      <Input id="email" type="email" required placeholder="paula@clinica.com" />
+                      <Input
+                        id="email"
+                        type="email"
+                        required
+                        placeholder="esther.mendez@esther.com"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
@@ -161,7 +166,7 @@ function Registro() {
                   </div>
                   <p className="mt-3 text-sm font-semibold">Confirmá tu cuenta</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Hola Dra. Paula, tu cuenta de Clínica Dental Sonrisa está casi lista. Confirmá
+                    Hola Esther, tu cuenta de Clínica Dental Esther está casi lista. Confirmá
                     tu correo para entrar al panel de Cloud Esther.
                   </p>
                   <span className="bg-brand mt-4 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground">

@@ -19,6 +19,8 @@ import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frecuentes'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as DemoPacientesRouteImport } from './routes/demo_.pacientes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +72,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoAgendaRoute = DemoAgendaRouteImport.update({
+  id: '/demo_/agenda',
+  path: '/demo/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoPacientesRoute = DemoPacientesRouteImport.update({
+  id: '/demo_/pacientes',
+  path: '/demo/pacientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +93,8 @@ export interface FileRoutesByFullPath {
   '/planes': typeof PlanesRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
+  '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/pacientes': typeof DemoPacientesRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +107,8 @@ export interface FileRoutesByTo {
   '/planes': typeof PlanesRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
+  '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/pacientes': typeof DemoPacientesRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +122,8 @@ export interface FileRoutesById {
   '/planes': typeof PlanesRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
+  '/demo_/agenda': typeof DemoAgendaRoute
+  '/demo_/pacientes': typeof DemoPacientesRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +138,8 @@ export interface FileRouteTypes {
     | '/planes'
     | '/preguntas-frecuentes'
     | '/registro'
+    | '/demo/agenda'
+    | '/demo/pacientes'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +152,8 @@ export interface FileRouteTypes {
     | '/planes'
     | '/preguntas-frecuentes'
     | '/registro'
+    | '/demo/agenda'
+    | '/demo/pacientes'
     | '/app'
   id:
     | '__root__'
@@ -144,6 +166,8 @@ export interface FileRouteTypes {
     | '/planes'
     | '/preguntas-frecuentes'
     | '/registro'
+    | '/demo_/agenda'
+    | '/demo_/pacientes'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +181,8 @@ export interface RootRouteChildren {
   PlanesRoute: typeof PlanesRoute
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
+  DemoAgendaRoute: typeof DemoAgendaRoute
+  DemoPacientesRoute: typeof DemoPacientesRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -232,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/agenda': {
+      id: '/demo_/agenda'
+      path: '/demo/agenda'
+      fullPath: '/demo/agenda'
+      preLoaderRoute: typeof DemoAgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/pacientes': {
+      id: '/demo_/pacientes'
+      path: '/demo/pacientes'
+      fullPath: '/demo/pacientes'
+      preLoaderRoute: typeof DemoPacientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -245,6 +285,8 @@ const rootRouteChildren: RootRouteChildren = {
   PlanesRoute: PlanesRoute,
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
+  DemoAgendaRoute: DemoAgendaRoute,
+  DemoPacientesRoute: DemoPacientesRoute,
   AppIndexRoute: AppIndexRoute,
 }
 export const routeTree = rootRouteImport

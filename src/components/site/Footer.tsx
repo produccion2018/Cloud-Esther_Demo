@@ -63,6 +63,32 @@ const socials = [
   },
 ];
 
+/* =========================================================
+   LOGO — DIENTE
+========================================================= */
+function ToothIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="12 12 40 42"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        fill="currentColor"
+        d="M23 14 C17.5 14 14 18 14 23.5 C14 28 15.6 31 17 35.5 C18.6 40.5 18.6 47 20.6 50 C22.2 52.4 25.2 51.6 26 48.4 C27 44.4 28.4 40.6 32 40.6 C35.6 40.6 37 44.4 38 48.4 C38.8 51.6 41.8 52.4 43.4 50 C45.4 47 45.4 40.5 47 35.5 C48.4 31 50 28 50 23.5 C50 18 46.5 14 41 14 C37.6 14 35 15.6 32 15.6 C29 15.6 26.4 14 23 14 Z"
+      />
+      <path
+        d="M20 22 C20 19.6 21.6 18.4 23.6 18.4"
+        stroke="#8B5CF6"
+        strokeOpacity="0.35"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="relative overflow-hidden bg-[#0d0820] text-white">
@@ -139,19 +165,14 @@ export function Footer() {
               to="/"
               className="group inline-flex items-center gap-3"
             >
-              {/* LOGO — SIN ESTRELLA */}
+              {/* LOGO — DIENTE (igual que el header) */}
               <motion.span
                 whileHover={{ scale: 1.05 }}
-                className="relative flex size-12 items-center justify-center rounded-2xl border border-violet-300/20 bg-gradient-to-br from-violet-500 to-purple-700 shadow-[0_0_35px_rgba(139,92,246,0.25)]"
+                className="relative flex size-11 items-center justify-center rounded-full border border-violet-300/20 bg-gradient-to-br from-violet-500 to-purple-700 shadow-[0_0_35px_rgba(139,92,246,0.3)]"
               >
-                <span className="absolute inset-[5px] rounded-[13px] border border-white/10" />
+                <ToothIcon className="relative z-10 size-6 text-white" />
 
-                {/* Marca abstracta de Cloud Esther */}
-                <span className="relative flex items-center gap-[3px]">
-                  <span className="h-4 w-[3px] rounded-full bg-white/90" />
-                  <span className="h-6 w-[3px] rounded-full bg-white" />
-                  <span className="h-3.5 w-[3px] rounded-full bg-white/80" />
-                </span>
+                <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
 
                 <motion.span
                   animate={{
@@ -163,12 +184,12 @@ export function Footer() {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="absolute -inset-2 rounded-2xl bg-violet-500/20 blur-lg"
+                  className="absolute -inset-2 rounded-full bg-violet-500/20 blur-lg"
                 />
               </motion.span>
 
               <span className="font-display text-xl font-bold tracking-tight text-white">
-                Cloud Esther
+                Cloud <span className="text-violet-300">Esther</span>
               </span>
             </Link>
 
@@ -213,20 +234,24 @@ export function Footer() {
           <div className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-4">
             {columns.map((col) => (
               <div key={col.title}>
-                <h4 className="text-sm font-semibold text-white">
+                <h4 className="text-[13px] font-semibold text-white">
                   {col.title}
                 </h4>
+
+                <span className="mt-2 block h-0.5 w-6 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
 
                 <ul className="mt-5 space-y-3.5">
                   {col.links.map((link) => (
                     <li key={link.label}>
                       <Link
                         to={link.to}
-                        className="group inline-flex items-center gap-1 text-sm text-white/45 transition-colors duration-300 hover:text-violet-300"
+                        className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-white/60 transition-all duration-300 hover:translate-x-1 hover:text-white"
                       >
-                        <span>{link.label}</span>
+                        <span className="relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-gradient-to-r after:from-violet-400 after:to-fuchsia-400 after:shadow-[0_0_10px_rgba(139,92,246,0.6)] after:transition-transform after:duration-300 after:content-[''] group-hover:after:scale-x-100">
+                          {link.label}
+                        </span>
 
-                        <ArrowUpRight className="size-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-70" />
+                        <ArrowUpRight className="size-3 -translate-x-1 text-violet-300 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-90" />
                       </Link>
                     </li>
                   ))}

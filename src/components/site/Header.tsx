@@ -47,11 +47,84 @@ const featureItems = [
   },
 ];
 
+/* =========================================================
+   LOGO — DIENTE
+========================================================= */
+function ToothIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="12 12 40 42"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        fill="currentColor"
+        d="M23 14 C17.5 14 14 18 14 23.5 C14 28 15.6 31 17 35.5 C18.6 40.5 18.6 47 20.6 50 C22.2 52.4 25.2 51.6 26 48.4 C27 44.4 28.4 40.6 32 40.6 C35.6 40.6 37 44.4 38 48.4 C38.8 51.6 41.8 52.4 43.4 50 C45.4 47 45.4 40.5 47 35.5 C48.4 31 50 28 50 23.5 C50 18 46.5 14 41 14 C37.6 14 35 15.6 32 15.6 C29 15.6 26.4 14 23 14 Z"
+      />
+      <path
+        d="M20 22 C20 19.6 21.6 18.4 23.6 18.4"
+        stroke="#8B5CF6"
+        strokeOpacity="0.35"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* =========================================================
+   PÍLDORA DE HOVER (se desliza entre opciones)
+========================================================= */
+function HoverPill() {
+  return (
+    <motion.span
+      layoutId="nav-hover"
+      className="absolute inset-0 rounded-xl bg-lavender shadow-[0_5px_18px_rgba(124,58,237,0.1)]"
+      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+    />
+  );
+}
+
+/* =========================================================
+   LINK DEL NAV (desktop)
+========================================================= */
+function NavLink({
+  to,
+  label,
+  exact = false,
+  hovered,
+  onHover,
+}: {
+  to: string;
+  label: string;
+  exact?: boolean;
+  hovered: string | null;
+  onHover: (value: string | null) => void;
+}) {
+  return (
+    <Link
+      to={to as never}
+      activeOptions={{ exact }}
+      onMouseEnter={() => onHover(to)}
+      onFocus={() => onHover(to)}
+      className="group relative rounded-xl px-4 py-2.5 text-[15px] font-medium text-foreground/65 transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 data-[status=active]:font-semibold data-[status=active]:text-foreground"
+    >
+      {hovered === to && <HoverPill />}
+
+      <span className="relative z-10">{label}</span>
+
+      <span className="pointer-events-none absolute bottom-1 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 scale-x-0 rounded-full bg-primary opacity-0 shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100 group-data-[status=active]:scale-x-100 group-data-[status=active]:opacity-100" />
+    </Link>
+  );
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -77,7 +150,7 @@ export function Header() {
             : "border-white/70 bg-background/75 shadow-[0_10px_35px_rgba(88,28,135,0.07)] backdrop-blur-xl"
         }`}
       >
-        <div className="flex h-[68px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-7">
+        <div className="flex h-[68px] items-center justify-between gap-4 px-4 sm:px-6 xl:px-7">
           {/* =====================================================
               LOGO
           ===================================================== */}
@@ -87,9 +160,7 @@ export function Header() {
             className="group flex shrink-0 items-center gap-2.5"
           >
             <span className="relative flex size-9 items-center justify-center overflow-hidden rounded-full bg-primary shadow-[0_6px_20px_rgba(124,58,237,0.25)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(124,58,237,0.35)]">
-              <span className="text-[15px] font-bold text-primary-foreground">
-                C
-              </span>
+              <ToothIcon className="relative z-10 size-5 text-primary-foreground" />
 
               <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
             </span>
@@ -100,45 +171,57 @@ export function Header() {
           </Link>
 
           {/* =====================================================
-              DESKTOP NAV
+              DESKTOP NAV (desde 1280px; debajo, menú hamburguesa)
           ===================================================== */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav
+            className="hidden items-center gap-1 xl:flex"
+            onMouseLeave={() => setHovered(null)}
+          >
             {/* INICIO */}
-            <Link
+            <NavLink
               to="/"
-              activeOptions={{ exact: true }}
-              activeProps={{
-                className:
-                  "group relative rounded-xl bg-lavender px-4 py-2.5 font-display text-[14px] font-semibold tracking-[0.01em] text-foreground shadow-sm after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:rounded-full after:bg-primary after:shadow-[0_0_12px_rgba(124,58,237,0.6)]",
-              }}
-              className="group relative rounded-xl px-4 py-2.5 font-display text-[14px] font-medium tracking-[0.01em] text-muted-foreground transition-all duration-300 hover:-translate-y-[1px] hover:bg-lavender/75 hover:text-foreground hover:shadow-[0_5px_18px_rgba(124,58,237,0.08)] after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:scale-x-0 after:rounded-full after:bg-primary after:opacity-0 after:shadow-[0_0_12px_rgba(124,58,237,0.55)] after:transition-all after:duration-300 after:content-[''] hover:after:scale-x-100 hover:after:opacity-100"
-            >
-              <span className="relative z-10">Inicio</span>
-            </Link>
+              label="Inicio"
+              exact
+              hovered={hovered}
+              onHover={setHovered}
+            />
 
             {/* =================================================
                 CARACTERÍSTICAS
             ================================================= */}
             <div
               className="relative"
-              onMouseEnter={() => setFeaturesOpen(true)}
+              onMouseEnter={() => {
+                setFeaturesOpen(true);
+                setHovered("features");
+              }}
               onMouseLeave={() => setFeaturesOpen(false)}
             >
               <button
                 type="button"
                 aria-expanded={featuresOpen}
                 onClick={() => setFeaturesOpen((value) => !value)}
-                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 font-display text-[14px] tracking-[0.01em] transition-all duration-300 after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:rounded-full after:bg-primary after:shadow-[0_0_12px_rgba(124,58,237,0.55)] after:transition-all after:duration-300 after:content-[''] ${
+                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[15px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                   featuresOpen
-                    ? "bg-lavender font-semibold text-foreground after:scale-x-100 after:opacity-100"
-                    : "font-medium text-muted-foreground after:scale-x-0 after:opacity-0 hover:-translate-y-[1px] hover:bg-lavender/75 hover:text-foreground hover:shadow-[0_5px_18px_rgba(124,58,237,0.08)] hover:after:scale-x-100 hover:after:opacity-100"
+                    ? "font-semibold text-foreground"
+                    : "font-medium text-foreground/65 hover:text-foreground"
                 }`}
               >
+                {hovered === "features" && <HoverPill />}
+
                 <span className="relative z-10">Características</span>
 
                 <ChevronDown
                   className={`relative z-10 size-3.5 transition-transform duration-300 ${
                     featuresOpen ? "rotate-180 text-primary" : ""
+                  }`}
+                />
+
+                <span
+                  className={`pointer-events-none absolute bottom-1 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 ${
+                    featuresOpen
+                      ? "scale-x-100 opacity-100"
+                      : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100"
                   }`}
                 />
               </button>
@@ -156,7 +239,7 @@ export function Header() {
                     className="absolute left-1/2 top-full mt-3 w-[310px] -translate-x-1/2 overflow-hidden rounded-2xl border border-primary/10 bg-background/95 p-2 shadow-[0_20px_55px_rgba(88,28,135,0.16)] backdrop-blur-2xl"
                   >
                     <div className="px-3 pb-2 pt-2">
-                      <p className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
                         Todo lo que necesitás
                       </p>
                     </div>
@@ -177,7 +260,7 @@ export function Header() {
                             </span>
 
                             <span className="min-w-0">
-                              <span className="block font-display text-sm font-semibold tracking-[-0.01em] text-foreground">
+                              <span className="block text-sm font-semibold text-foreground">
                                 {item.label}
                               </span>
 
@@ -206,24 +289,20 @@ export function Header() {
                 PLANES + NOSOTROS
             ================================================= */}
             {nav.slice(1).map((item) => (
-              <Link
+              <NavLink
                 key={item.to}
                 to={item.to}
-                className="group relative rounded-xl px-4 py-2.5 font-display text-[14px] font-medium tracking-[0.01em] text-muted-foreground transition-all duration-300 hover:-translate-y-[1px] hover:bg-lavender/75 hover:text-foreground hover:shadow-[0_5px_18px_rgba(124,58,237,0.08)] after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:scale-x-0 after:rounded-full after:bg-primary after:opacity-0 after:shadow-[0_0_12px_rgba(124,58,237,0.55)] after:transition-all after:duration-300 after:content-[''] hover:after:scale-x-100 hover:after:opacity-100"
-                activeProps={{
-                  className:
-                    "group relative rounded-xl bg-lavender px-4 py-2.5 font-display text-[14px] font-semibold tracking-[0.01em] text-foreground shadow-sm after:absolute after:bottom-1 after:left-1/2 after:h-[2px] after:w-6 after:-translate-x-1/2 after:rounded-full after:bg-primary after:shadow-[0_0_12px_rgba(124,58,237,0.6)]",
-                }}
-              >
-                <span className="relative z-10">{item.label}</span>
-              </Link>
+                label={item.label}
+                hovered={hovered}
+                onHover={setHovered}
+              />
             ))}
           </nav>
 
           {/* =====================================================
               DESKTOP ACTIONS
           ===================================================== */}
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center gap-2 xl:flex">
             <Button
               asChild
               variant="ghost"
@@ -253,14 +332,15 @@ export function Header() {
           </div>
 
           {/* =====================================================
-              MOBILE BUTTON
+              MOBILE / TABLET BUTTON (hamburguesa)
           ===================================================== */}
           <button
             type="button"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}
+            aria-controls="mobile-menu"
             onClick={() => setOpen((value) => !value)}
-            className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-foreground shadow-sm transition-all hover:border-primary/20 hover:bg-lavender lg:hidden"
+            className="flex size-11 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-foreground shadow-sm transition-all hover:border-primary/20 hover:bg-lavender xl:hidden"
           >
             <AnimatePresence mode="wait" initial={false}>
               {open ? (
@@ -292,6 +372,7 @@ export function Header() {
         <AnimatePresence>
           {open && (
             <motion.div
+              id="mobile-menu"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
@@ -299,31 +380,28 @@ export function Header() {
                 duration: 0.28,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="overflow-hidden border-t border-border/60 lg:hidden"
+              className="overflow-hidden border-t border-border/60 xl:hidden"
             >
-              <div className="flex flex-col gap-1 px-4 pb-4 pt-3 sm:px-6">
+              <div className="flex max-h-[calc(100dvh-7rem)] flex-col gap-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6">
                 <Link
                   to="/"
                   onClick={closeMenu}
                   activeOptions={{ exact: true }}
-                  activeProps={{
-                    className:
-                      "relative rounded-xl bg-lavender px-4 py-3 font-display text-sm font-semibold tracking-[0.01em] text-foreground",
-                  }}
-                  className="group relative rounded-xl px-4 py-3 font-display text-sm font-medium tracking-[0.01em] text-muted-foreground transition-all duration-300 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:font-semibold data-[status=active]:text-foreground"
                 >
                   Inicio
                 </Link>
 
                 <button
                   type="button"
+                  aria-expanded={mobileFeaturesOpen}
                   onClick={() =>
                     setMobileFeaturesOpen((value) => !value)
                   }
-                  className={`relative flex items-center justify-between rounded-xl px-4 py-3 font-display text-sm tracking-[0.01em] transition-all duration-300 ${
+                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] transition-all duration-200 ${
                     mobileFeaturesOpen
                       ? "bg-lavender font-semibold text-foreground"
-                      : "font-medium text-muted-foreground hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                      : "font-medium text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
                   }`}
                 >
                   <span>Características</span>
@@ -351,7 +429,7 @@ export function Header() {
                             key={item.label}
                             to="/caracteristicas"
                             onClick={closeMenu}
-                            className="group flex items-center gap-3 rounded-xl px-4 py-2.5 font-display text-sm font-medium text-muted-foreground transition-all duration-200 hover:translate-x-1 hover:bg-lavender hover:text-foreground"
+                            className="group flex items-center gap-3 rounded-xl px-4 py-3 text-[14px] font-medium text-foreground/65 transition-all duration-200 hover:translate-x-1 hover:bg-lavender hover:text-foreground"
                           >
                             <Icon className="size-4 text-primary transition-transform duration-200 group-hover:scale-110" />
                             {item.label}
@@ -365,13 +443,9 @@ export function Header() {
                 {nav.slice(1).map((item) => (
                   <Link
                     key={item.to}
-                    to={item.to}
+                    to={item.to as never}
                     onClick={closeMenu}
-                    className="rounded-xl px-4 py-3 font-display text-sm font-medium tracking-[0.01em] text-muted-foreground transition-all duration-300 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
-                    activeProps={{
-                      className:
-                        "rounded-xl bg-lavender px-4 py-3 font-display text-sm font-semibold tracking-[0.01em] text-foreground",
-                    }}
+                    className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:font-semibold data-[status=active]:text-foreground"
                   >
                     {item.label}
                   </Link>

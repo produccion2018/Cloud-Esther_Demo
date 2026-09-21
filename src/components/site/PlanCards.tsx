@@ -53,16 +53,20 @@ export function PlanCard({
       <h3 className="relative mt-3 font-display text-xl font-bold">{plan.name}</h3>
       <p className="relative mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
 
-      <div className="relative mt-5 flex items-baseline gap-1">
-        <span className="text-4xl font-extrabold tracking-tight lg:text-[2.75rem]">
+      {/* Precio + "/ mes + IVA" en la misma línea, con el IVA más chico */}
+      <div className="relative mt-5 flex flex-nowrap items-baseline gap-1.5 whitespace-nowrap">
+        <span className="text-4xl font-extrabold tracking-tight lg:text-[2.75rem] xl:text-4xl">
           {plan.price}
         </span>
-        <span className="text-sm font-medium text-muted-foreground">/ mes</span>
+        <span className="shrink-0 text-xs font-medium leading-none text-muted-foreground">
+          / mes + IVA
+        </span>
       </div>
       <p className="relative mt-1.5 text-xs text-muted-foreground">
-        Implementación inicial: <span className="font-medium text-foreground">{plan.setup}</span>
+        Implementación inicial:{" "}
+        <span className="font-medium text-foreground">{plan.setup}</span>{" "}
+        <span className="text-muted-foreground/70">+ IVA</span>
       </p>
-      <p className="relative mt-0.5 text-[10px] text-muted-foreground/70">+ impuestos</p>
 
       <div className="relative mt-5 grid gap-2 rounded-xl bg-muted/50 p-3 text-xs">
         <span className="flex items-center gap-2">

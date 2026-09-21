@@ -130,21 +130,28 @@ function Login() {
                 >
                   <motion.span
                     animate={{
-                      scale: [1, 1.06, 1],
+                      scale: [1, 1.08, 1],
+                      rotate: [0, -8, 8, 0],
                       boxShadow: [
                         "0 0 0 rgba(255,255,255,0)",
-                        "0 0 24px rgba(255,255,255,0.18)",
+                        "0 0 26px rgba(255,255,255,0.22)",
                         "0 0 0 rgba(255,255,255,0)",
                       ],
                     }}
                     transition={{
-                      duration: 4,
+                      duration: 4.5,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="flex size-9 items-center justify-center rounded-full bg-white/10 text-sm font-bold backdrop-blur-md"
+                    className="flex size-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-md"
                   >
-                    C
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="size-4.5 fill-white"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 2C8.5 2 6 4 6 7.5c0 2.2.6 3.8 1.1 5.6.5 1.7.9 3.6 1.1 6.1.1 1.2 1 2.1 1.9 1.7.7-.3.9-1.3 1.1-2.2.3-1.4.6-2.9 1.8-2.9s1.5 1.5 1.8 2.9c.2.9.4 1.9 1.1 2.2.9.4 1.8-.5 1.9-1.7.2-2.5.6-4.4 1.1-6.1.5-1.8 1.1-3.4 1.1-5.6C18 4 15.5 2 12 2z" />
+                    </svg>
                   </motion.span>
 
                   <span className="font-display text-base font-bold tracking-tight">
@@ -299,7 +306,7 @@ function Login() {
                       id="email"
                       type="email"
                       required
-                      placeholder="paula@clinica.com"
+                      placeholder="esther.mendez@esther.com"
                       className="h-11 rounded-xl border-border/80 bg-background px-4 text-sm transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
                     />
                   </motion.div>

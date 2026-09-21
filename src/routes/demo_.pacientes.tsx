@@ -4,13 +4,15 @@ import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   Search, ChevronDown, ChevronUp, Download, UserPlus, FolderOpen, Pencil, Trash2, X, ImagePlus,
   Users, History, Stethoscope, Activity, FileText, ReceiptText, CalendarDays, Wallet, HeartPulse,
-  Mail, Hash, ShieldCheck, Phone,
+  Mail, Hash, ShieldCheck, Phone, Pill,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 import { SeccionPaciente, useRegistrosPacientes } from "@/components/cloud-esther/PacienteSecciones";
 import type { Cambiar, Registros } from "@/components/cloud-esther/PacienteSecciones";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import type { Paciente, EstadoPaciente } from "@/lib/cloud-esther/pacientes";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/pacientes")({
@@ -28,34 +30,11 @@ export const Route = createFileRoute("/demo_/pacientes")({
 
 /* ───────────── Tipos ───────────── */
 
-type EstadoPaciente = "Activo" | "Inactivo";
-
-type Paciente = {
-  id: number;
-  nombre: string;
-  apellido: string;
-  documento: string; // solo dígitos
-  fechaNacimiento: string;
-  genero: string;
-  email: string;
-  telefono: string;
-  sucursal: string;
-  obraSocial: string;
-  afiliado: string;
-  direccion: string;
-  nota: string;
-  estado: EstadoPaciente;
-  foto: string | null;
-  // TODO backend: estos dos vienen de los módulos de Tratamientos y Turnos
-  tratamientoActual?: { nombre: string; detalle: string; profesional: string };
-  proximoTurno?: { fecha: string; detalle: string; profesional: string };
-};
-
-type DatosPaciente = Omit<Paciente, "id" | "tratamientoActual" | "proximoTurno">;
+type DatosPaciente = Omit<Paciente, "id">;
 type ModalActivo = { tipo: "form"; paciente?: Paciente } | { tipo: "eliminar"; paciente: Paciente } | null;
 
 type Seccion =
-  | "resumen" | "historia" | "tratamientos" | "odontograma" | "documentos"
+  | "resumen" | "historia" | "tratamientos" | "odontograma" | "documentos" | "recetas"
   | "estudios" | "presupuestos" | "turnos" | "cuenta" | "profesionales";
 
 const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
@@ -64,6 +43,7 @@ const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
   { id: "tratamientos", label: "Tratamientos", icon: Stethoscope },
   { id: "odontograma", label: "Odontograma", icon: Activity },
   { id: "documentos", label: "Documentos", icon: FolderOpen },
+  { id: "recetas", label: "Receta digital", icon: Pill },
   { id: "estudios", label: "Estudios y diagnósticos", icon: FileText },
   { id: "presupuestos", label: "Presupuestos", icon: ReceiptText },
   { id: "turnos", label: "Turnos", icon: CalendarDays },
@@ -83,35 +63,6 @@ const OBRAS_SOCIALES = ["No aplica / particular"];
 const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
 const ESTADOS: EstadoPaciente[] = ["Activo", "Inactivo"];
 
-// Dato de ejemplo (borrar al conectar el backend)
-const PACIENTE_EJEMPLO: Paciente = {
-  id: 1,
-  nombre: "Mauro",
-  apellido: "Pinto",
-  documento: "95222294",
-  fechaNacimiento: "",
-  genero: "",
-  email: "mauro.pinto@example.com",
-  telefono: "+54 11 5555-8899",
-  sucursal: "",
-  obraSocial: "OSDE",
-  afiliado: "OS-45892177",
-  direccion: "",
-  nota: "",
-  estado: "Activo",
-  foto: null,
-  tratamientoActual: {
-    nombre: "Restauración estética",
-    detalle: "Pieza 21 · En tratamiento",
-    profesional: "Dr. Carlos Rodríguez",
-  },
-  proximoTurno: {
-    fecha: "28/08/2026 · 15:00",
-    detalle: "Restauración pieza 21",
-    profesional: "Dr. Carlos Rodríguez",
-  },
-};
-
 /* ───────────── Utilidades ───────────── */
 
 function formatearDocumento(digitos: string) {
@@ -128,6 +79,23 @@ function iniciales(p: Pick<Paciente, "nombre" | "apellido">) {
 
 function csvCelda(v: string) {
   return `"${v.replace(/"/g, '""')}"`;
+}
+
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function fechaCorta(iso: string) {
+  return iso ? iso.split("-").reverse().join("/") : "";
+}
+
+function edadDesde(iso: string) {
+  const [a, m, d] = iso.split("-").map(Number);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - a;
+  if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
+  return edad;
 }
 
 function useToast() {
@@ -614,6 +582,18 @@ function CarpetaPaciente({
   const actual = SECCIONES.find((s) => s.id === seccion) ?? SECCIONES[0];
   const ActualIcon = actual.icon;
 
+  // El resumen se calcula con los registros del paciente (Tratamientos y Turnos), no con datos fijos.
+  const tratamientosEnCurso = datos.tratamientos.filter((t) => t.estado === "En tratamiento");
+  const tratamientoActual = tratamientosEnCurso[0] ?? null;
+  const hoy = hoyISO();
+  const proximoTurno =
+    datos.turnos
+      .filter((t) => (t.estado === "Pendiente" || t.estado === "Confirmado") && t.fecha >= hoy)
+      .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0] ?? null;
+  const nacimiento = paciente.fechaNacimiento
+    ? `${fechaCorta(paciente.fechaNacimiento)} · ${edadDesde(paciente.fechaNacimiento)} años`
+    : "";
+
   return (
     <div className="mt-3 overflow-hidden rounded-xl border border-primary/25 bg-card/95">
       <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)]">
@@ -668,15 +648,30 @@ function CarpetaPaciente({
                 <Dato label="Afiliado" value={paciente.afiliado} icon={Hash} />
               </div>
 
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Dato label="Fecha de nacimiento" value={nacimiento} icon={CalendarDays} />
+                <Dato label="Sexo / género" value={paciente.genero} icon={Users} />
+                <Dato label="Sucursal" value={paciente.sucursal} icon={HeartPulse} />
+              </div>
+
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className={DATO_CARD}>
                   <IconoCirculo icon={Stethoscope} />
                   <h5 className="relative text-sm font-semibold">Tratamiento actual</h5>
-                  {paciente.tratamientoActual ? (
+                  {tratamientoActual ? (
                     <div className="relative mt-2 space-y-1 text-sm">
-                      <p className="font-semibold">{paciente.tratamientoActual.nombre}</p>
-                      <p className="text-muted-foreground">{paciente.tratamientoActual.detalle}</p>
-                      <p className="text-muted-foreground">Profesional: {paciente.tratamientoActual.profesional}</p>
+                      <p className="font-semibold">{tratamientoActual.nombre}</p>
+                      <p className="text-muted-foreground">
+                        {[tratamientoActual.pieza && `Pieza ${tratamientoActual.pieza}`, tratamientoActual.estado]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      {tratamientoActual.profesional && (
+                        <p className="text-muted-foreground">Profesional: {tratamientoActual.profesional}</p>
+                      )}
+                      {tratamientosEnCurso.length > 1 && (
+                        <p className="text-xs text-muted-foreground">y {tratamientosEnCurso.length - 1} más en curso</p>
+                      )}
                     </div>
                   ) : (
                     <p className="relative mt-2 text-sm text-muted-foreground">Sin tratamiento en curso.</p>
@@ -685,11 +680,13 @@ function CarpetaPaciente({
                 <div className={DATO_CARD}>
                   <IconoCirculo icon={CalendarDays} />
                   <h5 className="relative text-sm font-semibold">Próximo turno</h5>
-                  {paciente.proximoTurno ? (
+                  {proximoTurno ? (
                     <div className="relative mt-2 space-y-1 text-sm">
-                      <p className="font-semibold">{paciente.proximoTurno.fecha}</p>
-                      <p className="text-muted-foreground">{paciente.proximoTurno.detalle}</p>
-                      <p className="text-muted-foreground">{paciente.proximoTurno.profesional}</p>
+                      <p className="font-semibold">
+                        {fechaCorta(proximoTurno.fecha)} · {proximoTurno.hora} hs
+                      </p>
+                      <p className="text-muted-foreground">{proximoTurno.motivo}</p>
+                      {proximoTurno.profesional && <p className="text-muted-foreground">{proximoTurno.profesional}</p>}
                     </div>
                   ) : (
                     <p className="relative mt-2 text-sm text-muted-foreground">Sin turnos programados.</p>
@@ -729,7 +726,16 @@ function CarpetaPaciente({
               </div>
             </div>
           ) : (
-            <SeccionPaciente seccion={seccion} datos={datos} cambiar={cambiar} onToast={onToast} />
+            <SeccionPaciente
+              seccion={seccion}
+              datos={datos}
+              cambiar={cambiar}
+              onToast={onToast}
+              contexto={{
+                paciente: `${paciente.nombre} ${paciente.apellido}`.trim(),
+                email: paciente.email,
+              }}
+            />
           )}
         </div>
       </div>
@@ -742,7 +748,7 @@ function CarpetaPaciente({
 function PacientesInner() {
   const { message, show } = useToast();
   const registros = useRegistrosPacientes();
-  const [pacientes, setPacientes] = useState<Paciente[]>([PACIENTE_EJEMPLO]);
+  const { pacientes, setPacientes } = usePacientes();
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [modal, setModal] = useState<ModalActivo>(null);
   const [busqueda, setBusqueda] = useState("");

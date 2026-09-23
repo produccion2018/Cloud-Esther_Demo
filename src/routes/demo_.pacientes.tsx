@@ -2,17 +2,48 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
-  Search, ChevronDown, ChevronUp, Download, UserPlus, FolderOpen, Pencil, Trash2, X, ImagePlus,
-  Users, History, Stethoscope, Activity, FileText, ReceiptText, CalendarDays, Wallet, HeartPulse,
-  Mail, Hash, ShieldCheck, Phone, Pill,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  UserPlus,
+  FolderOpen,
+  Pencil,
+  Trash2,
+  X,
+  ImagePlus,
+  Users,
+  History,
+  Stethoscope,
+  Activity,
+  FileText,
+  ReceiptText,
+  CalendarDays,
+  Wallet,
+  HeartPulse,
+  Mail,
+  Hash,
+  ShieldCheck,
+  Phone,
+  Pill,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
-import { SeccionPaciente, useRegistrosPacientes } from "@/components/cloud-esther/PacienteSecciones";
-import type { Cambiar, Registros } from "@/components/cloud-esther/PacienteSecciones";
+import {
+  SeccionPaciente,
+  useRegistrosPacientes,
+} from "@/components/cloud-esther/PacienteSecciones";
+import type {
+  Cambiar,
+  Registros,
+} from "@/components/cloud-esther/PacienteSecciones";
+import { OdontogramaSec } from "@/components/cloud-esther/Odontograma2D";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
-import type { Paciente, EstadoPaciente } from "@/lib/cloud-esther/pacientes";
+import type {
+  Paciente,
+  EstadoPaciente,
+} from "@/lib/cloud-esther/pacientes";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/pacientes")({
@@ -31,13 +62,30 @@ export const Route = createFileRoute("/demo_/pacientes")({
 /* ───────────── Tipos ───────────── */
 
 type DatosPaciente = Omit<Paciente, "id">;
-type ModalActivo = { tipo: "form"; paciente?: Paciente } | { tipo: "eliminar"; paciente: Paciente } | null;
+
+type ModalActivo =
+  | { tipo: "form"; paciente?: Paciente }
+  | { tipo: "eliminar"; paciente: Paciente }
+  | null;
 
 type Seccion =
-  | "resumen" | "historia" | "tratamientos" | "odontograma" | "documentos" | "recetas"
-  | "estudios" | "presupuestos" | "turnos" | "cuenta" | "profesionales";
+  | "resumen"
+  | "historia"
+  | "tratamientos"
+  | "odontograma"
+  | "documentos"
+  | "recetas"
+  | "estudios"
+  | "presupuestos"
+  | "turnos"
+  | "cuenta"
+  | "profesionales";
 
-const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
+const SECCIONES: {
+  id: Seccion;
+  label: string;
+  icon: LucideIcon;
+}[] = [
   { id: "resumen", label: "Resumen", icon: Users },
   { id: "historia", label: "Historia clínica", icon: History },
   { id: "tratamientos", label: "Tratamientos", icon: Stethoscope },
@@ -51,16 +99,21 @@ const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
   { id: "profesionales", label: "Profesionales", icon: HeartPulse },
 ];
 
-/* ───────────── Datos ─────────────
-   TODO backend: los catálogos y el paciente de ejemplo se reemplazan por lo
-   que devuelva la API (filtrado por la clínica del usuario). Un solo dato de
-   ejemplo; se borra al conectar. */
+/* ───────────── Datos ───────────── */
 
-// TODO backend: las sucursales las completa la API (por clínica). Vacío a propósito.
+// TODO backend: las sucursales las completa la API.
 const SUCURSALES: string[] = [];
-// TODO backend: las obras sociales las completa la API. Solo queda la opción fija.
+
+// TODO backend: las obras sociales las completa la API.
 const OBRAS_SOCIALES = ["No aplica / particular"];
-const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
+
+const GENEROS = [
+  "Femenino",
+  "Masculino",
+  "No binario",
+  "Prefiere no decir",
+];
+
 const ESTADOS: EstadoPaciente[] = ["Activo", "Inactivo"];
 
 /* ───────────── Utilidades ───────────── */
@@ -73,8 +126,33 @@ function etiquetaObraSocial(o: string) {
   return o.startsWith("No aplica") ? "Particular" : o;
 }
 
-function iniciales(p: Pick<Paciente, "nombre" | "apellido">) {
-  return `${p.nombre.charAt(0)}${p.apellido.charAt(0)}`.toUpperCase();
+function normalizarNombre(valor: string) {
+  return valor
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("es-AR")
+    .replace(
+      /(^|[\s'-])([a-záéíóúüñ])/giu,
+      (_, separador: string, letra: string) =>
+        `${separador}${letra.toLocaleUpperCase("es-AR")}`,
+    );
+}
+
+function nombreCompleto(
+  p: Pick<Paciente, "nombre" | "apellido">,
+) {
+  return `${normalizarNombre(p.nombre)} ${normalizarNombre(
+    p.apellido,
+  )}`.trim();
+}
+
+function iniciales(
+  p: Pick<Paciente, "nombre" | "apellido">,
+) {
+  const nombre = normalizarNombre(p.nombre);
+  const apellido = normalizarNombre(p.apellido);
+
+  return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
 }
 
 function csvCelda(v: string) {
@@ -83,7 +161,13 @@ function csvCelda(v: string) {
 
 function hoyISO() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  return `${d.getFullYear()}-${String(
+    d.getMonth() + 1,
+  ).padStart(2, "0")}-${String(d.getDate()).padStart(
+    2,
+    "0",
+  )}`;
 }
 
 function fechaCorta(iso: string) {
@@ -93,115 +177,82 @@ function fechaCorta(iso: string) {
 function edadDesde(iso: string) {
   const [a, m, d] = iso.split("-").map(Number);
   const hoy = new Date();
+
   let edad = hoy.getFullYear() - a;
-  if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
+
+  if (
+    hoy.getMonth() + 1 < m ||
+    (hoy.getMonth() + 1 === m && hoy.getDate() < d)
+  ) {
+    edad--;
+  }
+
   return edad;
 }
 
 function useToast() {
   const [message, setMessage] = useState<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
+
   const show = (msg: string) => {
     setMessage(msg);
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => setMessage(null), 2400);
+
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = window.setTimeout(
+      () => setMessage(null),
+      2400,
+    );
   };
+
   return { message, show };
 }
 
 /* ───────────── Estilos ───────────── */
 
 const CARD =
-  "rounded-xl border border-primary/25 bg-card/90 bg-gradient-to-b from-[oklch(0.96_0.025_292)]/70 to-transparent p-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/10";
+  "rounded-2xl border border-border/70 bg-card shadow-sm";
 
 const DATO_CARD =
-  "relative overflow-hidden rounded-xl border border-primary/20 bg-card bg-gradient-to-br from-card via-card to-[oklch(0.94_0.035_292)] p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10";
+  "relative overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.025]";
 
 const INPUT =
-  "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
 
 const TEXTAREA =
-  "min-h-16 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "min-h-20 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
 
 const BTN_PRIMARIO =
-  "flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-primary to-[oklch(0.5_0.2_292)] px-4 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
 
 const BTN_SECUNDARIO =
-  "flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO =
-  "grid size-9 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
+  "grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO_PELIGRO =
-  "grid size-9 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2";
+  "grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/15";
 
-/* ───────────── Fondo temático (pacientes) ───────────── */
+/* ───────────── Fondo de pacientes ───────────── */
 
 function FondoPacientes() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.05] via-transparent to-primary/[0.04]" />
-      <div className="absolute -left-24 -top-24 size-96 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -bottom-32 -right-24 size-[28rem] rounded-full bg-primary/10 blur-3xl" />
-      <svg className="absolute inset-0 size-full text-primary" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="patron-pacientes-lista" width="170" height="170" patternUnits="userSpaceOnUse">
-            <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.06">
-              <g transform="translate(20 20)">
-                <circle cx="12" cy="8" r="5" />
-                <path d="M3 26c0-5 4-8 9-8s9 3 9 8" />
-              </g>
-              <g transform="translate(104 20) scale(1.3)">
-                <path d="M12 5.5c-1.2-1-2.6-1.5-4-1.5C5.5 4 4 6 4 8.3c0 2 .9 3.3 1.5 5.2.6 1.8.6 4.5 1.6 6 .7 1 1.9.9 2.4-.3.5-1.2.6-3 1.2-4.2.3-.6.9-1 1.3-1s1 .4 1.3 1c.6 1.2.7 3 1.2 4.2.5 1.2 1.7 1.3 2.4.3 1-1.5 1-4.2 1.6-6 .6-1.9 1.5-3.2 1.5-5.2C20 6 18.5 4 16 4c-1.4 0-2.8.5-4 1.5z" />
-              </g>
-              <g transform="translate(24 100)">
-                <rect x="2" y="4" width="24" height="22" rx="4" />
-                <path d="M2 11h24M9 1v6M19 1v6M9 18l3 3 6-6" />
-              </g>
-              <g transform="translate(106 104)">
-                <path d="M12 4v16M4 12h16" />
-              </g>
-            </g>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#patron-pacientes-lista)" />
-      </svg>
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden opacity-75"
+    >
+      <div className="absolute left-[-120px] top-[-100px] size-[380px] rounded-full bg-primary/[0.09] blur-3xl" />
 
-      {/* Ilustración: paciente con tablet mostrando un diente */}
-      <div
-        className="absolute right-4 top-20 hidden w-[320px] text-primary opacity-40 md:block lg:right-10 lg:w-[360px]"
-        style={{
-          WebkitMaskImage: "linear-gradient(to bottom, black 55%, transparent 100%)",
-          maskImage: "linear-gradient(to bottom, black 55%, transparent 100%)",
-        }}
-      >
-        <svg viewBox="0 0 360 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* cuerpo y cuello */}
-          <path d="M30 420c0-72 52-112 124-112s124 40 124 112z" fill="currentColor" opacity="0.16" />
-          <rect x="134" y="248" width="42" height="64" rx="18" fill="currentColor" opacity="0.14" />
-          {/* cabeza y pelo */}
-          <circle cx="155" cy="188" r="62" fill="currentColor" opacity="0.16" />
-          <path d="M93 184c0-46 28-74 63-74s63 27 63 68c-14-19-38-31-63-31s-47 13-63 37z" fill="currentColor" opacity="0.26" />
-          {/* rostro */}
-          <circle cx="135" cy="192" r="4" fill="currentColor" opacity="0.4" />
-          <circle cx="175" cy="192" r="4" fill="currentColor" opacity="0.4" />
-          <path d="M136 214q19 17 38 0" stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity="0.4" />
-          {/* tablet */}
-          <g transform="rotate(-10 262 330)">
-            <rect x="188" y="238" width="152" height="196" rx="20" fill="currentColor" opacity="0.22" />
-            <rect x="199" y="250" width="130" height="172" rx="12" fill="currentColor" opacity="0.08" />
-            <g stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
-              <path d="M264 274c-7-6-15-9-23-9-14 0-23 12-23 25 0 12 5 19 9 30 3 10 3 26 9 35 4 6 11 5 14-2 3-7 3-17 7-24 2-4 5-6 8-6s6 2 8 6c4 7 4 17 7 24 3 7 10 8 14 2 6-9 6-25 9-35 4-11 9-18 9-30 0-13-9-25-23-25-8 0-16 3-23 9z" />
-            </g>
-            <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity="0.28">
-              <path d="M214 372h100M214 390h70M214 408h84" />
-            </g>
-          </g>
-          {/* manos */}
-          <ellipse cx="200" cy="392" rx="26" ry="18" fill="currentColor" opacity="0.2" />
-          <ellipse cx="330" cy="352" rx="18" ry="24" fill="currentColor" opacity="0.2" />
-        </svg>
-      </div>
+      <div className="absolute right-[-100px] top-[90px] size-[360px] rounded-full bg-violet-400/[0.075] blur-3xl" />
+
+      <div className="absolute bottom-[-150px] right-[-100px] size-[420px] rounded-full bg-violet-400/[0.07] blur-3xl" />
+
+      <div className="absolute left-1/2 top-[250px] size-[280px] -translate-x-1/2 rounded-full bg-fuchsia-300/[0.045] blur-3xl" />
+
+      <div className="absolute bottom-[10%] left-[-100px] size-[300px] rounded-full bg-sky-300/[0.04] blur-3xl" />
     </div>
   );
 }
@@ -221,9 +272,13 @@ function Modal({
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+      }
     };
+
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
@@ -236,21 +291,31 @@ function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-2xl border border-primary/15 bg-card bg-gradient-to-b from-primary/[0.06] to-transparent p-5 shadow-2xl ${
+        className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl ${
           size === "sm" ? "max-w-sm" : "max-w-xl"
         }`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Cloud Esther
+            </p>
+
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">
+              {title}
+            </h2>
+          </div>
+
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10"
+            className="grid size-8 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-4" />
           </button>
         </div>
+
         {children}
       </div>
     </div>
@@ -270,12 +335,20 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold">
+        {label}
+      </span>
+
       {children}
+
       {error ? (
-        <span className="mt-1 block text-xs text-destructive">{error}</span>
+        <span className="mt-1 block text-xs text-destructive">
+          {error}
+        </span>
       ) : hint ? (
-        <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{hint}</span>
+        <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+          {hint}
+        </span>
       ) : null}
     </label>
   );
@@ -299,21 +372,29 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${INPUT} appearance-none pr-9 ${value === "" && className === "muted" ? "text-muted-foreground" : ""}`}
+        className={`${INPUT} appearance-none pr-9 ${
+          value === "" && className === "muted"
+            ? "text-muted-foreground"
+            : ""
+        }`}
       >
-        {placeholder && <option value="">{placeholder}</option>}
+        {placeholder && (
+          <option value="">{placeholder}</option>
+        )}
+
         {options.map((o) => (
           <option key={o} value={o}>
             {o}
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+
+      <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
 }
 
-/* ───────────── Formulario de paciente (crear / editar) ───────────── */
+/* ───────────── Formulario de paciente ───────────── */
 
 function PacienteForm({
   inicial,
@@ -327,50 +408,136 @@ function PacienteForm({
   onCancel: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [foto, setFoto] = useState<string | null>(inicial?.foto ?? null);
-  const [nombre, setNombre] = useState(inicial?.nombre ?? "");
-  const [apellido, setApellido] = useState(inicial?.apellido ?? "");
-  const [documento, setDocumento] = useState(inicial ? formatearDocumento(inicial.documento) : "");
-  const [errorDocumento, setErrorDocumento] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState(inicial?.fechaNacimiento ?? "");
-  const [genero, setGenero] = useState(inicial?.genero ?? "");
-  const [email, setEmail] = useState(inicial?.email ?? "");
-  const [telefono, setTelefono] = useState(inicial?.telefono ?? "");
-  const [sucursal, setSucursal] = useState(inicial?.sucursal ?? "");
-  const [estado, setEstado] = useState<EstadoPaciente>(inicial?.estado ?? "Activo");
-  const [obraSocial, setObraSocial] = useState(inicial?.obraSocial ?? OBRAS_SOCIALES[0]);
-  const [afiliado, setAfiliado] = useState(inicial?.afiliado ?? "");
-  const [direccion, setDireccion] = useState(inicial?.direccion ?? "");
-  const [nota, setNota] = useState(inicial?.nota ?? "");
+
+  const [foto, setFoto] = useState<string | null>(
+    inicial?.foto ?? null,
+  );
+
+  const [nombre, setNombre] = useState(
+    inicial?.nombre ?? "",
+  );
+
+  const [apellido, setApellido] = useState(
+    inicial?.apellido ?? "",
+  );
+
+  const [documento, setDocumento] = useState(
+    inicial
+      ? formatearDocumento(inicial.documento)
+      : "",
+  );
+
+  const [errorDocumento, setErrorDocumento] =
+    useState("");
+
+  const [fechaNacimiento, setFechaNacimiento] =
+    useState(inicial?.fechaNacimiento ?? "");
+
+  const [genero, setGenero] = useState(
+    inicial?.genero ?? "",
+  );
+
+  const [email, setEmail] = useState(
+    inicial?.email ?? "",
+  );
+
+  const [telefono, setTelefono] = useState(
+    inicial?.telefono ?? "",
+  );
+
+  const [sucursal, setSucursal] = useState(
+    inicial?.sucursal ?? "",
+  );
+
+  const [estado, setEstado] =
+    useState<EstadoPaciente>(
+      inicial?.estado ?? "Activo",
+    );
+
+  const [obraSocial, setObraSocial] =
+    useState(
+      inicial?.obraSocial ??
+        OBRAS_SOCIALES[0],
+    );
+
+  const [afiliado, setAfiliado] = useState(
+    inicial?.afiliado ?? "",
+  );
+
+  const [direccion, setDireccion] = useState(
+    inicial?.direccion ?? "",
+  );
+
+  const [nota, setNota] = useState(
+    inicial?.nota ?? "",
+  );
 
   const opcionesObraSocial =
-    inicial && !OBRAS_SOCIALES.includes(inicial.obraSocial)
-      ? [...OBRAS_SOCIALES, inicial.obraSocial]
+    inicial &&
+    !OBRAS_SOCIALES.includes(
+      inicial.obraSocial,
+    )
+      ? [
+          ...OBRAS_SOCIALES,
+          inicial.obraSocial,
+        ]
       : OBRAS_SOCIALES;
 
-  const elegirFoto = (e: ChangeEvent<HTMLInputElement>) => {
+  const elegirFoto = (
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
     const archivo = e.target.files?.[0];
+
     if (!archivo) return;
+
     const lector = new FileReader();
-    lector.onload = () => setFoto(String(lector.result));
+
+    lector.onload = () =>
+      setFoto(String(lector.result));
+
     lector.readAsDataURL(archivo);
+
     e.target.value = "";
   };
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    const soloDigitos = documento.replace(/\D/g, "");
-    if (soloDigitos.length < 7 || soloDigitos.length > 8) {
-      setErrorDocumento("Ingresá un documento válido (7 u 8 dígitos).");
+
+    const soloDigitos =
+      documento.replace(/\D/g, "");
+
+    if (
+      soloDigitos.length < 7 ||
+      soloDigitos.length > 8
+    ) {
+      setErrorDocumento(
+        "Ingresá un documento válido (7 u 8 dígitos).",
+      );
+
       return;
     }
-    if (documentosExistentes.includes(soloDigitos)) {
-      setErrorDocumento("Ya existe un paciente con ese documento.");
+
+    if (
+      documentosExistentes.includes(
+        soloDigitos,
+      )
+    ) {
+      setErrorDocumento(
+        "Ya existe un paciente con ese documento.",
+      );
+
       return;
     }
+
+    const nombreNormalizado =
+      normalizarNombre(nombre);
+
+    const apellidoNormalizado =
+      normalizarNombre(apellido);
+
     onSubmit({
-      nombre: nombre.trim(),
-      apellido: apellido.trim(),
+      nombre: nombreNormalizado,
+      apellido: apellidoNormalizado,
       documento: soloDigitos,
       fechaNacimiento,
       genero,
@@ -387,38 +554,103 @@ function PacienteForm({
   };
 
   return (
-    <form onSubmit={enviar} className="space-y-3">
-      <div className="flex items-center gap-4">
-        <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-dashed border-primary/30 bg-primary/10">
-          {foto ? (
-            <img src={foto} alt="Foto del paciente" className="size-full object-cover" />
-          ) : (
-            <ImagePlus className="size-6 text-primary" />
-          )}
-        </div>
-        <div>
-          <p className="text-sm font-semibold leading-tight">Foto del paciente</p>
-          <p className="text-xs text-muted-foreground">La foto podrá agregarse o cambiarse posteriormente.</p>
-          <input ref={fileRef} type="file" accept="image/*" onChange={elegirFoto} className="hidden" />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="mt-1.5 rounded-lg border border-border bg-background px-3 py-1 text-xs font-medium shadow-sm transition-colors hover:bg-muted"
-          >
-            {foto ? "Cambiar foto" : "Seleccionar foto"}
-          </button>
+    <form
+      onSubmit={enviar}
+      className="space-y-4"
+    >
+      {/* Foto */}
+
+      <div className="rounded-2xl border border-primary/15 bg-primary/[0.045] p-3.5">
+        <div className="flex items-center gap-4">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-primary/20 bg-primary/10">
+            {foto ? (
+              <img
+                src={foto}
+                alt="Foto del paciente"
+                className="size-full object-cover"
+              />
+            ) : (
+              <ImagePlus className="size-6 text-primary" />
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold leading-tight">
+              Foto del paciente
+            </p>
+
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Podés agregarla ahora o más adelante.
+            </p>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={elegirFoto}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                fileRef.current?.click()
+              }
+              className="mt-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors hover:bg-muted"
+            >
+              {foto
+                ? "Cambiar foto"
+                : "Seleccionar foto"}
+            </button>
+          </div>
         </div>
       </div>
 
-      <h3 className="pt-1 text-sm font-semibold">Datos personales</h3>
-      <div className="grid grid-cols-1 items-start gap-x-3 gap-y-2.5 sm:grid-cols-2">
+      <h3 className="pt-1 text-sm font-semibold">
+        Datos personales
+      </h3>
+
+      <div className="grid grid-cols-1 items-start gap-x-3 gap-y-3 sm:grid-cols-2">
         <Field label="Nombre *">
-          <input autoFocus required value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Mauro" />
+          <input
+            autoFocus
+            required
+            value={nombre}
+            onChange={(e) =>
+              setNombre(e.target.value)
+            }
+            onBlur={() =>
+              setNombre(
+                normalizarNombre(nombre),
+              )
+            }
+            className={INPUT}
+            placeholder="Mauro"
+          />
         </Field>
+
         <Field label="Apellido *">
-          <input required value={apellido} onChange={(e) => setApellido(e.target.value)} className={INPUT} placeholder="Pinto" />
+          <input
+            required
+            value={apellido}
+            onChange={(e) =>
+              setApellido(e.target.value)
+            }
+            onBlur={() =>
+              setApellido(
+                normalizarNombre(apellido),
+              )
+            }
+            className={INPUT}
+            placeholder="Pinto"
+          />
         </Field>
-        <Field label="Documento *" hint="El documento debe ser válido y único para el paciente." error={errorDocumento}>
+
+        <Field
+          label="Documento *"
+          hint="El documento debe ser válido y único para el paciente."
+          error={errorDocumento}
+        >
           <input
             required
             inputMode="numeric"
@@ -431,55 +663,134 @@ function PacienteForm({
             placeholder="95.222.294"
           />
         </Field>
+
         <Field label="Fecha de nacimiento">
-          <input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fechaNacimiento}
+            onChange={(e) =>
+              setFechaNacimiento(
+                e.target.value,
+              )
+            }
+            className={INPUT}
+          />
         </Field>
+
         <Field label="Sexo / género">
-          <SelectField className="muted" value={genero} onChange={setGenero} options={GENEROS} placeholder="Seleccionar" />
+          <SelectField
+            className="muted"
+            value={genero}
+            onChange={setGenero}
+            options={GENEROS}
+            placeholder="Seleccionar"
+          />
         </Field>
+
         <Field label="Correo electrónico *">
-          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="mauro.pinto@email.com" />
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+            className={INPUT}
+            placeholder="mauro.pinto@email.com"
+          />
         </Field>
+
         <Field label="Teléfono">
-          <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} className={INPUT} placeholder="+54 11 5555-8899" />
+          <input
+            type="tel"
+            value={telefono}
+            onChange={(e) =>
+              setTelefono(e.target.value)
+            }
+            className={INPUT}
+            placeholder="+54 11 5555-8899"
+          />
         </Field>
+
         <Field label="Sucursal">
-          <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} placeholder="Seleccionar" />
+          <SelectField
+            value={sucursal}
+            onChange={setSucursal}
+            options={SUCURSALES}
+            placeholder="Seleccionar"
+          />
         </Field>
+
         {inicial && (
           <Field label="Estado del paciente">
-            <SelectField value={estado} onChange={(v) => setEstado(v as EstadoPaciente)} options={ESTADOS} />
+            <SelectField
+              value={estado}
+              onChange={(v) =>
+                setEstado(
+                  v as EstadoPaciente,
+                )
+              }
+              options={ESTADOS}
+            />
           </Field>
         )}
       </div>
 
-      <h3 className="pt-1 text-sm font-semibold">Obra social / cobertura</h3>
-      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+      <h3 className="pt-1 text-sm font-semibold">
+        Obra social / cobertura
+      </h3>
+
+      <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2">
         <Field label="Obra social">
-          <SelectField value={obraSocial} onChange={setObraSocial} options={opcionesObraSocial} />
+          <SelectField
+            value={obraSocial}
+            onChange={setObraSocial}
+            options={opcionesObraSocial}
+          />
         </Field>
+
         <Field label="Número de afiliado">
-          <input value={afiliado} onChange={(e) => setAfiliado(e.target.value)} className={INPUT} placeholder="OS-45892177" />
+          <input
+            value={afiliado}
+            onChange={(e) =>
+              setAfiliado(e.target.value)
+            }
+            className={INPUT}
+            placeholder="OS-45892177"
+          />
         </Field>
       </div>
 
-      <h3 className="pt-1 text-sm font-semibold">Información de contacto</h3>
-      <div className="space-y-2.5">
+      <h3 className="pt-1 text-sm font-semibold">
+        Información de contacto
+      </h3>
+
+      <div className="space-y-3">
         <Field label="Dirección">
-          <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={INPUT} placeholder="Av. Corrientes 1234, Buenos Aires" />
+          <input
+            value={direccion}
+            onChange={(e) =>
+              setDireccion(e.target.value)
+            }
+            className={INPUT}
+            placeholder="Av. Corrientes 1234, Buenos Aires"
+          />
         </Field>
+
         <Field label="Nota de interés">
           <textarea
             rows={2}
             value={nota}
-            onChange={(e) => setNota(e.target.value)}
+            onChange={(e) =>
+              setNota(e.target.value)
+            }
             className={TEXTAREA}
             placeholder="Información importante sobre el paciente…"
           />
         </Field>
       </div>
 
-      <div className="flex justify-end gap-3 pt-1">
+      <div className="flex justify-end gap-3 border-t border-border/70 pt-4">
         <button
           type="button"
           onClick={onCancel}
@@ -487,11 +798,14 @@ function PacienteForm({
         >
           Cancelar
         </button>
+
         <button
           type="submit"
           className={BTN_PRIMARIO}
         >
-          {inicial ? "Guardar cambios" : "Crear paciente"}
+          {inicial
+            ? "Guardar cambios"
+            : "Crear paciente"}
         </button>
       </div>
     </form>
@@ -500,13 +814,23 @@ function PacienteForm({
 
 /* ───────────── Piezas de la página ───────────── */
 
-function Avatar({ paciente, className }: { paciente: Paciente; className: string }) {
+function Avatar({
+  paciente,
+  className,
+}: {
+  paciente: Paciente;
+  className: string;
+}) {
   return (
     <span
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-[oklch(0.45_0.2_290)] font-semibold text-primary-foreground shadow-md shadow-primary/25 ring-2 ring-card ${className}`}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-2xl bg-primary/10 font-bold text-primary ring-1 ring-primary/15 ${className}`}
     >
       {paciente.foto ? (
-        <img src={paciente.foto} alt={`${paciente.nombre} ${paciente.apellido}`} className="size-full object-cover" />
+        <img
+          src={paciente.foto}
+          alt={nombreCompleto(paciente)}
+          className="size-full object-cover"
+        />
       ) : (
         iniciales(paciente)
       )}
@@ -514,31 +838,58 @@ function Avatar({ paciente, className }: { paciente: Paciente; className: string
   );
 }
 
-function BadgeEstado({ estado, largo = false }: { estado: EstadoPaciente; largo?: boolean }) {
+function BadgeEstado({
+  estado,
+  largo = false,
+}: {
+  estado: EstadoPaciente;
+  largo?: boolean;
+}) {
   const activo = estado === "Activo";
+
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        activo ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+        activo
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/15"
+          : "bg-muted text-muted-foreground"
       }`}
     >
-      {largo ? `Paciente ${estado.toLowerCase()}` : estado}
+      <span
+        className={`size-1.5 rounded-full ${
+          activo
+            ? "bg-emerald-500"
+            : "bg-muted-foreground/50"
+        }`}
+      />
+
+      {largo
+        ? `Paciente ${estado.toLowerCase()}`
+        : estado}
     </span>
   );
 }
 
-function BadgeOutline({ children }: { children: ReactNode }) {
+function BadgeOutline({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
-    <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[11px] font-semibold">
+    <span className="inline-flex rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground/75">
       {children}
     </span>
   );
 }
 
-function IconoCirculo({ icon: Icon }: { icon: LucideIcon }) {
+function IconoCirculo({
+  icon: Icon,
+}: {
+  icon: LucideIcon;
+}) {
   return (
-    <div className="pointer-events-none absolute -right-5 -top-5 grid size-20 place-items-center rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent ring-1 ring-primary/10">
-      <Icon className="size-4 text-primary/70" />
+    <div className="pointer-events-none absolute right-3 top-3 grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+      <Icon className="size-4" />
     </div>
   );
 }
@@ -557,13 +908,24 @@ function Dato({
   return (
     <div className={DATO_CARD}>
       <IconoCirculo icon={icon} />
-      <p className="relative pr-8 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`relative mt-1 text-sm font-semibold ${cortar ? "truncate" : ""}`} title={cortar ? value : undefined}>
+
+      <p className="relative pr-10 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+
+      <p
+        className={`relative mt-1.5 text-sm font-semibold ${
+          cortar ? "truncate" : ""
+        }`}
+        title={cortar ? value : undefined}
+      >
         {value || "—"}
       </p>
     </div>
   );
 }
+
+/* ───────────── Carpeta del paciente ───────────── */
 
 function CarpetaPaciente({
   paciente,
@@ -578,42 +940,64 @@ function CarpetaPaciente({
   onToast: (msg: string) => void;
   onEditar: () => void;
 }) {
-  const [seccion, setSeccion] = useState<Seccion>("resumen");
-  const actual = SECCIONES.find((s) => s.id === seccion) ?? SECCIONES[0];
-  const ActualIcon = actual.icon;
+  const [seccion, setSeccion] =
+    useState<Seccion>("resumen");
 
-  // El resumen se calcula con los registros del paciente (Tratamientos y Turnos), no con datos fijos.
-  const tratamientosEnCurso = datos.tratamientos.filter((t) => t.estado === "En tratamiento");
-  const tratamientoActual = tratamientosEnCurso[0] ?? null;
+  const tratamientosEnCurso =
+    datos.tratamientos.filter(
+      (t) => t.estado === "En tratamiento",
+    );
+
+  const tratamientoActual =
+    tratamientosEnCurso[0] ?? null;
+
   const hoy = hoyISO();
+
   const proximoTurno =
     datos.turnos
-      .filter((t) => (t.estado === "Pendiente" || t.estado === "Confirmado") && t.fecha >= hoy)
-      .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0] ?? null;
+      .filter(
+        (t) =>
+          (t.estado === "Pendiente" ||
+            t.estado === "Confirmado") &&
+          t.fecha >= hoy,
+      )
+      .sort((a, b) =>
+        `${a.fecha} ${a.hora}`.localeCompare(
+          `${b.fecha} ${b.hora}`,
+        ),
+      )[0] ?? null;
+
   const nacimiento = paciente.fechaNacimiento
-    ? `${fechaCorta(paciente.fechaNacimiento)} · ${edadDesde(paciente.fechaNacimiento)} años`
+    ? `${fechaCorta(
+        paciente.fechaNacimiento,
+      )} · ${edadDesde(
+        paciente.fechaNacimiento,
+      )} años`
     : "";
 
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-primary/25 bg-card/95">
+    <div className="mt-3 overflow-hidden rounded-2xl border border-primary/20 bg-card">
       <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)]">
         {/* Navegación */}
-        <nav className="border-b border-border p-3 md:border-b-0 md:border-r">
-          <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+
+        <nav className="border-b border-border bg-muted/20 p-3 md:border-b-0 md:border-r">
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
             Carpeta del paciente
           </p>
+
           <div className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
             {SECCIONES.map((s) => {
               const Icon = s.icon;
               const activa = s.id === seccion;
+
               return (
                 <button
                   key={s.id}
                   onClick={() => setSeccion(s.id)}
                   className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all duration-200 ${
                     activa
-                      ? "bg-gradient-to-b from-primary to-[oklch(0.5_0.2_292)] text-primary-foreground shadow-md shadow-primary/25"
-                      : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                   }`}
                 >
                   <Icon className="size-4 shrink-0" />
@@ -625,106 +1009,223 @@ function CarpetaPaciente({
         </nav>
 
         {/* Contenido */}
+
         <div className="min-w-0 p-4">
           {seccion === "resumen" ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h4 className="text-lg font-semibold">Resumen del paciente</h4>
+                  <h4 className="text-lg font-semibold">
+                    Resumen del paciente
+                  </h4>
+
                   <p className="text-sm text-muted-foreground">
-                    Información general y estado actual de {paciente.nombre}.
+                    Información general y estado actual de{" "}
+                    {normalizarNombre(paciente.nombre)}.
                   </p>
                 </div>
-                <button onClick={onEditar} className={BTN_SECUNDARIO}>
+
+                <button
+                  onClick={onEditar}
+                  className={BTN_SECUNDARIO}
+                >
                   <Pencil className="size-4" />
                   Editar paciente
                 </button>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]">
-                <Dato label="Documento" value={formatearDocumento(paciente.documento)} icon={FileText} />
-                <Dato label="Correo" value={paciente.email} icon={Mail} cortar />
-                <Dato label="Obra social" value={etiquetaObraSocial(paciente.obraSocial)} icon={ShieldCheck} />
-                <Dato label="Afiliado" value={paciente.afiliado} icon={Hash} />
+                <Dato
+                  label="Documento"
+                  value={formatearDocumento(
+                    paciente.documento,
+                  )}
+                  icon={FileText}
+                />
+
+                <Dato
+                  label="Correo"
+                  value={paciente.email}
+                  icon={Mail}
+                  cortar
+                />
+
+                <Dato
+                  label="Obra social"
+                  value={etiquetaObraSocial(
+                    paciente.obraSocial,
+                  )}
+                  icon={ShieldCheck}
+                />
+
+                <Dato
+                  label="Afiliado"
+                  value={paciente.afiliado}
+                  icon={Hash}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Dato label="Fecha de nacimiento" value={nacimiento} icon={CalendarDays} />
-                <Dato label="Sexo / género" value={paciente.genero} icon={Users} />
-                <Dato label="Sucursal" value={paciente.sucursal} icon={HeartPulse} />
+                <Dato
+                  label="Fecha de nacimiento"
+                  value={nacimiento}
+                  icon={CalendarDays}
+                />
+
+                <Dato
+                  label="Sexo / género"
+                  value={paciente.genero}
+                  icon={Users}
+                />
+
+                <Dato
+                  label="Sucursal"
+                  value={paciente.sucursal}
+                  icon={HeartPulse}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className={DATO_CARD}>
                   <IconoCirculo icon={Stethoscope} />
-                  <h5 className="relative text-sm font-semibold">Tratamiento actual</h5>
+
+                  <h5 className="relative text-sm font-semibold">
+                    Tratamiento actual
+                  </h5>
+
                   {tratamientoActual ? (
                     <div className="relative mt-2 space-y-1 text-sm">
-                      <p className="font-semibold">{tratamientoActual.nombre}</p>
+                      <p className="font-semibold">
+                        {tratamientoActual.nombre}
+                      </p>
+
                       <p className="text-muted-foreground">
-                        {[tratamientoActual.pieza && `Pieza ${tratamientoActual.pieza}`, tratamientoActual.estado]
+                        {[
+                          tratamientoActual.pieza &&
+                            `Pieza ${tratamientoActual.pieza}`,
+                          tratamientoActual.estado,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
+
                       {tratamientoActual.profesional && (
-                        <p className="text-muted-foreground">Profesional: {tratamientoActual.profesional}</p>
+                        <p className="text-muted-foreground">
+                          Profesional:{" "}
+                          {
+                            tratamientoActual.profesional
+                          }
+                        </p>
                       )}
-                      {tratamientosEnCurso.length > 1 && (
-                        <p className="text-xs text-muted-foreground">y {tratamientosEnCurso.length - 1} más en curso</p>
+
+                      {tratamientosEnCurso.length >
+                        1 && (
+                        <p className="text-xs text-muted-foreground">
+                          y{" "}
+                          {tratamientosEnCurso.length -
+                            1}{" "}
+                          más en curso
+                        </p>
                       )}
                     </div>
                   ) : (
-                    <p className="relative mt-2 text-sm text-muted-foreground">Sin tratamiento en curso.</p>
+                    <p className="relative mt-2 text-sm text-muted-foreground">
+                      Sin tratamiento en curso.
+                    </p>
                   )}
                 </div>
+
                 <div className={DATO_CARD}>
                   <IconoCirculo icon={CalendarDays} />
-                  <h5 className="relative text-sm font-semibold">Próximo turno</h5>
+
+                  <h5 className="relative text-sm font-semibold">
+                    Próximo turno
+                  </h5>
+
                   {proximoTurno ? (
                     <div className="relative mt-2 space-y-1 text-sm">
                       <p className="font-semibold">
-                        {fechaCorta(proximoTurno.fecha)} · {proximoTurno.hora} hs
+                        {fechaCorta(
+                          proximoTurno.fecha,
+                        )}{" "}
+                        · {proximoTurno.hora} hs
                       </p>
-                      <p className="text-muted-foreground">{proximoTurno.motivo}</p>
-                      {proximoTurno.profesional && <p className="text-muted-foreground">{proximoTurno.profesional}</p>}
+
+                      <p className="text-muted-foreground">
+                        {proximoTurno.motivo}
+                      </p>
+
+                      {proximoTurno.profesional && (
+                        <p className="text-muted-foreground">
+                          {
+                            proximoTurno.profesional
+                          }
+                        </p>
+                      )}
                     </div>
                   ) : (
-                    <p className="relative mt-2 text-sm text-muted-foreground">Sin turnos programados.</p>
+                    <p className="relative mt-2 text-sm text-muted-foreground">
+                      Sin turnos programados.
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className={DATO_CARD}>
                 <IconoCirculo icon={Phone} />
-                <h5 className="relative text-sm font-semibold">Información de contacto</h5>
+
+                <h5 className="relative text-sm font-semibold">
+                  Información de contacto
+                </h5>
+
                 <dl className="relative mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="inline font-semibold">Teléfono: </dt>
-                    <dd className="inline text-muted-foreground">{paciente.telefono || "—"}</dd>
+                    <dt className="inline font-semibold">
+                      Teléfono:{" "}
+                    </dt>
+
+                    <dd className="inline text-muted-foreground">
+                      {paciente.telefono || "—"}
+                    </dd>
                   </div>
+
                   <div className="min-w-0">
-                    <dt className="inline font-semibold">Email: </dt>
-                    <dd className="inline break-all text-muted-foreground">{paciente.email || "—"}</dd>
+                    <dt className="inline font-semibold">
+                      Email:{" "}
+                    </dt>
+
+                    <dd className="inline break-all text-muted-foreground">
+                      {paciente.email || "—"}
+                    </dd>
                   </div>
+
                   <div>
-                    <dt className="inline font-semibold">Dirección: </dt>
-                    <dd className="inline text-muted-foreground">{paciente.direccion || "—"}</dd>
+                    <dt className="inline font-semibold">
+                      Dirección:{" "}
+                    </dt>
+
+                    <dd className="inline text-muted-foreground">
+                      {paciente.direccion || "—"}
+                    </dd>
                   </div>
+
                   <div>
-                    <dt className="inline font-semibold">Nota de interés: </dt>
-                    <dd className="inline text-muted-foreground">{paciente.nota || "—"}</dd>
+                    <dt className="inline font-semibold">
+                      Nota de interés:{" "}
+                    </dt>
+
+                    <dd className="inline text-muted-foreground">
+                      {paciente.nota || "—"}
+                    </dd>
                   </div>
                 </dl>
               </div>
             </div>
           ) : seccion === "odontograma" ? (
-            <div className="grid min-h-48 place-items-center rounded-xl border border-dashed border-border text-center">
-              <div>
-                <ActualIcon className="mx-auto size-8 text-primary/60" />
-                <p className="mt-2 text-sm font-semibold">{actual.label}</p>
-                <p className="text-sm text-muted-foreground">Esta sección estará disponible próximamente.</p>
-              </div>
-            </div>
+            <OdontogramaSec
+              pacienteId={paciente.id}
+              onToast={onToast}
+            />
           ) : (
             <SeccionPaciente
               seccion={seccion}
@@ -732,7 +1233,7 @@ function CarpetaPaciente({
               cambiar={cambiar}
               onToast={onToast}
               contexto={{
-                paciente: `${paciente.nombre} ${paciente.apellido}`.trim(),
+                paciente: nombreCompleto(paciente),
                 email: paciente.email,
               }}
             />
@@ -747,250 +1248,637 @@ function CarpetaPaciente({
 
 function PacientesInner() {
   const { message, show } = useToast();
-  const registros = useRegistrosPacientes();
-  const { pacientes, setPacientes } = usePacientes();
-  const [abiertoId, setAbiertoId] = useState<number | null>(null);
-  const [modal, setModal] = useState<ModalActivo>(null);
-  const [busqueda, setBusqueda] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroSucursal, setFiltroSucursal] = useState("");
 
-  const cerrarModal = () => setModal(null);
+  const registros =
+    useRegistrosPacientes();
+
+  const {
+    pacientes,
+    setPacientes,
+  } = usePacientes();
+
+  const [abiertoId, setAbiertoId] =
+    useState<number | null>(null);
+
+  const [modal, setModal] =
+    useState<ModalActivo>(null);
+
+  const [busqueda, setBusqueda] =
+    useState("");
+
+  const [filtroEstado, setFiltroEstado] =
+    useState("");
+
+  const [filtroSucursal, setFiltroSucursal] =
+    useState("");
+
+  const cerrarModal = () =>
+    setModal(null);
 
   /* Filtros */
 
-  const q = busqueda.trim().toLowerCase();
-  const qDigitos = q.replace(/\D/g, "");
+  const q = busqueda
+    .trim()
+    .toLowerCase();
+
+  const qDigitos = q.replace(
+    /\D/g,
+    "",
+  );
+
   const coincide = (p: Paciente) =>
     !q ||
-    `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) ||
+    `${p.nombre} ${p.apellido}`
+      .toLowerCase()
+      .includes(q) ||
     (qDigitos.length > 0 &&
-      (p.documento.includes(qDigitos) || p.telefono.replace(/\D/g, "").includes(qDigitos)));
+      (p.documento.includes(
+        qDigitos,
+      ) ||
+        p.telefono
+          .replace(/\D/g, "")
+          .includes(qDigitos)));
 
   const filtrados = pacientes.filter(
     (p) =>
       coincide(p) &&
-      (!filtroEstado || p.estado === filtroEstado) &&
-      (!filtroSucursal || p.sucursal === filtroSucursal),
+      (!filtroEstado ||
+        p.estado === filtroEstado) &&
+      (!filtroSucursal ||
+        p.sucursal === filtroSucursal),
   );
-  const hayFiltros = Boolean(q || filtroEstado || filtroSucursal);
 
-  /* Acciones
-     TODO backend: cada handler es el punto donde va la llamada a la API
-     (POST / PUT / DELETE / GET export). Hoy solo actualizan el estado local. */
+  const hayFiltros = Boolean(
+    q ||
+      filtroEstado ||
+      filtroSucursal,
+  );
 
-  const guardarPaciente = (d: DatosPaciente) => {
-    const editando = modal?.tipo === "form" ? modal.paciente : undefined;
+  const cantidadActivos = pacientes.filter(
+    (p) => p.estado === "Activo",
+  ).length;
+
+  const cantidadInactivos = pacientes.filter(
+    (p) => p.estado === "Inactivo",
+  ).length;
+
+  /* Acciones */
+
+  const guardarPaciente = (
+    d: DatosPaciente,
+  ) => {
+    const editando =
+      modal?.tipo === "form"
+        ? modal.paciente
+        : undefined;
+
+    const datosNormalizados = {
+      ...d,
+      nombre: normalizarNombre(
+        d.nombre,
+      ),
+      apellido: normalizarNombre(
+        d.apellido,
+      ),
+    };
+
     if (editando) {
-      // TODO backend: PUT /pacientes/:id
-      setPacientes((prev) => prev.map((p) => (p.id === editando.id ? { ...p, ...d } : p)));
+      setPacientes((prev) =>
+        prev.map((p) =>
+          p.id === editando.id
+            ? {
+                ...p,
+                ...datosNormalizados,
+              }
+            : p,
+        ),
+      );
+
       show("Paciente actualizado");
     } else {
-      // TODO backend: POST /pacientes
-      setPacientes((prev) => [...prev, { ...d, id: Date.now() }]);
+      setPacientes((prev) => [
+        ...prev,
+        {
+          ...datosNormalizados,
+          id: Date.now(),
+        },
+      ]);
+
       show("Paciente creado");
     }
+
     cerrarModal();
   };
 
-  const eliminarPaciente = (p: Paciente) => {
-    // TODO backend: DELETE /pacientes/:id
-    setPacientes((prev) => prev.filter((x) => x.id !== p.id));
+  const eliminarPaciente = (
+    p: Paciente,
+  ) => {
+    setPacientes((prev) =>
+      prev.filter(
+        (x) => x.id !== p.id,
+      ),
+    );
+
     registros.quitar(p.id);
-    if (abiertoId === p.id) setAbiertoId(null);
+
+    if (abiertoId === p.id) {
+      setAbiertoId(null);
+    }
+
     cerrarModal();
-    show(`${p.nombre} ${p.apellido} eliminado`);
+
+    show(
+      `${nombreCompleto(p)} eliminado`,
+    );
   };
 
   const exportar = () => {
-    // TODO backend: GET /pacientes/export (o generar el archivo en el servidor)
     if (filtrados.length === 0) {
-      show("No hay pacientes para exportar");
+      show(
+        "No hay pacientes para exportar",
+      );
+
       return;
     }
+
     const filas = [
-      ["Nombre", "Apellido", "Documento", "Teléfono", "Correo", "Obra social", "Afiliado", "Sucursal", "Estado"],
+      [
+        "Nombre",
+        "Apellido",
+        "Documento",
+        "Teléfono",
+        "Correo",
+        "Obra social",
+        "Afiliado",
+        "Sucursal",
+        "Estado",
+      ],
+
       ...filtrados.map((p) => [
-        p.nombre,
-        p.apellido,
-        formatearDocumento(p.documento),
+        normalizarNombre(p.nombre),
+        normalizarNombre(p.apellido),
+        formatearDocumento(
+          p.documento,
+        ),
         p.telefono,
         p.email,
-        etiquetaObraSocial(p.obraSocial),
+        etiquetaObraSocial(
+          p.obraSocial,
+        ),
         p.afiliado,
         p.sucursal,
         p.estado,
       ]),
     ];
-    const csv = "\uFEFF" + filas.map((f) => f.map(csvCelda).join(";")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+
+    const csv =
+      "\uFEFF" +
+      filas
+        .map((f) =>
+          f.map(csvCelda).join(";"),
+        )
+        .join("\r\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const a =
+      document.createElement("a");
+
     a.href = url;
     a.download = "pacientes.csv";
     a.click();
+
     URL.revokeObjectURL(url);
-    show("Descargando pacientes.csv");
+
+    show(
+      "Descargando pacientes.csv",
+    );
   };
 
-  const modalForm = modal?.tipo === "form" ? modal : null;
-  const modalEliminar = modal?.tipo === "eliminar" ? modal : null;
-  const idEditando = modalForm?.paciente?.id;
-  const documentosExistentes = pacientes.filter((p) => p.id !== idEditando).map((p) => p.documento);
+  const modalForm =
+    modal?.tipo === "form"
+      ? modal
+      : null;
+
+  const modalEliminar =
+    modal?.tipo === "eliminar"
+      ? modal
+      : null;
+
+  const idEditando =
+    modalForm?.paciente?.id;
+
+  const documentosExistentes =
+    pacientes
+      .filter(
+        (p) => p.id !== idEditando,
+      )
+      .map((p) => p.documento);
 
   return (
     <AppShell>
-      <div className="relative min-h-full">
+      <div className="relative min-h-full overflow-hidden bg-muted/15">
+        {/* Fondo original conservado, solamente suavizado */}
         <FondoPacientes />
 
         <div
           className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8"
-          style={{ fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif' }}
+          style={{
+            fontFamily:
+              '"Inter", ui-sans-serif, system-ui, sans-serif',
+          }}
         >
-          {/* Encabezado */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="font-display text-2xl font-bold tracking-tight">Pacientes</h1>
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                  {pacientes.length} {pacientes.length === 1 ? "paciente" : "pacientes"}
-                </span>
+          {/* ───────────── Encabezado ───────────── */}
+
+          <section className="relative overflow-hidden rounded-[28px] border border-primary/20 bg-card/90 shadow-sm">
+            <div className="absolute left-0 top-0 h-1.5 w-full bg-primary/70" />
+
+            <div className="relative p-5 md:p-6 lg:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                      <Users className="size-3.5" />
+                      Gestión clínica
+                    </span>
+
+                    <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/10">
+                      {pacientes.length}{" "}
+                      {pacientes.length === 1
+                        ? "paciente"
+                        : "pacientes"}
+                    </span>
+                  </div>
+
+                  <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+                    Pacientes
+                  </h1>
+
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    Toda la información de tus pacientes
+                    en un solo lugar: carpeta clínica,
+                    tratamientos, estudios, turnos,
+                    documentos y cuenta corriente.
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    onClick={exportar}
+                    className={BTN_SECUNDARIO}
+                  >
+                    <Download className="size-4" />
+                    Exportar
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      setModal({
+                        tipo: "form",
+                      })
+                    }
+                    className={BTN_PRIMARIO}
+                  >
+                    <UserPlus className="size-4" />
+                    Nuevo paciente
+                  </button>
+                </div>
               </div>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Listado unificado de pacientes con acceso a su carpeta clínica, tratamientos, documentos, turnos y
-                cuenta corriente.
-              </p>
+
+              {/* Mini resumen */}
+
+              <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="rounded-2xl border border-primary/10 bg-primary/[0.055] px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary/70">
+                        Total
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold">
+                        {pacientes.length}
+                      </p>
+                    </div>
+
+                    <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                      <Users className="size-4" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-600/10 bg-emerald-50/70 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700/70">
+                        Activos
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-emerald-800">
+                        {cantidadActivos}
+                      </p>
+                    </div>
+
+                    <div className="grid size-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <HeartPulse className="size-4" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-violet-600/10 bg-violet-50/70 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-700/70">
+                        Inactivos
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-violet-800">
+                        {cantidadInactivos}
+                      </p>
+                    </div>
+
+                    <div className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-700">
+                      <History className="size-4" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtros */}
+
+              <div className="mt-4 rounded-2xl border border-border/70 bg-muted/25 p-2.5">
+                <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1.5fr)_1fr_1fr]">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+
+                    <input
+                      value={busqueda}
+                      onChange={(e) =>
+                        setBusqueda(
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Buscar por nombre, documento o teléfono"
+                      className={`${INPUT} border-transparent bg-background pl-10 shadow-none focus:border-primary/40`}
+                    />
+                  </div>
+
+                  <SelectField
+                    value={filtroEstado}
+                    onChange={
+                      setFiltroEstado
+                    }
+                    options={ESTADOS}
+                    placeholder="Todos los estados"
+                  />
+
+                  <SelectField
+                    value={filtroSucursal}
+                    onChange={
+                      setFiltroSucursal
+                    }
+                    options={SUCURSALES}
+                    placeholder="Todas las sucursales"
+                  />
+                </div>
+
+                {hayFiltros && (
+                  <button
+                    onClick={() => {
+                      setBusqueda("");
+                      setFiltroEstado("");
+                      setFiltroSucursal("");
+                    }}
+                    className="px-1 pt-2 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={exportar}
-                className={BTN_SECUNDARIO}
-              >
-                <Download className="size-4" />
-                Exportar
-              </button>
-              <button
-                onClick={() => setModal({ tipo: "form" })}
-                className={BTN_PRIMARIO}
-              >
-                <UserPlus className="size-4" />
-                Nuevo paciente
-              </button>
-            </div>
+          </section>
+
+          {/* ───────────── Separador ───────────── */}
+
+          <div className="mt-6 flex items-center gap-3 px-1">
+            <div className="h-px flex-1 bg-border/70" />
+
+            <span className="rounded-full border border-border bg-card/85 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground shadow-sm">
+              {hayFiltros
+                ? `${filtrados.length} resultados`
+                : "Listado de pacientes"}
+            </span>
+
+            <div className="h-px flex-1 bg-border/70" />
           </div>
 
-          {/* Filtros */}
-          <div className={`${CARD} mt-4`}>
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar por nombre, documento o teléfono"
-                  className={`${INPUT} pl-9`}
-                />
-              </div>
-              <SelectField value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS} placeholder="Todos los estados" />
-              <SelectField value={filtroSucursal} onChange={setFiltroSucursal} options={SUCURSALES} placeholder="Todas las sucursales" />
-            </div>
-            {hayFiltros && (
-              <button
-                onClick={() => {
-                  setBusqueda("");
-                  setFiltroEstado("");
-                  setFiltroSucursal("");
-                }}
-                className="mt-2 text-xs font-medium text-primary"
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </div>
+          {/* ───────────── Listado ───────────── */}
 
-          {/* Listado */}
           <div className="mt-3">
             {filtrados.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border bg-card/90 py-10 text-center text-sm text-muted-foreground backdrop-blur-sm">
-                {hayFiltros
-                  ? "No hay pacientes que coincidan con los filtros."
-                  : "Todavía no hay pacientes. Creá el primero con «Nuevo paciente»."}
-              </p>
+              <div className="rounded-3xl border border-dashed border-primary/20 bg-card/85 px-6 py-14 text-center shadow-sm">
+                <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <Users className="size-6" />
+                </div>
+
+                <p className="mt-4 text-sm font-semibold">
+                  {hayFiltros
+                    ? "No encontramos pacientes"
+                    : "Todavía no hay pacientes"}
+                </p>
+
+                <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                  {hayFiltros
+                    ? "Probá modificando los filtros de búsqueda."
+                    : "Creá el primer paciente para comenzar a trabajar con su carpeta clínica."}
+                </p>
+
+                {!hayFiltros && (
+                  <button
+                    onClick={() =>
+                      setModal({
+                        tipo: "form",
+                      })
+                    }
+                    className={`${BTN_PRIMARIO} mt-5`}
+                  >
+                    <UserPlus className="size-4" />
+                    Crear primer paciente
+                  </button>
+                )}
+              </div>
             ) : (
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {filtrados.map((p) => {
-                  const abierto = abiertoId === p.id;
+                  const abierto =
+                    abiertoId === p.id;
+
+                  const nombre = nombreCompleto(p);
+
                   return (
                     <li
                       key={p.id}
-                      className={`rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-primary/50 hover:shadow-md ${
-                        abierto ? "border-primary" : "border-border hover:-translate-y-0.5"
+                      className={`overflow-hidden rounded-2xl border bg-card/95 shadow-sm transition-all duration-200 ${
+                        abierto
+                          ? "border-primary/45 shadow-md shadow-primary/5"
+                          : "border-border/70 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
                       }`}
                     >
-                      <div className="flex flex-wrap items-center gap-4">
-                        <Avatar paciente={p} className="size-12 text-base" />
+                      <div className="p-3.5 md:p-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                          <Avatar
+                            paciente={p}
+                            className="size-12 text-sm"
+                          />
 
-                        <div className="min-w-[150px]">
-                          <p className="font-semibold leading-tight">
-                            {p.nombre} {p.apellido}
-                          </p>
-                          <p className="text-sm text-muted-foreground">DNI {formatearDocumento(p.documento)}</p>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            <BadgeEstado estado={p.estado} />
-                            <BadgeOutline>{etiquetaObraSocial(p.obraSocial)}</BadgeOutline>
-                          </div>
-                        </div>
+                          <div className="min-w-[180px] flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold leading-tight">
+                                {nombre}
+                              </p>
 
-                        <div className="grid min-w-[260px] flex-1 grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Teléfono</p>
-                            <p className="font-medium">{p.telefono || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Obra social</p>
-                            <p className="font-medium">{etiquetaObraSocial(p.obraSocial)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Sucursal</p>
-                            <p className="font-medium">{p.sucursal || "—"}</p>
-                          </div>
-                        </div>
+                              <BadgeEstado
+                                estado={p.estado}
+                              />
+                            </div>
 
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            onClick={() => setAbiertoId(abierto ? null : p.id)}
-                            className={BTN_PRIMARIO}
-                          >
-                            <FolderOpen className="size-4" />
-                            {abierto ? "Cerrar carpeta" : "Abrir carpeta"}
-                            {abierto ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                          </button>
-                          <button
-                            onClick={() => setModal({ tipo: "form", paciente: p })}
-                            aria-label={`Editar a ${p.nombre} ${p.apellido}`}
-                            className={BTN_ICONO}
-                          >
-                            <Pencil className="size-4" />
-                          </button>
-                          <button
-                            onClick={() => setModal({ tipo: "eliminar", paciente: p })}
-                            aria-label={`Eliminar a ${p.nombre} ${p.apellido}`}
-                            className={BTN_ICONO_PELIGRO}
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              DNI{" "}
+                              {formatearDocumento(
+                                p.documento,
+                              )}
+                            </p>
+
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              <BadgeOutline>
+                                {etiquetaObraSocial(
+                                  p.obraSocial,
+                                )}
+                              </BadgeOutline>
+                            </div>
+                          </div>
+
+                          <div className="grid min-w-[260px] flex-[2] grid-cols-1 gap-2 sm:grid-cols-3">
+                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                Teléfono
+                              </p>
+
+                              <p className="mt-0.5 truncate text-sm font-medium">
+                                {p.telefono || "—"}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                Obra social
+                              </p>
+
+                              <p className="mt-0.5 truncate text-sm font-medium">
+                                {etiquetaObraSocial(
+                                  p.obraSocial,
+                                )}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                Sucursal
+                              </p>
+
+                              <p className="mt-0.5 truncate text-sm font-medium">
+                                {p.sucursal ||
+                                  "—"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="ml-auto flex items-center gap-2">
+                            <button
+                              onClick={() =>
+                                setAbiertoId(
+                                  abierto
+                                    ? null
+                                    : p.id,
+                                )
+                              }
+                              className={`${BTN_PRIMARIO} whitespace-nowrap`}
+                            >
+                              <FolderOpen className="size-4" />
+
+                              {abierto
+                                ? "Cerrar carpeta"
+                                : "Abrir carpeta"}
+
+                              {abierto ? (
+                                <ChevronUp className="size-4" />
+                              ) : (
+                                <ChevronDown className="size-4" />
+                              )}
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                setModal({
+                                  tipo: "form",
+                                  paciente: p,
+                                })
+                              }
+                              aria-label={`Editar a ${nombre}`}
+                              className={BTN_ICONO}
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                setModal({
+                                  tipo: "eliminar",
+                                  paciente: p,
+                                })
+                              }
+                              aria-label={`Eliminar a ${nombre}`}
+                              className={
+                                BTN_ICONO_PELIGRO
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
                       {abierto && (
-                        <CarpetaPaciente
-                          key={p.id}
-                          paciente={p}
-                          datos={registros.de(p.id)}
-                          cambiar={(clave, fn) => registros.cambiar(p.id, clave, fn)}
-                          onToast={show}
-                          onEditar={() => setModal({ tipo: "form", paciente: p })}
-                        />
+                        <div className="border-t border-primary/10 bg-primary/[0.018] px-3.5 pb-3.5 md:px-4 md:pb-4">
+                          <CarpetaPaciente
+                            key={p.id}
+                            paciente={p}
+                            datos={registros.de(
+                              p.id,
+                            )}
+                            cambiar={(
+                              clave,
+                              fn,
+                            ) =>
+                              registros.cambiar(
+                                p.id,
+                                clave,
+                                fn,
+                              )
+                            }
+                            onToast={show}
+                            onEditar={() =>
+                              setModal({
+                                tipo: "form",
+                                paciente: p,
+                              })
+                            }
+                          />
+                        </div>
                       )}
                     </li>
                   );
@@ -1001,36 +1889,61 @@ function PacientesInner() {
         </div>
       </div>
 
+      {/* Modal nuevo / editar */}
+
       {modalForm && (
-        <Modal title={modalForm.paciente ? "Editar paciente" : "Nuevo paciente"} onClose={cerrarModal}>
+        <Modal
+          title={
+            modalForm.paciente
+              ? "Editar paciente"
+              : "Nuevo paciente"
+          }
+          onClose={cerrarModal}
+        >
           <PacienteForm
             inicial={modalForm.paciente}
-            documentosExistentes={documentosExistentes}
+            documentosExistentes={
+              documentosExistentes
+            }
             onSubmit={guardarPaciente}
             onCancel={cerrarModal}
           />
         </Modal>
       )}
 
+      {/* Modal eliminar */}
+
       {modalEliminar && (
-        <Modal title="Eliminar paciente" size="sm" onClose={cerrarModal}>
-          <p className="text-sm text-muted-foreground">
+        <Modal
+          title="Eliminar paciente"
+          size="sm"
+          onClose={cerrarModal}
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
             ¿Seguro que querés eliminar a{" "}
             <span className="font-semibold text-foreground">
-              {modalEliminar.paciente.nombre} {modalEliminar.paciente.apellido}
+              {nombreCompleto(
+                modalEliminar.paciente,
+              )}
             </span>
             ? Esta acción no se puede deshacer.
           </p>
-          <div className="mt-4 flex justify-end gap-3">
+
+          <div className="mt-5 flex justify-end gap-3">
             <button
               onClick={cerrarModal}
               className={BTN_SECUNDARIO}
             >
               Cancelar
             </button>
+
             <button
-              onClick={() => eliminarPaciente(modalEliminar.paciente)}
-              className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              onClick={() =>
+                eliminarPaciente(
+                  modalEliminar.paciente,
+                )
+              }
+              className="rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
             >
               Eliminar
             </button>
@@ -1038,8 +1951,10 @@ function PacientesInner() {
         </Modal>
       )}
 
+      {/* Toast */}
+
       {message && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-background shadow-xl">
           {message}
         </div>
       )}

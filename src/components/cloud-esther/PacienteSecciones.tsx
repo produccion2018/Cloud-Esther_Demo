@@ -582,12 +582,14 @@ function Encabezado({
   etiquetaBoton,
   onAgregar,
   icon: Icon,
+  botonClassName,
 }: {
   titulo: string;
   descripcion: string;
   etiquetaBoton: string;
   onAgregar: () => void;
   icon?: LucideIcon;
+  botonClassName?: string;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -604,7 +606,7 @@ function Encabezado({
       </div>
       <button
         onClick={onAgregar}
-        className={BTN_PRIMARIO}
+        className={`${BTN_PRIMARIO} ${botonClassName ?? ""}`}
       >
         <Plus className="size-4" />
         {etiquetaBoton}
@@ -647,25 +649,47 @@ function EstadoVacio({
   );
 }
 
-function BotonBorrar({ onClick, etiqueta }: { onClick: () => void; etiqueta: string }) {
+function BotonBorrar({
+  onClick,
+  etiqueta,
+  compacto = false,
+}: {
+  onClick: () => void;
+  etiqueta: string;
+  compacto?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
       aria-label={etiqueta}
-      className="grid size-8 shrink-0 place-items-center rounded-full border border-transparent text-muted-foreground transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+      className={`grid shrink-0 place-items-center rounded-full border border-transparent text-muted-foreground transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 ${
+        compacto ? "size-7" : "size-8"
+      }`}
     >
-      <Trash2 className="size-4" />
+      <Trash2 className={compacto ? "size-3.5" : "size-4"} />
     </button>
   );
 }
 
-function BotonMini({ icon: Icon, label, onClick }: { icon?: LucideIcon; label: string; onClick: () => void }) {
+function BotonMini({
+  icon: Icon,
+  label,
+  onClick,
+  compacto = false,
+}: {
+  icon?: LucideIcon;
+  label: string;
+  onClick: () => void;
+  compacto?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      className={`flex items-center justify-center gap-1 rounded-full border border-border bg-card font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+        compacto ? "min-h-7 px-2 py-0.5 text-[10px]" : "px-3 py-1 text-[11px]"
+      }`}
     >
-      {Icon && <Icon className="size-3" />}
+      {Icon && <Icon className={compacto ? "size-2.5" : "size-3"} />}
       {label}
     </button>
   );
@@ -2015,7 +2039,7 @@ function GaleriaTab({
           <p className="text-sm font-semibold">Estudios del paciente</p>
           <p className="text-xs text-muted-foreground">Ordenados del más reciente al más antiguo.</p>
         </div>
-        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
           {estudios.length} {estudios.length === 1 ? "estudio" : "estudios"}
         </span>
       </div>
@@ -2026,29 +2050,36 @@ function GaleriaTab({
           const tieneArchivo = Boolean(s.url && s.archivoNombre);
 
           return (
-            <li key={s.id} className={ESTUDIO_ITEM}>
-              <div className="flex min-h-[132px] gap-3 p-2.5">
+            <li
+              key={s.id}
+              className={`${ESTUDIO_ITEM} hover:-translate-y-0.5`}
+            >
+              <div className="flex min-h-[108px] gap-2.5 p-2">
                 <button
                   type="button"
                   onClick={() => onVer(s.id)}
                   aria-label={`Ver ${s.tipo}`}
-                  className="group relative w-32 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-36"
+                  className="group relative h-[92px] w-[112px] shrink-0 overflow-hidden rounded-lg border border-border/80 bg-muted/30 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-[118px]"
                 >
                   {tieneArchivo && esImagen(s.archivoNombre) ? (
-                    <img src={s.url} alt={s.tipo} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                    <img
+                      src={s.url}
+                      alt={s.tipo}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
                   ) : (
                     <div className="grid h-full place-items-center text-center">
                       <div>
-                        <span className="mx-auto grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                          <Icono className="size-4" />
+                        <span className="mx-auto grid size-8 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
+                          <Icono className="size-3.5" />
                         </span>
-                        <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                        <p className="mt-1 text-[9px] font-medium text-muted-foreground">
                           {tieneArchivo ? "Archivo adjunto" : "Sin imagen"}
                         </p>
                       </div>
                     </div>
                   )}
-                  <span className="absolute bottom-1.5 right-1.5 rounded-md bg-background/90 px-1.5 py-1 text-[10px] font-semibold text-foreground shadow-sm backdrop-blur">
+                  <span className="absolute bottom-1 right-1 rounded-full border border-border/70 bg-background/90 px-1.5 py-0.5 text-[9px] font-semibold text-foreground shadow-sm backdrop-blur transition-colors group-hover:border-primary/30 group-hover:text-primary">
                     Ver
                   </span>
                 </button>
@@ -2056,31 +2087,31 @@ function GaleriaTab({
                 <div className="min-w-0 flex-1 py-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{s.tipo}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      <p className="truncate text-[13px] font-semibold leading-5 text-foreground">{s.tipo}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                         {[formatearFecha(s.fecha), s.zona].filter(Boolean).join(" · ")}
                       </p>
                     </div>
                     <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
                   </div>
 
-                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground">
+                  <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
                     {s.diagnostico || "Sin informe o diagnóstico registrado."}
                   </p>
 
-                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border/70 pt-2">
-                    <div className="min-w-0 text-[10px] text-muted-foreground">
+                  <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border/60 pt-1.5">
+                    <div className="min-w-0 text-[9px] text-muted-foreground">
                       {s.solicitante ? (
-                        <span className="truncate">Solicita: {s.solicitante}</span>
+                        <span className="block truncate">Solicita: {s.solicitante}</span>
                       ) : s.archivoNombre ? (
-                        <span className="truncate">{s.archivoNombre}</span>
+                        <span className="block truncate">{s.archivoNombre}</span>
                       ) : (
                         <span>Sin archivo adjunto</span>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <BotonMini icon={Eye} label="Abrir" onClick={() => onVer(s.id)} />
-                      <BotonBorrar etiqueta="Eliminar estudio" onClick={() => onBorrar(s)} />
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <BotonMini compacto icon={Eye} label="Abrir" onClick={() => onVer(s.id)} />
+                      <BotonBorrar compacto etiqueta="Eliminar estudio" onClick={() => onBorrar(s)} />
                     </div>
                   </div>
                 </div>
@@ -2636,6 +2667,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         descripcion="Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
         etiquetaBoton="Cargar estudio"
         onAgregar={() => setAbierto(true)}
+        botonClassName="rounded-lg px-3 py-1.5 text-xs shadow-sm"
       />
 
       <div className="rounded-xl border border-border/80 bg-card px-3 py-2.5 shadow-sm">
@@ -2666,7 +2698,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                className={`flex min-h-8 items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
                   activa
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"

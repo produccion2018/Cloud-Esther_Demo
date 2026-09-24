@@ -16,20 +16,26 @@ import {
   ScanLine,
   Bell,
   MessageSquare,
+  FlaskConical,
+  Megaphone,
+  UserCircle2,
+  UserCog,
+  Mails,
+  Plug,
+  FolderOpen,
 } from "lucide-react";
 
 export type PlanId = "inicial" | "profesional" | "avanzada" | "grupo";
 
-export const PLANS: Record<
-  PlanId,
-  {
-    id: PlanId;
-    name: string;
-    level: number;
-    audience: string;
-    price: string;
-  }
-> = {
+type PlanInfo = {
+  id: PlanId;
+  name: string;
+  level: number;
+  audience: string;
+  price: string;
+};
+
+export const PLANS: Record<PlanId, PlanInfo> = {
   inicial: {
     id: "inicial",
     name: "Clínica Inicial",
@@ -62,6 +68,49 @@ export const PLANS: Record<
 
 export function planLevel(id: PlanId) {
   return PLANS[id].level;
+}
+
+/* ─────────────────────────────────────────────
+   Persistencia del plan (localStorage)
+───────────────────────────────────────────── */
+
+const PLAN_STORAGE_KEY = "cloud-esther-demo:plan";
+
+function isPlanId(value: string): value is PlanId {
+  return value === "inicial" || value === "profesional" || value === "avanzada" || value === "grupo";
+}
+
+function getStoredPlan(): PlanId {
+  if (typeof window === "undefined") {
+    return "avanzada";
+  }
+
+  const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
+
+  return raw && isPlanId(raw) ? raw : "avanzada";
+}
+
+export function setStoredPlan(id: PlanId) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(PLAN_STORAGE_KEY, id);
+}
+
+export function mapSitePlanToPlanId(siteId: string): PlanId {
+  switch (siteId) {
+    case "esencial":
+      return "inicial";
+    case "profesional":
+      return "profesional";
+    case "avanzado":
+      return "avanzada";
+    case "enterprise":
+      return "grupo";
+    default:
+      return "inicial";
+  }
 }
 
 export const CLINICS = [
@@ -164,6 +213,14 @@ export const MODULES: AppModule[] = [
     minPlan: "inicial",
   },
   {
+    id: "laboratorio",
+    label: "Laboratorio",
+    icon: "laboratorio",
+    path: "/demo/laboratorio",
+    group: "Clínico",
+    minPlan: "profesional",
+  },
+  {
     id: "tratamientos",
     label: "Tratamientos",
     icon: "stethoscope",
@@ -173,8 +230,64 @@ export const MODULES: AppModule[] = [
   },
 
   // ─────────────────────────────────────────────
-  // OPERACIÓN
+  // OPERACIÓN (Centro de Operaciones)
   // ─────────────────────────────────────────────
+  {
+    id: "comunicaciones",
+    label: "Comunicación",
+    icon: "message",
+    path: "/demo/comunicaciones",
+    group: "Operación",
+    minPlan: "inicial",
+  },
+  {
+    id: "notificaciones",
+    label: "Notificaciones",
+    icon: "bell",
+    path: "/demo/notificaciones",
+    group: "Operación",
+    minPlan: "inicial",
+  },
+  {
+    id: "equipo",
+    label: "Equipo",
+    icon: "team",
+    path: "/demo/equipo",
+    group: "Operación",
+    minPlan: "inicial",
+  },
+  {
+    id: "marketing",
+    label: "Marketing y captación",
+    icon: "marketing",
+    path: "/demo/marketing",
+    group: "Operación",
+    minPlan: "profesional",
+  },
+  {
+    id: "portal-paciente",
+    label: "Portal del paciente",
+    icon: "portal-paciente",
+    path: "/demo/portal-paciente",
+    group: "Operación",
+    minPlan: "profesional",
+  },
+  {
+    id: "inventario",
+    label: "Inventario",
+    icon: "boxes",
+    path: "/demo/inventario",
+    group: "Operación",
+    minPlan: "avanzada",
+  },
+  {
+    id: "rrhh",
+    label: "Equipo y RRHH",
+    icon: "users",
+    path: "/demo/rrhh",
+    group: "Operación",
+    minPlan: "avanzada",
+  },
   {
     id: "presupuestos",
     label: "Presupuestos",
@@ -183,68 +296,32 @@ export const MODULES: AppModule[] = [
     group: "Operación",
     minPlan: "profesional",
   },
-  {
-    id: "facturacion",
-    label: "Facturación",
-    icon: "receipt",
-    path: "/demo/facturacion",
-    group: "Operación",
-    minPlan: "profesional",
-  },
-  {
-    id: "recordatorios",
-    label: "Recordatorios",
-    icon: "bell",
-    path: "/demo/recordatorios",
-    group: "Operación",
-    minPlan: "inicial",
-  },
-  {
-    id: "comunicaciones",
-    label: "Comunicaciones",
-    icon: "message",
-    path: "/demo/comunicaciones",
-    group: "Operación",
-    minPlan: "inicial",
-  },
 
   // ─────────────────────────────────────────────
   // ADMINISTRACIÓN
   // ─────────────────────────────────────────────
   {
-    id: "inventario",
-    label: "Inventario",
-    icon: "boxes",
-    path: "/demo/inventario",
+    id: "facturacion",
+    label: "Finanzas",
+    icon: "receipt",
+    path: "/demo/facturacion",
     group: "Administración",
-    minPlan: "avanzada",
+    minPlan: "profesional",
   },
-  {
-    id: "rrhh",
-    label: "Recursos Humanos",
-    icon: "users",
-    path: "/demo/rrhh",
-    group: "Administración",
-    minPlan: "avanzada",
-  },
-
-  // ─────────────────────────────────────────────
-  // INTELIGENCIA
-  // ─────────────────────────────────────────────
   {
     id: "bi",
-    label: "Business Intelligence",
+    label: "Analítica",
     icon: "chart",
     path: "/demo/bi",
-    group: "Inteligencia",
+    group: "Administración",
     minPlan: "avanzada",
   },
   {
     id: "ia",
-    label: "Cloud Esther IA",
+    label: "IA Esther",
     icon: "sparkles",
     path: "/demo/ia",
-    group: "Inteligencia",
+    group: "Administración",
     minPlan: "avanzada",
   },
   {
@@ -252,19 +329,39 @@ export const MODULES: AppModule[] = [
     label: "Automatizaciones",
     icon: "workflow",
     path: "/demo/automatizaciones",
-    group: "Inteligencia",
+    group: "Administración",
     minPlan: "avanzada",
   },
-
-  // ─────────────────────────────────────────────
-  // SISTEMA
-  // ─────────────────────────────────────────────
+  {
+    id: "multiempresa",
+    label: "Multiempresa",
+    icon: "multiempresa",
+    path: "/demo/multiempresa",
+    group: "Administración",
+    minPlan: "grupo",
+  },
+  {
+    id: "integraciones",
+    label: "Integraciones",
+    icon: "integraciones",
+    path: "/demo/integraciones",
+    group: "Administración",
+    minPlan: "grupo",
+  },
+  {
+    id: "documentos",
+    label: "Documentos y seguridad",
+    icon: "documentos",
+    path: "/demo/documentos",
+    group: "Administración",
+    minPlan: "grupo",
+  },
   {
     id: "seguridad",
     label: "Seguridad",
     icon: "shield",
     path: "/demo/seguridad",
-    group: "Sistema",
+    group: "Administración",
     minPlan: "grupo",
   },
   {
@@ -272,7 +369,7 @@ export const MODULES: AppModule[] = [
     label: "Configuración",
     icon: "settings",
     path: "/demo/configuracion",
-    group: "Sistema",
+    group: "Administración",
     minPlan: "inicial",
   },
 ];
@@ -290,28 +387,35 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "Recetas",
     "Estudios y diagnóstico",
     "Tratamientos",
-    "Recordatorios",
-    "Comunicaciones",
+    "Equipo",
+    "Comunicación",
+    "Notificaciones",
+    "Configuración",
   ],
   profesional: [
     "Todo lo anterior",
     "Presupuestos",
-    "Facturación",
+    "Finanzas",
+    "Laboratorio",
+    "Marketing y captación",
+    "Portal del paciente",
   ],
   avanzada: [
     "Todo lo anterior",
     "Odontograma 3D",
     "Inventario",
-    "RRHH",
-    "IA",
+    "Equipo y RRHH",
+    "IA Esther",
     "Automatizaciones",
-    "BI",
+    "Analítica",
   ],
   grupo: [
     "Todo lo anterior",
     "Multi-clínica",
-    "Dashboard corporativo",
-    "IA corporativa",
+    "Multiempresa",
+    "Integraciones",
+    "Documentos y seguridad",
+    "Seguridad",
   ],
 };
 
@@ -319,6 +423,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   calendar: CalendarDays,
   users: Users,
+  team: UserCog,
   file: FileText,
   receipt: Receipt,
   boxes: Boxes,
@@ -334,6 +439,12 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   studies: FileText,
   bell: Bell,
   message: MessageSquare,
+  laboratorio: FlaskConical,
+  marketing: Megaphone,
+  "portal-paciente": UserCircle2,
+  multiempresa: Mails,
+  integraciones: Plug,
+  documentos: FolderOpen,
 };
 
 export function ModuleIcon({
@@ -364,10 +475,15 @@ export function CloudEstherProvider({
 }: {
   children: ReactNode;
 }) {
-  const [plan, setPlan] = useState<PlanId>("avanzada");
+  const [plan, setPlanState] = useState<PlanId>(() => getStoredPlan());
   const [clinic, setClinic] = useState("centro");
   const [role] = useState("admin");
   const [disabled] = useState<string[]>([]);
+
+  const setPlan = (p: PlanId) => {
+    setPlanState(p);
+    setStoredPlan(p);
+  };
 
   return (
     <CloudEstherContext.Provider

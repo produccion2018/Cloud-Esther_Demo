@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
+import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -60,6 +61,7 @@ function Registro() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
+                    setStoredPlan(mapSitePlanToPlanId(selected));
                     setSent(true);
                   }}
                   className="card-premium mt-10 space-y-5 p-6 lg:p-8"

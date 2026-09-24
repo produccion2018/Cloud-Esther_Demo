@@ -10,7 +10,7 @@ export const Route = createFileRoute("/demo_/odontograma-3d")({
 function Pagina() {
   return (
     <PaginaSeccionPaciente
-      seccion="odontograma"
+      seccion="odontograma-3d"
       titulo="Odontograma 3D"
       descripcion="Buscá al paciente y accedé a su odontograma en 3D."
       icon={Activity}

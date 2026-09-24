@@ -20,11 +20,16 @@ import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frec
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
+import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
 import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
 import { Route as DemoHistoriaRouteImport } from './routes/demo_.historia'
+import { Route as DemoMarketingRouteImport } from './routes/demo_.marketing'
+import { Route as DemoNotificacionesRouteImport } from './routes/demo_.notificaciones'
 import { Route as DemoOdontogramaRouteImport } from './routes/demo_.odontograma'
 import { Route as DemoOdontograma3dRouteImport } from './routes/demo_.odontograma-3d'
 import { Route as DemoPacientesRouteImport } from './routes/demo_.pacientes'
+import { Route as DemoPortalPacienteRouteImport } from './routes/demo_.portal-paciente'
 import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuestos'
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
@@ -84,6 +89,16 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoComunicacionesRoute = DemoComunicacionesRouteImport.update({
+  id: '/demo_/comunicaciones',
+  path: '/demo/comunicaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoEquipoProfesionalRoute = DemoEquipoProfesionalRouteImport.update({
+  id: '/demo_/equipo-profesional',
+  path: '/demo/equipo-profesional',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoEstudiosRoute = DemoEstudiosRouteImport.update({
   id: '/demo_/estudios',
   path: '/demo/estudios',
@@ -92,6 +107,16 @@ const DemoEstudiosRoute = DemoEstudiosRouteImport.update({
 const DemoHistoriaRoute = DemoHistoriaRouteImport.update({
   id: '/demo_/historia',
   path: '/demo/historia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoMarketingRoute = DemoMarketingRouteImport.update({
+  id: '/demo_/marketing',
+  path: '/demo/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoNotificacionesRoute = DemoNotificacionesRouteImport.update({
+  id: '/demo_/notificaciones',
+  path: '/demo/notificaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoOdontogramaRoute = DemoOdontogramaRouteImport.update({
@@ -107,6 +132,11 @@ const DemoOdontograma3dRoute = DemoOdontograma3dRouteImport.update({
 const DemoPacientesRoute = DemoPacientesRouteImport.update({
   id: '/demo_/pacientes',
   path: '/demo/pacientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoPortalPacienteRoute = DemoPortalPacienteRouteImport.update({
+  id: '/demo_/portal-paciente',
+  path: '/demo/portal-paciente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoPresupuestosRoute = DemoPresupuestosRouteImport.update({
@@ -136,11 +166,16 @@ export interface FileRoutesByFullPath {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
   '/demo/odontograma-3d': typeof DemoOdontograma3dRoute
   '/demo/pacientes': typeof DemoPacientesRoute
+  '/demo/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
@@ -157,11 +192,16 @@ export interface FileRoutesByTo {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
   '/demo/odontograma-3d': typeof DemoOdontograma3dRoute
   '/demo/pacientes': typeof DemoPacientesRoute
+  '/demo/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
@@ -179,11 +219,16 @@ export interface FileRoutesById {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo_/agenda': typeof DemoAgendaRoute
+  '/demo_/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo_/estudios': typeof DemoEstudiosRoute
   '/demo_/historia': typeof DemoHistoriaRoute
+  '/demo_/marketing': typeof DemoMarketingRoute
+  '/demo_/notificaciones': typeof DemoNotificacionesRoute
   '/demo_/odontograma': typeof DemoOdontogramaRoute
   '/demo_/odontograma-3d': typeof DemoOdontograma3dRoute
   '/demo_/pacientes': typeof DemoPacientesRoute
+  '/demo_/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo_/presupuestos': typeof DemoPresupuestosRoute
   '/demo_/recetas': typeof DemoRecetasRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
@@ -202,11 +247,16 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/comunicaciones'
+    | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/historia'
+    | '/demo/marketing'
+    | '/demo/notificaciones'
     | '/demo/odontograma'
     | '/demo/odontograma-3d'
     | '/demo/pacientes'
+    | '/demo/portal-paciente'
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/tratamientos'
@@ -223,11 +273,16 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/comunicaciones'
+    | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/historia'
+    | '/demo/marketing'
+    | '/demo/notificaciones'
     | '/demo/odontograma'
     | '/demo/odontograma-3d'
     | '/demo/pacientes'
+    | '/demo/portal-paciente'
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/tratamientos'
@@ -244,11 +299,16 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo_/agenda'
+    | '/demo_/comunicaciones'
+    | '/demo_/equipo-profesional'
     | '/demo_/estudios'
     | '/demo_/historia'
+    | '/demo_/marketing'
+    | '/demo_/notificaciones'
     | '/demo_/odontograma'
     | '/demo_/odontograma-3d'
     | '/demo_/pacientes'
+    | '/demo_/portal-paciente'
     | '/demo_/presupuestos'
     | '/demo_/recetas'
     | '/demo_/tratamientos'
@@ -266,11 +326,16 @@ export interface RootRouteChildren {
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
+  DemoComunicacionesRoute: typeof DemoComunicacionesRoute
+  DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
   DemoEstudiosRoute: typeof DemoEstudiosRoute
   DemoHistoriaRoute: typeof DemoHistoriaRoute
+  DemoMarketingRoute: typeof DemoMarketingRoute
+  DemoNotificacionesRoute: typeof DemoNotificacionesRoute
   DemoOdontogramaRoute: typeof DemoOdontogramaRoute
   DemoOdontograma3dRoute: typeof DemoOdontograma3dRoute
   DemoPacientesRoute: typeof DemoPacientesRoute
+  DemoPortalPacienteRoute: typeof DemoPortalPacienteRoute
   DemoPresupuestosRoute: typeof DemoPresupuestosRoute
   DemoRecetasRoute: typeof DemoRecetasRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
@@ -356,6 +421,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/comunicaciones': {
+      id: '/demo_/comunicaciones'
+      path: '/demo/comunicaciones'
+      fullPath: '/demo/comunicaciones'
+      preLoaderRoute: typeof DemoComunicacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/equipo-profesional': {
+      id: '/demo_/equipo-profesional'
+      path: '/demo/equipo-profesional'
+      fullPath: '/demo/equipo-profesional'
+      preLoaderRoute: typeof DemoEquipoProfesionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/estudios': {
       id: '/demo_/estudios'
       path: '/demo/estudios'
@@ -368,6 +447,20 @@ declare module '@tanstack/react-router' {
       path: '/demo/historia'
       fullPath: '/demo/historia'
       preLoaderRoute: typeof DemoHistoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/marketing': {
+      id: '/demo_/marketing'
+      path: '/demo/marketing'
+      fullPath: '/demo/marketing'
+      preLoaderRoute: typeof DemoMarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/notificaciones': {
+      id: '/demo_/notificaciones'
+      path: '/demo/notificaciones'
+      fullPath: '/demo/notificaciones'
+      preLoaderRoute: typeof DemoNotificacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/odontograma': {
@@ -389,6 +482,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/pacientes'
       fullPath: '/demo/pacientes'
       preLoaderRoute: typeof DemoPacientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/portal-paciente': {
+      id: '/demo_/portal-paciente'
+      path: '/demo/portal-paciente'
+      fullPath: '/demo/portal-paciente'
+      preLoaderRoute: typeof DemoPortalPacienteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/presupuestos': {
@@ -426,11 +526,16 @@ const rootRouteChildren: RootRouteChildren = {
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   DemoAgendaRoute: DemoAgendaRoute,
+  DemoComunicacionesRoute: DemoComunicacionesRoute,
+  DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
   DemoEstudiosRoute: DemoEstudiosRoute,
   DemoHistoriaRoute: DemoHistoriaRoute,
+  DemoMarketingRoute: DemoMarketingRoute,
+  DemoNotificacionesRoute: DemoNotificacionesRoute,
   DemoOdontogramaRoute: DemoOdontogramaRoute,
   DemoOdontograma3dRoute: DemoOdontograma3dRoute,
   DemoPacientesRoute: DemoPacientesRoute,
+  DemoPortalPacienteRoute: DemoPortalPacienteRoute,
   DemoPresupuestosRoute: DemoPresupuestosRoute,
   DemoRecetasRoute: DemoRecetasRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,

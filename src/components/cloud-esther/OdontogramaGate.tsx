@@ -1,22 +1,18 @@
 // src/components/cloud-esther/OdontogramaGate.tsx
+
 import { OdontogramaSec } from "@/components/cloud-esther/Odontograma2D";
 import { Odontograma3D } from "@/components/cloud-esther/Odontograma3D";
 
-/**
- * Regla de odontograma según el plan:
- *
- * Esencial     → 2D
- * Profesional  → 2D
- * Avanzado     → 3D
- * Enterprise   → 3D
- */
 function planIncluye3D(plan: string): boolean {
   const planNormalizado = plan.trim().toLowerCase();
 
   return (
+    planNormalizado === "avanzada" ||
     planNormalizado === "avanzado" ||
+    planNormalizado === "grupo" ||
+    planNormalizado === "enterprise" ||
     planNormalizado === "clínica avanzada" ||
-    planNormalizado === "enterprise"
+    planNormalizado === "clinica avanzada"
   );
 }
 

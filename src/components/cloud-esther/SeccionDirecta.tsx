@@ -14,7 +14,10 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { AppShell } from "@/components/cloud-esther/AppShell";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import {
+  CloudEstherProvider,
+  useCloudEsther,
+} from "@/lib/cloud-esther/data";
 import {
   SeccionPaciente,
   useRegistrosPacientes,
@@ -23,6 +26,7 @@ import type {
   SeccionRegistros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
+import { Odontograma3D } from "@/components/cloud-esther/Odontograma3D";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 
@@ -34,9 +38,7 @@ import type { Paciente } from "@/lib/cloud-esther/pacientes";
   cálida, moderna, expresiva y clínica sin verse sobria.
 */
 
-export type SeccionDirectaId = SeccionRegistros | "odontograma";
-
-const PLAN_ACTUAL = "Clínica Avanzada";
+export type SeccionDirectaId = SeccionRegistros | "odontograma" | "odontograma-3d";
 
 export const headSeccion = (titulo: string) => () => ({
   meta: [{ title: `${titulo} | Cloud Esther` }],
@@ -204,6 +206,8 @@ function SeccionDirectaInner({
 }: Props) {
   const { message, show } = useToast();
 
+  const { plan } = useCloudEsther();
+
   const {
     pacientes,
     activoId,
@@ -332,8 +336,6 @@ function SeccionDirectaInner({
           {!activo ? (
             <section className="mt-5">
               <div className="overflow-hidden rounded-3xl border border-primary/10 bg-card/90 shadow-sm backdrop-blur-sm">
-                {/* Cabecera del buscador */}
-
                 <div className="border-b border-border/60 bg-primary/[0.025] px-5 py-5 sm:px-7">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -358,8 +360,6 @@ function SeccionDirectaInner({
                       </div>
                     )}
                   </div>
-
-                  {/* Buscador */}
 
                   <div className="relative mt-5 max-w-3xl">
                     <Search className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-primary/60" />
@@ -396,8 +396,6 @@ function SeccionDirectaInner({
                     )}
                   </div>
                 </div>
-
-                {/* Resultados */}
 
                 {resultados.length === 0 ? (
                   <div className="px-5 py-14 sm:px-7">
@@ -485,8 +483,6 @@ function SeccionDirectaInner({
                   </div>
                 )}
               </div>
-
-              {/* Pie contextual */}
 
               {pacientes.length > 0 && (
                 <div className="mt-3 flex items-center gap-2 px-1 text-xs text-muted-foreground">
@@ -576,8 +572,6 @@ function SeccionDirectaInner({
                       </button>
                     </div>
 
-                    {/* Mini contexto */}
-
                     <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl bg-primary/[0.035] px-4 py-3 ring-1 ring-inset ring-primary/[0.08]">
                       <span className="size-2 rounded-full bg-emerald-500" />
 
@@ -605,10 +599,16 @@ function SeccionDirectaInner({
                 <div className="overflow-hidden rounded-3xl border border-primary/10 bg-card/90 p-4 shadow-sm backdrop-blur-sm sm:p-6">
                   {seccion === "odontograma" ? (
                     <OdontogramaGate
-                      key={activo.id}
+                      key={`${activo.id}-${plan}`}
                       pacienteId={activo.id}
                       onToast={show}
-                      plan={PLAN_ACTUAL}
+                      plan={plan}
+                    />
+                  ) : seccion === "odontograma-3d" ? (
+                    <Odontograma3D
+                      key={`${activo.id}-3d`}
+                      pacienteId={String(activo.id)}
+                      onToast={show}
                     />
                   ) : (
                     <SeccionPaciente

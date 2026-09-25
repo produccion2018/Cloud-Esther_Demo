@@ -23,6 +23,7 @@ import {
   Mails,
   Plug,
   FolderOpen,
+  Wallet,
 } from "lucide-react";
 
 export type PlanId = "inicial" | "profesional" | "avanzada" | "grupo";
@@ -252,7 +253,7 @@ export const MODULES: AppModule[] = [
     id: "equipo",
     label: "Equipo",
     icon: "team",
-    path: "/demo/equipo",
+    path: "/demo/equipo-profesional",
     group: "Operación",
     minPlan: "inicial",
   },
@@ -302,9 +303,17 @@ export const MODULES: AppModule[] = [
   // ─────────────────────────────────────────────
   {
     id: "facturacion",
-    label: "Finanzas",
+    label: "Facturación",
     icon: "receipt",
     path: "/demo/facturacion",
+    group: "Administración",
+    minPlan: "profesional",
+  },
+  {
+    id: "finanzas",
+    label: "Finanzas",
+    icon: "finanzas",
+    path: "/demo/finanzas",
     group: "Administración",
     minPlan: "profesional",
   },
@@ -426,6 +435,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   team: UserCog,
   file: FileText,
   receipt: Receipt,
+  finanzas: Wallet,
   boxes: Boxes,
   chart: BarChart3,
   shield: Shield,

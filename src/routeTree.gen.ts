@@ -20,10 +20,14 @@ import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frec
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as DemoBiRouteImport } from './routes/demo_.bi'
 import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
 import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
 import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
+import { Route as DemoFinanzasRouteImport } from './routes/demo_.finanzas'
 import { Route as DemoHistoriaRouteImport } from './routes/demo_.historia'
+import { Route as DemoInventarioRouteImport } from './routes/demo_.inventario'
+import { Route as DemoLaboratorioRouteImport } from './routes/demo_.laboratorio'
 import { Route as DemoMarketingRouteImport } from './routes/demo_.marketing'
 import { Route as DemoNotificacionesRouteImport } from './routes/demo_.notificaciones'
 import { Route as DemoOdontogramaRouteImport } from './routes/demo_.odontograma'
@@ -33,6 +37,9 @@ import { Route as DemoPortalPacienteRouteImport } from './routes/demo_.portal-pa
 import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuestos'
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
+import { Route as DemoEquipoProfesionalEspecialidadesRouteImport } from './routes/demo_.equipo-profesional_.especialidades'
+import { Route as DemoEquipoProfesionalPermisosAccesosRouteImport } from './routes/demo_.equipo-profesional_.permisos-accesos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,6 +96,11 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoBiRoute = DemoBiRouteImport.update({
+  id: '/demo_/bi',
+  path: '/demo/bi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoComunicacionesRoute = DemoComunicacionesRouteImport.update({
   id: '/demo_/comunicaciones',
   path: '/demo/comunicaciones',
@@ -104,9 +116,24 @@ const DemoEstudiosRoute = DemoEstudiosRouteImport.update({
   path: '/demo/estudios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoFinanzasRoute = DemoFinanzasRouteImport.update({
+  id: '/demo_/finanzas',
+  path: '/demo/finanzas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoHistoriaRoute = DemoHistoriaRouteImport.update({
   id: '/demo_/historia',
   path: '/demo/historia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoInventarioRoute = DemoInventarioRouteImport.update({
+  id: '/demo_/inventario',
+  path: '/demo/inventario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoLaboratorioRoute = DemoLaboratorioRouteImport.update({
+  id: '/demo_/laboratorio',
+  path: '/demo/laboratorio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoMarketingRoute = DemoMarketingRouteImport.update({
@@ -154,6 +181,24 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoEquipoProfesionalAgendasHorariosRoute =
+  DemoEquipoProfesionalAgendasHorariosRouteImport.update({
+    id: '/demo_/equipo-profesional_/agendas-horarios',
+    path: '/demo/equipo-profesional/agendas-horarios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DemoEquipoProfesionalEspecialidadesRoute =
+  DemoEquipoProfesionalEspecialidadesRouteImport.update({
+    id: '/demo_/equipo-profesional_/especialidades',
+    path: '/demo/equipo-profesional/especialidades',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DemoEquipoProfesionalPermisosAccesosRoute =
+  DemoEquipoProfesionalPermisosAccesosRouteImport.update({
+    id: '/demo_/equipo-profesional_/permisos-accesos',
+    path: '/demo/equipo-profesional/permisos-accesos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -166,10 +211,14 @@ export interface FileRoutesByFullPath {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
+  '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/inventario': typeof DemoInventarioRoute
+  '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
@@ -180,6 +229,9 @@ export interface FileRoutesByFullPath {
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
+  '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
+  '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
+  '/demo/equipo-profesional/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -192,10 +244,14 @@ export interface FileRoutesByTo {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
+  '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/inventario': typeof DemoInventarioRoute
+  '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
@@ -206,6 +262,9 @@ export interface FileRoutesByTo {
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app': typeof AppIndexRoute
+  '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
+  '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
+  '/demo/equipo-profesional/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -219,10 +278,14 @@ export interface FileRoutesById {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo_/agenda': typeof DemoAgendaRoute
+  '/demo_/bi': typeof DemoBiRoute
   '/demo_/comunicaciones': typeof DemoComunicacionesRoute
   '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo_/estudios': typeof DemoEstudiosRoute
+  '/demo_/finanzas': typeof DemoFinanzasRoute
   '/demo_/historia': typeof DemoHistoriaRoute
+  '/demo_/inventario': typeof DemoInventarioRoute
+  '/demo_/laboratorio': typeof DemoLaboratorioRoute
   '/demo_/marketing': typeof DemoMarketingRoute
   '/demo_/notificaciones': typeof DemoNotificacionesRoute
   '/demo_/odontograma': typeof DemoOdontogramaRoute
@@ -233,6 +296,9 @@ export interface FileRoutesById {
   '/demo_/recetas': typeof DemoRecetasRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
+  '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
+  '/demo_/equipo-profesional_/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
+  '/demo_/equipo-profesional_/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -247,10 +313,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/bi'
     | '/demo/comunicaciones'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
+    | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/inventario'
+    | '/demo/laboratorio'
     | '/demo/marketing'
     | '/demo/notificaciones'
     | '/demo/odontograma'
@@ -261,6 +331,9 @@ export interface FileRouteTypes {
     | '/demo/recetas'
     | '/demo/tratamientos'
     | '/app/'
+    | '/demo/equipo-profesional/agendas-horarios'
+    | '/demo/equipo-profesional/especialidades'
+    | '/demo/equipo-profesional/permisos-accesos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -273,10 +346,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/bi'
     | '/demo/comunicaciones'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
+    | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/inventario'
+    | '/demo/laboratorio'
     | '/demo/marketing'
     | '/demo/notificaciones'
     | '/demo/odontograma'
@@ -287,6 +364,9 @@ export interface FileRouteTypes {
     | '/demo/recetas'
     | '/demo/tratamientos'
     | '/app'
+    | '/demo/equipo-profesional/agendas-horarios'
+    | '/demo/equipo-profesional/especialidades'
+    | '/demo/equipo-profesional/permisos-accesos'
   id:
     | '__root__'
     | '/'
@@ -299,10 +379,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo_/agenda'
+    | '/demo_/bi'
     | '/demo_/comunicaciones'
     | '/demo_/equipo-profesional'
     | '/demo_/estudios'
+    | '/demo_/finanzas'
     | '/demo_/historia'
+    | '/demo_/inventario'
+    | '/demo_/laboratorio'
     | '/demo_/marketing'
     | '/demo_/notificaciones'
     | '/demo_/odontograma'
@@ -313,6 +397,9 @@ export interface FileRouteTypes {
     | '/demo_/recetas'
     | '/demo_/tratamientos'
     | '/app/'
+    | '/demo_/equipo-profesional_/agendas-horarios'
+    | '/demo_/equipo-profesional_/especialidades'
+    | '/demo_/equipo-profesional_/permisos-accesos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -326,10 +413,14 @@ export interface RootRouteChildren {
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
+  DemoBiRoute: typeof DemoBiRoute
   DemoComunicacionesRoute: typeof DemoComunicacionesRoute
   DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
   DemoEstudiosRoute: typeof DemoEstudiosRoute
+  DemoFinanzasRoute: typeof DemoFinanzasRoute
   DemoHistoriaRoute: typeof DemoHistoriaRoute
+  DemoInventarioRoute: typeof DemoInventarioRoute
+  DemoLaboratorioRoute: typeof DemoLaboratorioRoute
   DemoMarketingRoute: typeof DemoMarketingRoute
   DemoNotificacionesRoute: typeof DemoNotificacionesRoute
   DemoOdontogramaRoute: typeof DemoOdontogramaRoute
@@ -340,6 +431,9 @@ export interface RootRouteChildren {
   DemoRecetasRoute: typeof DemoRecetasRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   AppIndexRoute: typeof AppIndexRoute
+  DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
+  DemoEquipoProfesionalEspecialidadesRoute: typeof DemoEquipoProfesionalEspecialidadesRoute
+  DemoEquipoProfesionalPermisosAccesosRoute: typeof DemoEquipoProfesionalPermisosAccesosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -421,6 +515,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/bi': {
+      id: '/demo_/bi'
+      path: '/demo/bi'
+      fullPath: '/demo/bi'
+      preLoaderRoute: typeof DemoBiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/comunicaciones': {
       id: '/demo_/comunicaciones'
       path: '/demo/comunicaciones'
@@ -442,11 +543,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoEstudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/finanzas': {
+      id: '/demo_/finanzas'
+      path: '/demo/finanzas'
+      fullPath: '/demo/finanzas'
+      preLoaderRoute: typeof DemoFinanzasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/historia': {
       id: '/demo_/historia'
       path: '/demo/historia'
       fullPath: '/demo/historia'
       preLoaderRoute: typeof DemoHistoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/inventario': {
+      id: '/demo_/inventario'
+      path: '/demo/inventario'
+      fullPath: '/demo/inventario'
+      preLoaderRoute: typeof DemoInventarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/laboratorio': {
+      id: '/demo_/laboratorio'
+      path: '/demo/laboratorio'
+      fullPath: '/demo/laboratorio'
+      preLoaderRoute: typeof DemoLaboratorioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/marketing': {
@@ -512,6 +634,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/equipo-profesional_/agendas-horarios': {
+      id: '/demo_/equipo-profesional_/agendas-horarios'
+      path: '/demo/equipo-profesional/agendas-horarios'
+      fullPath: '/demo/equipo-profesional/agendas-horarios'
+      preLoaderRoute: typeof DemoEquipoProfesionalAgendasHorariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/equipo-profesional_/especialidades': {
+      id: '/demo_/equipo-profesional_/especialidades'
+      path: '/demo/equipo-profesional/especialidades'
+      fullPath: '/demo/equipo-profesional/especialidades'
+      preLoaderRoute: typeof DemoEquipoProfesionalEspecialidadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/equipo-profesional_/permisos-accesos': {
+      id: '/demo_/equipo-profesional_/permisos-accesos'
+      path: '/demo/equipo-profesional/permisos-accesos'
+      fullPath: '/demo/equipo-profesional/permisos-accesos'
+      preLoaderRoute: typeof DemoEquipoProfesionalPermisosAccesosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -526,10 +669,14 @@ const rootRouteChildren: RootRouteChildren = {
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   DemoAgendaRoute: DemoAgendaRoute,
+  DemoBiRoute: DemoBiRoute,
   DemoComunicacionesRoute: DemoComunicacionesRoute,
   DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
   DemoEstudiosRoute: DemoEstudiosRoute,
+  DemoFinanzasRoute: DemoFinanzasRoute,
   DemoHistoriaRoute: DemoHistoriaRoute,
+  DemoInventarioRoute: DemoInventarioRoute,
+  DemoLaboratorioRoute: DemoLaboratorioRoute,
   DemoMarketingRoute: DemoMarketingRoute,
   DemoNotificacionesRoute: DemoNotificacionesRoute,
   DemoOdontogramaRoute: DemoOdontogramaRoute,
@@ -540,6 +687,12 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRecetasRoute: DemoRecetasRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
   AppIndexRoute: AppIndexRoute,
+  DemoEquipoProfesionalAgendasHorariosRoute:
+    DemoEquipoProfesionalAgendasHorariosRoute,
+  DemoEquipoProfesionalEspecialidadesRoute:
+    DemoEquipoProfesionalEspecialidadesRoute,
+  DemoEquipoProfesionalPermisosAccesosRoute:
+    DemoEquipoProfesionalPermisosAccesosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

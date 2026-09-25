@@ -3,7 +3,8 @@ import type { FormEvent, ReactNode } from "react";
 import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
   CalendarDays, Wallet, HeartPulse, Check, Paperclip, ExternalLink, Upload, Pill, Printer,
-  Images, GitCompare, Ruler, Link2, Activity, Download, Mail, ZoomIn, ZoomOut, Eye,
+  Images, GitCompare, Ruler, Link2, Activity, Download, Mail, ZoomIn, ZoomOut, Eye, FlaskConical,
+  Truck, PackageCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -15,6 +16,7 @@ const PROFESIONALES: string[] = [];
 const SUCURSALES: string[] = [];
 const PRACTICAS: string[] = [];
 const MEDICAMENTOS: string[] = [];
+const LABORATORIOS_PROVEEDORES: string[] = [];
 
 /* ───────────── Opciones fijas del producto ───────────── */
 
@@ -66,6 +68,31 @@ const TIPOS_MOVIMIENTO = ["Cargo", "Pago", "Nota de crédito"] as const;
 const MEDIOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta de débito", "Tarjeta de crédito", "Obra social"];
 const ROLES_PROFESIONAL = ["Principal", "Interconsulta", "Derivación"] as const;
 
+const TIPOS_TRABAJO_LAB = [
+  "Corona",
+  "Puente",
+  "Prótesis removible",
+  "Prótesis completa",
+  "Placa de descarga",
+  "Férula de blanqueamiento",
+  "Carilla",
+  "Guarda oclusal",
+  "Modelo de estudio",
+  "Otro",
+];
+
+const MATERIALES_LAB = [
+  "Zirconio",
+  "Disilicato de litio (e.max)",
+  "Metal-porcelana",
+  "Acrílico",
+  "Resina",
+  "Flexible",
+  "Otro",
+];
+
+const ESTADOS_LABORATORIO = ["Enviado", "En proceso", "Listo para retirar", "Entregado"] as const;
+
 /* ───────────── Tipos ───────────── */
 
 type EstadoTratamiento = (typeof ESTADOS_TRATAMIENTO)[number];
@@ -76,6 +103,7 @@ type EstadoInforme = (typeof ESTADOS_INFORME)[number];
 type EstadoDiagnostico = (typeof ESTADOS_DIAGNOSTICO)[number];
 type TipoMovimiento = (typeof TIPOS_MOVIMIENTO)[number];
 type RolProfesional = (typeof ROLES_PROFESIONAL)[number];
+type EstadoLaboratorio = (typeof ESTADOS_LABORATORIO)[number];
 
 type Evolucion = { id: number; fecha: string; profesional: string; motivo: string; pieza: string; detalle: string };
 
@@ -191,6 +219,19 @@ type Movimiento = {
 
 type ProfesionalPaciente = { id: number; nombre: string; especialidad: string; rol: RolProfesional; desde: string };
 
+export type TrabajoLaboratorio = {
+  id: number;
+  tipo: string;
+  pieza: string;
+  material: string;
+  proveedor: string;
+  fechaEnvio: string;
+  fechaEntregaEstimada: string;
+  estado: EstadoLaboratorio;
+  costo: number;
+  notas: string;
+};
+
 export type Registros = {
   historia: Evolucion[];
   tratamientos: TratamientoPaciente[];
@@ -203,12 +244,13 @@ export type Registros = {
   turnos: TurnoPaciente[];
   cuenta: Movimiento[];
   profesionales: ProfesionalPaciente[];
+  laboratorio: TrabajoLaboratorio[];
 };
 
 export type Cambiar = <K extends keyof Registros>(clave: K, fn: (prev: Registros[K]) => Registros[K]) => void;
 
 export type SeccionRegistros =
-  | "historia" | "tratamientos" | "documentos" | "recetas" | "estudios" | "presupuestos" | "turnos" | "cuenta" | "profesionales";
+  | "historia" | "tratamientos" | "documentos" | "recetas" | "estudios" | "presupuestos" | "turnos" | "cuenta" | "profesionales" | "laboratorio";
 
 /* Datos opcionales del contexto (paciente / clínica) para la receta digital y el resumen de estudios.
    TODO backend: completarlos desde la ficha del paciente y la configuración de la clínica. */
@@ -226,6 +268,7 @@ const VACIO: Registros = {
   turnos: [],
   cuenta: [],
   profesionales: [],
+  laboratorio: [],
 };
 
 /* ───────────── Estado por paciente ─────────────
@@ -400,6 +443,15 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           sucursal: "",
           estado: "Confirmado",
         },
+        {
+          id: 2,
+          fecha: "2026-08-10",
+          hora: "10:30",
+          motivo: "Control y evaluación",
+          profesional: "Dr. Carlos Rodríguez",
+          sucursal: "",
+          estado: "Atendido",
+        },
       ],
       cuenta: [
         {
@@ -419,6 +471,20 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           especialidad: "Odontología general",
           rol: "Principal",
           desde: "2026-08-20",
+        },
+      ],
+      laboratorio: [
+        {
+          id: 1,
+          tipo: "Corona",
+          pieza: "21",
+          material: "Disilicato de litio (e.max)",
+          proveedor: "",
+          fechaEnvio: "2026-08-21",
+          fechaEntregaEstimada: "2026-08-29",
+          estado: "En proceso",
+          costo: 0,
+          notas: "Toma de color registrada. Pendiente de recibir del laboratorio.",
         },
       ],
     },
@@ -568,6 +634,12 @@ const TONO_INFORME: Record<EstadoInforme, Tono> = {
 const TONO_DIAGNOSTICO: Record<EstadoDiagnostico, Tono> = {
   Activo: "primary",
   Resuelto: "verde",
+};
+const TONO_LABORATORIO: Record<EstadoLaboratorio, Tono> = {
+  Enviado: "ambar",
+  "En proceso": "primary",
+  "Listo para retirar": "verde",
+  Entregado: "gris",
 };
 
 /* ───────────── Piezas comunes ───────────── */
@@ -865,6 +937,11 @@ function Datalists() {
       </datalist>
       <datalist id="dl-medicamentos">
         {MEDICAMENTOS.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+      <datalist id="dl-laboratorios">
+        {LABORATORIOS_PROVEEDORES.map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -3340,6 +3417,165 @@ function ProfesionalesSec({ datos, cambiar, onToast }: PropsSeccion) {
   );
 }
 
+/* ───────────── Laboratorio ───────────── */
+
+function LaboratorioForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (t: Omit<TrabajoLaboratorio, "id" | "estado">) => void;
+  onCancel: () => void;
+}) {
+  const [tipo, setTipo] = useState(TIPOS_TRABAJO_LAB[0]);
+  const [pieza, setPieza] = useState("");
+  const [material, setMaterial] = useState(MATERIALES_LAB[0]);
+  const [proveedor, setProveedor] = useState("");
+  const [fechaEnvio, setFechaEnvio] = useState(hoyISO());
+  const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
+  const [costo, setCosto] = useState("");
+  const [notas, setNotas] = useState("");
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      tipo,
+      pieza: pieza.trim(),
+      material,
+      proveedor: proveedor.trim(),
+      fechaEnvio,
+      fechaEntregaEstimada,
+      costo: Number(costo) || 0,
+      notas: notas.trim(),
+    });
+  };
+
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Tipo de trabajo *">
+          <SelectField value={tipo} onChange={setTipo} options={TIPOS_TRABAJO_LAB} />
+        </Field>
+        <Field label="Pieza / zona">
+          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21, arcada superior" />
+        </Field>
+        <Field label="Material">
+          <SelectField value={material} onChange={setMaterial} options={MATERIALES_LAB} />
+        </Field>
+        <Field label="Laboratorio proveedor">
+          <input list="dl-laboratorios" value={proveedor} onChange={(e) => setProveedor(e.target.value)} className={INPUT} placeholder="Nombre del laboratorio" />
+        </Field>
+        <Field label="Fecha de envío">
+          <input type="date" value={fechaEnvio} onChange={(e) => setFechaEnvio(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Entrega estimada">
+          <input type="date" value={fechaEntregaEstimada} onChange={(e) => setFechaEntregaEstimada(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Costo (ARS)">
+          <input type="number" min={0} value={costo} onChange={(e) => setCosto(e.target.value)} className={INPUT} placeholder="0" />
+        </Field>
+      </div>
+      <Field label="Notas">
+        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Toma de color, especificaciones, observaciones…" />
+      </Field>
+      <Acciones etiqueta="Enviar a laboratorio" onCancel={onCancel} />
+    </form>
+  );
+}
+
+function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
+  const [abierto, setAbierto] = useState(false);
+  const lista = [...datos.laboratorio].sort((a, b) => `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`));
+
+  const enProceso = datos.laboratorio.filter((t) => t.estado === "Enviado" || t.estado === "En proceso").length;
+  const listos = datos.laboratorio.filter((t) => t.estado === "Listo para retirar").length;
+  const entregados = datos.laboratorio.filter((t) => t.estado === "Entregado").length;
+
+  const cambiarEstado = (t: TrabajoLaboratorio, estado: EstadoLaboratorio) => {
+    // TODO backend: PATCH /pacientes/:id/laboratorio/:trabajoId { estado }
+    cambiar("laboratorio", (prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
+    onToast(`${t.tipo}: ${estado.toLowerCase()}`);
+  };
+
+  return (
+    <div className="space-y-3">
+      <Encabezado
+        icon={FlaskConical}
+        titulo="Laboratorio"
+        descripcion="Trabajos enviados al laboratorio dental: coronas, prótesis, placas y otros elementos."
+        etiquetaBoton="Enviar a laboratorio"
+        onAgregar={() => setAbierto(true)}
+      />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <ResumenCuenta etiqueta="En proceso" valor={String(enProceso)} icon={Truck} tono="text-primary" />
+        <ResumenCuenta etiqueta="Listos para retirar" valor={String(listos)} icon={PackageCheck} tono="text-emerald-600" />
+        <ResumenCuenta etiqueta="Entregados" valor={String(entregados)} icon={Check} />
+      </div>
+
+      {lista.length === 0 ? (
+        <EstadoVacio
+          icon={FlaskConical}
+          titulo="Sin trabajos de laboratorio"
+          texto="Cada trabajo pasa por estos estados:"
+          chips={ESTADOS_LABORATORIO}
+        />
+      ) : (
+        <ul className="space-y-2.5">
+          {lista.map((t) => (
+            <li key={t.id} className={`${ITEM} flex flex-wrap items-center gap-3`}>
+              <span className={`${CIRCULO_ICONO} size-10`}>
+                <FlaskConical className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold">{t.tipo}</p>
+                  {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
+                  <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
+                </div>
+                <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
+                  {t.material && <span>{t.material}</span>}
+                  {t.proveedor && <span>{t.proveedor}</span>}
+                  <span>Enviado: {formatearFecha(t.fechaEnvio)}</span>
+                  {t.fechaEntregaEstimada && <span>Entrega estimada: {formatearFecha(t.fechaEntregaEstimada)}</span>}
+                </p>
+                {t.notas && <p className="mt-0.5 text-xs italic text-muted-foreground">{t.notas}</p>}
+              </div>
+              {t.costo > 0 && <span className="text-sm font-bold">{formatearMonto(t.costo)}</span>}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {t.estado === "Enviado" && <BotonMini icon={Truck} label="En proceso" onClick={() => cambiarEstado(t, "En proceso")} />}
+                {t.estado === "En proceso" && <BotonMini icon={PackageCheck} label="Listo para retirar" onClick={() => cambiarEstado(t, "Listo para retirar")} />}
+                {t.estado === "Listo para retirar" && <BotonMini icon={Check} label="Entregado" onClick={() => cambiarEstado(t, "Entregado")} />}
+                <BotonBorrar
+                  etiqueta="Eliminar trabajo de laboratorio"
+                  onClick={() => {
+                    // TODO backend: DELETE /pacientes/:id/laboratorio/:trabajoId
+                    cambiar("laboratorio", (prev) => prev.filter((x) => x.id !== t.id));
+                    onToast("Trabajo de laboratorio eliminado");
+                  }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {abierto && (
+        <Modal title="Enviar a laboratorio" onClose={() => setAbierto(false)}>
+          <LaboratorioForm
+            onCancel={() => setAbierto(false)}
+            onSubmit={(nuevo) => {
+              // TODO backend: POST /pacientes/:id/laboratorio
+              cambiar("laboratorio", (prev) => [...prev, { ...nuevo, id: Date.now(), estado: "Enviado" as const }]);
+              setAbierto(false);
+              onToast("Trabajo enviado a laboratorio");
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /* ───────────── Componente principal ───────────── */
 
 export function SeccionPaciente({
@@ -3368,6 +3604,7 @@ export function SeccionPaciente({
       {seccion === "turnos" && <TurnosSec {...props} />}
       {seccion === "cuenta" && <CuentaSec {...props} />}
       {seccion === "profesionales" && <ProfesionalesSec {...props} />}
+      {seccion === "laboratorio" && <LaboratorioSec {...props} />}
     </>
   );
 }

@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Phone,
   Pill,
+  FlaskConical,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
@@ -76,6 +77,7 @@ type Seccion =
   | "documentos"
   | "recetas"
   | "estudios"
+  | "laboratorio"
   | "presupuestos"
   | "turnos"
   | "cuenta"
@@ -93,6 +95,7 @@ const SECCIONES: {
   { id: "documentos", label: "Documentos", icon: FolderOpen },
   { id: "recetas", label: "Receta digital", icon: Pill },
   { id: "estudios", label: "Estudios y diagnósticos", icon: FileText },
+  { id: "laboratorio", label: "Laboratorio", icon: FlaskConical },
   { id: "presupuestos", label: "Presupuestos", icon: ReceiptText },
   { id: "turnos", label: "Turnos", icon: CalendarDays },
   { id: "cuenta", label: "Cuenta corriente", icon: Wallet },
@@ -215,8 +218,17 @@ function useToast() {
 const CARD =
   "rounded-2xl border border-border/70 bg-card shadow-sm";
 
+/* ITEM: cards de "Resumen" con ADN violeta de Cloud Esther —
+   borde y fondo violeta siempre visibles (no solo en hover),
+   y texto del valor un poco más suave (ver text-foreground/85 en Dato). */
 const DATO_CARD =
-  "relative overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.025]";
+  "relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card to-primary/[0.035] p-3.5 shadow-sm shadow-primary/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-primary/[0.06] hover:shadow-md hover:shadow-primary/10";
+
+/* MINI_DATO_CARD: versión compacta de DATO_CARD para los chips de la fila
+   del listado (Teléfono / Obra social / Sucursal) — mismo ADN violeta,
+   sin el ícono circular ni el padding grande. */
+const MINI_DATO_CARD =
+  "rounded-xl border border-primary/20 bg-gradient-to-br from-card to-primary/[0.03] px-3 py-2 transition-all duration-200 hover:border-primary/35 hover:bg-primary/[0.055]";
 
 const INPUT =
   "h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
@@ -224,17 +236,18 @@ const INPUT =
 const TEXTAREA =
   "min-h-20 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
 
+/* Botones más finos: menos padding vertical y tracking normal en vez de chips anchos */
 const BTN_PRIMARIO =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
 
 const BTN_SECUNDARIO =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-medium text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO =
-  "grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
+  "grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO_PELIGRO =
-  "grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/15";
+  "grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/15";
 
 /* ───────────── Fondo de pacientes ───────────── */
 
@@ -876,7 +889,7 @@ function BadgeOutline({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground/75">
+    <span className="inline-flex rounded-full border border-primary/20 bg-primary/[0.04] px-2.5 py-1 text-[11px] font-semibold text-foreground/75">
       {children}
     </span>
   );
@@ -914,13 +927,100 @@ function Dato({
       </p>
 
       <p
-        className={`relative mt-1.5 text-sm font-semibold ${
+        className={`relative mt-1.5 text-sm font-semibold text-foreground/85 ${
           cortar ? "truncate" : ""
         }`}
         title={cortar ? value : undefined}
       >
         {value || "—"}
       </p>
+    </div>
+  );
+}
+
+/* Chip compacto para la fila del listado (Teléfono / Obra social / Sucursal) */
+function DatoMini({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={MINI_DATO_CARD}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-primary/60">
+        {label}
+      </p>
+
+      <p className="mt-0.5 truncate text-sm font-medium text-foreground/85">
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
+
+/* Card de estadística estilo "Turnos de hoy / Ingresos del día": fondo blanco,
+   borde sutil, ícono en círculo arriba a la derecha, valor grande abajo. */
+type ToneClases = { label: string; icono: string; valor: string };
+
+const TONE_CLASSES: Record<"primary" | "emerald" | "violet", ToneClases> = {
+  primary: {
+    label: "text-primary/70",
+    icono: "bg-primary/10 text-primary",
+    valor: "text-foreground",
+  },
+  emerald: {
+    label: "text-emerald-600/80",
+    icono: "bg-emerald-50 text-emerald-600",
+    valor: "text-emerald-700",
+  },
+  violet: {
+    label: "text-violet-600/80",
+    icono: "bg-violet-50 text-violet-600",
+    valor: "text-violet-700",
+  },
+};
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  subtitle,
+}: {
+  label: string;
+  value: string | number;
+  icon: LucideIcon;
+  tone: "primary" | "emerald" | "violet";
+  subtitle?: string;
+}) {
+  const t = TONE_CLASSES[tone];
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <p
+          className={`text-[10px] font-bold uppercase tracking-[0.12em] ${t.label}`}
+        >
+          {label}
+        </p>
+
+        <div
+          className={`grid size-8 shrink-0 place-items-center rounded-xl ${t.icono}`}
+        >
+          <Icon className="size-4" />
+        </div>
+      </div>
+
+      <p className={`mt-1.5 text-2xl font-bold ${t.valor}`}>
+        {value}
+      </p>
+
+      {subtitle && (
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
@@ -1553,59 +1653,26 @@ function PacientesInner() {
               {/* Mini resumen */}
 
               <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                <div className="rounded-2xl border border-primary/10 bg-primary/[0.055] px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary/70">
-                        Total
-                      </p>
+                <StatCard
+                  label="Total"
+                  value={pacientes.length}
+                  icon={Users}
+                  tone="primary"
+                />
 
-                      <p className="mt-1 text-xl font-bold">
-                        {pacientes.length}
-                      </p>
-                    </div>
+                <StatCard
+                  label="Activos"
+                  value={cantidadActivos}
+                  icon={HeartPulse}
+                  tone="emerald"
+                />
 
-                    <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                      <Users className="size-4" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-emerald-600/10 bg-emerald-50/70 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700/70">
-                        Activos
-                      </p>
-
-                      <p className="mt-1 text-xl font-bold text-emerald-800">
-                        {cantidadActivos}
-                      </p>
-                    </div>
-
-                    <div className="grid size-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-                      <HeartPulse className="size-4" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-violet-600/10 bg-violet-50/70 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-700/70">
-                        Inactivos
-                      </p>
-
-                      <p className="mt-1 text-xl font-bold text-violet-800">
-                        {cantidadInactivos}
-                      </p>
-                    </div>
-
-                    <div className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-700">
-                      <History className="size-4" />
-                    </div>
-                  </div>
-                </div>
+                <StatCard
+                  label="Inactivos"
+                  value={cantidadInactivos}
+                  icon={History}
+                  tone="violet"
+                />
               </div>
 
               {/* Filtros */}
@@ -1725,7 +1792,7 @@ function PacientesInner() {
                       className={`overflow-hidden rounded-2xl border bg-card/95 shadow-sm transition-all duration-200 ${
                         abierto
                           ? "border-primary/45 shadow-md shadow-primary/5"
-                          : "border-border/70 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+                          : "border-primary/15 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                       }`}
                     >
                       <div className="p-3.5 md:p-4">
@@ -1763,38 +1830,22 @@ function PacientesInner() {
                           </div>
 
                           <div className="grid min-w-[260px] flex-[2] grid-cols-1 gap-2 sm:grid-cols-3">
-                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
-                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                                Teléfono
-                              </p>
+                            <DatoMini
+                              label="Teléfono"
+                              value={p.telefono}
+                            />
 
-                              <p className="mt-0.5 truncate text-sm font-medium">
-                                {p.telefono || "—"}
-                              </p>
-                            </div>
+                            <DatoMini
+                              label="Obra social"
+                              value={etiquetaObraSocial(
+                                p.obraSocial,
+                              )}
+                            />
 
-                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
-                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                                Obra social
-                              </p>
-
-                              <p className="mt-0.5 truncate text-sm font-medium">
-                                {etiquetaObraSocial(
-                                  p.obraSocial,
-                                )}
-                              </p>
-                            </div>
-
-                            <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5">
-                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                                Sucursal
-                              </p>
-
-                              <p className="mt-0.5 truncate text-sm font-medium">
-                                {p.sucursal ||
-                                  "—"}
-                              </p>
-                            </div>
+                            <DatoMini
+                              label="Sucursal"
+                              value={p.sucursal}
+                            />
                           </div>
 
                           <div className="ml-auto flex items-center gap-2">
@@ -1943,7 +1994,7 @@ function PacientesInner() {
                   modalEliminar.paciente,
                 )
               }
-              className="rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              className="rounded-lg bg-destructive px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
             >
               Eliminar
             </button>

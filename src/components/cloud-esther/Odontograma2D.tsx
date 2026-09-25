@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
-import { Eraser, RotateCcw, Trash2, Activity } from "lucide-react";
+import { Eraser, RotateCcw, Trash2, Activity, HeartPulse, Stethoscope, CalendarClock, CalendarCheck2 } from "lucide-react";
+import type { Registros } from "./PacienteSecciones";
 
 /* ─────────────────────────────────────────────────────────────
    Odontograma 2D - Cloud Esther
@@ -35,9 +36,7 @@ export type Denticion =
   | "temporal";
 
 export type EstadoDiente = {
-  sup: Partial<
-    Record<Superficie, HallazgoSuperficie>
-  >;
+  sup: Partial<Record<Superficie, HallazgoSuperficie>>;
   entero?: HallazgoPieza;
 };
 
@@ -1092,21 +1091,150 @@ function Dato({
   );
 }
 
+function formatearFecha(iso: string) {
+  return iso ? iso.split("-").reverse().join("/") : "";
+}
+
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* Tarjeta de resumen: estado de salud bucal, tratamientos activos,
+   próximo turno y último turno. Se calcula a partir de los hallazgos
+   del odontograma y de los registros generales del paciente (Registros). */
+function ResumenPaciente({
+  datos,
+  piezasConCaries,
+  piezasConFracturas,
+  piezasAusentes,
+}: {
+  datos?: Registros;
+  piezasConCaries: number;
+  piezasConFracturas: number;
+  piezasAusentes: number;
+}) {
+  const tratamientosActivos =
+    datos?.tratamientos.filter((t) => t.estado === "En tratamiento") ?? [];
+
+  const hoy = hoyISO();
+
+  const turnosOrdenados = [...(datos?.turnos ?? [])].sort((a, b) =>
+    `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`),
+  );
+
+  const proximoTurno =
+    turnosOrdenados.find(
+      (t) => t.fecha >= hoy && (t.estado === "Pendiente" || t.estado === "Confirmado"),
+    ) ?? null;
+
+  const ultimoTurno =
+    [...turnosOrdenados].reverse().find((t) => t.fecha < hoy || t.estado === "Atendido") ?? null;
+
+  let estadoSalud = "Buena salud bucal";
+  let estadoTono = "text-emerald-600";
+
+  if (piezasConCaries > 0 || piezasConFracturas > 0) {
+    estadoSalud = "Requiere atención";
+    estadoTono = "text-destructive";
+  } else if (piezasAusentes > 0) {
+    estadoSalud = "Estable, con antecedentes";
+    estadoTono = "text-amber-600";
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={ITEM}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Estado de salud bucal
+          </p>
+          <span className={`${CIRCULO_ICONO} size-8`}>
+            <HeartPulse className="size-4" />
+          </span>
+        </div>
+        <p className={`mt-1.5 text-sm font-bold ${estadoTono}`}>{estadoSalud}</p>
+      </div>
+
+      <div className={ITEM}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tratamientos activos
+          </p>
+          <span className={`${CIRCULO_ICONO} size-8`}>
+            <Stethoscope className="size-4" />
+          </span>
+        </div>
+        {tratamientosActivos.length === 0 ? (
+          <p className="mt-1.5 text-sm text-muted-foreground">Sin tratamientos en curso</p>
+        ) : (
+          <div className="mt-1.5">
+            <p className="text-sm font-bold">{tratamientosActivos[0].nombre}</p>
+            {tratamientosActivos.length > 1 && (
+              <p className="text-xs text-muted-foreground">y {tratamientosActivos.length - 1} más en curso</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className={ITEM}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Próximo turno
+          </p>
+          <span className={`${CIRCULO_ICONO} size-8`}>
+            <CalendarClock className="size-4" />
+          </span>
+        </div>
+        {proximoTurno ? (
+          <div className="mt-1.5">
+            <p className="text-sm font-bold">{formatearFecha(proximoTurno.fecha)} · {proximoTurno.hora} hs</p>
+            <p className="text-xs text-muted-foreground">{proximoTurno.motivo}</p>
+          </div>
+        ) : (
+          <p className="mt-1.5 text-sm text-muted-foreground">Sin turnos programados</p>
+        )}
+      </div>
+
+      <div className={ITEM}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Último turno
+          </p>
+          <span className={`${CIRCULO_ICONO} size-8`}>
+            <CalendarCheck2 className="size-4" />
+          </span>
+        </div>
+        {ultimoTurno ? (
+          <div className="mt-1.5">
+            <p className="text-sm font-bold">{formatearFecha(ultimoTurno.fecha)}</p>
+            <p className="text-xs text-muted-foreground">{ultimoTurno.motivo}</p>
+          </div>
+        ) : (
+          <p className="mt-1.5 text-sm text-muted-foreground">Sin turnos anteriores</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ───────────── Sección principal ───────────── */
 
 export function OdontogramaSec({
   pacienteId,
   onToast,
+  datos,
 }: {
   pacienteId: number;
   onToast: (
     msg: string,
   ) => void;
+  datos?: Registros;
 }) {
   const store =
     useOdontogramas();
 
-  const datos =
+  const odontograma =
     store.de(pacienteId);
 
   const [
@@ -1227,7 +1355,7 @@ export function OdontogramaSec({
 
   const limpiar = () => {
     if (
-      Object.keys(datos)
+      Object.keys(odontograma)
         .length === 0
     ) {
       return;
@@ -1254,7 +1382,7 @@ export function OdontogramaSec({
   /* ───────────── Datos ───────────── */
 
   const piezas =
-    Object.keys(datos)
+    Object.keys(odontograma)
       .map(Number)
       .sort(
         (a, b) => a - b,
@@ -1267,7 +1395,7 @@ export function OdontogramaSec({
       (acc, n) =>
         acc +
         Object.values(
-          datos[n].sup,
+          odontograma[n].sup,
         ).filter(
           (v) => v === h,
         ).length,
@@ -1279,7 +1407,7 @@ export function OdontogramaSec({
   ) =>
     piezas.filter(
       (n) =>
-        datos[n].entero ===
+        odontograma[n].entero ===
         h,
     ).length;
 
@@ -1381,6 +1509,14 @@ export function OdontogramaSec({
         </button>
       </div>
 
+      {/* Resumen: salud bucal, tratamientos activos, próximo/último turno */}
+      <ResumenPaciente
+        datos={datos}
+        piezasConCaries={superficiesCon("caries")}
+        piezasConFracturas={superficiesCon("fractura")}
+        piezasAusentes={piezasCon("ausente")}
+      />
+
       {/* Dentición */}
       <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-primary/15 bg-primary/5 p-1.5 sm:max-w-sm">
         {(
@@ -1455,7 +1591,7 @@ export function OdontogramaSec({
       <div className="rounded-xl border border-primary/25 bg-card p-3 shadow-sm">
         <Grafico
           denticion={denticion}
-          datos={datos}
+          datos={odontograma}
           onClick={aplicar}
         />
 
@@ -1475,7 +1611,7 @@ export function OdontogramaSec({
         </p>
       </div>
 
-      {/* Resumen */}
+      {/* Resumen del odontograma */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato
           etiqueta="Piezas con hallazgos"
@@ -1529,7 +1665,7 @@ export function OdontogramaSec({
           {piezas.map(
             (n) => {
               const d =
-                datos[n];
+                odontograma[n];
 
               const caras =
                 (

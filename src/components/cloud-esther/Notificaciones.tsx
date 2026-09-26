@@ -100,6 +100,12 @@ const INITIAL_NOTIFICACIONES: Notificacion[] = [
   },
 ];
 
+const ESTHER_CARD =
+  "relative overflow-hidden rounded-2xl border border-violet-300/70 bg-[radial-gradient(circle_at_100%_0%,rgba(124,58,237,0.11)_0%,rgba(124,58,237,0.075)_18%,rgba(124,58,237,0)_34%),linear-gradient(135deg,#ffffff_0%,#fdfaff_48%,#f7f1ff_100%)] shadow-[0_2px_10px_rgba(124,58,237,0.08)]";
+
+const ESTHER_CARD_HOVER =
+  "transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/80 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]";
+
 const QUICK_TEMPLATES = [
   {
     id: 1,
@@ -298,51 +304,36 @@ function NotificacionesInner() {
 
   return (
     <AppShell>
-      <div className="relative min-h-full overflow-hidden bg-[#f8f7ff]">
-        {/* BACKGROUND */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-[0.10]"
-            style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&w=1800&q=80')",
-            }}
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-b from-[#f8f7ff]/95 via-[#f8f7ff]/90 to-[#f8f7ff]" />
-
-          <div className="absolute -right-24 top-0 h-72 w-72 rounded-full bg-violet-300/20 blur-3xl" />
-
-          <div className="absolute left-1/3 top-48 h-56 w-56 rounded-full bg-purple-200/20 blur-3xl" />
+      <div className="relative min-h-full overflow-hidden bg-[#fbfbfd] text-slate-900 antialiased">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -right-24 top-0 h-72 w-72 rounded-full bg-violet-200/20 blur-3xl" />
+          <div className="absolute left-1/3 top-56 h-56 w-56 rounded-full bg-purple-100/30 blur-3xl" />
         </div>
 
         <div className="relative mx-auto w-full max-w-[1500px] px-4 py-5 md:px-6 lg:px-8">
           {/* HEADER */}
-          <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <header className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                  <BellRing size={19} />
-                </div>
-
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    Notificaciones
-                  </h1>
-
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    Recordatorios para tu equipo y alertas automáticas para
-                    tus pacientes.
-                  </p>
-                </div>
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/80">
+                <BellRing size={14} />
+                Centro de operaciones
               </div>
+
+              <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950 md:text-[2.1rem]">
+                Notificaciones
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Recordatorios para tu equipo y alertas automáticas para tus
+                pacientes.
+              </p>
             </div>
 
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowAudit(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/40 hover:shadow-md"
               >
                 <History size={15} />
                 Auditoría
@@ -351,7 +342,7 @@ function NotificacionesInner() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-lg"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lg"
               >
                 <Plus size={15} />
                 Nueva notificación
@@ -360,7 +351,7 @@ function NotificacionesInner() {
           </header>
 
           {/* QUICK TEMPLATES */}
-          <section className="mb-5 rounded-2xl border border-violet-200/80 bg-white/75 p-5 shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <section className={`mb-6 ${ESTHER_CARD} p-5`}>
             <div className="mb-4">
               <h2 className="text-sm font-bold text-slate-900">
                 Plantillas rápidas
@@ -377,7 +368,7 @@ function NotificacionesInner() {
 
                 return (
                   <div key={group.category}>
-                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-600">
+                    <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary/80">
                       <Icon size={14} />
                       {group.category}
                     </div>
@@ -394,7 +385,7 @@ function NotificacionesInner() {
                             onClick={() =>
                               createFromTemplate(group.category, item)
                             }
-                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:text-violet-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
                           >
                             {isSaving && (
                               <Loader2
@@ -414,7 +405,7 @@ function NotificacionesInner() {
           </section>
 
           {/* STATS */}
-          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard icon={<Bell size={17} />} label="Total" value={notificaciones.length} />
 
             <StatCard
@@ -440,9 +431,9 @@ function NotificacionesInner() {
           </div>
 
           {/* MAIN CARD */}
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_6px_24px_rgba(51,36,84,0.05)]">
             {/* TOOLBAR */}
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
                   Centro de notificaciones
@@ -464,7 +455,7 @@ function NotificacionesInner() {
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                     placeholder="Buscar notificación..."
-                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs outline-none transition focus:border-violet-300 focus:bg-white sm:w-64"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-xs outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 sm:w-64"
                   />
                 </div>
 
@@ -524,7 +515,7 @@ function NotificacionesInner() {
           </section>
 
           {/* FOOTER INFO */}
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-200/70 bg-violet-50/70 px-4 py-3 text-xs text-violet-700">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3 text-xs text-violet-700">
             <Bell size={15} />
             Las notificaciones se mantienen durante la sesión en esta versión
             demo.
@@ -729,7 +720,7 @@ function NotificationRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="group flex flex-col gap-3 border-b border-slate-100 p-4 transition-all duration-200 hover:bg-violet-50/40 hover:shadow-[inset_3px_0_0_#7c3aed] sm:flex-row sm:items-center">
+    <div className={`${ESTHER_CARD} ${ESTHER_CARD_HOVER} group p-4`}>
       <div
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
           notification.prioridad === "Alta"
@@ -781,7 +772,7 @@ function NotificationRow({
               type="button"
               onClick={onRead}
               title="Marcar como leída"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-violet-100 hover:text-violet-600"
+              className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
             >
               <Eye size={15} />
             </button>
@@ -790,7 +781,7 @@ function NotificationRow({
               type="button"
               onClick={onComplete}
               title="Completar"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-emerald-100 hover:text-emerald-600"
+              className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
             >
               <Check size={15} />
             </button>
@@ -812,7 +803,7 @@ function NotificationRow({
           type="button"
           onClick={onDelete}
           title="Eliminar"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+          className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
         >
           <Trash2 size={14} />
         </button>
@@ -857,18 +848,19 @@ function StatCard({
           : "bg-violet-100 text-violet-600";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-violet-200 hover:shadow-lg">
-      <div className="flex items-center gap-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconStyle}`}>
-          {icon}
-        </div>
-
+    <div className={`${ESTHER_CARD} ${ESTHER_CARD_HOVER} p-4`}>
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[11px] text-slate-400">{label}</div>
-
-          <div className="mt-0.5 text-xl font-bold text-slate-900">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            {label}
+          </div>
+          <div className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
             {value}
           </div>
+        </div>
+
+        <div className={`grid size-9 shrink-0 place-items-center rounded-xl ${iconStyle} ring-1 ring-black/[0.03]`}>
+          {icon}
         </div>
       </div>
     </div>

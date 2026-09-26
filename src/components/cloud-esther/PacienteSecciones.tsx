@@ -568,10 +568,10 @@ function escapar(t: string) {
 /* ───────────── Estilos ───────────── */
 
 const ITEM =
-  "relative overflow-hidden rounded-xl border border-primary/20 bg-card bg-gradient-to-br from-card via-card to-[oklch(0.94_0.035_292)] p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10";
+  "relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-white via-card to-primary/[0.035] p-3.5 shadow-[0_8px_24px_-18px_rgba(124,58,237,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.32)]";
 
 const ESTUDIO_ITEM =
-  "relative overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md";
+  "relative overflow-hidden rounded-2xl border border-primary/10 bg-card shadow-[0_8px_24px_-18px_rgba(124,58,237,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.30)]";
 
 const INPUT =
   "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -586,7 +586,7 @@ const BTN_SECUNDARIO =
   "flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
 
 const CIRCULO_ICONO =
-  "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/15";
+  "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15 shadow-[0_5px_14px_-8px_rgba(124,58,237,0.32)]";
 
 type Tono = "primary" | "verde" | "ambar" | "rojo" | "gris";
 
@@ -699,7 +699,7 @@ function EstadoVacio({
   chips?: readonly string[];
 }) {
   return (
-    <div className="grid min-h-40 place-items-center rounded-xl border border-dashed border-border p-6 text-center">
+    <div className="relative grid min-h-40 place-items-center overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-white via-card to-primary/[0.025] p-6 text-center shadow-[0_8px_22px_-18px_rgba(124,58,237,0.22)]">
       <div>
         <Icon className="mx-auto size-8 text-primary/60" />
         <p className="mt-2 text-sm font-semibold">{titulo}</p>
@@ -3223,12 +3223,14 @@ function MovimientoForm({
 
 function ResumenCuenta({ etiqueta, valor, icon: Icon, tono }: { etiqueta: string; valor: string; icon: LucideIcon; tono?: string }) {
   return (
-    <div className={ITEM}>
-      <div className="pointer-events-none absolute -right-5 -top-5 grid size-20 place-items-center rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent ring-1 ring-primary/10">
-        <Icon className="size-4 text-primary/70" />
+    <div className={`${ITEM} min-h-[86px]`}>
+      <div className="pointer-events-none absolute -right-7 -top-7 grid size-24 place-items-center rounded-full bg-gradient-to-br from-primary/16 via-primary/8 to-transparent ring-1 ring-primary/10">
+        <span className="grid size-9 place-items-center rounded-full bg-white/55 text-primary shadow-sm ring-1 ring-primary/10 backdrop-blur">
+          <Icon className="size-4" />
+        </span>
       </div>
-      <p className="relative pr-8 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{etiqueta}</p>
-      <p className={`relative mt-1 text-base font-bold ${tono ?? ""}`}>{valor}</p>
+      <p className="relative z-10 pr-12 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</p>
+      <p className={`relative z-10 mt-1 text-lg font-bold tracking-tight ${tono ?? ""}`}>{valor}</p>
     </div>
   );
 }
@@ -3576,6 +3578,84 @@ function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
   );
 }
 
+/* ───────────── Resumen visual del paciente ───────────── */
+
+function ResumenPaciente({ datos, contexto }: { datos: Registros; contexto?: ContextoPaciente }) {
+  if (!contexto?.paciente) return null;
+
+  const hoy = hoyISO();
+  const tratamientosActivos = datos.tratamientos.filter(
+    (t) => t.estado === "Planificado" || t.estado === "En tratamiento",
+  ).length;
+
+  const proximoTurno = [...datos.turnos]
+    .filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`)
+    .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
+
+  const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
+  const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
+  const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);
+  const saldo = cargos - pagos - creditos;
+
+  const inicialesPaciente = iniciales(contexto.paciente) || "PA";
+
+  return (
+    <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
+      <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(124,58,237,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(124,58,237,0.035) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          maskImage: "linear-gradient(to bottom, black, transparent 85%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black, transparent 85%)",
+        }}
+      />
+
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">
+            {inicialesPaciente}
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p>
+            <h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>
+            {contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
+            {datos.historia.length} evoluciones
+          </span>
+          <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
+            {datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos
+          </span>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" />
+        <ResumenCuenta
+          etiqueta="Próximo turno"
+          valor={proximoTurno ? `${formatearFecha(proximoTurno.fecha)} · ${proximoTurno.hora}` : "Sin turno"}
+          icon={CalendarDays}
+        />
+        <ResumenCuenta
+          etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"}
+          valor={formatearMonto(Math.abs(saldo))}
+          icon={Wallet}
+          tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""}
+        />
+        <ResumenCuenta etiqueta="Estudios registrados" valor={String(datos.estudios.length)} icon={Images} />
+      </div>
+    </section>
+  );
+}
+
 /* ───────────── Componente principal ───────────── */
 
 export function SeccionPaciente({
@@ -3593,18 +3673,38 @@ export function SeccionPaciente({
 }) {
   const props = { datos, cambiar, onToast, contexto };
   return (
-    <>
-      <Datalists />
-      {seccion === "historia" && <HistoriaSec {...props} />}
-      {seccion === "tratamientos" && <TratamientosSec {...props} />}
-      {seccion === "documentos" && <DocumentosSec {...props} />}
-      {seccion === "recetas" && <RecetasSec {...props} />}
-      {seccion === "estudios" && <EstudiosSec {...props} />}
-      {seccion === "presupuestos" && <PresupuestosSec {...props} />}
-      {seccion === "turnos" && <TurnosSec {...props} />}
-      {seccion === "cuenta" && <CuentaSec {...props} />}
-      {seccion === "profesionales" && <ProfesionalesSec {...props} />}
-      {seccion === "laboratorio" && <LaboratorioSec {...props} />}
-    </>
+    <div className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4">
+      {/* Fondo visual del módulo Paciente: suave, clínico y alineado al lenguaje violeta del SaaS. */}
+      <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-primary/[0.07] blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-12 size-80 rounded-full bg-primary/[0.055] blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-10rem] left-1/2 size-96 -translate-x-1/2 rounded-full bg-primary/[0.035] blur-3xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-45"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(124,58,237,0.055) 1px, transparent 0)",
+          backgroundSize: "24px 24px",
+          maskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
+        }}
+      />
+
+      <div className="relative z-10">
+        <Datalists />
+        <ResumenPaciente datos={datos} contexto={contexto} />
+
+        {seccion === "historia" && <HistoriaSec {...props} />}
+        {seccion === "tratamientos" && <TratamientosSec {...props} />}
+        {seccion === "documentos" && <DocumentosSec {...props} />}
+        {seccion === "recetas" && <RecetasSec {...props} />}
+        {seccion === "estudios" && <EstudiosSec {...props} />}
+        {seccion === "presupuestos" && <PresupuestosSec {...props} />}
+        {seccion === "turnos" && <TurnosSec {...props} />}
+        {seccion === "cuenta" && <CuentaSec {...props} />}
+        {seccion === "profesionales" && <ProfesionalesSec {...props} />}
+        {seccion === "laboratorio" && <LaboratorioSec {...props} />}
+      </div>
+    </div>
   );
 }

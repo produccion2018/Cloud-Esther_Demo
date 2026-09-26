@@ -358,22 +358,6 @@ export const MODULES: AppModule[] = [
     minPlan: "grupo",
   },
   {
-    id: "documentos",
-    label: "Documentos y seguridad",
-    icon: "documentos",
-    path: "/demo/documentos",
-    group: "Administración",
-    minPlan: "grupo",
-  },
-  {
-    id: "seguridad",
-    label: "Seguridad",
-    icon: "shield",
-    path: "/demo/seguridad",
-    group: "Administración",
-    minPlan: "grupo",
-  },
-  {
     id: "configuracion",
     label: "Configuración",
     icon: "settings",
@@ -423,8 +407,6 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "Multi-clínica",
     "Multiempresa",
     "Integraciones",
-    "Documentos y seguridad",
-    "Seguridad",
   ],
 };
 

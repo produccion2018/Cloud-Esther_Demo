@@ -570,40 +570,43 @@ export function Comunicacion() {
   return (
     <CloudEstherProvider>
       <AppShell>
-        <div className="relative min-h-full overflow-hidden bg-background text-foreground antialiased">
+        <div className="relative min-h-full overflow-hidden bg-[#fbfbfd] text-slate-900 antialiased">
           <CommunicationBackground />
 
           {feedback && (
-            <div className="fixed right-5 top-5 z-[100] flex items-center gap-2 rounded-xl border border-primary/20 bg-card px-4 py-3 text-sm font-medium text-foreground shadow-xl">
-              <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-primary">
+            <div className="fixed right-4 top-4 z-[100] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-[0_16px_40px_rgba(15,23,42,0.12)] sm:right-5 sm:top-5">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-violet-50 text-primary ring-1 ring-violet-100">
                 <Check size={15} />
               </span>
               {feedback}
             </div>
           )}
 
-          <div className="relative mx-auto w-full max-w-[1500px] px-4 py-5 md:px-6 lg:px-8">
-            <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 md:px-6 lg:px-8">
+            <header className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/80">
                   <MessageCircle size={14} />
                   Centro de operaciones
                 </div>
 
-                <h1 className="font-display text-2xl font-bold tracking-tight">
+                <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950 md:text-[2.1rem]">
                   Comunicación
                 </h1>
 
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                   Gestioná conversaciones, recordatorios, plantillas,
                   campañas y automatizaciones desde un solo lugar.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="grid w-full grid-cols-3 gap-3 xl:w-auto xl:min-w-[540px]">
                 <StatBox
                   label="Conversaciones"
                   value={conversations.length + 19}
+                  detail="7 confirmadas · 2 pendientes"
+                  trend="+9%"
+                  icon={<MessageCircle size={17} />}
                 />
                 <StatBox
                   label="Sin responder"
@@ -611,15 +614,21 @@ export function Comunicacion() {
                     conversations.filter((x) => x.status === "Pendiente")
                       .length + 4
                   }
+                  detail="pendientes de atención"
+                  trend="Hoy"
+                  icon={<Bell size={17} />}
                 />
                 <StatBox
                   label="Automatizaciones"
                   value={automations.filter((x) => x.active).length}
+                  detail="activas actualmente"
+                  trend="94%"
+                  icon={<Zap size={17} />}
                 />
               </div>
             </header>
 
-            <div className="mb-5 flex flex-wrap gap-1 rounded-xl border border-border/70 bg-card/90 p-1.5 shadow-sm backdrop-blur">
+            <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_6px_20px_rgba(51,36,84,0.04)]">
               <NavButton
                 active={section === "conversaciones"}
                 icon={<MessageCircle size={15} />}
@@ -695,7 +704,7 @@ export function Comunicacion() {
                       className={`group ${ESTHER_CARD} ${ESTHER_CARD_HOVER} p-4`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
+                        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100 transition-transform duration-200 group-hover:scale-105">
                           <Bell size={18} />
                         </div>
 
@@ -704,7 +713,7 @@ export function Comunicacion() {
                             {reminder.patient}
                           </div>
 
-                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                             <span>{reminder.date}</span>
                             <span>•</span>
                             <span>{reminder.time} hs</span>
@@ -731,7 +740,7 @@ export function Comunicacion() {
                           className={`rounded-full border px-3 py-1 text-[10px] font-semibold transition-all ${
                             reminder.active
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                              : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+                              : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-50/70"
                           }`}
                         >
                           {reminder.active ? "Activo" : "Pausado"}
@@ -744,7 +753,7 @@ export function Comunicacion() {
                             );
                             showFeedback("Recordatorio eliminado");
                           }}
-                          className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          className="grid size-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -771,7 +780,7 @@ export function Comunicacion() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
-                          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
+                          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100 transition-transform duration-200 group-hover:scale-105">
                             {channelIcon(template.channel)}
                           </div>
 
@@ -797,17 +806,17 @@ export function Comunicacion() {
                             );
                             showFeedback("Plantilla eliminada");
                           }}
-                          className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground opacity-70 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                          className="grid size-7 shrink-0 place-items-center rounded-lg text-slate-500 opacity-70 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                         >
                           <MoreHorizontal size={16} />
                         </button>
                       </div>
 
-                      <p className="mt-4 line-clamp-3 min-h-[54px] text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-4 line-clamp-3 min-h-[54px] text-xs leading-relaxed text-slate-500">
                         {template.text}
                       </p>
 
-                      <div className="mt-4 text-[10px] text-muted-foreground">
+                      <div className="mt-4 text-[10px] text-slate-500">
                         Enviada {template.sent} veces
                       </div>
 
@@ -825,7 +834,7 @@ export function Comunicacion() {
                             setTemplateText(template.text);
                             showFeedback("Plantilla copiada al editor");
                           }}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-[11px] font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium transition-all hover:border-primary/30 hover:bg-violet-50/70"
                         >
                           <Copy size={13} />
                           Copiar
@@ -853,7 +862,7 @@ export function Comunicacion() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
-                          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
+                          <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100 transition-transform duration-200 group-hover:scale-105">
                             <Users size={17} />
                           </div>
 
@@ -865,10 +874,10 @@ export function Comunicacion() {
                             <span
                               className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                                 campaign.status === "Activa"
-                                  ? "border-primary/20 bg-primary/10 text-primary"
+                                  ? "border-primary/20 bg-violet-50 text-primary"
                                   : campaign.status === "Programada"
                                     ? "border-blue-200 bg-blue-50 text-blue-700"
-                                    : "border-border bg-muted text-muted-foreground"
+                                    : "border-slate-200 bg-slate-50 text-slate-500"
                               }`}
                             >
                               {campaign.status === "Activa"
@@ -882,13 +891,13 @@ export function Comunicacion() {
                           onClick={() =>
                             showFeedback("Más acciones de campaña")
                           }
-                          className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
+                          className="grid size-7 place-items-center rounded-lg text-slate-500 hover:bg-slate-50"
                         >
                           <MoreHorizontal size={16} />
                         </button>
                       </div>
 
-                      <div className="mt-5 grid grid-cols-2 gap-4 border-t border-violet-200/50 pt-4">
+                      <div className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
                         <Metric
                           label="Alcanzados"
                           value={campaign.recipients.toLocaleString("es-AR")}
@@ -911,7 +920,7 @@ export function Comunicacion() {
 
                         <button
                           onClick={() => showFeedback("Campaña pausada")}
-                          className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-[11px] font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
+                          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium transition-all hover:border-primary/30 hover:bg-violet-50/70"
                         >
                           <Clock3 size={13} />
                           {campaign.status === "Programada"
@@ -939,13 +948,13 @@ export function Comunicacion() {
                   {automations.map((automation, index) => (
                     <div
                       key={automation.id}
-                      className={`group flex flex-col gap-4 p-4 transition-all duration-200 hover:bg-primary/[0.025] md:flex-row md:items-center ${
+                      className={`group flex flex-col gap-4 p-4 transition-all duration-200 hover:bg-slate-50/80 md:flex-row md:items-center ${
                         index !== automations.length - 1
-                          ? "border-b border-violet-200/60"
+                          ? "border-b border-slate-200/80"
                           : ""
                       }`}
                     >
-                      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary/15">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-violet-50 text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary/15">
                         <Zap size={17} />
                       </div>
 
@@ -954,16 +963,26 @@ export function Comunicacion() {
                           {automation.name}
                         </h3>
 
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Canal: {automation.channel}
+                        <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                          {automation.description}
                         </p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium ${channelClass(automation.channel)}`}>
+                            {channelIcon(automation.channel)}
+                            {automation.channel}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {automation.trigger}
+                          </span>
+                        </div>
                       </div>
 
                       <span
                         className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
                           automation.active
                             ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-border bg-muted text-muted-foreground"
+                            : "border-slate-200 bg-slate-50 text-slate-500"
                         }`}
                       >
                         {automation.active ? "Activa" : "Pausada"}
@@ -987,7 +1006,7 @@ export function Comunicacion() {
                           );
                         }}
                         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                          automation.active ? "bg-primary" : "bg-muted"
+                          automation.active ? "bg-primary" : "bg-slate-50"
                         }`}
                       >
                         <span
@@ -1000,8 +1019,8 @@ export function Comunicacion() {
                   ))}
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
+                <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-xs text-slate-500">
+                  <div className="flex items-start gap-2">
                     <Zap size={15} className="text-primary" />
                     Las automatizaciones se aplican por sucursal según el
                     plan contratado. En esta versión frontend los cambios se
@@ -1051,8 +1070,8 @@ export function Comunicacion() {
                   />
                 </Field>
 
-                <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 text-[11px] text-muted-foreground">
-                  <div className="font-medium text-foreground">
+                <div className="rounded-xl border border-primary/10 bg-violet-50/70 p-3 text-[11px] text-slate-500">
+                  <div className="font-medium text-slate-900">
                     Variables disponibles
                   </div>
 
@@ -1066,7 +1085,7 @@ export function Comunicacion() {
                               (prev) => `${prev} {{${variable}}}`,
                             )
                           }
-                          className="rounded-full border border-primary/15 bg-card px-2 py-1 text-[10px] text-primary transition-colors hover:bg-primary/10"
+                          className="rounded-full border border-primary/15 bg-white px-2 py-1 text-[10px] text-primary transition-colors hover:bg-primary/10"
                         >
                           {"{{" + variable + "}}"}
                         </button>
@@ -1187,7 +1206,7 @@ export function Comunicacion() {
                   />
                 </Field>
 
-                <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 text-xs text-muted-foreground">
+                <div className="rounded-xl border border-primary/10 bg-violet-50/70 p-3 text-xs text-slate-500">
                   La campaña se crea como borrador y luego puede programarse.
                 </div>
 
@@ -1211,20 +1230,10 @@ function CommunicationBackground() {
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      <div
-        className="absolute inset-0 opacity-[0.13]"
-        style={{
-          backgroundImage:
-            "linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.96)), url('https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1800&q=80')",
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-        }}
-      />
-
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.055] via-transparent to-primary/[0.025]" />
-      <div className="absolute -right-24 -top-28 size-[28rem] rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -bottom-40 left-1/3 size-[32rem] rounded-full bg-primary/5 blur-3xl" />
-      <div className="absolute right-10 top-10 h-40 w-56 rounded-[40%] bg-primary/[0.035] blur-2xl" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,#fbfaff_0%,#ffffff_36%,#ffffff_100%)]" />
+      <div className="absolute -right-40 -top-40 size-[34rem] rounded-full bg-violet-100/40 blur-3xl" />
+      <div className="absolute -bottom-52 left-1/4 size-[30rem] rounded-full bg-purple-100/30 blur-3xl" />
+      <div className="absolute left-[8%] top-[18%] h-32 w-32 rounded-full bg-violet-50/70 blur-2xl" />
     </div>
   );
 }
@@ -1262,21 +1271,21 @@ function ConversationView({
 }) {
   return (
     <div
-      className={`grid min-h-[650px] overflow-hidden lg:grid-cols-[330px_minmax(0,1fr)] ${ESTHER_CARD}`}
+      className="grid min-h-[650px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(51,36,84,0.045)] lg:grid-cols-[330px_minmax(0,1fr)]"
     >
-      <aside className="border-b border-violet-200/60 lg:border-b-0 lg:border-r">
-        <div className="border-b border-violet-200/60 p-4">
+      <aside className="border-b border-slate-200/80 lg:border-b-0 lg:border-r">
+        <div className="border-b border-slate-100 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Bandeja de entrada</h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-500">
                 {conversations.length} conversaciones
               </p>
             </div>
 
             <button
               onClick={() => showFeedback("Nueva conversación")}
-              className="grid size-8 place-items-center rounded-lg border border-border text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+              className="grid size-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-violet-50 hover:text-primary"
             >
               <Plus size={16} />
             </button>
@@ -1285,14 +1294,14 @@ function ConversationView({
           <div className="relative">
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             />
 
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar conversación..."
-              className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-xs outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs outline-none transition-all placeholder:text-slate-400 focus:border-primary/40 focus:bg-white focus:ring-4 focus:ring-primary/10"
             />
           </div>
 
@@ -1304,8 +1313,8 @@ function ConversationView({
                   onClick={() => setChannelFilter(channel)}
                   className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition-all ${
                     channelFilter === channel
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                      ? "bg-violet-50 text-primary ring-1 ring-violet-100"
+                      : "bg-slate-50 text-slate-500 hover:bg-violet-50 hover:text-primary"
                   }`}
                 >
                   {channel}
@@ -1320,14 +1329,14 @@ function ConversationView({
             <button
               key={conversation.id}
               onClick={() => setSelectedConversation(conversation.id)}
-              className={`w-full border-b border-violet-200/40 p-4 text-left transition-all hover:bg-primary/[0.025] ${
+              className={`w-full border-b border-slate-100 p-4 text-left transition-all hover:bg-slate-50/80 ${
                 selectedConversation === conversation.id
-                  ? "bg-primary/[0.07] shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                  ? "bg-violet-50/70 shadow-[inset_3px_0_0_hsl(var(--primary))]"
                   : ""
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                <div className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-violet-50 to-violet-100 text-[10px] font-bold text-primary ring-1 ring-violet-100">
                   {initials(conversation.patient)}
                 </div>
 
@@ -1337,7 +1346,7 @@ function ConversationView({
                       {conversation.patient}
                     </span>
 
-                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 text-[10px] text-slate-500">
                       {conversation.time}
                     </span>
                   </div>
@@ -1354,7 +1363,7 @@ function ConversationView({
                   </div>
 
                   <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-slate-500">
                       {conversation.lastMessage}
                     </p>
 
@@ -1374,9 +1383,9 @@ function ConversationView({
       <section className="flex min-w-0 flex-col">
         {currentConversation && (
           <>
-            <div className="flex items-center justify-between border-b border-violet-200/60 px-5 py-3.5">
+            <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3.5 sm:px-5">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                <div className="grid size-10 place-items-center rounded-full bg-violet-50 text-xs font-bold text-primary ring-1 ring-violet-100">
                   {initials(currentConversation.patient)}
                 </div>
 
@@ -1385,7 +1394,7 @@ function ConversationView({
                     {currentConversation.patient}
                   </div>
 
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
                     <span>{currentConversation.phone}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1 text-emerald-600">
@@ -1399,30 +1408,30 @@ function ConversationView({
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => showFeedback("Llamada iniciada")}
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+                  className="grid size-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-violet-50/70 hover:text-primary"
                 >
                   <Phone size={16} />
                 </button>
 
                 <button
                   onClick={() => showFeedback("Datos del paciente")}
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+                  className="grid size-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-violet-50/70 hover:text-primary"
                 >
                   <Users size={16} />
                 </button>
 
                 <button
                   onClick={() => showFeedback("Más acciones")}
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+                  className="grid size-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-violet-50/70 hover:text-primary"
                 >
                   <MoreHorizontal size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-5">
+            <div className="flex-1 space-y-4 overflow-y-auto bg-[#f8f7fb] p-4 sm:p-5">
               <div className="flex justify-center">
-                <span className="rounded-full border border-border/60 bg-card px-3 py-1 text-[10px] text-muted-foreground shadow-sm">
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-medium text-slate-400 shadow-sm">
                   Hoy
                 </span>
               </div>
@@ -1439,8 +1448,8 @@ function ConversationView({
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
                       message.from === "clinic"
-                        ? "rounded-br-md bg-primary text-primary-foreground"
-                        : "rounded-bl-md border border-border/70 bg-card"
+                        ? "rounded-br-md bg-primary text-primary-foreground shadow-[0_6px_18px_rgba(124,58,237,0.14)]"
+                        : "rounded-bl-md border border-slate-200 bg-white text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.05)]"
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.text}</p>
@@ -1449,7 +1458,7 @@ function ConversationView({
                       className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${
                         message.from === "clinic"
                           ? "text-primary-foreground/70"
-                          : "text-muted-foreground"
+                          : "text-slate-500"
                       }`}
                     >
                       {message.time}
@@ -1466,13 +1475,13 @@ function ConversationView({
               ))}
             </div>
 
-            <div className="border-t border-violet-200/60 bg-card p-4">
+            <div className="border-t border-slate-200/80 bg-white p-3.5 sm:p-4">
               <div className="mb-2 flex gap-2 overflow-x-auto">
                 {templates.slice(0, 3).map((template) => (
                   <button
                     key={template.id}
                     onClick={() => setMessageText(template.text)}
-                    className="whitespace-nowrap rounded-lg border border-border bg-muted/50 px-2.5 py-1.5 text-[10px] text-muted-foreground transition-all hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
+                    className="whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-medium text-slate-500 transition-all hover:border-violet-100 hover:bg-violet-50 hover:text-primary"
                   >
                     {template.name}
                   </button>
@@ -1482,7 +1491,7 @@ function ConversationView({
               <div className="flex items-end gap-2">
                 <button
                   onClick={() => showFeedback("Adjuntar archivo")}
-                  className="mb-1 grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+                  className="mb-1 grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-violet-50/70 hover:text-primary"
                 >
                   <Paperclip size={17} />
                 </button>
@@ -1498,7 +1507,7 @@ function ConversationView({
                   }}
                   rows={2}
                   placeholder="Escribí un mensaje..."
-                  className="min-h-[42px] flex-1 resize-none rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm outline-none transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/15"
+                  className="min-h-[42px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary/40 focus:bg-white focus:ring-4 focus:ring-primary/10"
                 />
 
                 <button
@@ -1532,8 +1541,8 @@ function NavButton({
       onClick={onClick}
       className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all ${
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-primary/8 hover:text-primary"
+          ? "bg-violet-50 text-primary shadow-sm ring-1 ring-violet-100"
+          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
       }`}
     >
       {icon}
@@ -1561,13 +1570,13 @@ function ManagementSection({
     <section>
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+          <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100">
             {icon}
           </div>
 
           <div>
             <h2 className="text-base font-semibold">{title}</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-slate-500">
               {description}
             </p>
           </div>
@@ -1575,7 +1584,7 @@ function ManagementSection({
 
         <button
           onClick={onAction}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-[0_5px_14px_rgba(124,58,237,0.18)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(124,58,237,0.22)]"
         >
           <Plus size={15} />
           {actionLabel}
@@ -1598,11 +1607,11 @@ function Metric({
 }) {
   return (
     <div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</div>
 
       <div
         className={`mt-1 text-xl font-bold tabular-nums ${
-          accent ? "text-emerald-600" : "text-foreground"
+          accent ? "text-emerald-600" : "text-slate-900"
         }`}
       >
         {value}
@@ -1614,18 +1623,41 @@ function Metric({
 function StatBox({
   label,
   value,
+  detail,
+  trend,
+  icon,
 }: {
   label: string;
   value: string | number;
+  detail: string;
+  trend: string;
+  icon: ReactNode;
 }) {
   return (
-    <div
-      className={`${ESTHER_CARD} px-4 py-2.5`}
-    >
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+    <div className="relative min-w-0 overflow-hidden rounded-[20px] border border-violet-200 bg-white px-3 py-3 shadow-[0_5px_14px_rgba(139,92,246,0.10)] sm:px-4 sm:py-3.5">
+      <div className="pointer-events-none absolute -right-7 -top-7 size-20 rounded-full bg-violet-100/80" />
 
-      <div className="mt-0.5 text-lg font-bold tabular-nums">
-        {value}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-[9px] font-semibold uppercase tracking-[0.04em] text-slate-500 sm:text-[10px]">
+            {label}
+          </div>
+
+          <div className="mt-1 text-xl font-bold leading-none tabular-nums text-slate-900 sm:text-[23px]">
+            {value}
+          </div>
+        </div>
+
+        <div className="grid size-7 shrink-0 place-items-center text-slate-500 sm:size-8">
+          {icon}
+        </div>
+      </div>
+
+      <div className="relative mt-2 flex min-w-0 items-center gap-1.5 text-[9px] sm:text-[10px]">
+        <span className="shrink-0 font-semibold text-emerald-600">
+          {trend}
+        </span>
+        <span className="truncate text-slate-400">{detail}</span>
       </div>
     </div>
   );
@@ -1656,17 +1688,17 @@ function ModalActions({
   confirmLabel: string;
 }) {
   return (
-    <div className="flex justify-end gap-2 pt-2">
+    <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
       <button
         onClick={onCancel}
-        className="rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-medium transition-colors hover:bg-muted"
+        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
       >
         Cancelar
       </button>
 
       <button
         onClick={onConfirm}
-        className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-md"
+        className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-[0_5px_14px_rgba(124,58,237,0.18)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(124,58,237,0.22)]"
       >
         {confirmLabel}
       </button>
@@ -1684,16 +1716,16 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-foreground/35 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[3px]">
       <div
-        className={`max-h-[90vh] w-full max-w-lg overflow-y-auto ${ESTHER_CARD}`}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
       >
-        <div className="flex items-center justify-between border-b border-violet-200/60 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
           <h2 className="text-sm font-semibold">{title}</h2>
 
           <button
             onClick={onClose}
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
+            className="grid size-8 place-items-center rounded-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
           >
             <X size={17} />
           </button>
@@ -1706,4 +1738,4 @@ function Modal({
 }
 
 const INPUT =
-  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";
+  "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary/50 focus:ring-4 focus:ring-primary/10";

@@ -166,16 +166,16 @@ const PROMOS_INICIALES: Promocion[] = [
 ];
 
 const CARD =
-  "rounded-2xl border border-primary/20 bg-card/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/45 hover:shadow-lg hover:shadow-primary/10";
+  "relative overflow-hidden rounded-2xl border border-violet-300/70 bg-white shadow-[0_2px_10px_rgba(124,58,237,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/80 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]";
 
 const BUTTON_PRIMARY =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md active:translate-y-0";
 
 const BUTTON_SECONDARY =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/60 hover:shadow-sm";
 
 const INPUT =
-  "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -250,18 +250,8 @@ function estadoLeadStyle(estado: Lead["estado"]) {
 function FondoMarketing() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background/70 to-primary/[0.03]" />
-
-      <div className="absolute -right-24 -top-24 size-96 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -bottom-40 -left-24 size-[30rem] rounded-full bg-primary/5 blur-3xl" />
-
-      <div className="absolute right-12 top-8 opacity-[0.045]">
-        <Megaphone className="size-72" />
-      </div>
-
-      <div className="absolute left-1/3 top-20 opacity-[0.035]">
-        <Target className="size-40" />
-      </div>
+      <div className="absolute -right-24 -top-24 size-96 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="absolute -bottom-40 -left-24 size-[30rem] rounded-full bg-violet-100/30 blur-3xl" />
     </div>
   );
 }
@@ -278,17 +268,23 @@ function StatCard({
   detail: string;
 }) {
   return (
-    <div className={`${CARD} p-4`}>
-      <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
-          <Icon className="size-5" />
-        </span>
+    <div className={`${CARD} group p-4`}>
+      <div className="absolute -right-5 -top-8 size-24 rounded-full bg-violet-100/80 transition-transform duration-300 group-hover:scale-110" />
 
+      <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="mt-0.5 text-xl font-bold text-foreground">{value}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{detail}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            {label}
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+            {value}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">{detail}</p>
         </div>
+
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100">
+          <Icon className="size-4" />
+        </span>
       </div>
     </div>
   );
@@ -495,28 +491,25 @@ export default function Marketing() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
+    <div className="relative min-h-screen overflow-hidden bg-[#fbfbfd]">
       <FondoMarketing />
 
       <div className="relative z-10 p-4 md:p-6">
         {/* ENCABEZADO */}
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                <Megaphone className="size-5" />
-              </span>
-
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  Marketing y captación
-                </h1>
-
-                <p className="text-sm text-muted-foreground">
-                  Captá nuevos pacientes, activá campañas y medí tus resultados.
-                </p>
-              </div>
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+              <Megaphone className="size-3.5" />
+              Centro de operaciones
             </div>
+
+            <h1 className="text-2xl font-bold tracking-tight">
+              Marketing y captación
+            </h1>
+
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Captá nuevos pacientes, activá campañas y medí tus resultados.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -540,30 +533,32 @@ export default function Marketing() {
           </div>
         </div>
 
-        {/* TABS */}
-        <div className="mb-5 flex flex-wrap gap-1 rounded-2xl border border-border/70 bg-background/70 p-1.5 shadow-sm backdrop-blur">
-          {[
-            ["resumen", "Resumen"],
-            ["campanias", "Campañas"],
-            ["leads", "Leads"],
-            ["promociones", "Promociones"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => {
-                setTab(value as typeof tab);
-                setBusqueda("");
-              }}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                tab === value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        {/* NAVEGACIÓN PRINCIPAL — estilo selector segmentado */}
+        <div className="mb-6 overflow-x-auto pb-1">
+          <div className="inline-flex min-w-full items-center rounded-full border border-violet-200/80 bg-white p-1 shadow-[0_2px_8px_rgba(124,58,237,0.08)] sm:min-w-0">
+            {[
+              ["resumen", "Resumen"],
+              ["campanias", "Campañas"],
+              ["leads", "Leads"],
+              ["promociones", "Promociones"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setTab(value as typeof tab);
+                  setBusqueda("");
+                }}
+                className={`min-w-[104px] rounded-full px-5 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 sm:min-w-0 sm:px-6 ${
+                  tab === value
+                    ? "bg-primary text-primary-foreground shadow-[0_2px_7px_rgba(124,58,237,0.22)]"
+                    : "text-slate-500 hover:bg-violet-50/70 hover:text-slate-800"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* RESUMEN */}
@@ -601,7 +596,7 @@ export default function Marketing() {
 
             <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
               <section className={`${CARD} overflow-hidden`}>
-                <div className="flex items-center justify-between border-b border-border/70 p-4">
+                <div className="flex items-center justify-between border-b border-violet-100/80 p-4">
                   <div>
                     <h2 className="font-semibold">Campañas activas</h2>
                     <p className="text-xs text-muted-foreground">
@@ -618,7 +613,7 @@ export default function Marketing() {
                   </button>
                 </div>
 
-                <div className="divide-y divide-border/60">
+                <div className="divide-y divide-violet-100/70">
                   {campanias
                     .filter((c) => c.estado === "Activa")
                     .slice(0, 4)
@@ -628,7 +623,7 @@ export default function Marketing() {
                       return (
                         <div
                           key={campania.id}
-                          className="flex items-center gap-3 p-4 transition-colors hover:bg-primary/[0.025]"
+                          className="flex items-center gap-3 p-4 transition-colors hover:bg-violet-50/40"
                         >
                           <span
                             className={`grid size-10 shrink-0 place-items-center rounded-xl border ${canalStyle(
@@ -860,7 +855,7 @@ export default function Marketing() {
                       </div>
 
                       <div className="mt-5 grid grid-cols-3 gap-2">
-                        <div className="rounded-xl bg-muted/50 p-3">
+                        <div className="rounded-xl border border-violet-100 bg-violet-50/45 p-3">
                           <p className="text-[10px] text-muted-foreground">
                             Alcanzados
                           </p>
@@ -869,7 +864,7 @@ export default function Marketing() {
                           </p>
                         </div>
 
-                        <div className="rounded-xl bg-muted/50 p-3">
+                        <div className="rounded-xl border border-violet-100 bg-violet-50/45 p-3">
                           <p className="text-[10px] text-muted-foreground">
                             Conversiones
                           </p>
@@ -878,7 +873,7 @@ export default function Marketing() {
                           </p>
                         </div>
 
-                        <div className="rounded-xl bg-muted/50 p-3">
+                        <div className="rounded-xl border border-violet-100 bg-violet-50/45 p-3">
                           <p className="text-[10px] text-muted-foreground">
                             Conversión
                           </p>
@@ -969,7 +964,7 @@ export default function Marketing() {
                 {leadsFiltrados.map((lead) => (
                   <div
                     key={lead.id}
-                    className="flex flex-col gap-3 p-4 transition-colors hover:bg-primary/[0.025] sm:flex-row sm:items-center"
+                    className="flex flex-col gap-3 p-4 transition-colors hover:bg-violet-50/35 sm:flex-row sm:items-center"
                   >
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                       {lead.nombre
@@ -1041,7 +1036,7 @@ export default function Marketing() {
               {promos.map((promo) => (
                 <article key={promo.id} className={`${CARD} group p-5`}>
                   <div className="flex items-start justify-between gap-3">
-                    <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
+                    <span className="grid size-11 place-items-center rounded-xl bg-violet-50 text-primary ring-1 ring-violet-100 transition-transform duration-300 group-hover:scale-105">
                       <Gift className="size-5" />
                     </span>
 
@@ -1063,7 +1058,7 @@ export default function Marketing() {
                   </p>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-muted/50 p-3">
+                    <div className="rounded-xl border border-violet-100 bg-violet-50/45 p-3">
                       <p className="text-[10px] text-muted-foreground">
                         Vigencia
                       </p>
@@ -1072,7 +1067,7 @@ export default function Marketing() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-muted/50 p-3">
+                    <div className="rounded-xl border border-violet-100 bg-violet-50/45 p-3">
                       <p className="text-[10px] text-muted-foreground">Usos</p>
                       <p className="mt-1 text-sm font-bold">{promo.usos}</p>
                     </div>
@@ -1105,8 +1100,8 @@ export default function Marketing() {
 
       {/* MODAL */}
       {modal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/25 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-violet-200/70 bg-white p-5 shadow-2xl shadow-violet-950/10">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold">

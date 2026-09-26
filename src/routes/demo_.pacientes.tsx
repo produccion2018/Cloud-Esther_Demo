@@ -6,6 +6,10 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
+  Clock3,
+  DollarSign,
+  Bell,
+  TriangleAlert,
   UserPlus,
   FolderOpen,
   Pencil,
@@ -216,38 +220,33 @@ function useToast() {
 /* ───────────── Estilos ───────────── */
 
 const CARD =
-  "rounded-2xl border border-border/70 bg-card shadow-sm";
+  "rounded-[24px] border border-primary/10 bg-white/90 shadow-[0_10px_30px_-24px_rgba(124,58,237,0.45)] backdrop-blur-sm";
 
-/* ITEM: cards de "Resumen" con ADN violeta de Cloud Esther —
-   borde y fondo violeta siempre visibles (no solo en hover),
-   y texto del valor un poco más suave (ver text-foreground/85 en Dato). */
+/* Cards clínicas: mismo ADN violeta, pero con más profundidad y jerarquía visual. */
 const DATO_CARD =
-  "relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card to-primary/[0.035] p-3.5 shadow-sm shadow-primary/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-primary/[0.06] hover:shadow-md hover:shadow-primary/10";
+  "relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.045] p-4 shadow-[0_10px_28px_-22px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_16px_32px_-22px_rgba(124,58,237,0.5)]";
 
-/* MINI_DATO_CARD: versión compacta de DATO_CARD para los chips de la fila
-   del listado (Teléfono / Obra social / Sucursal) — mismo ADN violeta,
-   sin el ícono circular ni el padding grande. */
+/* Datos compactos del listado. */
 const MINI_DATO_CARD =
-  "rounded-xl border border-primary/20 bg-gradient-to-br from-card to-primary/[0.03] px-3 py-2 transition-all duration-200 hover:border-primary/35 hover:bg-primary/[0.055]";
+  "rounded-xl border border-primary/12 bg-gradient-to-br from-white to-primary/[0.035] px-3 py-2.5 shadow-[0_6px_18px_-16px_rgba(124,58,237,0.4)] transition-all duration-200 hover:border-primary/25 hover:bg-primary/[0.045]";
 
 const INPUT =
-  "h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
+  "h-10 w-full rounded-xl border border-primary/10 bg-white/80 px-3.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white focus:ring-4 focus:ring-primary/10";
 
 const TEXTAREA =
-  "min-h-20 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
+  "min-h-20 w-full resize-y rounded-xl border border-primary/10 bg-white/80 px-3.5 py-2.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white focus:ring-4 focus:ring-primary/10";
 
-/* Botones más finos: menos padding vertical y tracking normal en vez de chips anchos */
 const BTN_PRIMARIO =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-[0_8px_20px_-12px_rgba(124,58,237,0.75)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_12px_24px_-12px_rgba(124,58,237,0.8)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
 
 const BTN_SECUNDARIO =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-medium text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary/12 bg-white/90 px-4 py-2 text-[13px] font-medium text-foreground shadow-[0_6px_18px_-16px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-primary/[0.035] hover:shadow-[0_10px_22px_-15px_rgba(124,58,237,0.5)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO =
-  "grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
+  "grid size-9 place-items-center rounded-xl border border-primary/12 bg-white/90 text-muted-foreground shadow-[0_5px_16px_-14px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-[0_9px_20px_-14px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
 
 const BTN_ICONO_PELIGRO =
-  "grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/15";
+  "grid size-9 place-items-center rounded-xl border border-primary/12 bg-white/90 text-muted-foreground shadow-[0_5px_16px_-14px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/15";
 
 /* ───────────── Fondo de pacientes ───────────── */
 
@@ -255,17 +254,29 @@ function FondoPacientes() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden opacity-75"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      <div className="absolute left-[-120px] top-[-100px] size-[380px] rounded-full bg-primary/[0.09] blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.17),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(167,139,250,0.15),transparent_27%),radial-gradient(circle_at_78%_88%,rgba(196,181,253,0.14),transparent_30%),radial-gradient(circle_at_28%_58%,rgba(221,214,254,0.10),transparent_32%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]" />
 
-      <div className="absolute right-[-100px] top-[90px] size-[360px] rounded-full bg-violet-400/[0.075] blur-3xl" />
+      <div className="absolute left-[-180px] top-[-180px] size-[520px] rounded-full bg-violet-500/[0.055] blur-3xl" />
+      <div className="absolute right-[-170px] top-[120px] size-[460px] rounded-full bg-purple-400/[0.065] blur-3xl" />
+      <div className="absolute bottom-[-220px] left-[32%] size-[560px] rounded-full bg-fuchsia-300/[0.045] blur-3xl" />
 
-      <div className="absolute bottom-[-150px] right-[-100px] size-[420px] rounded-full bg-violet-400/[0.07] blur-3xl" />
+      <div
+        className="absolute inset-0 opacity-[0.28]"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(124,58,237,0.16) 0.7px, transparent 0.7px)",
+          backgroundSize: "24px 24px",
+          maskImage:
+            "linear-gradient(to bottom, black, transparent 78%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black, transparent 78%)",
+        }}
+      />
 
-      <div className="absolute left-1/2 top-[250px] size-[280px] -translate-x-1/2 rounded-full bg-fuchsia-300/[0.045] blur-3xl" />
-
-      <div className="absolute bottom-[10%] left-[-100px] size-[300px] rounded-full bg-sky-300/[0.04] blur-3xl" />
+      <div className="absolute left-[8%] top-[15%] size-20 rounded-[26px] border border-primary/[0.07] bg-white/[0.22] rotate-12 blur-[0.2px]" />
+      <div className="absolute right-[9%] top-[48%] size-28 rounded-full border border-primary/[0.06] bg-white/[0.18]" />
     </div>
   );
 }
@@ -901,7 +912,7 @@ function IconoCirculo({
   icon: LucideIcon;
 }) {
   return (
-    <div className="pointer-events-none absolute right-3 top-3 grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+    <div className="pointer-events-none absolute right-3 top-3 grid size-8 place-items-center rounded-xl border border-primary/10 bg-primary/[0.075] text-primary shadow-sm">
       <Icon className="size-4" />
     </div>
   );
@@ -948,7 +959,7 @@ function DatoMini({
 }) {
   return (
     <div className={MINI_DATO_CARD}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-primary/60">
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/60">
         {label}
       </p>
 
@@ -959,25 +970,46 @@ function DatoMini({
   );
 }
 
-/* Card de estadística estilo "Turnos de hoy / Ingresos del día": fondo blanco,
-   borde sutil, ícono en círculo arriba a la derecha, valor grande abajo. */
-type ToneClases = { label: string; icono: string; valor: string };
+/* KPI cards principales: ADN Cloud Esther + referencia visual solicitada. */
+type StatTone = "primary" | "emerald" | "violet" | "danger";
 
-const TONE_CLASSES: Record<"primary" | "emerald" | "violet", ToneClases> = {
+const STAT_TONES: Record<
+  StatTone,
+  {
+    label: string;
+    value: string;
+    icon: string;
+    circle: string;
+    trend: string;
+  }
+> = {
   primary: {
-    label: "text-primary/70",
-    icono: "bg-primary/10 text-primary",
-    valor: "text-foreground",
+    label: "text-primary/75",
+    value: "text-primary",
+    icon: "text-primary",
+    circle: "bg-primary/[0.075]",
+    trend: "text-primary",
   },
   emerald: {
-    label: "text-emerald-600/80",
-    icono: "bg-emerald-50 text-emerald-600",
-    valor: "text-emerald-700",
+    label: "text-emerald-600/85",
+    value: "text-emerald-600",
+    icon: "text-emerald-600",
+    circle: "bg-emerald-400/[0.075]",
+    trend: "text-emerald-600",
   },
   violet: {
     label: "text-violet-600/80",
-    icono: "bg-violet-50 text-violet-600",
-    valor: "text-violet-700",
+    value: "text-foreground",
+    icon: "text-violet-600",
+    circle: "bg-violet-400/[0.075]",
+    trend: "text-emerald-600",
+  },
+  danger: {
+    label: "text-violet-600/80",
+    value: "text-red-500",
+    icon: "text-slate-500",
+    circle: "bg-violet-400/[0.075]",
+    trend: "text-red-500",
   },
 };
 
@@ -986,41 +1018,48 @@ function StatCard({
   value,
   icon: Icon,
   tone,
-  subtitle,
+  trend,
+  detail,
 }: {
   label: string;
   value: string | number;
   icon: LucideIcon;
-  tone: "primary" | "emerald" | "violet";
-  subtitle?: string;
+  tone: StatTone;
+  trend: string;
+  detail: string;
 }) {
-  const t = TONE_CLASSES[tone];
+  const t = STAT_TONES[tone];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <p
-          className={`text-[10px] font-bold uppercase tracking-[0.12em] ${t.label}`}
-        >
-          {label}
-        </p>
+    <div className="group relative min-h-[118px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_18px_34px_-20px_rgba(124,58,237,0.58)]">
+      <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035] transition-transform duration-300 group-hover:scale-110" />
+
+      <div className="relative flex h-full items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className={`max-w-[150px] text-[10px] font-bold uppercase leading-[1.25] tracking-[0.09em] ${t.label}`}
+          >
+            {label}
+          </p>
+
+          <p
+            className={`mt-2 text-[27px] font-bold leading-none tracking-tight ${t.value}`}
+          >
+            {value}
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-4">
+            <span className={`font-semibold ${t.trend}`}>{trend}</span>
+            <span className="text-muted-foreground">{detail}</span>
+          </div>
+        </div>
 
         <div
-          className={`grid size-8 shrink-0 place-items-center rounded-xl ${t.icono}`}
+          className={`relative grid size-9 shrink-0 place-items-center rounded-full ${t.circle} ${t.icon}`}
         >
-          <Icon className="size-4" />
+          <Icon className="size-4" strokeWidth={1.7} />
         </div>
       </div>
-
-      <p className={`mt-1.5 text-2xl font-bold ${t.valor}`}>
-        {value}
-      </p>
-
-      {subtitle && (
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {subtitle}
-        </p>
-      )}
     </div>
   );
 }
@@ -1582,12 +1621,33 @@ function PacientesInner() {
 
   return (
     <AppShell>
-      <div className="relative min-h-full overflow-hidden bg-muted/15">
-        {/* Fondo original conservado, solamente suavizado */}
+      <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
         <FondoPacientes />
 
+        <div className="fixed right-4 top-4 z-40 flex items-center gap-2 md:right-6 md:top-5">
+          <button
+            onClick={exportar}
+            className={`${BTN_SECUNDARIO} bg-white/95 backdrop-blur-md`}
+          >
+            <Download className="size-4" />
+            Exportar
+          </button>
+
+          <button
+            onClick={() =>
+              setModal({
+                tipo: "form",
+              })
+            }
+            className={`${BTN_PRIMARIO} shadow-[0_10px_24px_-10px_rgba(124,58,237,0.72)]`}
+          >
+            <UserPlus className="size-4" />
+            Nuevo paciente
+          </button>
+        </div>
+
         <div
-          className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8"
+          className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8"
           style={{
             fontFamily:
               '"Inter", ui-sans-serif, system-ui, sans-serif',
@@ -1595,19 +1655,21 @@ function PacientesInner() {
         >
           {/* ───────────── Encabezado ───────────── */}
 
-          <section className="relative overflow-hidden rounded-[28px] border border-primary/20 bg-card/90 shadow-sm">
-            <div className="absolute left-0 top-0 h-1.5 w-full bg-primary/70" />
+          <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)] backdrop-blur-md">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-violet-400/55" />
+            <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+            <div className="pointer-events-none absolute right-24 top-[-80px] size-36 rounded-full border-[18px] border-primary/[0.035]" />
 
-            <div className="relative p-5 md:p-6 lg:p-7">
+            <div className="relative p-5 md:p-7 lg:p-8">
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary shadow-sm">
                       <Users className="size-3.5" />
                       Gestión clínica
                     </span>
 
-                    <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/10">
+                    <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-3 py-1.5 text-[11px] font-bold text-amber-700 shadow-sm">
                       {pacientes.length}{" "}
                       {pacientes.length === 1
                         ? "paciente"
@@ -1615,11 +1677,11 @@ function PacientesInner() {
                     </span>
                   </div>
 
-                  <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+                  <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] text-foreground md:text-[42px]">
                     Pacientes
                   </h1>
 
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  <p className="mt-2.5 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                     Toda la información de tus pacientes
                     en un solo lugar: carpeta clínica,
                     tratamientos, estudios, turnos,
@@ -1627,57 +1689,51 @@ function PacientesInner() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <button
-                    onClick={exportar}
-                    className={BTN_SECUNDARIO}
-                  >
-                    <Download className="size-4" />
-                    Exportar
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setModal({
-                        tipo: "form",
-                      })
-                    }
-                    className={BTN_PRIMARIO}
-                  >
-                    <UserPlus className="size-4" />
-                    Nuevo paciente
-                  </button>
-                </div>
               </div>
 
               {/* Mini resumen */}
 
-              <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
-                  label="Total"
-                  value={pacientes.length}
-                  icon={Users}
+                  label="Turnos de hoy"
+                  value="11"
+                  icon={Clock3}
                   tone="primary"
+                  trend="+9%"
+                  detail="7 confirmados · 2 pendientes"
                 />
 
                 <StatCard
-                  label="Activos"
-                  value={cantidadActivos}
-                  icon={HeartPulse}
+                  label="Ingresos del día"
+                  value="$1.284.000"
+                  icon={DollarSign}
                   tone="emerald"
+                  trend="+14%"
+                  detail="6 cobros registrados"
                 />
 
                 <StatCard
-                  label="Inactivos"
-                  value={cantidadInactivos}
-                  icon={History}
+                  label="Recordatorios enviados"
+                  value="34"
+                  icon={Bell}
                   tone="violet"
+                  trend="94%"
+                  detail="entregados"
+                />
+
+                <StatCard
+                  label="Deuda vencida"
+                  value="$572.000"
+                  icon={TriangleAlert}
+                  tone="danger"
+                  trend="-4%"
+                  detail="2 pacientes"
                 />
               </div>
 
               {/* Filtros */}
 
-              <div className="mt-4 rounded-2xl border border-border/70 bg-muted/25 p-2.5">
+              <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.025] p-2.5 shadow-inner shadow-primary/[0.025]">
                 <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1.5fr)_1fr_1fr]">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
@@ -1690,7 +1746,7 @@ function PacientesInner() {
                         )
                       }
                       placeholder="Buscar por nombre, documento o teléfono"
-                      className={`${INPUT} border-transparent bg-background pl-10 shadow-none focus:border-primary/40`}
+                      className={`${INPUT} border-primary/8 bg-white pl-10 shadow-none focus:border-primary/35`}
                     />
                   </div>
 
@@ -1731,23 +1787,23 @@ function PacientesInner() {
 
           {/* ───────────── Separador ───────────── */}
 
-          <div className="mt-6 flex items-center gap-3 px-1">
-            <div className="h-px flex-1 bg-border/70" />
+          <div className="mt-7 flex items-center gap-3 px-1">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
 
-            <span className="rounded-full border border-border bg-card/85 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground shadow-sm">
+            <span className="rounded-full border border-primary/12 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground shadow-[0_5px_16px_-12px_rgba(124,58,237,0.45)] backdrop-blur-sm">
               {hayFiltros
                 ? `${filtrados.length} resultados`
                 : "Listado de pacientes"}
             </span>
 
-            <div className="h-px flex-1 bg-border/70" />
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
           </div>
 
           {/* ───────────── Listado ───────────── */}
 
-          <div className="mt-3">
+          <div className="mt-4">
             {filtrados.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-primary/20 bg-card/85 px-6 py-14 text-center shadow-sm">
+              <div className="rounded-[26px] border border-dashed border-primary/20 bg-white/80 px-6 py-14 text-center shadow-[0_12px_32px_-26px_rgba(124,58,237,0.5)] backdrop-blur-sm">
                 <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <Users className="size-6" />
                 </div>
@@ -1789,17 +1845,17 @@ function PacientesInner() {
                   return (
                     <li
                       key={p.id}
-                      className={`overflow-hidden rounded-2xl border bg-card/95 shadow-sm transition-all duration-200 ${
+                      className={`overflow-hidden rounded-[24px] border bg-white/90 shadow-[0_12px_32px_-25px_rgba(76,29,149,0.42)] backdrop-blur-sm transition-all duration-200 ${
                         abierto
-                          ? "border-primary/45 shadow-md shadow-primary/5"
-                          : "border-primary/15 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                          ? "border-primary/40 shadow-[0_16px_38px_-24px_rgba(124,58,237,0.5)]"
+                          : "border-primary/10 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_38px_-24px_rgba(124,58,237,0.48)]"
                       }`}
                     >
-                      <div className="p-3.5 md:p-4">
+                      <div className="p-4 md:p-[18px]">
                         <div className="flex flex-wrap items-center gap-4">
                           <Avatar
                             paciente={p}
-                            className="size-12 text-sm"
+                            className="size-12 text-sm ring-4 ring-primary/[0.035]"
                           />
 
                           <div className="min-w-[180px] flex-1">
@@ -1904,7 +1960,7 @@ function PacientesInner() {
                       </div>
 
                       {abierto && (
-                        <div className="border-t border-primary/10 bg-primary/[0.018] px-3.5 pb-3.5 md:px-4 md:pb-4">
+                        <div className="border-t border-primary/10 bg-gradient-to-b from-primary/[0.018] to-white/70 px-3.5 pb-3.5 md:px-4 md:pb-4">
                           <CarpetaPaciente
                             key={p.id}
                             paciente={p}

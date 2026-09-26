@@ -20,12 +20,14 @@ import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frec
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
 import { Route as DemoBiRouteImport } from './routes/demo_.bi'
 import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
 import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
 import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
 import { Route as DemoFinanzasRouteImport } from './routes/demo_.finanzas'
 import { Route as DemoHistoriaRouteImport } from './routes/demo_.historia'
+import { Route as DemoIntegracionesRouteImport } from './routes/demo_.integraciones'
 import { Route as DemoInventarioRouteImport } from './routes/demo_.inventario'
 import { Route as DemoLaboratorioRouteImport } from './routes/demo_.laboratorio'
 import { Route as DemoMarketingRouteImport } from './routes/demo_.marketing'
@@ -96,6 +98,11 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoAutomatizacionesRoute = DemoAutomatizacionesRouteImport.update({
+  id: '/demo_/automatizaciones',
+  path: '/demo/automatizaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoBiRoute = DemoBiRouteImport.update({
   id: '/demo_/bi',
   path: '/demo/bi',
@@ -124,6 +131,11 @@ const DemoFinanzasRoute = DemoFinanzasRouteImport.update({
 const DemoHistoriaRoute = DemoHistoriaRouteImport.update({
   id: '/demo_/historia',
   path: '/demo/historia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoIntegracionesRoute = DemoIntegracionesRouteImport.update({
+  id: '/demo_/integraciones',
+  path: '/demo/integraciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoInventarioRoute = DemoInventarioRouteImport.update({
@@ -211,12 +223,14 @@ export interface FileRoutesByFullPath {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
@@ -244,12 +258,14 @@ export interface FileRoutesByTo {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
@@ -278,12 +294,14 @@ export interface FileRoutesById {
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo_/agenda': typeof DemoAgendaRoute
+  '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
   '/demo_/comunicaciones': typeof DemoComunicacionesRoute
   '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo_/estudios': typeof DemoEstudiosRoute
   '/demo_/finanzas': typeof DemoFinanzasRoute
   '/demo_/historia': typeof DemoHistoriaRoute
+  '/demo_/integraciones': typeof DemoIntegracionesRoute
   '/demo_/inventario': typeof DemoInventarioRoute
   '/demo_/laboratorio': typeof DemoLaboratorioRoute
   '/demo_/marketing': typeof DemoMarketingRoute
@@ -313,12 +331,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
@@ -346,12 +366,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
+    | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
@@ -379,12 +401,14 @@ export interface FileRouteTypes {
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo_/agenda'
+    | '/demo_/automatizaciones'
     | '/demo_/bi'
     | '/demo_/comunicaciones'
     | '/demo_/equipo-profesional'
     | '/demo_/estudios'
     | '/demo_/finanzas'
     | '/demo_/historia'
+    | '/demo_/integraciones'
     | '/demo_/inventario'
     | '/demo_/laboratorio'
     | '/demo_/marketing'
@@ -413,12 +437,14 @@ export interface RootRouteChildren {
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
+  DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
   DemoBiRoute: typeof DemoBiRoute
   DemoComunicacionesRoute: typeof DemoComunicacionesRoute
   DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
   DemoEstudiosRoute: typeof DemoEstudiosRoute
   DemoFinanzasRoute: typeof DemoFinanzasRoute
   DemoHistoriaRoute: typeof DemoHistoriaRoute
+  DemoIntegracionesRoute: typeof DemoIntegracionesRoute
   DemoInventarioRoute: typeof DemoInventarioRoute
   DemoLaboratorioRoute: typeof DemoLaboratorioRoute
   DemoMarketingRoute: typeof DemoMarketingRoute
@@ -515,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/automatizaciones': {
+      id: '/demo_/automatizaciones'
+      path: '/demo/automatizaciones'
+      fullPath: '/demo/automatizaciones'
+      preLoaderRoute: typeof DemoAutomatizacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/bi': {
       id: '/demo_/bi'
       path: '/demo/bi'
@@ -555,6 +588,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/historia'
       fullPath: '/demo/historia'
       preLoaderRoute: typeof DemoHistoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/integraciones': {
+      id: '/demo_/integraciones'
+      path: '/demo/integraciones'
+      fullPath: '/demo/integraciones'
+      preLoaderRoute: typeof DemoIntegracionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/inventario': {
@@ -669,12 +709,14 @@ const rootRouteChildren: RootRouteChildren = {
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   DemoAgendaRoute: DemoAgendaRoute,
+  DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,
   DemoBiRoute: DemoBiRoute,
   DemoComunicacionesRoute: DemoComunicacionesRoute,
   DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
   DemoEstudiosRoute: DemoEstudiosRoute,
   DemoFinanzasRoute: DemoFinanzasRoute,
   DemoHistoriaRoute: DemoHistoriaRoute,
+  DemoIntegracionesRoute: DemoIntegracionesRoute,
   DemoInventarioRoute: DemoInventarioRoute,
   DemoLaboratorioRoute: DemoLaboratorioRoute,
   DemoMarketingRoute: DemoMarketingRoute,

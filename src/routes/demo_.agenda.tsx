@@ -362,22 +362,22 @@ function obtenerDiasMes(iso: string) {
 /* ───────────── Estilos compartidos ───────────── */
 
 const CARD =
-  "rounded-3xl border border-primary/20 bg-card/90 bg-gradient-to-b from-card/95 to-card/75 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10";
+  "rounded-3xl border border-primary/25 bg-card/95 bg-gradient-to-br from-white via-card/95 to-primary/[0.045] p-4 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10";
 
 const ITEM =
-  "rounded-2xl border border-primary/15 bg-card/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5";
+  "rounded-2xl border border-primary/18 bg-card/90 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/8";
 
 const STAT_CARD =
-  "group relative flex min-h-[92px] flex-col overflow-hidden rounded-3xl border border-primary/20 bg-card/90 bg-gradient-to-br from-card/95 via-card/90 to-primary/[0.035] p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10";
+  "group relative flex min-h-[108px] flex-col overflow-hidden rounded-3xl border border-primary/25 bg-white/95 bg-gradient-to-br from-white via-white to-primary/[0.055] p-5 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/45 hover:shadow-lg hover:shadow-primary/12";
 
 const INPUT =
-  "h-11 w-full rounded-2xl border border-primary/15 bg-card/80 px-3.5 text-sm shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15";
+  "h-11 w-full rounded-2xl border border-primary/20 bg-white/90 px-3.5 text-sm shadow-sm shadow-primary/5 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15";
 
 const INPUT_SM =
-  "h-10 w-full rounded-xl border border-primary/15 bg-card/80 px-3 text-sm shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15";
+  "h-10 w-full rounded-xl border border-primary/20 bg-white/90 px-3 text-sm shadow-sm shadow-primary/5 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15";
 
 const TEXTAREA =
-  "min-h-24 w-full resize-y rounded-2xl border border-primary/15 bg-card/80 px-3.5 py-2.5 text-sm shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15";
+  "min-h-24 w-full resize-y rounded-2xl border border-primary/20 bg-white/90 px-3.5 py-2.5 text-sm shadow-sm shadow-primary/5 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15";
 
 /* ───────────── Utilidades UI ───────────── */
 
@@ -1472,8 +1472,9 @@ function MesView({
   const dias = obtenerDiasMes(fecha);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-primary/15 bg-card/60">
-      <div className="grid grid-cols-7 border-b border-primary/15 bg-primary/[0.025]">
+    <div className="overflow-x-auto rounded-2xl border border-primary/20 bg-white/75 shadow-sm shadow-primary/5">
+      <div className="min-w-[720px] overflow-hidden rounded-2xl">
+      <div className="grid grid-cols-7 border-b border-primary/15 bg-primary/[0.035]">
         {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((dia) => (
           <div
             key={dia}
@@ -1558,6 +1559,7 @@ function MesView({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
@@ -1881,7 +1883,7 @@ function AgendaInner() {
                 Agenda
               </div>
 
-              <h1 className="font-display text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight">
                 Agenda y turnos
               </h1>
 
@@ -1912,15 +1914,15 @@ function AgendaInner() {
 
           {/* Estadísticas */}
 
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatCard
-              label="Total"
+              label="Turnos de hoy"
               value={turnosHoy.length}
               icon={CalendarDays}
             />
 
             <StatCard
-              label="Confirmadas"
+              label="Confirmados"
               value={contar("Confirmada")}
               icon={Check}
             />
@@ -1932,15 +1934,9 @@ function AgendaInner() {
             />
 
             <StatCard
-              label="Atendidas"
+              label="Atendidos"
               value={contar("Atendida")}
               icon={CalendarCheck}
-            />
-
-            <StatCard
-              label="Canceladas"
-              value={contar("Cancelada")}
-              icon={X}
             />
           </div>
 

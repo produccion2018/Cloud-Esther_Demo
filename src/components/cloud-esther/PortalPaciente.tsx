@@ -13,21 +13,18 @@ import {
   LogOut,
   MapPin,
   MessageCircle,
-  Phone,
   Pill,
+  Upload,
   Wallet,
   X,
 } from "lucide-react";
-
-/* ─────────────────────────────────────────────
-   Tipos
-───────────────────────────────────────────── */
 
 type Seccion =
   | "inicio"
   | "turnos"
   | "tratamientos"
   | "documentos"
+  | "documentacion"
   | "pagos";
 
 type EstadoCita =
@@ -38,6 +35,13 @@ type EstadoCita =
 
 type TipoDoc = "Receta" | "Estudio" | "Presupuesto";
 
+type EstadoDocumentacion =
+  | "Pendiente"
+  | "Adjuntada"
+  | "En revisión"
+  | "Aprobada"
+  | "Rechazada";
+
 type Cita = {
   id: number;
   fecha: string;
@@ -46,38 +50,43 @@ type Cita = {
   especialidad: string;
   motivo: string;
   estado: EstadoCita;
-  direccion: string;
+  observaciones?: string;
 };
 
 type Tratamiento = {
   id: number;
   nombre: string;
-  profesional: string;
-  pieza?: string;
-  estado: "Planificado" | "En curso" | "Finalizado";
-  progreso: number;
   descripcion: string;
+  progreso: number;
+  estado: "En curso" | "Finalizado";
+  profesional: string;
+  ultimaSesion: string;
 };
 
 type Documento = {
   id: number;
   tipo: TipoDoc;
   titulo: string;
-  fecha: string;
   descripcion: string;
+  fecha: string;
 };
 
 type Pago = {
   id: number;
-  fecha: string;
   concepto: string;
+  fecha: string;
   monto: number;
   estado: "Pagado" | "Pendiente";
 };
 
-/* ─────────────────────────────────────────────
-   Datos demo
-───────────────────────────────────────────── */
+type DocumentacionSolicitadaItem = {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  obligatorio: boolean;
+  estado: EstadoDocumentacion;
+  archivo?: string;
+};
 
 const PACIENTE = {
   nombre: "María González",
@@ -91,9 +100,9 @@ const CITAS_INICIALES: Cita[] = [
     hora: "15:30",
     profesional: "Dra. Lucía Ferrer",
     especialidad: "Odontología general",
-    motivo: "Control y restauración",
+    motivo: "Control y seguimiento",
     estado: "Confirmada",
-    direccion: "Clínica Centro · Av. Corrientes 1250",
+    observaciones: "Continuar con el tratamiento restaurador.",
   },
   {
     id: 2,
@@ -101,111 +110,133 @@ const CITAS_INICIALES: Cita[] = [
     hora: "10:00",
     profesional: "Dra. Lucía Ferrer",
     especialidad: "Odontología general",
-    motivo: "Control de tratamiento",
+    motivo: "Restauración estética",
     estado: "Pendiente",
-    direccion: "Clínica Centro · Av. Corrientes 1250",
   },
   {
     id: 3,
-    fecha: "2026-08-28",
-    hora: "15:00",
-    profesional: "Dr. Carlos Rodríguez",
+    fecha: "2026-08-21",
+    hora: "11:30",
+    profesional: "Dra. Lucía Ferrer",
     especialidad: "Odontología general",
-    motivo: "Restauración pieza 21",
+    motivo: "Limpieza y control",
     estado: "Realizada",
-    direccion: "Clínica Centro · Av. Corrientes 1250",
   },
   {
     id: 4,
-    fecha: "2026-08-12",
-    hora: "11:00",
+    fecha: "2026-08-07",
+    hora: "16:00",
     profesional: "Dra. Lucía Ferrer",
     especialidad: "Odontología general",
-    motivo: "Limpieza dental",
+    motivo: "Evaluación inicial",
     estado: "Realizada",
-    direccion: "Clínica Centro · Av. Corrientes 1250",
   },
 ];
 
-const TRATAMIENTOS_INICIALES: Tratamiento[] = [
+const TRATAMIENTOS: Tratamiento[] = [
   {
     id: 1,
     nombre: "Restauración estética",
-    profesional: "Dr. Carlos Rodríguez",
-    pieza: "21",
-    estado: "En curso",
-    progreso: 65,
     descripcion:
-      "Tratamiento de restauración estética de la pieza dental 21.",
+      "Tratamiento restaurador para mejorar la función y estética dental.",
+    progreso: 65,
+    estado: "En curso",
+    profesional: "Dra. Lucía Ferrer",
+    ultimaSesion: "2026-09-12",
   },
   {
     id: 2,
     nombre: "Limpieza y control",
-    profesional: "Dra. Lucía Ferrer",
-    estado: "Finalizado",
+    descripcion:
+      "Limpieza profesional y control general de salud bucal.",
     progreso: 100,
-    descripcion: "Limpieza profesional y control general.",
+    estado: "Finalizado",
+    profesional: "Dra. Lucía Ferrer",
+    ultimaSesion: "2026-08-21",
   },
 ];
 
-const DOCUMENTOS_INICIALES: Documento[] = [
+const DOCUMENTOS: Documento[] = [
   {
     id: 1,
     tipo: "Receta",
     titulo: "Receta odontológica",
-    fecha: "20/08/2026",
-    descripcion: "Indicaciones posteriores al tratamiento.",
+    descripcion: "Indicaciones posteriores a la consulta.",
+    fecha: "2026-09-12",
   },
   {
     id: 2,
     tipo: "Estudio",
     titulo: "Radiografía panorámica",
-    fecha: "15/08/2026",
-    descripcion: "Estudio radiográfico disponible.",
+    descripcion: "Estudio radiográfico odontológico.",
+    fecha: "2026-08-07",
   },
   {
     id: 3,
     tipo: "Presupuesto",
-    titulo: "Presupuesto tratamiento integral",
-    fecha: "12/08/2026",
-    descripcion: "Detalle del tratamiento propuesto.",
+    titulo: "Presupuesto tratamiento restaurador",
+    descripcion: "Detalle del tratamiento y valores asociados.",
+    fecha: "2026-08-07",
   },
   {
     id: 4,
     tipo: "Estudio",
     titulo: "Radiografía periapical",
-    fecha: "08/08/2026",
-    descripcion: "Estudio de pieza dental.",
+    descripcion: "Estudio solicitado durante el tratamiento.",
+    fecha: "2026-09-12",
   },
 ];
 
 const PAGOS_INICIALES: Pago[] = [
   {
     id: 1,
-    fecha: "20/08/2026",
     concepto: "Restauración estética",
+    fecha: "2026-09-12",
     monto: 45000,
     estado: "Pagado",
   },
   {
     id: 2,
-    fecha: "28/08/2026",
-    concepto: "Control odontológico",
+    concepto: "Limpieza y control",
+    fecha: "2026-08-21",
     monto: 18000,
     estado: "Pagado",
   },
   {
     id: 3,
-    fecha: "25/09/2026",
-    concepto: "Próxima sesión",
+    concepto: "Restauración estética - próxima sesión",
+    fecha: "2026-10-02",
     monto: 35000,
     estado: "Pendiente",
   },
 ];
 
-/* ─────────────────────────────────────────────
-   Estilos
-───────────────────────────────────────────── */
+const DOCUMENTACION_INICIAL: DocumentacionSolicitadaItem[] = [
+  {
+    id: 1,
+    titulo: "Documento de identidad",
+    descripcion:
+      "Adjuntá una imagen clara del frente y dorso de tu documento.",
+    obligatorio: true,
+    estado: "Pendiente",
+  },
+  {
+    id: 2,
+    titulo: "Estudio radiográfico",
+    descripcion:
+      "Adjuntá el estudio radiográfico solicitado por la profesional.",
+    obligatorio: true,
+    estado: "Pendiente",
+  },
+  {
+    id: 3,
+    titulo: "Orden médica",
+    descripcion:
+      "Adjuntá la orden médica correspondiente al tratamiento.",
+    obligatorio: false,
+    estado: "Pendiente",
+  },
+];
 
 const BTN =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
@@ -222,94 +253,87 @@ const CARD =
 const INPUT =
   "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-/* ─────────────────────────────────────────────
-   Utilidades
-───────────────────────────────────────────── */
-
 function ars(valor: number) {
-  return valor.toLocaleString("es-AR", {
+  return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
     maximumFractionDigits: 0,
-  });
+  }).format(valor);
 }
 
-function fechaCorta(valor: string) {
-  const [ano, mes, dia] = valor.split("-");
-  return `${dia}/${mes}/${ano}`;
+function fechaCorta(fecha: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(`${fecha}T12:00:00`));
 }
 
-function fechaLarga(valor: string) {
-  const fecha = new Date(`${valor}T12:00:00`);
-
-  return fecha.toLocaleDateString("es-AR", {
+function fechaLarga(fecha: string) {
+  return new Intl.DateTimeFormat("es-AR", {
     weekday: "long",
     day: "numeric",
     month: "long",
-  });
+    year: "numeric",
+  }).format(new Date(`${fecha}T12:00:00`));
 }
 
 function estadoStyle(estado: EstadoCita) {
-  if (estado === "Confirmada") {
-    return "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20";
+  switch (estado) {
+    case "Confirmada":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "Pendiente":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "Cancelada":
+      return "border-red-200 bg-red-50 text-red-700";
+    case "Realizada":
+      return "border-blue-200 bg-blue-50 text-blue-700";
   }
+}
 
-  if (estado === "Pendiente") {
-    return "bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20";
+function documentacionEstadoStyle(estado: EstadoDocumentacion) {
+  switch (estado) {
+    case "Pendiente":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "Adjuntada":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    case "En revisión":
+      return "border-violet-200 bg-violet-50 text-violet-700";
+    case "Aprobada":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "Rechazada":
+      return "border-red-200 bg-red-50 text-red-700";
   }
-
-  if (estado === "Realizada") {
-    return "bg-primary/10 text-primary ring-1 ring-primary/20";
-  }
-
-  return "bg-muted text-muted-foreground ring-1 ring-border";
 }
 
 function documentoIcono(tipo: TipoDoc) {
-  if (tipo === "Receta") return Pill;
-  if (tipo === "Estudio") return FileText;
-  return ClipboardList;
+  switch (tipo) {
+    case "Receta":
+      return <Pill className="h-5 w-5" />;
+    case "Estudio":
+      return <FileText className="h-5 w-5" />;
+    case "Presupuesto":
+      return <Wallet className="h-5 w-5" />;
+  }
 }
 
-/* ─────────────────────────────────────────────
-   Diente SVG
-───────────────────────────────────────────── */
-
-function DienteIcon({
-  className = "size-7",
-}: {
-  className?: string;
-}) {
+function DienteIcon({ className = "h-8 w-8" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 48 48"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
       <path
-        d="M10.1 4.8C7.2 4.8 5 7 5 9.9c0 2.4 1.1 3.9 1.7 5.9.7 2.3.7 5.8 2.1 7.7.7 1 2 1 2.6-.1.8-1.5.9-4 1.8-5.3.4-.6.8-.9 1.8-.9s1.4.3 1.8.9c.9 1.3 1 3.8 1.8 5.3.6 1.1 1.9 1.1 2.6.1 1.4-1.9 1.4-5.4 2.1-7.7.6-2 1.7-3.5 1.7-5.9 0-2.9-2.2-5.1-5.1-5.1-1.6 0-3.1.6-4.9 1.9-1.8-1.3-3.3-1.9-4.9-1.9Z"
-        fill="currentColor"
-        fillOpacity="0.14"
+        d="M14.5 8.5C11.4 8.5 9 11 9 14.1c0 3.3 1.7 5.6 2.6 8.2 1.2 3.5 1.2 10.5 4.5 10.5 2.7 0 2.5-8.2 7.9-8.2s5.2 8.2 7.9 8.2c3.3 0 3.3-7 4.5-10.5.9-2.6 2.6-4.9 2.6-8.2 0-3.1-2.4-5.6-5.5-5.6-3.2 0-5.1 1.9-7.5 1.9s-4.3-1.9-7.5-1.9Z"
         stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12.2 8.2c1.1-.7 2.1-.9 3.8-.9"
-        stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2.5"
         strokeLinecap="round"
-        opacity="0.7"
+        strokeLinejoin="round"
       />
     </svg>
   );
 }
-
-/* ─────────────────────────────────────────────
-   Badge
-───────────────────────────────────────────── */
 
 function Badge({
   children,
@@ -320,170 +344,246 @@ function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
     >
       {children}
     </span>
   );
 }
 
-/* ─────────────────────────────────────────────
-   Encabezado
-───────────────────────────────────────────── */
-
 function Encabezado({
+  eyebrow,
   titulo,
   descripcion,
 }: {
+  eyebrow: string;
   titulo: string;
-  descripcion?: string;
+  descripcion: string;
 }) {
   return (
-    <div className="mb-5">
-      <h2 className="text-xl font-bold tracking-tight">{titulo}</h2>
-      {descripcion && (
-        <p className="mt-1 text-sm text-muted-foreground">
-          {descripcion}
-        </p>
-      )}
+    <div className="mb-6">
+      <p className="mb-1 text-sm font-semibold text-primary">{eyebrow}</p>
+      <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+        {titulo}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">{descripcion}</p>
     </div>
   );
 }
-
-/* ─────────────────────────────────────────────
-   Cita
-───────────────────────────────────────────── */
 
 function CitaFila({
   cita,
   onCancelar,
 }: {
   cita: Cita;
-  onCancelar?: () => void;
+  onCancelar?: (id: number) => void;
 }) {
   return (
-    <div className={`${CARD} flex flex-col gap-4 sm:flex-row sm:items-center`}>
-      <div className="flex shrink-0 items-center gap-3">
-        <div className="grid size-14 place-items-center rounded-xl bg-primary/10 text-center text-primary">
-          <span className="text-lg font-bold leading-none">
-            {cita.hora}
-          </span>
-          <span className="text-[9px] font-medium uppercase">
-            hs
-          </span>
+    <div className={CARD}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <span className="text-xs font-semibold uppercase">
+              {new Intl.DateTimeFormat("es-AR", {
+                month: "short",
+              })
+                .format(new Date(`${cita.fecha}T12:00:00`))
+                .replace(".", "")}
+            </span>
+            <span className="text-lg font-bold">
+              {new Date(`${cita.fecha}T12:00:00`).getDate()}
+            </span>
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold">{cita.motivo}</h3>
+              <Badge className={estadoStyle(cita.estado)}>
+                {cita.estado}
+              </Badge>
+            </div>
+
+            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <p className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {cita.hora} hs · {fechaLarga(cita.fecha)}
+              </p>
+              <p className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                {cita.profesional} · {cita.especialidad}
+              </p>
+            </div>
+
+            {cita.observaciones && (
+              <p className="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
+                {cita.observaciones}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="sm:hidden">
-          <p className="text-sm font-semibold">
-            {fechaCorta(cita.fecha)}
-          </p>
-          <Badge className={estadoStyle(cita.estado)}>
-            {cita.estado}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-bold">{cita.motivo}</h3>
-
-          <span className="hidden sm:inline-flex">
-            <Badge className={estadoStyle(cita.estado)}>
-              {cita.estado}
-            </Badge>
-          </span>
-        </div>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          {cita.profesional} · {cita.especialidad}
-        </p>
-
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <CalendarDays className="size-3.5" />
-            {fechaLarga(cita.fecha)}
-          </span>
-
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3.5" />
-            {cita.direccion}
-          </span>
-        </div>
-      </div>
-
-      {onCancelar &&
-        cita.estado !== "Cancelada" &&
-        cita.estado !== "Realizada" && (
+        {onCancelar && cita.estado !== "Cancelada" && (
           <button
             type="button"
-            onClick={onCancelar}
-            className="self-start rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive sm:self-center"
+            className={`${BTN_SECONDARY} shrink-0 text-red-600 hover:border-red-200 hover:bg-red-50`}
+            onClick={() => onCancelar(cita.id)}
           >
+            <X className="h-4 w-4" />
             Cancelar
           </button>
         )}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   Modal
-───────────────────────────────────────────── */
-
-function Modal({
-  titulo,
-  onClose,
-  children,
-}: {
-  titulo: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
-      onMouseDown={onClose}
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-2xl md:p-6"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-bold">{titulo}</h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-9 place-items-center rounded-lg hover:bg-muted"
-            aria-label="Cerrar"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {children}
       </div>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────
-   Portal
-───────────────────────────────────────────── */
+function Modal({
+  abierto,
+  titulo,
+  onCerrar,
+  children,
+}: {
+  abierto: boolean;
+  titulo: string;
+  onCerrar: () => void;
+  children: React.ReactNode;
+}) {
+  if (!abierto) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border p-5">
+          <h2 className="text-lg font-bold">{titulo}</h2>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Cerrar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function DocumentacionSolicitada({
+  documentos,
+  onAdjuntar,
+}: {
+  documentos: DocumentacionSolicitadaItem[];
+  onAdjuntar: (id: number, archivo: string) => void;
+}) {
+  return (
+    <section>
+      <Encabezado
+        eyebrow="DOCUMENTACIÓN"
+        titulo="Documentación solicitada"
+        descripcion="Completá y adjuntá la documentación que la clínica necesita."
+      />
+
+      <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 md:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <FileText className="h-5 w-5" />
+          </div>
+
+          <div>
+            <h2 className="font-semibold">Documentación pendiente</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Adjuntá los archivos solicitados para que el equipo pueda
+              revisar tu documentación.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {documentos.map((documento) => (
+          <div key={documento.id} className={CARD}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">{documento.titulo}</h3>
+
+                    <Badge
+                      className={documentacionEstadoStyle(documento.estado)}
+                    >
+                      {documento.estado}
+                    </Badge>
+
+                    {documento.obligatorio && (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Obligatorio
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {documento.descripcion}
+                  </p>
+
+                  {documento.archivo && (
+                    <p className="mt-2 flex items-center gap-2 text-xs font-medium text-primary">
+                      <Check className="h-4 w-4" />
+                      {documento.archivo}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <label className={`${BTN_SECONDARY} shrink-0 cursor-pointer`}>
+                <Upload className="h-4 w-4" />
+                {documento.estado === "Pendiente"
+                  ? "Adjuntar archivo"
+                  : "Cambiar archivo"}
+
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(event) => {
+                    const archivo = event.target.files?.[0];
+
+                    if (!archivo) return;
+
+                    onAdjuntar(documento.id, archivo.name);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function PortalPaciente() {
   const [seccion, setSeccion] = useState<Seccion>("inicio");
 
-  const [citas, setCitas] =
-    useState<Cita[]>(CITAS_INICIALES);
+  const [citas, setCitas] = useState<Cita[]>(CITAS_INICIALES);
+  const [pagos, setPagos] = useState<Pago[]>(PAGOS_INICIALES);
 
-  const [pagos] =
-    useState<Pago[]>(PAGOS_INICIALES);
+  const [documentacion, setDocumentacion] = useState<
+    DocumentacionSolicitadaItem[]
+  >(DOCUMENTACION_INICIAL);
 
-  const [modal, setModal] = useState(false);
+  const [modal, setModal] = useState<
+    "turno" | "pago" | null
+  >(null);
 
-  const [mensaje, setMensaje] =
-    useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     fecha: "",
@@ -492,71 +592,52 @@ export default function PortalPaciente() {
     observaciones: "",
   });
 
-  const proximas = citas
-    .filter(
-      (c) =>
-        c.estado === "Confirmada" ||
-        c.estado === "Pendiente",
-    )
-    .sort((a, b) =>
-      `${a.fecha}${a.hora}`.localeCompare(
-        `${b.fecha}${b.hora}`,
-      ),
-    );
+  const proximas = citas.filter(
+    (cita) =>
+      cita.estado === "Confirmada" || cita.estado === "Pendiente"
+  );
 
-  const historial = citas
-    .filter(
-      (c) =>
-        c.estado === "Realizada" ||
-        c.estado === "Cancelada",
-    )
-    .sort((a, b) =>
-      `${b.fecha}${b.hora}`.localeCompare(
-        `${a.fecha}${a.hora}`,
-      ),
-    );
+  const historial = citas.filter(
+    (cita) =>
+      cita.estado === "Realizada" || cita.estado === "Cancelada"
+  );
 
   const proxima = proximas[0];
 
   const saldo = pagos
-    .filter((p) => p.estado === "Pendiente")
-    .reduce((total, p) => total + p.monto, 0);
+    .filter((pago) => pago.estado === "Pendiente")
+    .reduce((total, pago) => total + pago.monto, 0);
 
-  const avisar = (texto: string) => {
+  function avisar(texto: string) {
     setMensaje(texto);
 
     window.setTimeout(() => {
       setMensaje(null);
-    }, 2600);
-  };
+    }, 3500);
+  }
 
-  const ir = (destino: Seccion) => {
-    setSeccion(destino);
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+  function ir(nuevaSeccion: Seccion) {
+    setSeccion(nuevaSeccion);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-  const cancelarCita = (id: number) => {
+  function cancelarCita(id: number) {
     setCitas((actuales) =>
       actuales.map((cita) =>
         cita.id === id
           ? { ...cita, estado: "Cancelada" }
-          : cita,
-      ),
+          : cita
+      )
     );
 
-    avisar("Turno cancelado correctamente");
-  };
+    avisar("El turno fue cancelado correctamente.");
+  }
 
-  const solicitarTurno = (
-    e: React.FormEvent<HTMLFormElement>,
-  ) => {
-    e.preventDefault();
+  function solicitarTurno(event: React.FormEvent) {
+    event.preventDefault();
 
     if (!form.fecha || !form.hora || !form.motivo) {
-      avisar("Completá fecha, hora y motivo");
+      avisar("Completá los campos obligatorios.");
       return;
     }
 
@@ -568,14 +649,10 @@ export default function PortalPaciente() {
       especialidad: "Odontología general",
       motivo: form.motivo,
       estado: "Pendiente",
-      direccion:
-        "Clínica Centro · Av. Corrientes 1250",
+      observaciones: form.observaciones || undefined,
     };
 
-    setCitas((actuales) => [
-      ...actuales,
-      nuevaCita,
-    ]);
+    setCitas((actuales) => [...actuales, nuevaCita]);
 
     setForm({
       fecha: "",
@@ -584,15 +661,38 @@ export default function PortalPaciente() {
       observaciones: "",
     });
 
-    setModal(false);
-    avisar("Solicitud de turno enviada");
-  };
+    setModal(null);
+    avisar("Tu solicitud de turno fue enviada.");
+  }
 
-  const pagar = (pago: Pago) => {
-    avisar(
-      `Pago iniciado para ${pago.concepto}`,
+  function pagar(id: number) {
+    setPagos((actuales) =>
+      actuales.map((pago) =>
+        pago.id === id
+          ? { ...pago, estado: "Pagado" }
+          : pago
+      )
     );
-  };
+
+    setModal(null);
+    avisar("El pago fue registrado correctamente.");
+  }
+
+  function adjuntarDocumentacion(id: number, archivo: string) {
+    setDocumentacion((actuales) =>
+      actuales.map((documento) =>
+        documento.id === id
+          ? {
+              ...documento,
+              estado: "Adjuntada",
+              archivo,
+            }
+          : documento
+      )
+    );
+
+    avisar("La documentación fue adjuntada correctamente.");
+  }
 
   const nav = [
     {
@@ -616,6 +716,11 @@ export default function PortalPaciente() {
       icon: FileText,
     },
     {
+      id: "documentacion" as const,
+      label: "Documentación solicitada",
+      icon: Upload,
+    },
+    {
       id: "pagos" as const,
       label: "Pagos",
       icon: CreditCard,
@@ -624,51 +729,25 @@ export default function PortalPaciente() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ─────────────────────────────────────
-          Toast
-      ───────────────────────────────────── */}
-
-      {mensaje && (
-        <div className="fixed left-1/2 top-4 z-[70] -translate-x-1/2">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold shadow-xl">
-            <span className="grid size-6 place-items-center rounded-full bg-emerald-500/10 text-emerald-600">
-              <Check className="size-3.5" />
-            </span>
-            {mensaje}
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────
-          Layout
-      ───────────────────────────────────── */}
-
       <div className="flex min-h-screen">
-        {/* Sidebar escritorio */}
-
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card/95 md:flex">
-          <div className="border-b border-border p-5">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                <DienteIcon className="size-7" />
-              </span>
+        {/* SIDEBAR */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card/95 md:flex md:flex-col">
+          <div className="flex h-full flex-col p-4">
+            <div className="mb-8 flex items-center gap-3 px-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <DienteIcon className="h-6 w-6" />
+              </div>
 
               <div>
-                <p className="font-bold tracking-tight">
-                  Cloud Esther
-                </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="font-bold leading-tight">Cloud Esther</p>
+                <p className="text-xs text-muted-foreground">
                   Portal del paciente
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
-            <div className="mb-3 px-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Mi portal
-              </p>
+            <div className="mb-3 px-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Mi portal
             </div>
 
             <nav className="space-y-1">
@@ -681,380 +760,501 @@ export default function PortalPaciente() {
                     key={item.id}
                     type="button"
                     onClick={() => ir(item.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all ${
                       activo
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
                     }`}
                   >
-                    <Icon className="size-4" />
-                    {item.label}
-
-                    {item.id === "turnos" &&
-                      proximas.length > 0 && (
-                        <span
-                          className={`ml-auto rounded-full px-2 py-0.5 text-[10px] ${
-                            activo
-                              ? "bg-white/20"
-                              : "bg-primary/10 text-primary"
-                          }`}
-                        >
-                          {proximas.length}
-                        </span>
-                      )}
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
             </nav>
-          </div>
 
-          <div className="border-t border-border p-3">
-            <div className="mb-3 rounded-xl bg-primary/5 p-3">
-              <p className="text-xs text-muted-foreground">
-                Paciente
-              </p>
+            <div className="mt-auto">
+              <div className="mb-3 rounded-2xl border border-border bg-background p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    MG
+                  </div>
 
-              <p className="mt-1 text-sm font-bold">
-                {PACIENTE.nombre}
-              </p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {PACIENTE.nombre}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Paciente
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={`${BTN_SECONDARY} w-full`}
+                onClick={() => avisar("Volviendo a Cloud Esther...")}
+              >
+                <LogOut className="h-4 w-4" />
+                Volver a Cloud Esther
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = "/demo/agenda";
-              }}
-              className="flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-primary/5"
-            >
-              <LogOut className="size-4" />
-              Volver a Cloud Esther
-            </button>
           </div>
         </aside>
 
-        {/* Contenido */}
-
+        {/* CONTENIDO */}
         <div className="min-w-0 flex-1">
-          {/* Header mobile */}
-
+          {/* MOBILE HEADER */}
           <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur md:hidden">
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2.5">
-                <span className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <DienteIcon className="size-6" />
-                </span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <DienteIcon className="h-5 w-5" />
+                </div>
 
                 <div>
-                  <p className="text-sm font-bold">
-                    Cloud Esther
-                  </p>
+                  <p className="text-sm font-bold">Cloud Esther</p>
                   <p className="text-[10px] text-muted-foreground">
                     Portal del paciente
                   </p>
                 </div>
               </div>
 
-              <span className="grid size-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                 MG
-              </span>
+              </div>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 md:px-8 md:pb-10 md:pt-8">
-            {/* ─────────────────────────────
-                INICIO
-            ───────────────────────────── */}
-
+          <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-6 md:py-8 md:pb-10">
+            {/* INICIO */}
             {seccion === "inicio" && (
               <section>
-                <div className="relative mb-6 overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.14] via-card to-card p-5 shadow-sm md:p-7">
-                  <div className="pointer-events-none absolute -right-16 -top-16 opacity-[0.08]">
-                    <DienteIcon className="size-64" />
-                  </div>
+                <div className="mb-6 overflow-hidden rounded-3xl border border-border bg-card">
+                  <div className="relative p-6 md:p-8">
+                    <div className="relative z-10 max-w-2xl">
+                      <p className="mb-2 text-sm font-semibold text-primary">
+                        BIENVENIDA
+                      </p>
 
-                  <div className="relative">
-                    <p className="text-sm font-medium text-primary">
-                      Bienvenida
-                    </p>
+                      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                        Hola, {PACIENTE.corto}
+                      </h1>
 
-                    <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
-                      Hola, {PACIENTE.corto}
-                    </h1>
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground md:text-base">
+                        Desde tu portal podés gestionar tus turnos,
+                        consultar tratamientos, ver documentación y
+                        administrar tus pagos.
+                      </p>
 
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                      Desde acá podés consultar tus turnos,
-                      tratamientos, documentos y pagos de
-                      manera simple.
-                    </p>
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          className={BTN_PRIMARY}
+                          onClick={() => setModal("turno")}
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                          Solicitar turno
+                        </button>
 
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setModal(true)}
-                        className={BTN_PRIMARY}
-                      >
-                        <CalendarPlus className="size-4" />
-                        Solicitar turno
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => ir("documentos")}
-                        className={BTN_SECONDARY}
-                      >
-                        <FileText className="size-4" />
-                        Ver documentos
-                      </button>
+                        <button
+                          type="button"
+                          className={BTN_SECONDARY}
+                          onClick={() => ir("documentos")}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Ver documentos
+                        </button>
+                      </div>
                     </div>
+
+                    <div className="pointer-events-none absolute -right-10 -top-10 hidden h-56 w-56 rounded-full bg-primary/5 md:block" />
+                    <div className="pointer-events-none absolute -bottom-20 right-24 hidden h-48 w-48 rounded-full bg-primary/5 md:block" />
                   </div>
                 </div>
 
-                {/* Próximo turno + saldo */}
-
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
+                {/* PRÓXIMA CITA / SALDO */}
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className={CARD}>
-                    <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm font-bold">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Próximo turno
                         </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Tu próxima visita
-                        </p>
-                      </div>
 
-                      <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                        <CalendarDays className="size-4" />
-                      </span>
-                    </div>
+                        {proxima ? (
+                          <>
+                            <h2 className="mt-1 text-xl font-bold">
+                              {fechaCorta(proxima.fecha)} · {proxima.hora}
+                            </h2>
 
-                    {proxima ? (
-                      <div className="rounded-xl border border-primary/15 bg-primary/[0.035] p-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                          <div className="flex items-center gap-3">
-                            <div className="grid size-14 place-items-center rounded-xl bg-primary text-primary-foreground">
-                              <span className="text-lg font-bold">
-                                {proxima.hora}
-                              </span>
-                            </div>
-
-                            <div>
-                              <p className="text-sm font-bold capitalize">
-                                {fechaLarga(
-                                  proxima.fecha,
-                                )}
-                              </p>
-
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {proxima.profesional}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold">
+                            <p className="mt-1 text-sm text-muted-foreground">
                               {proxima.motivo}
                             </p>
 
-                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="size-3.5" />
-                              {proxima.direccion}
+                            <p className="mt-3 text-sm font-medium">
+                              {proxima.profesional}
                             </p>
-                          </div>
-
-                          <Badge
-                            className={estadoStyle(
-                              proxima.estado,
-                            )}
-                          >
-                            {proxima.estado}
-                          </Badge>
-                        </div>
+                          </>
+                        ) : (
+                          <h2 className="mt-1 text-xl font-bold">
+                            No tenés turnos próximos
+                          </h2>
+                        )}
                       </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                        <CalendarDays className="mx-auto size-7 text-muted-foreground" />
 
-                        <p className="mt-2 text-sm font-semibold">
-                          No tenés próximos turnos
-                        </p>
-
-                        <button
-                          type="button"
-                          onClick={() => setModal(true)}
-                          className="mt-3 text-xs font-bold text-primary"
-                        >
-                          Solicitar turno
-                        </button>
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarDays className="h-5 w-5" />
                       </div>
-                    )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-5 flex items-center gap-1 text-sm font-semibold text-primary"
+                      onClick={() => ir("turnos")}
+                    >
+                      Ver mis turnos
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </div>
 
                   <div className={CARD}>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm font-bold">
-                          Cuenta
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Saldo pendiente
+                        </p>
+
+                        <h2 className="mt-1 text-xl font-bold">
+                          {ars(saldo)}
+                        </h2>
+
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {pagos.filter(
+                            (pago) => pago.estado === "Pendiente"
+                          ).length}{" "}
+                          pago
+                          {pagos.filter(
+                            (pago) => pago.estado === "Pendiente"
+                          ).length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          pendiente
+                          {pagos.filter(
+                            (pago) => pago.estado === "Pendiente"
+                          ).length !== 1
+                            ? "s"
+                            : ""}
                         </p>
                       </div>
 
-                      <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                        <Wallet className="size-4" />
-                      </span>
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Wallet className="h-5 w-5" />
+                      </div>
                     </div>
-
-                    <p className="mt-5 text-2xl font-bold">
-                      {ars(saldo)}
-                    </p>
-
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {saldo > 0
-                        ? "Hay pagos pendientes."
-                        : "No tenés saldo pendiente."}
-                    </p>
 
                     <button
                       type="button"
+                      className="mt-5 flex items-center gap-1 text-sm font-semibold text-primary"
                       onClick={() => ir("pagos")}
-                      className="mt-5 flex items-center gap-1 text-xs font-bold text-primary"
                     >
-                      Ver movimientos
-                      <ChevronRight className="size-3.5" />
+                      Ver pagos
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Acciones rápidas */}
-
-                <div className="mt-6">
-                  <p className="mb-3 text-sm font-bold">
-                    Accesos rápidos
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {[
-                      {
-                        titulo: "Turnos",
-                        texto: "Consultar y solicitar",
-                        icon: CalendarDays,
-                        destino: "turnos" as const,
-                      },
-                      {
-                        titulo: "Tratamientos",
-                        texto: "Ver evolución",
-                        icon: ClipboardList,
-                        destino: "tratamientos" as const,
-                      },
-                      {
-                        titulo: "Documentos",
-                        texto: "Recetas y estudios",
-                        icon: FileText,
-                        destino: "documentos" as const,
-                      },
-                      {
-                        titulo: "Pagos",
-                        texto: "Consultar cuenta",
-                        icon: CreditCard,
-                        destino: "pagos" as const,
-                      },
-                    ].map((item) => {
-                      const Icon = item.icon;
-
-                      return (
-                        <button
-                          key={item.titulo}
-                          type="button"
-                          onClick={() =>
-                            ir(item.destino)
-                          }
-                          className={`${CARD} group text-left`}
-                        >
-                          <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
-                            <Icon className="size-5" />
-                          </span>
-
-                          <p className="mt-4 text-sm font-bold">
-                            {item.titulo}
-                          </p>
-
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {item.texto}
-                          </p>
-
-                          <ChevronRight className="mt-3 size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                        </button>
-                      );
-                    })}
+                {/* ACCESOS RÁPIDOS */}
+                <div className="mt-8">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-bold">Accesos rápidos</h2>
                   </div>
-                </div>
 
-                {/* Tratamiento */}
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+                    <button
+                      type="button"
+                      className={`${CARD} text-left`}
+                      onClick={() => ir("turnos")}
+                    >
+                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarDays className="h-5 w-5" />
+                      </div>
 
-                <div className="mt-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold">
-                        Tratamiento actual
+                      <h3 className="font-semibold">Turnos</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Consultá y gestioná tus turnos.
                       </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        Evolución de tu tratamiento
-                      </p>
-                    </div>
+                    </button>
 
                     <button
                       type="button"
-                      onClick={() =>
-                        ir("tratamientos")
-                      }
-                      className="text-xs font-bold text-primary"
+                      className={`${CARD} text-left`}
+                      onClick={() => ir("tratamientos")}
                     >
-                      Ver todo
+                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <ClipboardList className="h-5 w-5" />
+                      </div>
+
+                      <h3 className="font-semibold">Tratamientos</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Consultá el avance de tus tratamientos.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${CARD} text-left`}
+                      onClick={() => ir("documentos")}
+                    >
+                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <FileText className="h-5 w-5" />
+                      </div>
+
+                      <h3 className="font-semibold">Documentos</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Accedé a tus recetas y estudios.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${CARD} text-left`}
+                      onClick={() => ir("documentacion")}
+                    >
+                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Upload className="h-5 w-5" />
+                      </div>
+
+                      <h3 className="font-semibold">
+                        Documentación
+                      </h3>
+
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Adjuntá documentación solicitada.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${CARD} text-left`}
+                      onClick={() => ir("pagos")}
+                    >
+                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+
+                      <h3 className="font-semibold">Pagos</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Consultá tus pagos y saldo.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* TRATAMIENTO ACTUAL */}
+                <div className="mt-8">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-bold">
+                      Tratamiento actual
+                    </h2>
+
+                    <button
+                      type="button"
+                      className="text-sm font-semibold text-primary"
+                      onClick={() => ir("tratamientos")}
+                    >
+                      Ver todos
                     </button>
                   </div>
 
-                  {TRATAMIENTOS_INICIALES.filter(
-                    (t) => t.estado === "En curso",
-                  ).map((t) => (
-                    <div
-                      key={t.id}
-                      className={CARD}
-                    >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                          <DienteIcon className="size-7" />
-                        </span>
+                  <div className={CARD}>
+                    {TRATAMIENTOS.filter(
+                      (tratamiento) =>
+                        tratamiento.estado === "En curso"
+                    ).map((tratamiento) => (
+                      <div key={tratamiento.id}>
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h3 className="font-semibold">
+                              {tratamiento.nombre}
+                            </h3>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-bold">
-                              {t.nombre}
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {tratamiento.descripcion}
                             </p>
-
-                            {t.pieza && (
-                              <Badge className="bg-primary/10 text-primary">
-                                Pieza {t.pieza}
-                              </Badge>
-                            )}
                           </div>
 
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t.profesional}
+                          <Badge className="w-fit border-blue-200 bg-blue-50 text-blue-700">
+                            {tratamiento.progreso}% completado
+                          </Badge>
+                        </div>
+
+                        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{
+                              width: `${tratamiento.progreso}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* TURNOS */}
+            {seccion === "turnos" && (
+              <section>
+                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                  <Encabezado
+                    eyebrow="MI AGENDA"
+                    titulo="Mis turnos"
+                    descripcion="Consultá tus próximos turnos y el historial de atención."
+                  />
+
+                  <button
+                    type="button"
+                    className={`${BTN_PRIMARY} shrink-0`}
+                    onClick={() => setModal("turno")}
+                  >
+                    <CalendarPlus className="h-4 w-4" />
+                    Solicitar turno
+                  </button>
+                </div>
+
+                <div className="mb-8">
+                  <div className="mb-4 flex items-center gap-2">
+                    <h2 className="text-lg font-bold">
+                      Próximos turnos
+                    </h2>
+
+                    <Badge className="border-primary/20 bg-primary/5 text-primary">
+                      {proximas.length}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4">
+                    {proximas.length > 0 ? (
+                      proximas.map((cita) => (
+                        <CitaFila
+                          key={cita.id}
+                          cita={cita}
+                          onCancelar={cancelarCita}
+                        />
+                      ))
+                    ) : (
+                      <div className={`${CARD} text-center`}>
+                        <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground" />
+                        <h3 className="mt-3 font-semibold">
+                          No tenés turnos próximos
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Solicitá un nuevo turno para continuar.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <h2 className="text-lg font-bold">
+                      Historial
+                    </h2>
+
+                    <Badge className="border-border bg-muted text-muted-foreground">
+                      {historial.length}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4">
+                    {historial.map((cita) => (
+                      <CitaFila key={cita.id} cita={cita} />
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* TRATAMIENTOS */}
+            {seccion === "tratamientos" && (
+              <section>
+                <Encabezado
+                  eyebrow="MI SALUD"
+                  titulo="Tratamientos"
+                  descripcion="Consultá el estado y avance de tus tratamientos."
+                />
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {TRATAMIENTOS.map((tratamiento) => (
+                    <div key={tratamiento.id} className={CARD}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-lg font-bold">
+                              {tratamiento.nombre}
+                            </h2>
+
+                            <Badge
+                              className={
+                                tratamiento.estado === "Finalizado"
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-blue-200 bg-blue-50 text-blue-700"
+                              }
+                            >
+                              {tratamiento.estado}
+                            </Badge>
+                          </div>
+
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            {tratamiento.descripcion}
                           </p>
+                        </div>
 
-                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-primary transition-all"
-                              style={{
-                                width: `${t.progreso}%`,
-                              }}
-                            />
-                          </div>
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <ClipboardList className="h-5 w-5" />
+                        </div>
+                      </div>
 
-                          <p className="mt-1.5 text-[11px] text-muted-foreground">
-                            {t.progreso}% completado
+                      <div className="mt-6">
+                        <div className="mb-2 flex items-center justify-between text-sm">
+                          <span className="font-medium">
+                            Progreso
+                          </span>
+                          <span className="font-semibold text-primary">
+                            {tratamiento.progreso}%
+                          </span>
+                        </div>
+
+                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{
+                              width: `${tratamiento.progreso}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Profesional
+                          </p>
+                          <p className="mt-1 text-sm font-semibold">
+                            {tratamiento.profesional}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Última sesión
+                          </p>
+                          <p className="mt-1 text-sm font-semibold">
+                            {fechaCorta(tratamiento.ultimaSesion)}
                           </p>
                         </div>
                       </div>
@@ -1064,555 +1264,411 @@ export default function PortalPaciente() {
               </section>
             )}
 
-            {/* ─────────────────────────────
-                TURNOS
-            ───────────────────────────── */}
-
-            {seccion === "turnos" && (
-              <section>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <Encabezado
-                    titulo="Mis turnos"
-                    descripcion="Consultá tus próximas visitas e historial."
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setModal(true)}
-                    className={`${BTN_PRIMARY} mb-5`}
-                  >
-                    <CalendarPlus className="size-4" />
-                    Solicitar turno
-                  </button>
-                </div>
-
-                <div>
-                  <p className="mb-3 text-sm font-bold">
-                    Próximos turnos
-                  </p>
-
-                  {proximas.length > 0 ? (
-                    <div className="space-y-3">
-                      {proximas.map((cita) => (
-                        <CitaFila
-                          key={cita.id}
-                          cita={cita}
-                          onCancelar={() =>
-                            cancelarCita(
-                              cita.id,
-                            )
-                          }
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`${CARD} text-center`}>
-                      <CalendarDays className="mx-auto size-8 text-muted-foreground" />
-                      <p className="mt-3 text-sm font-bold">
-                        No tenés próximos turnos
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-8">
-                  <p className="mb-3 text-sm font-bold">
-                    Historial
-                  </p>
-
-                  {historial.length > 0 ? (
-                    <div className="space-y-3">
-                      {historial.map((cita) => (
-                        <CitaFila
-                          key={cita.id}
-                          cita={cita}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`${CARD} text-center`}>
-                      <p className="text-sm text-muted-foreground">
-                        Todavía no hay historial.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* ─────────────────────────────
-                TRATAMIENTOS
-            ───────────────────────────── */}
-
-            {seccion === "tratamientos" && (
-              <section>
-                <Encabezado
-                  titulo="Mis tratamientos"
-                  descripcion="Consultá el estado y evolución de tus tratamientos odontológicos."
-                />
-
-                <div className="space-y-4">
-                  {TRATAMIENTOS_INICIALES.map(
-                    (tratamiento) => (
-                      <div
-                        key={tratamiento.id}
-                        className={CARD}
-                      >
-                        <div className="flex gap-4">
-                          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                            <DienteIcon className="size-7" />
-                          </span>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-sm font-bold">
-                                {tratamiento.nombre}
-                              </h3>
-
-                              {tratamiento.pieza && (
-                                <Badge className="bg-primary/10 text-primary">
-                                  Pieza{" "}
-                                  {tratamiento.pieza}
-                                </Badge>
-                              )}
-
-                              <Badge
-                                className={
-                                  tratamiento.estado ===
-                                  "Finalizado"
-                                    ? "bg-emerald-500/10 text-emerald-700"
-                                    : "bg-primary/10 text-primary"
-                                }
-                              >
-                                {
-                                  tratamiento.estado
-                                }
-                              </Badge>
-                            </div>
-
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {
-                                tratamiento.profesional
-                              }
-                            </p>
-
-                            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                              {
-                                tratamiento.descripcion
-                              }
-                            </p>
-
-                            <div className="mt-4">
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="font-semibold">
-                                  Progreso
-                                </span>
-
-                                <span className="text-muted-foreground">
-                                  {
-                                    tratamiento.progreso
-                                  }%
-                                </span>
-                              </div>
-
-                              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    tratamiento.estado ===
-                                    "Finalizado"
-                                      ? "bg-emerald-500"
-                                      : "bg-primary"
-                                  }`}
-                                  style={{
-                                    width: `${tratamiento.progreso}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* ─────────────────────────────
-                DOCUMENTOS
-            ───────────────────────────── */}
-
+            {/* DOCUMENTOS */}
             {seccion === "documentos" && (
               <section>
                 <Encabezado
-                  titulo="Mis documentos"
-                  descripcion="Recetas, estudios y presupuestos disponibles."
+                  eyebrow="MI DOCUMENTACIÓN"
+                  titulo="Documentos"
+                  descripcion="Consultá las recetas, estudios y presupuestos disponibles."
                 />
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {DOCUMENTOS_INICIALES.map(
-                    (documento) => {
-                      const Icon =
-                        documentoIcono(
-                          documento.tipo,
-                        );
-
-                      return (
-                        <div
-                          key={documento.id}
-                          className={`${CARD} group`}
-                        >
-                          <div className="flex gap-3">
-                            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                              <Icon className="size-5" />
-                            </span>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge className="bg-primary/10 text-primary">
-                                  {
-                                    documento.tipo
-                                  }
-                                </Badge>
-
-                                <span className="text-[11px] text-muted-foreground">
-                                  {
-                                    documento.fecha
-                                  }
-                                </span>
-                              </div>
-
-                              <h3 className="mt-2 text-sm font-bold">
-                                {
-                                  documento.titulo
-                                }
-                              </h3>
-
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                {
-                                  documento.descripcion
-                                }
-                              </p>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  avisar(
-                                    `Abriendo ${documento.titulo}`,
-                                  )
-                                }
-                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary"
-                              >
-                                <Download className="size-3.5" />
-                                Ver documento
-                              </button>
-                            </div>
-                          </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {DOCUMENTOS.map((documento) => (
+                    <div key={documento.id} className={CARD}>
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          {documentoIcono(documento.tipo)}
                         </div>
-                      );
-                    },
-                  )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge className="border-primary/20 bg-primary/5 text-primary">
+                              {documento.tipo}
+                            </Badge>
+
+                            <span className="text-xs text-muted-foreground">
+                              {fechaCorta(documento.fecha)}
+                            </span>
+                          </div>
+
+                          <h2 className="mt-2 font-semibold">
+                            {documento.titulo}
+                          </h2>
+
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {documento.descripcion}
+                          </p>
+
+                          <button
+                            type="button"
+                            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                            onClick={() =>
+                              avisar(
+                                `Abriendo ${documento.titulo}...`
+                              )
+                            }
+                          >
+                            <Download className="h-4 w-4" />
+                            Ver documento
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
 
-            {/* ─────────────────────────────
-                PAGOS
-            ───────────────────────────── */}
+            {/* DOCUMENTACIÓN SOLICITADA */}
+            {seccion === "documentacion" && (
+              <DocumentacionSolicitada
+                documentos={documentacion}
+                onAdjuntar={adjuntarDocumentacion}
+              />
+            )}
 
+            {/* PAGOS */}
             {seccion === "pagos" && (
               <section>
                 <Encabezado
-                  titulo="Pagos y cuenta"
-                  descripcion="Consultá tus pagos, movimientos y saldo pendiente."
+                  eyebrow="CUENTA"
+                  titulo="Pagos"
+                  descripcion="Consultá tus pagos realizados y los importes pendientes."
                 />
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="mb-6 grid gap-4 md:grid-cols-3">
                   <div className={CARD}>
-                    <p className="text-xs font-semibold text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Saldo pendiente
                     </p>
-
-                    <p className="mt-2 text-2xl font-bold">
+                    <p className="mt-1 text-2xl font-bold">
                       {ars(saldo)}
                     </p>
                   </div>
 
                   <div className={CARD}>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      Pagos realizados
+                    <p className="text-sm text-muted-foreground">
+                      Pagado
                     </p>
 
-                    <p className="mt-2 text-2xl font-bold">
+                    <p className="mt-1 text-2xl font-bold">
                       {ars(
                         pagos
                           .filter(
-                            (p) =>
-                              p.estado ===
-                              "Pagado",
+                            (pago) => pago.estado === "Pagado"
                           )
                           .reduce(
-                            (total, p) =>
-                              total + p.monto,
-                            0,
-                          ),
+                            (total, pago) => total + pago.monto,
+                            0
+                          )
                       )}
                     </p>
                   </div>
 
                   <div className={CARD}>
-                    <p className="text-xs font-semibold text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Movimientos
                     </p>
 
-                    <p className="mt-2 text-2xl font-bold">
+                    <p className="mt-1 text-2xl font-bold">
                       {pagos.length}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-3">
-                  {pagos.map((pago) => (
-                    <div
-                      key={pago.id}
-                      className={CARD}
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                          <CreditCard className="size-5" />
-                        </div>
+                <div className={CARD}>
+                  <div className="mb-4">
+                    <h2 className="text-lg font-bold">
+                      Movimientos
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Historial de pagos de tu cuenta.
+                    </p>
+                  </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-bold">
+                  <div className="divide-y divide-border">
+                    {pagos.map((pago) => (
+                      <div
+                        key={pago.id}
+                        className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <CreditCard className="h-5 w-5" />
+                          </div>
+
+                          <div>
+                            <p className="font-semibold">
                               {pago.concepto}
                             </p>
 
-                            <Badge
-                              className={
-                                pago.estado ===
-                                "Pagado"
-                                  ? "bg-emerald-500/10 text-emerald-700"
-                                  : "bg-amber-500/10 text-amber-700"
-                              }
-                            >
-                              {pago.estado}
-                            </Badge>
+                            <p className="text-sm text-muted-foreground">
+                              {fechaCorta(pago.fecha)}
+                            </p>
                           </div>
-
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {pago.fecha}
-                          </p>
                         </div>
 
                         <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <p className="text-base font-bold">
+                          <p className="font-bold">
                             {ars(pago.monto)}
                           </p>
 
-                          {pago.estado ===
-                            "Pendiente" && (
+                          {pago.estado === "Pagado" ? (
+                            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                              <Check className="mr-1 h-3.5 w-3.5" />
+                              Pagado
+                            </Badge>
+                          ) : (
                             <button
                               type="button"
-                              onClick={() =>
-                                pagar(pago)
-                              }
-                              className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                              className={`${BTN_PRIMARY} min-h-9 px-3 text-xs`}
+                              onClick={() => {
+                                setModal("pago");
+                              }}
                             >
                               Pagar
                             </button>
                           )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </section>
             )}
           </main>
-
-          {/* Botón flotante de contacto */}
-
-          <button
-            type="button"
-            onClick={() =>
-              avisar(
-                "El contacto con la clínica estará disponible próximamente",
-              )
-            }
-            className="fixed bottom-20 right-4 z-30 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl md:bottom-6 md:right-6"
-            aria-label="Contactar a la clínica"
-          >
-            <MessageCircle className="size-5" />
-          </button>
-
-          {/* Navegación móvil */}
-
-          <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-            <div className="mx-auto flex max-w-lg items-center justify-around py-1.5">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const activo = seccion === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => ir(item.id)}
-                    className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold transition-colors ${
-                      activo
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    <Icon className="size-4" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
         </div>
       </div>
 
-      {/* ─────────────────────────────────────
-          Modal solicitar turno
-      ───────────────────────────────────── */}
+      {/* BOTÓN CONTACTO */}
+      <button
+        type="button"
+        onClick={() => avisar("Abriendo contacto con la clínica...")}
+        className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl md:bottom-6 md:right-6"
+        aria-label="Contactar con la clínica"
+      >
+        <MessageCircle className="h-5 w-5" />
+      </button>
 
-      {modal && (
-        <Modal
-          titulo="Solicitar un turno"
-          onClose={() => setModal(false)}
-        >
-          <form
-            onSubmit={solicitarTurno}
-            className="space-y-4"
-          >
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold">
-                Fecha
-              </label>
+      {/* MOBILE NAV */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card/95 backdrop-blur md:hidden">
+        <div className="grid grid-cols-5 px-2 py-2">
+          {[
+            {
+              id: "inicio" as const,
+              label: "Inicio",
+              icon: Home,
+            },
+            {
+              id: "turnos" as const,
+              label: "Turnos",
+              icon: CalendarDays,
+            },
+            {
+              id: "tratamientos" as const,
+              label: "Tratamientos",
+              icon: ClipboardList,
+            },
+            {
+              id: "documentos" as const,
+              label: "Docs.",
+              icon: FileText,
+            },
+            {
+              id: "pagos" as const,
+              label: "Pagos",
+              icon: CreditCard,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            const activo = seccion === item.id;
 
-              <input
-                required
-                type="date"
-                value={form.fecha}
-                onChange={(e) =>
-                  setForm((actual) => ({
-                    ...actual,
-                    fecha: e.target.value,
-                  }))
-                }
-                className={INPUT}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold">
-                Hora preferida
-              </label>
-
-              <input
-                required
-                type="time"
-                value={form.hora}
-                onChange={(e) =>
-                  setForm((actual) => ({
-                    ...actual,
-                    hora: e.target.value,
-                  }))
-                }
-                className={INPUT}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold">
-                Motivo
-              </label>
-
-              <select
-                required
-                value={form.motivo}
-                onChange={(e) =>
-                  setForm((actual) => ({
-                    ...actual,
-                    motivo: e.target.value,
-                  }))
-                }
-                className={`${INPUT} appearance-none`}
-              >
-                <option value="">
-                  Seleccionar motivo
-                </option>
-                <option value="Control odontológico">
-                  Control odontológico
-                </option>
-                <option value="Limpieza dental">
-                  Limpieza dental
-                </option>
-                <option value="Dolor / urgencia">
-                  Dolor / urgencia
-                </option>
-                <option value="Restauración">
-                  Restauración
-                </option>
-                <option value="Consulta general">
-                  Consulta general
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold">
-                Observaciones
-              </label>
-
-              <textarea
-                rows={3}
-                value={form.observaciones}
-                onChange={(e) =>
-                  setForm((actual) => ({
-                    ...actual,
-                    observaciones:
-                      e.target.value,
-                  }))
-                }
-                className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="Podés agregar alguna indicación..."
-              />
-            </div>
-
-            <div className="rounded-xl bg-primary/5 p-3">
-              <div className="flex gap-2">
-                <Clock className="mt-0.5 size-4 shrink-0 text-primary" />
-
-                <p className="text-xs leading-5 text-muted-foreground">
-                  La solicitud queda pendiente de
-                  confirmación por parte de la clínica.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
+            return (
               <button
+                key={item.id}
                 type="button"
-                onClick={() => setModal(false)}
-                className={BTN_SECONDARY}
+                onClick={() => ir(item.id)}
+                className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold transition-colors ${
+                  activo
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground"
+                }`}
               >
-                Cancelar
+                <Icon className="h-5 w-5" />
+                {item.label}
               </button>
+            );
+          })}
+        </div>
+      </nav>
 
-              <button
-                type="submit"
-                className={BTN_PRIMARY}
-              >
-                <CalendarPlus className="size-4" />
-                Solicitar turno
-              </button>
+      {/* MODAL SOLICITAR TURNO */}
+      <Modal
+        abierto={modal === "turno"}
+        titulo="Solicitar turno"
+        onCerrar={() => setModal(null)}
+      >
+        <form onSubmit={solicitarTurno} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold">
+              Fecha
+            </label>
+
+            <input
+              type="date"
+              className={INPUT}
+              value={form.fecha}
+              min="2026-09-25"
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  fecha: event.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold">
+              Hora
+            </label>
+
+            <input
+              type="time"
+              className={INPUT}
+              value={form.hora}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  hora: event.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold">
+              Motivo de la consulta
+            </label>
+
+            <select
+              className={INPUT}
+              value={form.motivo}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  motivo: event.target.value,
+                })
+              }
+            >
+              <option value="">Seleccionar motivo</option>
+              <option value="Control y seguimiento">
+                Control y seguimiento
+              </option>
+              <option value="Restauración estética">
+                Restauración estética
+              </option>
+              <option value="Limpieza y control">
+                Limpieza y control
+              </option>
+              <option value="Consulta general">
+                Consulta general
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold">
+              Observaciones
+            </label>
+
+            <textarea
+              className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              placeholder="Podés agregar información adicional..."
+              value={form.observaciones}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  observaciones: event.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              className={BTN_SECONDARY}
+              onClick={() => setModal(null)}
+            >
+              Cancelar
+            </button>
+
+            <button type="submit" className={BTN_PRIMARY}>
+              <CalendarPlus className="h-4 w-4" />
+              Solicitar turno
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL PAGO */}
+      <Modal
+        abierto={modal === "pago"}
+        titulo="Realizar pago"
+        onCerrar={() => setModal(null)}
+      >
+        <div className="space-y-5">
+          <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-sm text-muted-foreground">
+              Seleccioná el pago pendiente que querés registrar.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {pagos
+              .filter((pago) => pago.estado === "Pendiente")
+              .map((pago) => (
+                <div
+                  key={pago.id}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
+                >
+                  <div>
+                    <p className="font-semibold">{pago.concepto}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {fechaCorta(pago.fecha)}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="font-bold">{ars(pago.monto)}</p>
+
+                    <button
+                      type="button"
+                      className={`${BTN_PRIMARY} mt-2 min-h-9 px-3 text-xs`}
+                      onClick={() => pagar(pago.id)}
+                    >
+                      Confirmar pago
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* MENSAJE */}
+      {mensaje && (
+        <div className="fixed bottom-20 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 md:bottom-6">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium shadow-xl">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="h-4 w-4" />
             </div>
-          </form>
-        </Modal>
+
+            <span>{mensaje}</span>
+          </div>
+        </div>
       )}
     </div>
   );

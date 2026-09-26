@@ -23,6 +23,7 @@ import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
 import { Route as DemoBiRouteImport } from './routes/demo_.bi'
 import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
+import { Route as DemoConfiguracionRouteImport } from './routes/demo_.configuracion'
 import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
 import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
 import { Route as DemoFinanzasRouteImport } from './routes/demo_.finanzas'
@@ -38,6 +39,7 @@ import { Route as DemoPacientesRouteImport } from './routes/demo_.pacientes'
 import { Route as DemoPortalPacienteRouteImport } from './routes/demo_.portal-paciente'
 import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuestos'
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
+import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
 import { Route as DemoEquipoProfesionalEspecialidadesRouteImport } from './routes/demo_.equipo-profesional_.especialidades'
@@ -111,6 +113,11 @@ const DemoBiRoute = DemoBiRouteImport.update({
 const DemoComunicacionesRoute = DemoComunicacionesRouteImport.update({
   id: '/demo_/comunicaciones',
   path: '/demo/comunicaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoConfiguracionRoute = DemoConfiguracionRouteImport.update({
+  id: '/demo_/configuracion',
+  path: '/demo/configuracion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoEquipoProfesionalRoute = DemoEquipoProfesionalRouteImport.update({
@@ -188,6 +195,11 @@ const DemoRecetasRoute = DemoRecetasRouteImport.update({
   path: '/demo/recetas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoRrhhRoute = DemoRrhhRouteImport.update({
+  id: '/demo_/rrhh',
+  path: '/demo/rrhh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   id: '/demo_/tratamientos',
   path: '/demo/tratamientos',
@@ -226,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
@@ -241,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/demo/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
+  '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -261,6 +275,7 @@ export interface FileRoutesByTo {
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
@@ -276,6 +291,7 @@ export interface FileRoutesByTo {
   '/demo/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
+  '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -297,6 +313,7 @@ export interface FileRoutesById {
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
   '/demo_/comunicaciones': typeof DemoComunicacionesRoute
+  '/demo_/configuracion': typeof DemoConfiguracionRoute
   '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo_/estudios': typeof DemoEstudiosRoute
   '/demo_/finanzas': typeof DemoFinanzasRoute
@@ -312,6 +329,7 @@ export interface FileRoutesById {
   '/demo_/portal-paciente': typeof DemoPortalPacienteRoute
   '/demo_/presupuestos': typeof DemoPresupuestosRoute
   '/demo_/recetas': typeof DemoRecetasRoute
+  '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
   '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -334,6 +352,7 @@ export interface FileRouteTypes {
     | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
+    | '/demo/configuracion'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/finanzas'
@@ -349,6 +368,7 @@ export interface FileRouteTypes {
     | '/demo/portal-paciente'
     | '/demo/presupuestos'
     | '/demo/recetas'
+    | '/demo/rrhh'
     | '/demo/tratamientos'
     | '/app/'
     | '/demo/equipo-profesional/agendas-horarios'
@@ -369,6 +389,7 @@ export interface FileRouteTypes {
     | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
+    | '/demo/configuracion'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
     | '/demo/finanzas'
@@ -384,6 +405,7 @@ export interface FileRouteTypes {
     | '/demo/portal-paciente'
     | '/demo/presupuestos'
     | '/demo/recetas'
+    | '/demo/rrhh'
     | '/demo/tratamientos'
     | '/app'
     | '/demo/equipo-profesional/agendas-horarios'
@@ -404,6 +426,7 @@ export interface FileRouteTypes {
     | '/demo_/automatizaciones'
     | '/demo_/bi'
     | '/demo_/comunicaciones'
+    | '/demo_/configuracion'
     | '/demo_/equipo-profesional'
     | '/demo_/estudios'
     | '/demo_/finanzas'
@@ -419,6 +442,7 @@ export interface FileRouteTypes {
     | '/demo_/portal-paciente'
     | '/demo_/presupuestos'
     | '/demo_/recetas'
+    | '/demo_/rrhh'
     | '/demo_/tratamientos'
     | '/app/'
     | '/demo_/equipo-profesional_/agendas-horarios'
@@ -440,6 +464,7 @@ export interface RootRouteChildren {
   DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
   DemoBiRoute: typeof DemoBiRoute
   DemoComunicacionesRoute: typeof DemoComunicacionesRoute
+  DemoConfiguracionRoute: typeof DemoConfiguracionRoute
   DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
   DemoEstudiosRoute: typeof DemoEstudiosRoute
   DemoFinanzasRoute: typeof DemoFinanzasRoute
@@ -455,6 +480,7 @@ export interface RootRouteChildren {
   DemoPortalPacienteRoute: typeof DemoPortalPacienteRoute
   DemoPresupuestosRoute: typeof DemoPresupuestosRoute
   DemoRecetasRoute: typeof DemoRecetasRoute
+  DemoRrhhRoute: typeof DemoRrhhRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   AppIndexRoute: typeof AppIndexRoute
   DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -562,6 +588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoComunicacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/configuracion': {
+      id: '/demo_/configuracion'
+      path: '/demo/configuracion'
+      fullPath: '/demo/configuracion'
+      preLoaderRoute: typeof DemoConfiguracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/equipo-profesional': {
       id: '/demo_/equipo-profesional'
       path: '/demo/equipo-profesional'
@@ -667,6 +700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoRecetasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/rrhh': {
+      id: '/demo_/rrhh'
+      path: '/demo/rrhh'
+      fullPath: '/demo/rrhh'
+      preLoaderRoute: typeof DemoRrhhRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/tratamientos': {
       id: '/demo_/tratamientos'
       path: '/demo/tratamientos'
@@ -712,6 +752,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,
   DemoBiRoute: DemoBiRoute,
   DemoComunicacionesRoute: DemoComunicacionesRoute,
+  DemoConfiguracionRoute: DemoConfiguracionRoute,
   DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
   DemoEstudiosRoute: DemoEstudiosRoute,
   DemoFinanzasRoute: DemoFinanzasRoute,
@@ -727,6 +768,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoPortalPacienteRoute: DemoPortalPacienteRoute,
   DemoPresupuestosRoute: DemoPresupuestosRoute,
   DemoRecetasRoute: DemoRecetasRoute,
+  DemoRrhhRoute: DemoRrhhRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
   AppIndexRoute: AppIndexRoute,
   DemoEquipoProfesionalAgendasHorariosRoute:

@@ -99,7 +99,7 @@ const EVOLUCION_PUNTOS = (() => {
 })();
 
 const CARD =
-  "rounded-2xl border border-primary/25 bg-gradient-to-b from-[oklch(0.96_0.025_292)]/70 to-transparent p-4 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-primary hover:shadow-lg hover:shadow-primary/10";
+  "rounded-2xl border border-primary/25 bg-gradient-to-b from-lavender/70 to-transparent p-4 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-primary hover:shadow-lg hover:shadow-primary/10";
 
 const INPUT =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";

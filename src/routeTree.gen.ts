@@ -26,12 +26,14 @@ import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicac
 import { Route as DemoConfiguracionRouteImport } from './routes/demo_.configuracion'
 import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
 import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
+import { Route as DemoFacturacionRouteImport } from './routes/demo_.facturacion'
 import { Route as DemoFinanzasRouteImport } from './routes/demo_.finanzas'
 import { Route as DemoHistoriaRouteImport } from './routes/demo_.historia'
 import { Route as DemoIntegracionesRouteImport } from './routes/demo_.integraciones'
 import { Route as DemoInventarioRouteImport } from './routes/demo_.inventario'
 import { Route as DemoLaboratorioRouteImport } from './routes/demo_.laboratorio'
 import { Route as DemoMarketingRouteImport } from './routes/demo_.marketing'
+import { Route as DemoMultiempresaRouteImport } from './routes/demo_.multiempresa'
 import { Route as DemoNotificacionesRouteImport } from './routes/demo_.notificaciones'
 import { Route as DemoOdontogramaRouteImport } from './routes/demo_.odontograma'
 import { Route as DemoOdontograma3dRouteImport } from './routes/demo_.odontograma-3d'
@@ -130,6 +132,11 @@ const DemoEstudiosRoute = DemoEstudiosRouteImport.update({
   path: '/demo/estudios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoFacturacionRoute = DemoFacturacionRouteImport.update({
+  id: '/demo_/facturacion',
+  path: '/demo/facturacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoFinanzasRoute = DemoFinanzasRouteImport.update({
   id: '/demo_/finanzas',
   path: '/demo/finanzas',
@@ -158,6 +165,11 @@ const DemoLaboratorioRoute = DemoLaboratorioRouteImport.update({
 const DemoMarketingRoute = DemoMarketingRouteImport.update({
   id: '/demo_/marketing',
   path: '/demo/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoMultiempresaRoute = DemoMultiempresaRouteImport.update({
+  id: '/demo_/multiempresa',
+  path: '/demo/multiempresa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoNotificacionesRoute = DemoNotificacionesRouteImport.update({
@@ -241,12 +253,14 @@ export interface FileRoutesByFullPath {
   '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
+  '/demo/facturacion': typeof DemoFacturacionRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
   '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/multiempresa': typeof DemoMultiempresaRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
   '/demo/odontograma-3d': typeof DemoOdontograma3dRoute
@@ -278,12 +292,14 @@ export interface FileRoutesByTo {
   '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo/estudios': typeof DemoEstudiosRoute
+  '/demo/facturacion': typeof DemoFacturacionRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
   '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/multiempresa': typeof DemoMultiempresaRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
   '/demo/odontograma-3d': typeof DemoOdontograma3dRoute
@@ -316,12 +332,14 @@ export interface FileRoutesById {
   '/demo_/configuracion': typeof DemoConfiguracionRoute
   '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
   '/demo_/estudios': typeof DemoEstudiosRoute
+  '/demo_/facturacion': typeof DemoFacturacionRoute
   '/demo_/finanzas': typeof DemoFinanzasRoute
   '/demo_/historia': typeof DemoHistoriaRoute
   '/demo_/integraciones': typeof DemoIntegracionesRoute
   '/demo_/inventario': typeof DemoInventarioRoute
   '/demo_/laboratorio': typeof DemoLaboratorioRoute
   '/demo_/marketing': typeof DemoMarketingRoute
+  '/demo_/multiempresa': typeof DemoMultiempresaRoute
   '/demo_/notificaciones': typeof DemoNotificacionesRoute
   '/demo_/odontograma': typeof DemoOdontogramaRoute
   '/demo_/odontograma-3d': typeof DemoOdontograma3dRoute
@@ -355,12 +373,14 @@ export interface FileRouteTypes {
     | '/demo/configuracion'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
+    | '/demo/facturacion'
     | '/demo/finanzas'
     | '/demo/historia'
     | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
+    | '/demo/multiempresa'
     | '/demo/notificaciones'
     | '/demo/odontograma'
     | '/demo/odontograma-3d'
@@ -392,12 +412,14 @@ export interface FileRouteTypes {
     | '/demo/configuracion'
     | '/demo/equipo-profesional'
     | '/demo/estudios'
+    | '/demo/facturacion'
     | '/demo/finanzas'
     | '/demo/historia'
     | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
+    | '/demo/multiempresa'
     | '/demo/notificaciones'
     | '/demo/odontograma'
     | '/demo/odontograma-3d'
@@ -429,12 +451,14 @@ export interface FileRouteTypes {
     | '/demo_/configuracion'
     | '/demo_/equipo-profesional'
     | '/demo_/estudios'
+    | '/demo_/facturacion'
     | '/demo_/finanzas'
     | '/demo_/historia'
     | '/demo_/integraciones'
     | '/demo_/inventario'
     | '/demo_/laboratorio'
     | '/demo_/marketing'
+    | '/demo_/multiempresa'
     | '/demo_/notificaciones'
     | '/demo_/odontograma'
     | '/demo_/odontograma-3d'
@@ -467,12 +491,14 @@ export interface RootRouteChildren {
   DemoConfiguracionRoute: typeof DemoConfiguracionRoute
   DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
   DemoEstudiosRoute: typeof DemoEstudiosRoute
+  DemoFacturacionRoute: typeof DemoFacturacionRoute
   DemoFinanzasRoute: typeof DemoFinanzasRoute
   DemoHistoriaRoute: typeof DemoHistoriaRoute
   DemoIntegracionesRoute: typeof DemoIntegracionesRoute
   DemoInventarioRoute: typeof DemoInventarioRoute
   DemoLaboratorioRoute: typeof DemoLaboratorioRoute
   DemoMarketingRoute: typeof DemoMarketingRoute
+  DemoMultiempresaRoute: typeof DemoMultiempresaRoute
   DemoNotificacionesRoute: typeof DemoNotificacionesRoute
   DemoOdontogramaRoute: typeof DemoOdontogramaRoute
   DemoOdontograma3dRoute: typeof DemoOdontograma3dRoute
@@ -609,6 +635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoEstudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/facturacion': {
+      id: '/demo_/facturacion'
+      path: '/demo/facturacion'
+      fullPath: '/demo/facturacion'
+      preLoaderRoute: typeof DemoFacturacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/finanzas': {
       id: '/demo_/finanzas'
       path: '/demo/finanzas'
@@ -649,6 +682,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/marketing'
       fullPath: '/demo/marketing'
       preLoaderRoute: typeof DemoMarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/multiempresa': {
+      id: '/demo_/multiempresa'
+      path: '/demo/multiempresa'
+      fullPath: '/demo/multiempresa'
+      preLoaderRoute: typeof DemoMultiempresaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/notificaciones': {
@@ -755,12 +795,14 @@ const rootRouteChildren: RootRouteChildren = {
   DemoConfiguracionRoute: DemoConfiguracionRoute,
   DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
   DemoEstudiosRoute: DemoEstudiosRoute,
+  DemoFacturacionRoute: DemoFacturacionRoute,
   DemoFinanzasRoute: DemoFinanzasRoute,
   DemoHistoriaRoute: DemoHistoriaRoute,
   DemoIntegracionesRoute: DemoIntegracionesRoute,
   DemoInventarioRoute: DemoInventarioRoute,
   DemoLaboratorioRoute: DemoLaboratorioRoute,
   DemoMarketingRoute: DemoMarketingRoute,
+  DemoMultiempresaRoute: DemoMultiempresaRoute,
   DemoNotificacionesRoute: DemoNotificacionesRoute,
   DemoOdontogramaRoute: DemoOdontogramaRoute,
   DemoOdontograma3dRoute: DemoOdontograma3dRoute,

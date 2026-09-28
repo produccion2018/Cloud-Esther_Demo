@@ -8,7 +8,9 @@ export type SidebarColor =
   | "rojo"
   | "rosa"
   | "naranja"
-  | "gris";
+  | "gris"
+  | "blanco"
+  | "negro";
 
 export const SIDEBAR_COLORS: { id: SidebarColor; label: string; hex: string }[] = [
   { id: "violeta", label: "Violeta", hex: "#7c3aed" },
@@ -19,6 +21,8 @@ export const SIDEBAR_COLORS: { id: SidebarColor; label: string; hex: string }[] 
   { id: "rosa", label: "Rosa", hex: "#db2777" },
   { id: "naranja", label: "Naranja", hex: "#ea580c" },
   { id: "gris", label: "Gris oscuro", hex: "#475569" },
+  { id: "blanco", label: "Blanco", hex: "#ffffff" },
+  { id: "negro", label: "Negro", hex: "#000000" },
 ];
 
 export type FontSize = "sm" | "md" | "lg";
@@ -63,6 +67,17 @@ function clave(clinicId: string) {
 
 const EVENTO_CAMBIO = "cloud-esther-settings-changed";
 
+/**
+ * Publica el color del sidebar en <html> para que el CSS
+ * (sidebar-colors.css) pinte el sidebar real con el color elegido.
+ */
+function aplicarSidebarAlDocumento(settings: ClinicSettings) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.dataset.sidebarColor = settings.sidebarColor;
+  root.dataset.sidebarDark = settings.darkModeSidebar ? "true" : "false";
+}
+
 export function cargarSettings(clinicId: string): ClinicSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
@@ -76,7 +91,12 @@ export function cargarSettings(clinicId: string): ClinicSettings {
 
 export function guardarSettings(clinicId: string, settings: ClinicSettings) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(clave(clinicId), JSON.stringify(settings));
+  try {
+    window.localStorage.setItem(clave(clinicId), JSON.stringify(settings));
+  } catch {
+    /* almacenamiento no disponible: se ignora */
+  }
+  aplicarSidebarAlDocumento(settings);
   window.dispatchEvent(new CustomEvent(EVENTO_CAMBIO, { detail: { clinicId } }));
 }
 
@@ -98,6 +118,11 @@ export function useClinicSettings(clinicId: string): ClinicSettings {
     window.addEventListener(EVENTO_CAMBIO, handler);
     return () => window.removeEventListener(EVENTO_CAMBIO, handler);
   }, [clinicId]);
+
+  // Mantiene el color del sidebar aplicado en <html> al cargar y al cambiar.
+  useEffect(() => {
+    aplicarSidebarAlDocumento(settings);
+  }, [settings]);
 
   return settings;
 }

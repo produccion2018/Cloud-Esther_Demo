@@ -29,6 +29,7 @@ import { Route as DemoEstudiosRouteImport } from './routes/demo_.estudios'
 import { Route as DemoFacturacionRouteImport } from './routes/demo_.facturacion'
 import { Route as DemoFinanzasRouteImport } from './routes/demo_.finanzas'
 import { Route as DemoHistoriaRouteImport } from './routes/demo_.historia'
+import { Route as DemoIaRouteImport } from './routes/demo_.ia'
 import { Route as DemoIntegracionesRouteImport } from './routes/demo_.integraciones'
 import { Route as DemoInventarioRouteImport } from './routes/demo_.inventario'
 import { Route as DemoLaboratorioRouteImport } from './routes/demo_.laboratorio'
@@ -147,6 +148,11 @@ const DemoHistoriaRoute = DemoHistoriaRouteImport.update({
   path: '/demo/historia',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoIaRoute = DemoIaRouteImport.update({
+  id: '/demo_/ia',
+  path: '/demo/ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoIntegracionesRoute = DemoIntegracionesRouteImport.update({
   id: '/demo_/integraciones',
   path: '/demo/integraciones',
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/demo/facturacion': typeof DemoFacturacionRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/ia': typeof DemoIaRoute
   '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/demo/facturacion': typeof DemoFacturacionRoute
   '/demo/finanzas': typeof DemoFinanzasRoute
   '/demo/historia': typeof DemoHistoriaRoute
+  '/demo/ia': typeof DemoIaRoute
   '/demo/integraciones': typeof DemoIntegracionesRoute
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/demo_/facturacion': typeof DemoFacturacionRoute
   '/demo_/finanzas': typeof DemoFinanzasRoute
   '/demo_/historia': typeof DemoHistoriaRoute
+  '/demo_/ia': typeof DemoIaRoute
   '/demo_/integraciones': typeof DemoIntegracionesRoute
   '/demo_/inventario': typeof DemoInventarioRoute
   '/demo_/laboratorio': typeof DemoLaboratorioRoute
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '/demo/facturacion'
     | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/ia'
     | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/demo/facturacion'
     | '/demo/finanzas'
     | '/demo/historia'
+    | '/demo/ia'
     | '/demo/integraciones'
     | '/demo/inventario'
     | '/demo/laboratorio'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/demo_/facturacion'
     | '/demo_/finanzas'
     | '/demo_/historia'
+    | '/demo_/ia'
     | '/demo_/integraciones'
     | '/demo_/inventario'
     | '/demo_/laboratorio'
@@ -494,6 +506,7 @@ export interface RootRouteChildren {
   DemoFacturacionRoute: typeof DemoFacturacionRoute
   DemoFinanzasRoute: typeof DemoFinanzasRoute
   DemoHistoriaRoute: typeof DemoHistoriaRoute
+  DemoIaRoute: typeof DemoIaRoute
   DemoIntegracionesRoute: typeof DemoIntegracionesRoute
   DemoInventarioRoute: typeof DemoInventarioRoute
   DemoLaboratorioRoute: typeof DemoLaboratorioRoute
@@ -656,6 +669,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoHistoriaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/ia': {
+      id: '/demo_/ia'
+      path: '/demo/ia'
+      fullPath: '/demo/ia'
+      preLoaderRoute: typeof DemoIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/integraciones': {
       id: '/demo_/integraciones'
       path: '/demo/integraciones'
@@ -798,6 +818,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoFacturacionRoute: DemoFacturacionRoute,
   DemoFinanzasRoute: DemoFinanzasRoute,
   DemoHistoriaRoute: DemoHistoriaRoute,
+  DemoIaRoute: DemoIaRoute,
   DemoIntegracionesRoute: DemoIntegracionesRoute,
   DemoInventarioRoute: DemoInventarioRoute,
   DemoLaboratorioRoute: DemoLaboratorioRoute,

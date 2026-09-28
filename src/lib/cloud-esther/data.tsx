@@ -330,7 +330,7 @@ export const MODULES: AppModule[] = [
     label: "IA Esther",
     icon: "sparkles",
     path: "/demo/ia",
-    group: "Administración",
+    group: "Inteligencia",
     minPlan: "avanzada",
   },
   {

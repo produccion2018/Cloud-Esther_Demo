@@ -4,7 +4,7 @@ import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
   CalendarDays, Wallet, HeartPulse, Check, Paperclip, ExternalLink, Upload, Pill, Printer,
   Images, GitCompare, Ruler, Link2, Activity, Download, Mail, ZoomIn, ZoomOut, Eye, FlaskConical,
-  Truck, PackageCheck,
+  Truck, PackageCheck, Mic, Square, Clock3, Camera, Sparkles, RotateCw, SunMedium, Contrast, ScanLine, Maximize2, RefreshCcw, Bell, ClipboardList, CircleDollarSign, UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,13 +31,39 @@ const TIPOS_DOCUMENTO = [
 ];
 
 const TIPOS_ESTUDIO = [
-  "Radiografía periapical",
   "Radiografía panorámica",
+  "Radiografía periapical",
+  "Radiografía bitewing",
+  "Radiografía cefalométrica",
+  "Radiografía oclusal",
   "Tomografía (CBCT)",
+  "Fotografía clínica",
   "Fotografía intraoral",
   "Análisis de laboratorio",
   "Modelo de estudio",
   "Otro",
+];
+
+const TIPOS_FOTOGRAFIA = [
+  "Frente",
+  "Sonrisa",
+  "Perfil derecho",
+  "Perfil izquierdo",
+  "Intraoral frontal",
+  "Lateral derecha",
+  "Lateral izquierda",
+  "Arcada superior",
+  "Arcada inferior",
+  "Otras",
+];
+
+const TIPOS_SIMULACION = [
+  "Diseño de sonrisa",
+  "Carillas",
+  "Blanqueamiento",
+  "Coronas",
+  "Restauraciones estéticas",
+  "Alineación estética",
 ];
 
 const VIAS_ADMINISTRACION = [
@@ -60,7 +86,7 @@ const TIPOS_MEDICION = [
 
 const ESTADOS_DIAGNOSTICO = ["Activo", "Resuelto"] as const;
 
-const ESTADOS_TRATAMIENTO = ["Planificado", "En tratamiento", "Finalizado", "Cancelado"] as const;
+const ESTADOS_TRATAMIENTO = ["Pendiente", "Planificado", "En tratamiento", "Completado", "Finalizado", "Cancelado"] as const;
 const ESTADOS_PRESUPUESTO = ["Borrador", "Enviado", "Aprobado", "Rechazado"] as const;
 const ESTADOS_TURNO = ["Pendiente", "Confirmado", "Atendido", "Cancelado"] as const;
 const ESTADOS_RECETA = ["Borrador", "Emitida", "Dispensada", "Anulada"] as const;
@@ -104,6 +130,7 @@ type EstadoDiagnostico = (typeof ESTADOS_DIAGNOSTICO)[number];
 type TipoMovimiento = (typeof TIPOS_MOVIMIENTO)[number];
 type RolProfesional = (typeof ROLES_PROFESIONAL)[number];
 type EstadoLaboratorio = (typeof ESTADOS_LABORATORIO)[number];
+type EstadoSimulacion = "Preparada" | "En revisión" | "Guardada";
 
 type Evolucion = { id: number; fecha: string; profesional: string; motivo: string; pieza: string; detalle: string };
 
@@ -115,6 +142,11 @@ type TratamientoPaciente = {
   profesional: string;
   inicio: string;
   notas: string;
+  diagnostico?: string;
+  evolucion?: string;
+  presupuestoId?: number | null;
+  estudioIds?: number[];
+  fotografiaIds?: number[];
 };
 
 type DocumentoPaciente = {
@@ -136,11 +168,89 @@ type EstudioPaciente = {
   fecha: string;
   zona: string;
   solicitante: string;
+  profesional?: string;
   diagnostico: string;
+  observaciones?: string;
+  pieza?: string;
   archivoNombre: string;
   url: string;
   estadoInforme: EstadoInforme;
   tratamientoId: number | null;
+};
+
+type NotaClinica = {
+  id: number;
+  fecha: string;
+  hora: string;
+  profesional: string;
+  motivoConsulta: string;
+  anamnesis: string;
+  diagnostico: string;
+  procedimiento: string;
+  evolucion: string;
+  indicaciones: string;
+  proximoControl: string;
+  observaciones: string;
+  piezas: string;
+  tratamientoId: number | null;
+  fotografiaIds: number[];
+  estudioIds: number[];
+  recetaId: number | null;
+  odontogramaRef: string;
+  odontograma3DRef: string;
+};
+
+type NotaVoz = {
+  id: number;
+  fecha: string;
+  hora: string;
+  profesional: string;
+  duracionSegundos: number;
+  audioUrl: string;
+  transcripcion: string;
+  estadoTranscripcion: "Pendiente de integración" | "Transcrita";
+};
+
+type NotaRapida = {
+  id: number;
+  fecha: string;
+  hora: string;
+  profesional: string;
+  tipo: "Observación" | "Indicación" | "Seguimiento" | "Recordatorio interno";
+  texto: string;
+};
+
+type FotografiaClinica = {
+  id: number;
+  fecha: string;
+  profesional: string;
+  tipo: string;
+  observacion: string;
+  tratamientoId: number | null;
+  pieza: string;
+  archivoNombre: string;
+  url: string;
+};
+
+type SimulacionEstetica = {
+  id: number;
+  fecha: string;
+  profesional: string;
+  tipo: string;
+  fotografiaId: number;
+  tratamientoId: number | null;
+  imagenSimuladaNombre: string;
+  imagenSimuladaUrl: string;
+  estado: EstadoSimulacion;
+  observacion: string;
+};
+
+type AuditoriaPaciente = {
+  id: number;
+  usuario: string;
+  accion: string;
+  fecha: string;
+  hora: string;
 };
 
 type Anotacion = {
@@ -195,6 +305,9 @@ type PresupuestoPaciente = {
   estado: EstadoPresupuesto;
   lineas: LineaPresupuesto[];
   notas: string;
+  diagnosticoId?: number | null;
+  tratamientoId?: number | null;
+  profesional?: string;
 };
 
 type TurnoPaciente = {
@@ -234,10 +347,15 @@ export type TrabajoLaboratorio = {
 
 export type Registros = {
   historia: Evolucion[];
+  notasClinicas: NotaClinica[];
+  notasVoz: NotaVoz[];
+  notasRapidas: NotaRapida[];
   tratamientos: TratamientoPaciente[];
   documentos: DocumentoPaciente[];
   recetas: RecetaPaciente[];
   estudios: EstudioPaciente[];
+  fotografias: FotografiaClinica[];
+  simulaciones: SimulacionEstetica[];
   anotaciones: Anotacion[];
   diagnosticos: DiagnosticoPaciente[];
   presupuestos: PresupuestoPaciente[];
@@ -245,6 +363,7 @@ export type Registros = {
   cuenta: Movimiento[];
   profesionales: ProfesionalPaciente[];
   laboratorio: TrabajoLaboratorio[];
+  auditoria: AuditoriaPaciente[];
 };
 
 export type Cambiar = <K extends keyof Registros>(clave: K, fn: (prev: Registros[K]) => Registros[K]) => void;
@@ -258,10 +377,15 @@ export type ContextoPaciente = { paciente?: string; email?: string; clinica?: st
 
 const VACIO: Registros = {
   historia: [],
+  notasClinicas: [],
+  notasVoz: [],
+  notasRapidas: [],
   tratamientos: [],
   documentos: [],
   recetas: [],
   estudios: [],
+  fotografias: [],
+  simulaciones: [],
   anotaciones: [],
   diagnosticos: [],
   presupuestos: [],
@@ -269,6 +393,7 @@ const VACIO: Registros = {
   cuenta: [],
   profesionales: [],
   laboratorio: [],
+  auditoria: [],
 };
 
 /* ───────────── Estado por paciente ─────────────
@@ -287,6 +412,25 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           detalle: "Evaluación y preparación para restauración estética de pieza 21. Paciente en tratamiento.",
         },
       ],
+      notasClinicas: [
+        {
+          id: 1, fecha: "2026-08-21", hora: "15:35", profesional: "Dr. Carlos Rodríguez",
+          motivoConsulta: "Control de restauración estética",
+          anamnesis: "Sin dolor espontáneo. Refiere sensibilidad leve al frío.",
+          diagnostico: "Evolución favorable de pieza 21.",
+          procedimiento: "Control clínico, ajuste oclusal y registro fotográfico.",
+          evolucion: "Buena adaptación. Continuar indicaciones.",
+          indicaciones: "Higiene habitual y evitar alimentos muy duros durante 48 h.",
+          proximoControl: "2026-09-04",
+          observaciones: "Revisar sensibilidad en próximo control.",
+          piezas: "21", tratamientoId: 1, fotografiaIds: [1], estudioIds: [2], recetaId: 1,
+          odontogramaRef: "Pieza 21", odontograma3DRef: "Pieza 21",
+        },
+      ],
+      notasVoz: [],
+      notasRapidas: [
+        { id: 1, fecha: "2026-08-22", hora: "09:20", profesional: "Dra. Laura Gómez", tipo: "Seguimiento", texto: "Confirmar control de pieza 21 antes de la próxima cita." },
+      ],
       tratamientos: [
         {
           id: 1,
@@ -296,6 +440,11 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           profesional: "Dr. Carlos Rodríguez",
           inicio: "2026-08-20",
           notas: "Continuar tratamiento y realizar control.",
+          diagnostico: "Restauración estética de pieza 21.",
+          evolucion: "Adaptación favorable; pendiente control.",
+          presupuestoId: 1,
+          estudioIds: [2],
+          fotografiaIds: [1],
         },
       ],
       documentos: [
@@ -377,7 +526,10 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           fecha: "2026-08-15",
           zona: "",
           solicitante: "Dr. Martín Gómez",
+          profesional: "Dr. Martín Gómez",
           diagnostico: "Evaluación de pieza 36.",
+          observaciones: "Solicitada como control diagnóstico.",
+          pieza: "36",
           archivoNombre: "",
           url: "",
           estadoInforme: "Sin informar",
@@ -389,13 +541,24 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           fecha: "2026-08-15",
           zona: "",
           solicitante: "Dr. Martín Gómez",
+          profesional: "Dr. Martín Gómez",
           diagnostico: "Sin hallazgos críticos. Se recomienda seguimiento de piezas posteriores.",
+          observaciones: "Control panorámico de evolución.",
+          pieza: "21, 36",
           archivoNombre: "",
           url: "",
           estadoInforme: "Informado",
           tratamientoId: null,
         },
       ],
+      fotografias: [
+        {
+          id: 1, fecha: "2026-08-21", profesional: "Dr. Carlos Rodríguez", tipo: "Sonrisa",
+          observacion: "Registro previo al control estético.", tratamientoId: 1, pieza: "21",
+          archivoNombre: "foto-sonrisa-demo.jpg", url: "",
+        },
+      ],
+      simulaciones: [],
       anotaciones: [
         {
           id: 1,
@@ -431,6 +594,9 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
             { descripcion: "Control", pieza: "21", cantidad: 1, precio: 0 },
           ],
           notas: "Presupuesto asociado al tratamiento actual.",
+          diagnosticoId: 1,
+          tratamientoId: 1,
+          profesional: "Dr. Carlos Rodríguez",
         },
       ],
       turnos: [
@@ -486,6 +652,11 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           costo: 0,
           notas: "Toma de color registrada. Pendiente de recibir del laboratorio.",
         },
+      ],      auditoria: [
+        { id: 1, usuario: "Dr. Carlos Rodríguez", accion: "Creó una nota clínica", fecha: "2026-08-21", hora: "15:35" },
+        { id: 2, usuario: "Dr. Carlos Rodríguez", accion: "Agregó una fotografía clínica", fecha: "2026-08-21", hora: "15:36" },
+        { id: 3, usuario: "Dr. Martín Gómez", accion: "Cargó una radiografía panorámica", fecha: "2026-08-15", hora: "11:10" },
+        { id: 4, usuario: "Dr. Carlos Rodríguez", accion: "Creó el presupuesto PR-0001", fecha: "2026-08-20", hora: "16:10" },
       ],
     },
 };
@@ -599,8 +770,10 @@ const TONOS: Record<Tono, string> = {
 };
 
 const TONO_TRATAMIENTO: Record<EstadoTratamiento, Tono> = {
+  Pendiente: "ambar",
   Planificado: "gris",
   "En tratamiento": "primary",
+  Completado: "verde",
   Finalizado: "verde",
   Cancelado: "rojo",
 };
@@ -954,6 +1127,7 @@ type PropsSeccion = {
   cambiar: Cambiar;
   onToast: (msg: string) => void;
   contexto?: ContextoPaciente;
+  onSeccion?: (s: SeccionRegistros) => void;
 };
 
 /* ───────────── Historia clínica ───────────── */
@@ -994,6 +1168,340 @@ function EvolucionForm({ onSubmit, onCancel }: { onSubmit: (e: Omit<Evolucion, "
   );
 }
 
+function NotaClinicaForm({
+  initial,
+  tratamientos,
+  estudios,
+  fotografias,
+  recetas,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: NotaClinica;
+  tratamientos: TratamientoPaciente[];
+  estudios: EstudioPaciente[];
+  fotografias: FotografiaClinica[];
+  recetas: RecetaPaciente[];
+  onSubmit: (nota: Omit<NotaClinica, "id">) => void;
+  onCancel: () => void;
+}) {
+  const [fecha, setFecha] = useState(initial?.fecha ?? hoyISO());
+  const [hora, setHora] = useState(initial?.hora ?? new Date().toTimeString().slice(0, 5));
+  const [profesional, setProfesional] = useState(initial?.profesional ?? "");
+  const [motivoConsulta, setMotivoConsulta] = useState(initial?.motivoConsulta ?? "");
+  const [anamnesis, setAnamnesis] = useState(initial?.anamnesis ?? "");
+  const [diagnostico, setDiagnostico] = useState(initial?.diagnostico ?? "");
+  const [procedimiento, setProcedimiento] = useState(initial?.procedimiento ?? "");
+  const [evolucion, setEvolucion] = useState(initial?.evolucion ?? "");
+  const [indicaciones, setIndicaciones] = useState(initial?.indicaciones ?? "");
+  const [proximoControl, setProximoControl] = useState(initial?.proximoControl ?? "");
+  const [observaciones, setObservaciones] = useState(initial?.observaciones ?? "");
+  const [piezas, setPiezas] = useState(initial?.piezas ?? "");
+  const [tratamientoId, setTratamientoId] = useState<number | null>(initial?.tratamientoId ?? null);
+  const [recetaId, setRecetaId] = useState<number | null>(initial?.recetaId ?? null);
+  const [odontogramaRef, setOdontogramaRef] = useState(initial?.odontogramaRef ?? "");
+  const [odontograma3DRef, setOdontograma3DRef] = useState(initial?.odontograma3DRef ?? "");
+  const [fotografiaIds, setFotografiaIds] = useState<number[]>(initial?.fotografiaIds ?? []);
+  const [estudioIds, setEstudioIds] = useState<number[]>(initial?.estudioIds ?? []);
+
+  const toggleId = (ids: number[], id: number, setIds: (v: number[]) => void) =>
+    setIds(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      fecha, hora, profesional: profesional.trim(), motivoConsulta: motivoConsulta.trim(), anamnesis: anamnesis.trim(),
+      diagnostico: diagnostico.trim(), procedimiento: procedimiento.trim(), evolucion: evolucion.trim(),
+      indicaciones: indicaciones.trim(), proximoControl, observaciones: observaciones.trim(), piezas: piezas.trim(),
+      tratamientoId, fotografiaIds, estudioIds, recetaId, odontogramaRef: odontogramaRef.trim(), odontograma3DRef: odontograma3DRef.trim(),
+    });
+  };
+
+  return (
+    <form onSubmit={enviar} className="space-y-3">
+      <div className="rounded-xl border border-primary/10 bg-primary/[0.035] p-3">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-primary">
+          <ClipboardList className="size-4" /> Registro clínico
+        </div>
+        <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
+          <Field label="Fecha *"><input required type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} /></Field>
+          <Field label="Hora *"><input required type="time" value={hora} onChange={(e) => setHora(e.target.value)} className={INPUT} /></Field>
+          <Field label="Profesional *"><input required list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Motivo de consulta *"><input required value={motivoConsulta} onChange={(e) => setMotivoConsulta(e.target.value)} className={INPUT} placeholder="Control, dolor, urgencia…" /></Field>
+        <Field label="Dientes / piezas"><input value={piezas} onChange={(e) => setPiezas(e.target.value)} className={INPUT} placeholder="Ej: 16, 21, 36" /></Field>
+      </div>
+
+      <Field label="Anamnesis"><textarea rows={2} value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} className={TEXTAREA} placeholder="Antecedentes y relato del paciente…" /></Field>
+      <Field label="Diagnóstico"><textarea rows={2} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Diagnóstico clínico…" /></Field>
+      <Field label="Procedimiento realizado"><textarea rows={2} value={procedimiento} onChange={(e) => setProcedimiento(e.target.value)} className={TEXTAREA} placeholder="Procedimientos realizados durante la consulta…" /></Field>
+      <Field label="Evolución"><textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Respuesta y evolución…" /></Field>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Indicaciones"><textarea rows={2} value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} className={TEXTAREA} placeholder="Indicaciones al paciente…" /></Field>
+        <Field label="Observaciones"><textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Observaciones internas…" /></Field>
+      </div>
+      <Field label="Próximo control"><input type="date" value={proximoControl} onChange={(e) => setProximoControl(e.target.value)} className={INPUT} /></Field>
+
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Tratamiento relacionado">
+          <SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre }))} placeholder="Sin vincular" />
+        </Field>
+        <Field label="Receta relacionada">
+          <SelectId value={recetaId} onChange={setRecetaId} opciones={recetas.map((r) => ({ id: r.id, label: `${r.numero} · ${r.fecha}` }))} placeholder="Sin vincular" />
+        </Field>
+        <Field label="Referencia odontograma"><input value={odontogramaRef} onChange={(e) => setOdontogramaRef(e.target.value)} className={INPUT} placeholder="Ej: pieza 16 / restauración" /></Field>
+        <Field label="Referencia odontograma 3D"><input value={odontograma3DRef} onChange={(e) => setOdontograma3DRef(e.target.value)} className={INPUT} placeholder="Ej: FDI 16" /></Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Fotografías relacionadas">
+          <div className="max-h-28 overflow-y-auto rounded-lg border border-border bg-background p-2 text-xs">
+            {fotografias.length === 0 ? <span className="text-muted-foreground">Sin fotografías clínicas.</span> : fotografias.map((f) => (
+              <label key={f.id} className="flex cursor-pointer items-center gap-2 py-1">
+                <input type="checkbox" checked={fotografiaIds.includes(f.id)} onChange={() => toggleId(fotografiaIds, f.id, setFotografiaIds)} />
+                <span>{f.tipo} · {formatearFecha(f.fecha)}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="Estudios relacionados">
+          <div className="max-h-28 overflow-y-auto rounded-lg border border-border bg-background p-2 text-xs">
+            {estudios.length === 0 ? <span className="text-muted-foreground">Sin estudios.</span> : estudios.map((e) => (
+              <label key={e.id} className="flex cursor-pointer items-center gap-2 py-1">
+                <input type="checkbox" checked={estudioIds.includes(e.id)} onChange={() => toggleId(estudioIds, e.id, setEstudioIds)} />
+                <span>{e.tipo} · {formatearFecha(e.fecha)}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+      </div>
+      <Acciones etiqueta={initial ? "Guardar cambios" : "Guardar nota clínica"} onCancel={onCancel} />
+    </form>
+  );
+}
+
+function NotaVozRecorder({
+  profesional,
+  onSave,
+  onToast,
+}: {
+  profesional: string;
+  onSave: (nota: Omit<NotaVoz, "id">) => void;
+  onToast: (msg: string) => void;
+}) {
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const startedAtRef = useRef<number | null>(null);
+  const [grabando, setGrabando] = useState(false);
+  const [preparando, setPreparando] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [duracion, setDuracion] = useState(0);
+  const intervaloRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (intervaloRef.current) window.clearInterval(intervaloRef.current);
+    recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const iniciar = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      onToast("La grabación de voz no está disponible en este navegador");
+      return;
+    }
+    try {
+      setPreparando(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        setAudioUrl(URL.createObjectURL(blob));
+        const seconds = startedAtRef.current ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)) : 1;
+        setDuracion(seconds);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      startedAtRef.current = Date.now();
+      setDuracion(0);
+      setGrabando(true);
+      setPreparando(false);
+      const id = window.setInterval(() => {
+        if (startedAtRef.current) setDuracion(Math.round((Date.now() - startedAtRef.current) / 1000));
+      }, 500);
+      intervaloRef.current = id;
+    } catch {
+      setPreparando(false);
+      onToast("No se pudo acceder al micrófono");
+    }
+  };
+
+  const detener = () => {
+    if (!recorderRef.current) return;
+    recorderRef.current.stop();
+    recorderRef.current = null;
+    setGrabando(false);
+    if (intervaloRef.current) window.clearInterval(intervaloRef.current);
+    intervaloRef.current = null;
+  };
+
+  const guardar = () => {
+    if (!audioUrl) return;
+    onSave({
+      fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5), profesional: profesional || "Profesional actual",
+      duracionSegundos: duracion, audioUrl, transcripcion: "", estadoTranscripcion: "Pendiente de integración",
+    });
+    setAudioUrl("");
+    setDuracion(0);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.055] via-card to-background p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Nota de voz clínica</p>
+            <p className="text-xs text-muted-foreground">Graba ahora; la transcripción automática quedará preparada para una futura integración.</p>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${grabando ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+            {grabando ? "Grabando" : "Listo"}
+          </span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {!grabando ? (
+            <button type="button" disabled={preparando} onClick={iniciar} className={BTN_PRIMARIO}>
+              <Mic className="size-4" /> {preparando ? "Preparando micrófono…" : "Iniciar grabación"}
+            </button>
+          ) : (
+            <button type="button" onClick={detener} className={`${BTN_SECUNDARIO} text-destructive hover:border-destructive/40`}>
+              <Square className="size-3.5" /> Detener
+            </button>
+          )}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs tabular-nums">
+            <Clock3 className="size-3.5 text-primary" /> {Math.floor(duracion / 60)}:{String(duracion % 60).padStart(2, "0")}
+          </span>
+        </div>
+      </div>
+      {audioUrl && (
+        <div className="rounded-xl border border-border bg-background p-3">
+          <audio controls src={audioUrl} className="w-full" />
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            <BotonMini icon={Sparkles} label="Transcripción futura" onClick={() => onToast("Speech-to-Text pendiente de integración; no se generó una transcripción simulada")} />
+            <BotonMini icon={Check} label="Guardar nota de voz" onClick={guardar} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotaRapidaForm({ onSubmit, onCancel }: { onSubmit: (n: Omit<NotaRapida, "id">) => void; onCancel: () => void }) {
+  const [tipo, setTipo] = useState<NotaRapida["tipo"]>("Observación");
+  const [texto, setTexto] = useState("");
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    onSubmit({ fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5), profesional: "", tipo, texto: texto.trim() });
+  };
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <Field label="Tipo"><SelectField value={tipo} onChange={(v) => setTipo(v as NotaRapida["tipo"])} options={["Observación", "Indicación", "Seguimiento", "Recordatorio interno"]} /></Field>
+      <Field label="Nota *"><textarea autoFocus required rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} className={TEXTAREA} placeholder="Escribí una nota breve para el equipo…" /></Field>
+      <Acciones etiqueta="Guardar nota rápida" onCancel={onCancel} />
+    </form>
+  );
+}
+
+function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
+  const [abierto, setAbierto] = useState(false);
+  const [vozAbierta, setVozAbierta] = useState(false);
+  const [rapidaAbierta, setRapidaAbierta] = useState(false);
+  const [editarId, setEditarId] = useState<number | null>(null);
+  const [filtroFecha, setFiltroFecha] = useState("");
+  const [filtroProfesional, setFiltroProfesional] = useState("");
+
+  const notas = [...datos.notasClinicas]
+    .filter((n) => !filtroFecha || n.fecha === filtroFecha)
+    .filter((n) => !filtroProfesional || n.profesional.toLowerCase().includes(filtroProfesional.toLowerCase()))
+    .sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`));
+  const editar = datos.notasClinicas.find((n) => n.id === editarId) ?? null;
+
+  const guardar = (nota: Omit<NotaClinica, "id">) => {
+    if (editar) {
+      cambiar("notasClinicas", (prev) => prev.map((n) => n.id === editar.id ? { ...nota, id: editar.id } : n));
+      onToast("Nota clínica actualizada");
+    } else {
+      cambiar("notasClinicas", (prev) => [...prev, { ...nota, id: Date.now() }]);
+      onToast("Nota clínica guardada");
+    }
+    setAbierto(false); setEditarId(null);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
+        <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><p className="text-sm font-semibold">Notas clínicas</p><p className="text-xs text-muted-foreground">Registro clínico completo, editable y vinculado al resto de la ficha.</p></div>
+            <div className="flex flex-wrap gap-1.5">
+              <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              <BotonMini icon={Plus} label="Nota clínica" onClick={() => { setEditarId(null); setAbierto(true); }} />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Field label="Filtrar por fecha"><input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)} className={INPUT} /></Field>
+            <Field label="Filtrar por profesional"><input value={filtroProfesional} onChange={(e) => setFiltroProfesional(e.target.value)} className={INPUT} placeholder="Buscar profesional" /></Field>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Flujo preparado</p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+            <Badge tono="primary">Voz</Badge><span>→</span><Badge tono="primary">Transcripción</Badge><span>→</span><Badge tono="verde">Revisión</Badge><span>→</span><Badge tono="verde">Nota</Badge>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">No se ejecuta Speech-to-Text todavía.</p>
+        </div>
+      </div>
+
+      {notas.length === 0 ? <EstadoVacio icon={ClipboardList} titulo="Sin notas clínicas" texto="Registrá la primera consulta clínica o ajustá los filtros." /> : (
+        <ul className="space-y-2.5">
+          {notas.map((n) => (
+            <li key={n.id} className={ITEM}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{n.motivoConsulta}</p>{n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}<span className="text-[11px] text-muted-foreground">{formatearFecha(n.fecha)} · {n.hora}</span></div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{n.profesional || "Profesional"}</p>
+                </div>
+                <div className="flex items-center gap-1"><BotonMini icon={Eye} label="Consultar" onClick={() => { setEditarId(n.id); setAbierto(true); }} /><BotonBorrar etiqueta="Eliminar nota clínica" onClick={() => { if (!window.confirm("¿Eliminar esta nota clínica?")) return; cambiar("notasClinicas", (prev) => prev.filter((x) => x.id !== n.id)); onToast("Nota clínica eliminada"); }} /></div>
+              </div>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {[['Anamnesis', n.anamnesis], ['Diagnóstico', n.diagnostico], ['Procedimiento', n.procedimiento], ['Evolución', n.evolucion], ['Indicaciones', n.indicaciones], ['Observaciones', n.observaciones]].filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-lg border border-border bg-background/70 p-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-0.5 whitespace-pre-line text-xs">{value}</p></div>)}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+                {n.tratamientoId && <Badge tono="primary">Tratamiento vinculado</Badge>}{n.estudioIds.length > 0 && <Badge tono="gris">{n.estudioIds.length} estudio(s)</Badge>}{n.fotografiaIds.length > 0 && <Badge tono="gris">{n.fotografiaIds.length} foto(s)</Badge>}{n.recetaId && <Badge tono="gris">Receta vinculada</Badge>}{n.proximoControl && <Badge tono="ambar">Control {formatearFecha(n.proximoControl)}</Badge>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {datos.notasVoz.length > 0 && <div className="space-y-2"><p className="text-sm font-semibold">Notas de voz guardadas</p>{datos.notasVoz.map((v) => <div key={v.id} className={ITEM}><div className="flex flex-wrap items-center gap-2"><Mic className="size-4 text-primary" /><span className="text-sm font-semibold">{formatearFecha(v.fecha)} · {v.hora}</span><Badge tono="gris">{v.estadoTranscripcion}</Badge><span className="text-[11px] text-muted-foreground">{v.profesional} · {v.duracionSegundos}s</span></div><audio className="mt-2 w-full" controls src={v.audioUrl} /></div>)}</div>}
+
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Notas rápidas</p><p className="text-xs text-muted-foreground">Observaciones, indicaciones y recordatorios internos.</p></div><BotonMini icon={Plus} label="Nueva" onClick={() => setRapidaAbierta(true)} /></div>
+        {datos.notasRapidas.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p> : <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">{datos.notasRapidas.map((n) => <div key={n.id} className="rounded-xl border border-border bg-background p-2.5"><div className="flex items-center justify-between gap-2"><Badge tono="primary">{n.tipo}</Badge><span className="text-[10px] text-muted-foreground">{formatearFecha(n.fecha)} · {n.hora}</span></div><p className="mt-1 whitespace-pre-line text-xs">{n.texto}</p><div className="mt-1 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar nota rápida" onClick={() => { if (!window.confirm("¿Eliminar esta nota rápida?")) return; cambiar("notasRapidas", (prev) => prev.filter((x) => x.id !== n.id)); onToast("Nota rápida eliminada"); }} /></div></div>)}</div>}
+      </div>
+
+      {abierto && <Modal title={editar ? "Consultar / editar nota clínica" : "Nueva nota clínica"} onClose={() => { setAbierto(false); setEditarId(null); }} ancho="max-w-3xl"><NotaClinicaForm initial={editar ?? undefined} tratamientos={datos.tratamientos} estudios={datos.estudios} fotografias={datos.fotografias} recetas={datos.recetas} onCancel={() => { setAbierto(false); setEditarId(null); }} onSubmit={guardar} /></Modal>}
+      {vozAbierta && <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}><NotaVozRecorder profesional={datos.profesionales[0]?.nombre ?? ""} onToast={onToast} onSave={(nota) => { cambiar("notasVoz", (prev) => [...prev, { ...nota, id: Date.now() }]); setVozAbierta(false); onToast("Nota de voz guardada"); }} /></Modal>}
+      {rapidaAbierta && <Modal title="Nueva nota rápida" onClose={() => setRapidaAbierta(false)}><NotaRapidaForm onCancel={() => setRapidaAbierta(false)} onSubmit={(nota) => { cambiar("notasRapidas", (prev) => [...prev, { ...nota, id: Date.now(), profesional: datos.profesionales[0]?.nombre ?? "" }]); setRapidaAbierta(false); onToast("Nota rápida guardada"); }} /></Modal>}
+    </div>
+  );
+}
+
 function HistoriaSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const lista = [...datos.historia].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
@@ -1006,6 +1514,9 @@ function HistoriaSec({ datos, cambiar, onToast }: PropsSeccion) {
         etiquetaBoton="Agregar evolución"
         onAgregar={() => setAbierto(true)}
       />
+      <NotasClinicasPanel datos={datos} cambiar={cambiar} onToast={onToast} contexto={undefined} />
+      <div className="border-t border-border pt-3">
+        <div className="mb-2"><p className="text-sm font-semibold">Evoluciones históricas</p><p className="text-xs text-muted-foreground">Registro legado de evolución rápida, conservado y conectado a la misma ficha.</p></div>
       {lista.length === 0 ? (
         <EstadoVacio icon={History} titulo="Sin evoluciones" texto="Agregá la primera evolución del paciente." />
       ) : (
@@ -1048,6 +1559,7 @@ function HistoriaSec({ datos, cambiar, onToast }: PropsSeccion) {
           />
         </Modal>
       )}
+      </div>
     </div>
   );
 }
@@ -1055,9 +1567,11 @@ function HistoriaSec({ datos, cambiar, onToast }: PropsSeccion) {
 /* ───────────── Tratamientos ───────────── */
 
 function TratamientoForm({
+  presupuestos,
   onSubmit,
   onCancel,
 }: {
+  presupuestos: PresupuestoPaciente[];
   onSubmit: (t: Omit<TratamientoPaciente, "id">) => void;
   onCancel: () => void;
 }) {
@@ -1067,10 +1581,13 @@ function TratamientoForm({
   const [profesional, setProfesional] = useState("");
   const [inicio, setInicio] = useState("");
   const [notas, setNotas] = useState("");
+  const [diagnostico, setDiagnostico] = useState("");
+  const [evolucion, setEvolucion] = useState("");
+  const [presupuestoId, setPresupuestoId] = useState<number | null>(null);
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ nombre: nombre.trim(), pieza: pieza.trim(), estado, profesional: profesional.trim(), inicio, notas: notas.trim() });
+    onSubmit({ nombre: nombre.trim(), pieza: pieza.trim(), estado, profesional: profesional.trim(), inicio, notas: notas.trim(), diagnostico: diagnostico.trim(), evolucion: evolucion.trim(), presupuestoId, estudioIds: [], fotografiaIds: [] });
   };
 
   return (
@@ -1085,6 +1602,9 @@ function TratamientoForm({
         <Field label="Estado">
           <SelectField value={estado} onChange={(v) => setEstado(v as EstadoTratamiento)} options={ESTADOS_TRATAMIENTO} />
         </Field>
+        <Field label="Presupuesto relacionado">
+          <SelectId value={presupuestoId} onChange={setPresupuestoId} opciones={presupuestos.map((p) => ({ id: p.id, label: `${p.numero} · ${p.estado}` }))} placeholder="Sin vincular" />
+        </Field>
         <Field label="Profesional">
           <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
         </Field>
@@ -1092,6 +1612,12 @@ function TratamientoForm({
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={INPUT} />
         </Field>
       </div>
+      <Field label="Diagnóstico">
+        <textarea rows={2} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Diagnóstico que origina el tratamiento…" />
+      </Field>
+      <Field label="Evolución">
+        <textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Evolución del tratamiento…" />
+      </Field>
       <Field label="Notas">
         <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones del tratamiento…" />
       </Field>
@@ -1100,7 +1626,7 @@ function TratamientoForm({
   );
 }
 
-function TratamientosSec({ datos, cambiar, onToast }: PropsSeccion) {
+function TratamientosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
 
   const cambiarEstado = (t: TratamientoPaciente, estado: EstadoTratamiento) => {
@@ -1138,14 +1664,19 @@ function TratamientosSec({ datos, cambiar, onToast }: PropsSeccion) {
                   {t.profesional && <span>{t.profesional}</span>}
                   {t.inicio && <span>Inicio: {formatearFecha(t.inicio)}</span>}
                 </p>
+                {t.diagnostico && <p className="mt-1 text-xs text-muted-foreground">Diagnóstico: {t.diagnostico}</p>}
+                {t.evolucion && <p className="mt-0.5 text-xs text-muted-foreground">Evolución: {t.evolucion}</p>}
                 {t.notas && <p className="mt-0.5 text-xs italic text-muted-foreground">{t.notas}</p>}
+                <div className="mt-1 flex flex-wrap gap-1.5">{t.presupuestoId && <Badge tono="verde">Presupuesto vinculado</Badge>}{(t.estudioIds?.length ?? 0) > 0 && <Badge tono="gris">Estudios {t.estudioIds?.length}</Badge>}{(t.fotografiaIds?.length ?? 0) > 0 && <Badge tono="gris">Fotos {t.fotografiaIds?.length}</Badge>}</div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
+                {t.estado === "Pendiente" && <BotonMini icon={Check} label="Planificar" onClick={() => cambiarEstado(t, "Planificado")} />}
                 {t.estado === "Planificado" && <BotonMini icon={Check} label="Iniciar" onClick={() => cambiarEstado(t, "En tratamiento")} />}
-                {t.estado === "En tratamiento" && <BotonMini icon={Check} label="Finalizar" onClick={() => cambiarEstado(t, "Finalizado")} />}
-                {(t.estado === "Planificado" || t.estado === "En tratamiento") && (
+                {t.estado === "En tratamiento" && <BotonMini icon={Check} label="Completar" onClick={() => cambiarEstado(t, "Completado")} />}
+                {(t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento") && (
                   <BotonMini icon={X} label="Cancelar" onClick={() => cambiarEstado(t, "Cancelado")} />
                 )}
+                {t.presupuestoId && onSeccion && <BotonMini icon={ReceiptText} label="Ver presupuesto" onClick={() => onSeccion("presupuestos")} />}
                 <BotonBorrar
                   etiqueta="Eliminar tratamiento"
                   onClick={() => {
@@ -1162,6 +1693,7 @@ function TratamientosSec({ datos, cambiar, onToast }: PropsSeccion) {
       {abierto && (
         <Modal title="Agregar tratamiento" onClose={() => setAbierto(false)}>
           <TratamientoForm
+            presupuestos={datos.presupuestos}
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
               // TODO backend: POST /pacientes/:id/tratamientos
@@ -1930,8 +2462,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 /* ───────────── Estudios y diagnóstico por imagen ───────────── */
 
 function iconoEstudio(tipo: string): LucideIcon {
-  if (tipo.startsWith("Fotografía")) return Images;
+  if (tipo.startsWith("Fotografía")) return Camera;
   if (tipo.startsWith("Tomografía")) return Activity;
+  if (tipo.includes("Bitewing") || tipo.includes("Cefalométrica") || tipo.includes("Oclusal")) return ScanLine;
   return FileText;
 }
 
@@ -1966,6 +2499,9 @@ function EstudioForm({
   const [fecha, setFecha] = useState(hoyISO());
   const [zona, setZona] = useState("");
   const [solicitante, setSolicitante] = useState("");
+  const [profesional, setProfesional] = useState("");
+  const [pieza, setPieza] = useState("");
+  const [observaciones, setObservaciones] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
   const [estadoInforme, setEstadoInforme] = useState<EstadoInforme>("Sin informar");
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
@@ -1977,6 +2513,9 @@ function EstudioForm({
       fecha,
       zona: zona.trim(),
       solicitante: solicitante.trim(),
+      profesional: profesional.trim() || solicitante.trim(),
+      pieza: pieza.trim(),
+      observaciones: observaciones.trim(),
       diagnostico: diagnostico.trim(),
       archivoNombre: archivo?.name ?? "",
       // TODO backend: subir el archivo (multipart) y guardar la URL que devuelva el servidor
@@ -1995,11 +2534,17 @@ function EstudioForm({
         <Field label="Fecha">
           <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
         </Field>
-        <Field label="Zona o pieza">
-          <input value={zona} onChange={(e) => setZona(e.target.value)} className={INPUT} placeholder="Ej: 36, maxilar superior" />
+        <Field label="Zona">
+          <input value={zona} onChange={(e) => setZona(e.target.value)} className={INPUT} placeholder="Ej: maxilar superior" />
+        </Field>
+        <Field label="Diente relacionado">
+          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 16" />
+        </Field>
+        <Field label="Profesional">
+          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
         </Field>
         <Field label="Profesional solicitante">
-          <input list="dl-profesionales" value={solicitante} onChange={(e) => setSolicitante(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <input list="dl-profesionales" value={solicitante} onChange={(e) => setSolicitante(e.target.value)} className={INPUT} placeholder="Nombre del solicitante" />
         </Field>
         <Field label="Estado de informe">
           <SelectField value={estadoInforme} onChange={(v) => setEstadoInforme(v as EstadoInforme)} options={ESTADOS_INFORME} />
@@ -2017,6 +2562,9 @@ function EstudioForm({
       </div>
       <Field label="Diagnóstico / informe *">
         <textarea required rows={3} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Hallazgos y diagnóstico…" />
+      </Field>
+      <Field label="Observaciones">
+        <textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Observaciones clínicas…" />
       </Field>
       <div>
         <span className="mb-1 block text-xs font-medium">Archivo adjunto</span>
@@ -2047,44 +2595,45 @@ function VisorEstudio({
   onClose: () => void;
 }) {
   const [zoom, setZoom] = useState(1);
+  const [rotacion, setRotacion] = useState(0);
+  const [brillo, setBrillo] = useState(100);
+  const [contraste, setContraste] = useState(100);
+  const [invertido, setInvertido] = useState(false);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+
+  const restablecer = () => { setZoom(1); setRotacion(0); setBrillo(100); setContraste(100); setInvertido(false); };
+  const estiloImagen = {
+    transform: `rotate(${rotacion}deg) scale(${zoom})`,
+    filter: `brightness(${brillo}%) contrast(${contraste}%) ${invertido ? "invert(1)" : ""}`,
+    transition: "transform 180ms ease, filter 180ms ease",
+  };
+  const contenido = estudio.url && esImagen(estudio.archivoNombre) ? (
+    <img src={estudio.url} alt={estudio.tipo} className="mx-auto max-h-[58vh] max-w-full object-contain" style={estiloImagen} />
+  ) : <VistaEstudio estudio={estudio} alto="h-64" />;
 
   return (
-    <Modal title={estudio.tipo} onClose={onClose} ancho="max-w-3xl">
-      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-        <ControlesZoom zoom={zoom} setZoom={setZoom} />
-        {estudio.url && <BotonMini icon={ExternalLink} label="Abrir en pestaña" onClick={() => window.open(estudio.url, "_blank")} />}
-      </div>
-      <div className="max-h-[48vh] overflow-auto rounded-xl border border-border bg-muted/40 p-3">
-        <div style={{ zoom }} className="mx-auto w-full max-w-md">
-          <VistaEstudio estudio={estudio} alto="h-64" />
+    <div className="fixed inset-0 z-[60] bg-black/75 p-3 backdrop-blur-sm" onMouseDown={onClose}>
+      <div className={`mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-2xl ${pantallaCompleta ? "max-w-none rounded-none" : ""}`} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-3 py-2 backdrop-blur">
+          <div className="min-w-0"><p className="truncate text-sm font-semibold">{estudio.tipo}</p><p className="text-[10px] text-muted-foreground">{[formatearFecha(estudio.fecha), estudio.pieza || estudio.zona, estudio.profesional || estudio.solicitante].filter(Boolean).join(" · ")}</p></div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ControlesZoom zoom={zoom} setZoom={setZoom} />
+            <BotonMini icon={RotateCw} label="Rotar" onClick={() => setRotacion((r) => (r + 90) % 360)} compacto />
+            <BotonMini icon={SunMedium} label="Brillo" onClick={() => setBrillo((v) => v >= 160 ? 70 : v + 15)} compacto />
+            <BotonMini icon={Contrast} label="Contraste" onClick={() => setContraste((v) => v >= 160 ? 70 : v + 15)} compacto />
+            <BotonMini icon={ScanLine} label={invertido ? "Normal" : "Invertir"} onClick={() => setInvertido((v) => !v)} compacto />
+            <BotonMini icon={Maximize2} label={pantallaCompleta ? "Salir" : "Pantalla completa"} onClick={() => setPantallaCompleta((v) => !v)} compacto />
+            <BotonMini icon={RefreshCcw} label="Restablecer" onClick={restablecer} compacto />
+            <button type="button" onClick={onClose} aria-label="Cerrar visor" className="grid size-7 place-items-center rounded-full border border-border bg-card hover:bg-muted"><X className="size-3.5" /></button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto bg-black/5 p-3"><div className="grid min-h-full place-items-center rounded-xl border border-border bg-black/10 p-2">{contenido}</div></div>
+        <div className="grid grid-cols-1 gap-2 border-t border-border bg-card p-3 md:grid-cols-[1fr_auto]">
+          <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><Badge tono={TONO_INFORME[estudio.estadoInforme]}>{estudio.estadoInforme}</Badge>{(estudio.pieza || estudio.zona) && <Badge tono="primary">Pieza / zona {estudio.pieza || estudio.zona}</Badge>}</div><p className="whitespace-pre-line text-xs">{estudio.diagnostico}</p>{estudio.observaciones && <p className="text-[11px] text-muted-foreground">{estudio.observaciones}</p>}</div>
+          {anotaciones.length > 0 && <div className="rounded-lg border border-border bg-background p-2 text-xs"><p className="font-semibold">Mediciones</p>{anotaciones.map((a) => <div key={a.id} className="mt-1 flex justify-between gap-2"><span>{a.tipoMedicion}</span><strong className="text-primary">{a.valor}</strong></div>)}</div>}
         </div>
       </div>
-
-      <div className="mt-3 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tono={TONO_INFORME[estudio.estadoInforme]}>{estudio.estadoInforme}</Badge>
-          {estudio.zona && <Badge tono="primary">{estudio.zona}</Badge>}
-          <span className="text-[11px] text-muted-foreground">
-            {[formatearFecha(estudio.fecha), estudio.solicitante, estudio.archivoNombre].filter(Boolean).join(" · ")}
-          </span>
-        </div>
-        <p className="whitespace-pre-line text-sm">{estudio.diagnostico}</p>
-
-        {anotaciones.length > 0 && (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-background/70 text-xs">
-            {anotaciones.map((a) => (
-              <li key={a.id} className="flex items-start justify-between gap-3 px-2.5 py-1.5">
-                <span className="min-w-0">
-                  <span className="font-semibold">{a.tipoMedicion}</span>
-                  <span className="mt-0.5 block text-muted-foreground">{a.observacion}</span>
-                </span>
-                <span className="shrink-0 font-bold text-primary">{a.valor}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Modal>
+    </div>
   );
 }
 
@@ -2203,9 +2752,9 @@ function GaleriaTab({
 
 /* Comparar estudios */
 function CompararTab({ estudios }: { estudios: EstudioPaciente[] }) {
-  const ordenados = [...estudios].sort((a, b) => `${a.fecha}${a.id}`.localeCompare(`${b.fecha}${b.id}`));
   const [inicialId, setInicialId] = useState<number | null>(null);
   const [actualId, setActualId] = useState<number | null>(null);
+  const ordenados = [...estudios].sort((a, b) => `${a.fecha}${a.id}`.localeCompare(`${b.fecha}${b.id}`));
 
   if (ordenados.length < 2) {
     return (
@@ -2715,8 +3264,118 @@ function DiagnosticoTab({
   );
 }
 
+function FotografiaForm({
+  tratamientos,
+  onSubmit,
+  onCancel,
+}: {
+  tratamientos: TratamientoPaciente[];
+  onSubmit: (foto: Omit<FotografiaClinica, "id">) => void;
+  onCancel: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [fecha, setFecha] = useState(hoyISO());
+  const [profesional, setProfesional] = useState("");
+  const [tipo, setTipo] = useState(TIPOS_FOTOGRAFIA[0]);
+  const [observacion, setObservacion] = useState("");
+  const [tratamientoId, setTratamientoId] = useState<number | null>(null);
+  const [pieza, setPieza] = useState("");
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!archivo) return;
+    onSubmit({ fecha, profesional: profesional.trim(), tipo, observacion: observacion.trim(), tratamientoId, pieza: pieza.trim(), archivoNombre: archivo.name, url: URL.createObjectURL(archivo) });
+  };
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Tipo *"><SelectField value={tipo} onChange={setTipo} options={TIPOS_FOTOGRAFIA} /></Field>
+        <Field label="Fecha"><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} /></Field>
+        <Field label="Profesional"><input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field>
+        <Field label="Diente relacionado"><input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21" /></Field>
+        <Field label="Tratamiento relacionado"><SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · ${t.pieza}` : t.nombre }))} placeholder="Sin vincular" /></Field>
+      </div>
+      <Field label="Observación"><textarea rows={2} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Observación clínica de la fotografía…" /></Field>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
+      <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"><Camera className="size-4 text-primary" /><span className="min-w-0 flex-1 truncate">{archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Cargar fotografía clínica"}</span><Upload className="size-4 text-muted-foreground" /></button>
+      {!archivo && <p className="text-[11px] text-muted-foreground">La fotografía se guarda localmente en esta experiencia frontend hasta integrar almacenamiento.</p>}
+      <Acciones etiqueta="Guardar fotografía" onCancel={onCancel} />
+    </form>
+  );
+}
+
+function CompararFotografias({ fotografias }: { fotografias: FotografiaClinica[] }) {
+  const [antesId, setAntesId] = useState<number | null>(null);
+  const [despuesId, setDespuesId] = useState<number | null>(null);
+  const [modo, setModo] = useState<"lado" | "slider">("lado");
+  const [posicion, setPosicion] = useState(50);
+  const antes = fotografias.find((f) => f.id === antesId) ?? fotografias[0];
+  const despues = fotografias.find((f) => f.id === despuesId) ?? fotografias[fotografias.length - 1];
+  if (fotografias.length < 2) return <EstadoVacio icon={GitCompare} titulo="Comparación de fotografías" texto="Cargá al menos dos fotografías clínicas para comparar antes y después." />;
+  const opciones = fotografias.map((f) => ({ id: f.id, label: `${f.tipo} · ${formatearFecha(f.fecha)}` }));
+  const imagen = (f: FotografiaClinica, className = "") => f?.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className={`h-full w-full object-contain ${className}`} /> : <div className="grid h-full place-items-center text-xs text-muted-foreground">Sin imagen</div>;
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2"><Field label="Antes"><SelectId value={antes.id} onChange={setAntesId} opciones={opciones} /></Field><Field label="Después"><SelectId value={despues.id} onChange={setDespuesId} opciones={opciones} /></Field></div>
+      <div className="flex flex-wrap gap-1.5"><BotonMini label="Lado a lado" onClick={() => setModo("lado")} /><BotonMini label="Slider antes / después" onClick={() => setModo("slider")} /></div>
+      {modo === "lado" ? <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2"><div className={ITEM}><p className="mb-1 text-xs font-semibold">Antes · {antes.tipo}</p><div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(antes)}</div></div><div className={ITEM}><p className="mb-1 text-xs font-semibold">Después · {despues.tipo}</p><div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(despues)}</div></div></div> : <div className={`${ITEM} space-y-2`}><div className="relative h-80 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(despues)}<div className="absolute inset-y-0 left-0 overflow-hidden border-r-2 border-white/80 bg-background/20" style={{ width: `${posicion}%` }}>{imagen(antes)}</div><span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">Antes</span><span className="absolute right-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">Después</span></div><input aria-label="Posición de comparación" type="range" min={0} max={100} value={posicion} onChange={(e) => setPosicion(Number(e.target.value))} className="w-full" /></div>}
+    </div>
+  );
+}
+
+function SimulacionForm({
+  fotografias,
+  tratamientos,
+  onSubmit,
+  onCancel,
+}: {
+  fotografias: FotografiaClinica[];
+  tratamientos: TratamientoPaciente[];
+  onSubmit: (s: Omit<SimulacionEstetica, "id">) => void;
+  onCancel: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [fotografiaId, setFotografiaId] = useState(fotografias[0]?.id ?? 0);
+  const [tipo, setTipo] = useState(TIPOS_SIMULACION[0]);
+  const [profesional, setProfesional] = useState("");
+  const [tratamientoId, setTratamientoId] = useState<number | null>(null);
+  const [observacion, setObservacion] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!fotografiaId) return;
+    onSubmit({ fecha: hoyISO(), profesional: profesional.trim(), tipo, fotografiaId, tratamientoId, imagenSimuladaNombre: archivo?.name ?? "", imagenSimuladaUrl: archivo ? URL.createObjectURL(archivo) : "", estado: "Preparada", observacion: observacion.trim() });
+  };
+  return <form onSubmit={enviar} className="space-y-2.5">
+    <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800"><div className="flex items-center gap-2 font-semibold"><Sparkles className="size-4" /> Simulación orientativa</div><p className="mt-1">La simulación es una representación visual de referencia y no constituye una garantía de resultado clínico. La generación automática por IA queda preparada para una futura integración.</p></div>
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><Field label="Fotografía base *"><SelectId value={fotografiaId || null} onChange={(v) => setFotografiaId(v ?? 0)} opciones={fotografias.map((f) => ({ id: f.id, label: `${f.tipo} · ${formatearFecha(f.fecha)}` }))} placeholder="Seleccionar fotografía" /></Field><Field label="Tipo de simulación"><SelectField value={tipo} onChange={setTipo} options={TIPOS_SIMULACION} /></Field><Field label="Profesional"><input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field><Field label="Tratamiento relacionado"><SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))} placeholder="Sin vincular" /></Field></div>
+    <Field label="Observación"><textarea rows={2} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Objetivo visual de la simulación…" /></Field>
+    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
+    <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"><Upload className="size-4 text-primary" /><span className="min-w-0 flex-1 truncate">{archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Adjuntar simulación visual (opcional)"}</span></button>
+    <p className="text-[11px] text-muted-foreground">Si no adjuntás una imagen, se guarda la preparación y queda lista para una futura API de generación.</p>
+    <Acciones etiqueta="Guardar simulación" onCancel={onCancel} />
+  </form>;
+}
+
+function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
+  const [abierto, setAbierto] = useState(false);
+  const [simulacionAbierta, setSimulacionAbierta] = useState(false);
+  const [tab, setTab] = useState<"galeria" | "comparar" | "simulacion">("galeria");
+  const lista = [...datos.fotografias].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  return <div className="space-y-3">
+    <Encabezado icon={Camera} titulo="Fotografías clínicas" descripcion="Registros fotográficos organizados por tipo, fecha, pieza y tratamiento." etiquetaBoton="Cargar fotografía" onAgregar={() => setAbierto(true)} />
+    <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm"><div className="grid grid-cols-1 gap-1 sm:grid-cols-3">{([['galeria','Galería'],['comparar','Antes / Después'],['simulacion','Simulación estética']] as const).map(([id,label]) => <button key={id} type="button" onClick={() => setTab(id)} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${tab === id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}>{label}</button>)}</div></div>
+    {tab === "galeria" && (lista.length === 0 ? <EstadoVacio icon={Camera} titulo="Sin fotografías clínicas" texto="Cargá registros de frente, sonrisa, perfiles e intraorales." chips={TIPOS_FOTOGRAFIA} /> : <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">{lista.map((f) => <div key={f.id} className={ITEM}><div className="aspect-square overflow-hidden rounded-xl border border-border bg-muted/30">{f.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-center text-muted-foreground"><Camera className="mx-auto size-7" /><span className="mt-1 text-[10px]">Sin vista previa</span></div>}</div><div className="mt-2 flex items-center justify-between gap-2"><p className="truncate text-xs font-semibold">{f.tipo}</p><Badge tono="primary">{f.pieza || "General"}</Badge></div><p className="mt-0.5 text-[10px] text-muted-foreground">{formatearFecha(f.fecha)} · {f.profesional || "Profesional"}</p>{f.observacion && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{f.observacion}</p>}<div className="mt-1 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar fotografía" onClick={() => { if (!window.confirm("¿Eliminar esta fotografía clínica?")) return; cambiar("fotografias", (prev) => prev.filter((x) => x.id !== f.id)); onToast("Fotografía eliminada"); }} /></div></div>)}</div>)}
+    {tab === "comparar" && <CompararFotografias fotografias={lista} />}
+    {tab === "simulacion" && <div className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Simulación estética</p><p className="text-xs text-muted-foreground">Imagen original → simulación → comparación. La generación automática aún no está conectada.</p></div>{datos.fotografias.length > 0 && <BotonMini icon={Sparkles} label="Nueva simulación" onClick={() => setSimulacionAbierta(true)} />}</div>{datos.fotografias.length === 0 ? <EstadoVacio icon={Camera} titulo="Primero cargá una fotografía" texto="La simulación estética necesita una fotografía clínica como imagen original." /> : datos.simulaciones.length === 0 ? <EstadoVacio icon={Sparkles} titulo="Sin simulaciones guardadas" texto="Prepará una simulación visual sobre una fotografía del paciente." /> : <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">{datos.simulaciones.map((s) => { const base = datos.fotografias.find((f) => f.id === s.fotografiaId); return <div key={s.id} className={ITEM}><div className="grid grid-cols-2 gap-2"><div className="overflow-hidden rounded-lg border border-border bg-muted/30"><div className="p-1.5 text-[9px] font-semibold text-muted-foreground">Original</div><div className="h-40">{base?.url ? <img src={base.url} alt="Original" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-xs text-muted-foreground">Sin imagen</div>}</div></div><div className="overflow-hidden rounded-lg border border-border bg-muted/30"><div className="p-1.5 text-[9px] font-semibold text-muted-foreground">Simulación</div><div className="h-40">{s.imagenSimuladaUrl ? <img src={s.imagenSimuladaUrl} alt="Simulación" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center px-3 text-center text-xs text-muted-foreground">Pendiente de generación visual</div>}</div></div></div><div className="mt-2 flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{s.tipo}</p><Badge tono="ambar">{s.estado}</Badge></div><p className="mt-1 text-[10px] text-muted-foreground">{formatearFecha(s.fecha)} · {s.profesional || "Profesional"}</p>{s.observacion && <p className="mt-1 text-xs text-muted-foreground">{s.observacion}</p>}<div className="mt-2 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar simulación" onClick={() => { if (!window.confirm("¿Eliminar esta simulación?")) return; cambiar("simulaciones", (prev) => prev.filter((x) => x.id !== s.id)); onToast("Simulación eliminada"); }} /></div></div>; })}</div>}</div>}
+    {abierto && <Modal title="Nueva fotografía clínica" onClose={() => setAbierto(false)}><FotografiaForm tratamientos={datos.tratamientos} onCancel={() => setAbierto(false)} onSubmit={(foto) => { cambiar("fotografias", (prev) => [...prev, { ...foto, id: Date.now() }]); cambiar("auditoria", (prev) => [...prev, { id: Date.now()+1, usuario: foto.profesional || "Profesional", accion: "Agregó una fotografía clínica", fecha: foto.fecha, hora: new Date().toTimeString().slice(0,5) }]); setAbierto(false); onToast("Fotografía clínica guardada"); }} /></Modal>}
+    {simulacionAbierta && <Modal title="Nueva simulación estética" onClose={() => setSimulacionAbierta(false)}><SimulacionForm fotografias={lista} tratamientos={datos.tratamientos} onCancel={() => setSimulacionAbierta(false)} onSubmit={(sim) => { cambiar("simulaciones", (prev) => [...prev, { ...sim, id: Date.now() }]); setSimulacionAbierta(false); onToast("Simulación guardada como representación orientativa"); }} /></Modal>}
+  </div>;
+}
+
 /* Sección principal de estudios */
-type TabEstudios = "galeria" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
+type TabEstudios = "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
@@ -2730,6 +3389,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
   const TABS: { id: TabEstudios; label: string; icon: LucideIcon }[] = [
     { id: "galeria", label: "Galería", icon: Images },
+    { id: "fotografias", label: "Fotografías", icon: Camera },
     { id: "comparar", label: "Comparar", icon: GitCompare },
     { id: "anotaciones", label: "Mediciones", icon: Ruler },
     { id: "vinculados", label: "Tratamiento", icon: Link2 },
@@ -2767,7 +3427,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       </div>
 
       <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
-        <div className="grid grid-cols-2 gap-1 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1 md:grid-cols-6">
           {TABS.map((t) => {
             const activa = tab === t.id;
             return (
@@ -2802,6 +3462,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           }}
         />
       )}
+      {tab === "fotografias" && <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />}
       {tab === "comparar" && <CompararTab estudios={datos.estudios} />}
       {tab === "anotaciones" && <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />}
       {tab === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
@@ -2839,15 +3500,22 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 type LineaForm = { descripcion: string; pieza: string; cantidad: string; precio: string };
 
 function PresupuestoForm({
+  diagnosticos,
+  tratamientos,
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (p: { fecha: string; lineas: LineaPresupuesto[]; notas: string }) => void;
+  diagnosticos: DiagnosticoPaciente[];
+  tratamientos: TratamientoPaciente[];
+  onSubmit: (p: { fecha: string; lineas: LineaPresupuesto[]; notas: string; diagnosticoId: number | null; tratamientoId: number | null; profesional: string }) => void;
   onCancel: () => void;
 }) {
   const [fecha, setFecha] = useState(hoyISO());
   const [lineas, setLineas] = useState<LineaForm[]>([{ descripcion: "", pieza: "", cantidad: "1", precio: "" }]);
   const [notas, setNotas] = useState("");
+  const [diagnosticoId, setDiagnosticoId] = useState<number | null>(null);
+  const [tratamientoId, setTratamientoId] = useState<number | null>(null);
+  const [profesional, setProfesional] = useState("");
   const [error, setError] = useState("");
 
   const total = lineas.reduce((acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
@@ -2867,6 +3535,9 @@ function PresupuestoForm({
     onSubmit({
       fecha,
       notas: notas.trim(),
+      diagnosticoId,
+      tratamientoId,
+      profesional: profesional.trim(),
       lineas: validas.map((l) => ({
         descripcion: l.descripcion.trim(),
         pieza: l.pieza.trim(),
@@ -2878,9 +3549,20 @@ function PresupuestoForm({
 
   return (
     <form onSubmit={enviar} className="space-y-2.5">
-      <Field label="Fecha">
-        <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
-      </Field>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <Field label="Fecha">
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Diagnóstico relacionado">
+          <SelectId value={diagnosticoId} onChange={setDiagnosticoId} opciones={diagnosticos.map((d) => ({ id: d.id, label: d.pieza ? `${d.titulo} · pieza ${d.pieza}` : d.titulo }))} placeholder="Sin vincular" />
+        </Field>
+        <Field label="Tratamiento relacionado">
+          <SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))} placeholder="Sin vincular" />
+        </Field>
+        <Field label="Profesional">
+          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional responsable" />
+        </Field>
+      </div>
 
       <div>
         <div className="grid grid-cols-[minmax(0,1fr)_56px_60px_96px_28px] gap-2 px-0.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -2941,7 +3623,7 @@ function PresupuestoForm({
   );
 }
 
-function PresupuestosSec({ datos, cambiar, onToast }: PropsSeccion) {
+function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
 
   const cambiarEstado = (p: PresupuestoPaciente, estado: EstadoPresupuesto) => {
@@ -3002,6 +3684,7 @@ function PresupuestosSec({ datos, cambiar, onToast }: PropsSeccion) {
                   </li>
                 ))}
               </ul>
+              <div className="mt-2 flex flex-wrap gap-1.5">{p.diagnosticoId && <Badge tono="primary">Diagnóstico vinculado</Badge>}{p.tratamientoId && <Badge tono="verde">Tratamiento vinculado</Badge>}{p.profesional && <Badge tono="gris">{p.profesional}</Badge>}</div>
               {p.notas && <p className="mt-1.5 text-xs italic text-muted-foreground">{p.notas}</p>}
               {(p.estado === "Borrador" || p.estado === "Enviado") && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -3014,6 +3697,7 @@ function PresupuestosSec({ datos, cambiar, onToast }: PropsSeccion) {
                   )}
                 </div>
               )}
+              {p.estado === "Aprobado" && <div className="mt-2 flex flex-wrap gap-1.5"><BotonMini icon={CircleDollarSign} label="Preparar facturación" onClick={() => onToast(`${p.numero}: facturación pendiente de integración fiscal`)} />{p.tratamientoId && onSeccion && <BotonMini icon={Stethoscope} label="Ver tratamiento" onClick={() => onSeccion("tratamientos")} />}</div>}
             </li>
           ))}
         </ul>
@@ -3021,6 +3705,8 @@ function PresupuestosSec({ datos, cambiar, onToast }: PropsSeccion) {
       {abierto && (
         <Modal title="Nuevo presupuesto" onClose={() => setAbierto(false)}>
           <PresupuestoForm
+            diagnosticos={datos.diagnosticos}
+            tratamientos={datos.tratamientos}
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
               // TODO backend: POST /pacientes/:id/presupuestos (el número lo asigna el servidor)
@@ -3580,80 +4266,85 @@ function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
 
 /* ───────────── Resumen visual del paciente ───────────── */
 
-function ResumenPaciente({ datos, contexto }: { datos: Registros; contexto?: ContextoPaciente }) {
-  if (!contexto?.paciente) return null;
+function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+  type Evento = { id: string; fecha: string; hora?: string; titulo: string; detalle: string; icon: LucideIcon; seccion: SeccionRegistros; tono: Tono };
+  const eventos: Evento[] = ([
+    ...datos.turnos.map((t) => ({ id: `turno-${t.id}`, fecha: t.fecha, hora: t.hora, titulo: "Turno", detalle: `${t.motivo}${t.profesional ? ` · ${t.profesional}` : ""}`, icon: CalendarDays, seccion: "turnos" as SeccionRegistros, tono: TONO_TURNO[t.estado] })),
+    ...datos.historia.map((e) => ({ id: `hist-${e.id}`, fecha: e.fecha, titulo: "Consulta / evolución", detalle: `${e.motivo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`, icon: History, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
+    ...datos.notasClinicas.map((n) => ({ id: `nota-${n.id}`, fecha: n.fecha, hora: n.hora, titulo: "Nota clínica", detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""}`, icon: ClipboardList, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
+    ...datos.notasVoz.map((n) => ({ id: `voz-${n.id}`, fecha: n.fecha, hora: n.hora, titulo: "Nota de voz", detalle: `${n.profesional} · ${n.duracionSegundos}s`, icon: Mic, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
+    ...datos.diagnosticos.map((d) => ({ id: `diag-${d.id}`, fecha: d.fecha, titulo: "Diagnóstico", detalle: `${d.titulo}${d.pieza ? ` · pieza ${d.pieza}` : ""}`, icon: Activity, seccion: "estudios" as SeccionRegistros, tono: TONO_DIAGNOSTICO[d.estado] })),
+    ...datos.tratamientos.map((t) => ({ id: `trat-${t.id}`, fecha: t.inicio || hoyISO(), titulo: "Tratamiento", detalle: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`, icon: Stethoscope, seccion: "tratamientos" as SeccionRegistros, tono: TONO_TRATAMIENTO[t.estado] })),
+    ...datos.fotografias.map((f) => ({ id: `foto-${f.id}`, fecha: f.fecha, titulo: "Fotografía clínica", detalle: `${f.tipo}${f.pieza ? ` · pieza ${f.pieza}` : ""}`, icon: Camera, seccion: "estudios" as SeccionRegistros, tono: "primary" as Tono })),
+    ...datos.estudios.map((e) => ({ id: `est-${e.id}`, fecha: e.fecha, titulo: e.tipo, detalle: `${e.pieza || e.zona || "Estudio"}${e.profesional ? ` · ${e.profesional}` : ""}`, icon: Images, seccion: "estudios" as SeccionRegistros, tono: TONO_INFORME[e.estadoInforme] })),
+    ...datos.recetas.map((r) => ({ id: `rec-${r.id}`, fecha: r.fecha, titulo: "Receta digital", detalle: `${r.numero}${r.profesional ? ` · ${r.profesional}` : ""}`, icon: Pill, seccion: "recetas" as SeccionRegistros, tono: TONO_RECETA[r.estado] })),
+    ...datos.presupuestos.map((p) => ({ id: `pre-${p.id}`, fecha: p.fecha, titulo: "Presupuesto", detalle: p.numero, icon: ReceiptText, seccion: "presupuestos" as SeccionRegistros, tono: TONO_PRESUPUESTO[p.estado] })),
+    ...datos.cuenta.map((m) => ({ id: `mov-${m.id}`, fecha: m.fecha, titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo, detalle: m.concepto, icon: Wallet, seccion: "cuenta" as SeccionRegistros, tono: TONO_MOVIMIENTO[m.tipo] })),
+  ] as Evento[]).sort((a, b) => `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`)).slice(0, 16);
 
+  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{eventos.map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}</div>}</div>;
+}
+
+function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
   const hoy = hoyISO();
-  const tratamientosActivos = datos.tratamientos.filter(
-    (t) => t.estado === "Planificado" || t.estado === "En tratamiento",
-  ).length;
+  const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((a, m) => a + m.monto, 0);
+  const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((a, m) => a + m.monto, 0);
+  const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((a, m) => a + m.monto, 0);
+  const saldo = cargos - pagos - creditos;
+  const alertas: { id: string; texto: string; detalle: string; seccion: SeccionRegistros; tono: Tono }[] = [];
+  const pendientes = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado").length;
+  if (pendientes) alertas.push({ id: "trat", texto: "Tratamiento pendiente", detalle: `${pendientes} tratamiento(s) requieren atención`, seccion: "tratamientos", tono: "ambar" });
+  const presupuestosPendientes = datos.presupuestos.filter((p) => p.estado === "Borrador" || p.estado === "Enviado").length;
+  if (presupuestosPendientes) alertas.push({ id: "pres", texto: "Presupuesto pendiente", detalle: `${presupuestosPendientes} presupuesto(s) sin aprobación final`, seccion: "presupuestos", tono: "ambar" });
+  const controlesAtrasados = datos.turnos.filter((t) => t.fecha < hoy && t.estado === "Pendiente").length + datos.notasClinicas.filter((n) => n.proximoControl && n.proximoControl < hoy).length;
+  if (controlesAtrasados) alertas.push({ id: "control", texto: "Control atrasado", detalle: `${controlesAtrasados} seguimiento(s) requieren revisión`, seccion: "turnos", tono: "rojo" });
+  const estudiosPendientes = datos.estudios.filter((e) => e.estadoInforme === "Sin informar").length;
+  if (estudiosPendientes) alertas.push({ id: "est", texto: "Estudio pendiente", detalle: `${estudiosPendientes} estudio(s) sin informe`, seccion: "estudios", tono: "ambar" });
+  if (saldo > 0) alertas.push({ id: "pago", texto: "Pago pendiente", detalle: `Saldo actual ${formatearMonto(saldo)}`, seccion: "cuenta", tono: "rojo" });
+  const haySeguimientoReciente = [...datos.notasClinicas.map((n) => n.fecha), ...datos.historia.map((h) => h.fecha), ...datos.turnos.map((t) => t.fecha)].some((f) => f >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10));
+  if (!haySeguimientoReciente) alertas.push({ id: "seg", texto: "Paciente sin seguimiento reciente", detalle: "No hay actividad clínica en los últimos 60 días", seccion: "historia", tono: "rojo" });
+  return <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-card to-card p-3 shadow-sm"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-full bg-amber-100 text-amber-700"><Bell className="size-4" /></span><div><p className="text-sm font-semibold">Seguimiento y alertas</p><p className="text-xs text-muted-foreground">Situaciones accionables dentro de la ficha.</p></div></div>{alertas.length === 0 ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"><span className="font-semibold">Sin alertas activas.</span> El seguimiento registrado está al día.</div> : <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">{alertas.map((a) => <button key={a.id} type="button" onClick={() => onSeccion(a.seccion)} className="rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{a.texto}</span><Badge tono={a.tono}>Ver</Badge></div><p className="mt-0.5 text-[10px] text-muted-foreground">{a.detalle}</p></button>)}</div>}</div>;
+}
 
-  const proximoTurno = [...datos.turnos]
-    .filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`)
-    .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
+function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+  const piezas = Array.from(new Set([
+    ...datos.diagnosticos.map((d) => d.pieza), ...datos.tratamientos.map((t) => t.pieza), ...datos.historia.map((h) => h.pieza),
+    ...datos.estudios.map((e) => e.pieza || e.zona).filter(Boolean) as string[], ...datos.fotografias.map((f) => f.pieza), ...datos.notasClinicas.map((n) => n.piezas),
+  ].flatMap((p) => p.split(/[,;\s]+/).filter((x) => /^\d{1,2}$/.test(x))))).sort();
+  const [pieza, setPieza] = useState(piezas[0] ?? "");
+  const diagnosticos = datos.diagnosticos.filter((d) => d.pieza.split(/[,;\s]+/).includes(pieza));
+  const tratamientos = datos.tratamientos.filter((t) => t.pieza.split(/[,;\s]+/).includes(pieza));
+  const notas = datos.notasClinicas.filter((n) => n.piezas.split(/[,;\s]+/).includes(pieza));
+  const estudios = datos.estudios.filter((e) => (e.pieza || e.zona).split(/[,;\s]+/).includes(pieza));
+  const fotos = datos.fotografias.filter((f) => f.pieza === pieza);
+  if (piezas.length === 0) return null;
+  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Contexto clínico por pieza</p><p className="text-xs text-muted-foreground">Conexión conceptual con el odontograma y el odontograma 3D existentes.</p></div><div className="flex flex-wrap gap-1.5">{piezas.map((p) => <button key={p} type="button" onClick={() => setPieza(p)} className={`grid size-8 place-items-center rounded-full text-xs font-semibold transition ${pieza === p ? "bg-primary text-primary-foreground shadow" : "border border-border bg-background hover:border-primary/40 hover:text-primary"}`}>{p}</button>)}</div></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{diagnosticos.length}</p><p className="text-[10px] text-muted-foreground">Diagnósticos</p></button><button type="button" onClick={() => onSeccion("tratamientos")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{tratamientos.length}</p><p className="text-[10px] text-muted-foreground">Tratamientos</p></button><button type="button" onClick={() => onSeccion("historia")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{notas.length}</p><p className="text-[10px] text-muted-foreground">Notas clínicas</p></button><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{estudios.length + fotos.length}</p><p className="text-[10px] text-muted-foreground">Imágenes / estudios</p></button></div></div>;
+}
 
+function AuditoriaSec({ datos }: { datos: Registros }) {
+  const lista = [...datos.auditoria].sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`)).slice(0, 8);
+  return <div className="rounded-2xl border border-border bg-card p-3 shadow-sm"><div className="flex items-center gap-2"><span className={`${CIRCULO_ICONO} size-8`}><UserRound className="size-3.5" /></span><div><p className="text-sm font-semibold">Historial de cambios</p><p className="text-xs text-muted-foreground">Auditoría preparada para reutilizar el sistema existente cuando se conecte.</p></div></div>{lista.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin acciones registradas.</p> : <div className="mt-2 divide-y divide-border">{lista.map((a) => <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"><span><strong>{a.usuario}</strong> · {a.accion}</span><span className="text-[10px] text-muted-foreground">{formatearFecha(a.fecha)} · {a.hora}</span></div>)}</div>}</div>;
+}
+
+function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; contexto?: ContextoPaciente; onSeccion: (s: SeccionRegistros) => void }) {
+  if (!contexto?.paciente) return null;
+  const hoy = hoyISO();
+  const tratamientosActivos = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento").length;
+  const proximoTurno = [...datos.turnos].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
   const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
   const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);
   const saldo = cargos - pagos - creditos;
-
   const inicialesPaciente = iniciales(contexto.paciente) || "PA";
-
-  return (
+  return <>
     <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
-      <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgba(124,58,237,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(124,58,237,0.035) 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
-          maskImage: "linear-gradient(to bottom, black, transparent 85%)",
-          WebkitMaskImage: "linear-gradient(to bottom, black, transparent 85%)",
-        }}
-      />
-
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">
-            {inicialesPaciente}
-          </span>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p>
-            <h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>
-            {contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
-            {datos.historia.length} evoluciones
-          </span>
-          <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
-            {datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos
-          </span>
-        </div>
-      </div>
-
-      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" />
-        <ResumenCuenta
-          etiqueta="Próximo turno"
-          valor={proximoTurno ? `${formatearFecha(proximoTurno.fecha)} · ${proximoTurno.hora}` : "Sin turno"}
-          icon={CalendarDays}
-        />
-        <ResumenCuenta
-          etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"}
-          valor={formatearMonto(Math.abs(saldo))}
-          icon={Wallet}
-          tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""}
-        />
-        <ResumenCuenta etiqueta="Estudios registrados" valor={String(datos.estudios.length)} icon={Images} />
-      </div>
+      <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" /><div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${formatearFecha(proximoTurno.fecha)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
     </section>
-  );
+    <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
+    <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>
+  </>;
 }
 
 /* ───────────── Componente principal ───────────── */
@@ -3671,7 +4362,9 @@ export function SeccionPaciente({
   onToast: (msg: string) => void;
   contexto?: ContextoPaciente;
 }) {
-  const props = { datos, cambiar, onToast, contexto };
+  const [seccionActiva, setSeccionActiva] = useState<SeccionRegistros>(seccion);
+  useEffect(() => setSeccionActiva(seccion), [seccion]);
+  const props = { datos, cambiar, onToast, contexto, onSeccion: setSeccionActiva };
   return (
     <div className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4">
       {/* Fondo visual del módulo Paciente: suave, clínico y alineado al lenguaje violeta del SaaS. */}
@@ -3692,18 +4385,18 @@ export function SeccionPaciente({
 
       <div className="relative z-10">
         <Datalists />
-        <ResumenPaciente datos={datos} contexto={contexto} />
+        <ResumenPaciente datos={datos} contexto={contexto} onSeccion={setSeccionActiva} />
 
-        {seccion === "historia" && <HistoriaSec {...props} />}
-        {seccion === "tratamientos" && <TratamientosSec {...props} />}
-        {seccion === "documentos" && <DocumentosSec {...props} />}
-        {seccion === "recetas" && <RecetasSec {...props} />}
-        {seccion === "estudios" && <EstudiosSec {...props} />}
-        {seccion === "presupuestos" && <PresupuestosSec {...props} />}
-        {seccion === "turnos" && <TurnosSec {...props} />}
-        {seccion === "cuenta" && <CuentaSec {...props} />}
-        {seccion === "profesionales" && <ProfesionalesSec {...props} />}
-        {seccion === "laboratorio" && <LaboratorioSec {...props} />}
+        {seccionActiva === "historia" && <HistoriaSec {...props} />}
+        {seccionActiva === "tratamientos" && <TratamientosSec {...props} />}
+        {seccionActiva === "documentos" && <DocumentosSec {...props} />}
+        {seccionActiva === "recetas" && <RecetasSec {...props} />}
+        {seccionActiva === "estudios" && <EstudiosSec {...props} />}
+        {seccionActiva === "presupuestos" && <PresupuestosSec {...props} />}
+        {seccionActiva === "turnos" && <TurnosSec {...props} />}
+        {seccionActiva === "cuenta" && <CuentaSec {...props} />}
+        {seccionActiva === "profesionales" && <ProfesionalesSec {...props} />}
+        {seccionActiva === "laboratorio" && <LaboratorioSec {...props} />}
       </div>
     </div>
   );

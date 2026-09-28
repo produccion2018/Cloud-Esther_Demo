@@ -105,8 +105,23 @@ const EXTRA_SIDEBAR_COLORS: ExtraSidebarColor[] = [
   {
     id: "negro",
     label: "Negro",
-    hex: "#111827",
+    hex: "#000000",
   },
+];
+
+/**
+ * Lista única de colores del sidebar: los de settings-store más los extra,
+ * sin duplicados (blanco y negro ya están en settings-store).
+ */
+const ALL_SIDEBAR_COLORS: ExtraSidebarColor[] = [
+  ...SIDEBAR_COLORS.map((color) => ({
+    id: color.id as string,
+    label: color.label,
+    hex: color.hex,
+  })),
+  ...EXTRA_SIDEBAR_COLORS.filter(
+    (extra) => !SIDEBAR_COLORS.some((color) => color.id === extra.id),
+  ),
 ];
 
 const DIRECTORIO_ITEMS = [
@@ -791,27 +806,7 @@ function AparienciaTab({
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {SIDEBAR_COLORS.map((color) => {
-              const activo =
-                settings.sidebarColor === color.id;
-
-              return (
-                <ColorOption
-                  key={color.id}
-                  label={color.label}
-                  hex={color.hex}
-                  activo={activo}
-                  onClick={() =>
-                    actualizar(
-                      "sidebarColor",
-                      color.id as SidebarColor,
-                    )
-                  }
-                />
-              );
-            })}
-
-            {EXTRA_SIDEBAR_COLORS.map((color) => {
+            {ALL_SIDEBAR_COLORS.map((color) => {
               const activo =
                 settings.sidebarColor === color.id;
 
@@ -863,7 +858,7 @@ function AparienciaTab({
               </p>
 
               <p className="mt-1 text-xs text-muted-foreground">
-                Aplicá el modo oscuro solamente al menú lateral.
+                Oscurece el color elegido del menú lateral. Blanco y negro no cambian.
               </p>
             </div>
 
@@ -1536,17 +1531,24 @@ function PreviewSidebar({
   ) => void;
 }) {
   const selectedColor =
-    SIDEBAR_COLORS.find(
+    ALL_SIDEBAR_COLORS.find(
       (color) => color.id === settings.sidebarColor,
-    )?.hex ??
-    EXTRA_SIDEBAR_COLORS.find(
-      (color) => color.id === settings.sidebarColor,
-    )?.hex ??
-    "#7c3aed";
+    )?.hex ?? "#7c3aed";
 
-  const sidebarDark =
-    settings.darkModeSidebar ||
-    settings.sidebarColor === "negro";
+  const esBlanco = settings.sidebarColor === "blanco";
+  const esNegro = settings.sidebarColor === "negro";
+
+  // El color elegido manda. El interruptor "Sidebar oscuro" solo oscurece
+  // los colores intermedios: blanco sigue blanco y negro sigue negro.
+  const oscurecer = settings.darkModeSidebar && !esBlanco && !esNegro;
+
+  const fondo = oscurecer
+    ? `color-mix(in oklab, ${selectedColor} 45%, black)`
+    : selectedColor;
+
+  // Texto oscuro sobre fondos claros (blanco y amarillo sin oscurecer).
+  const esClaro =
+    esBlanco || (settings.sidebarColor === "amarillo" && !oscurecer);
 
   return (
     <div className={`${CARD} p-4`}>
@@ -1570,13 +1572,19 @@ function PreviewSidebar({
         <div
           className="p-3"
           style={{
-            backgroundColor: sidebarDark
-              ? "#111827"
-              : selectedColor,
+            backgroundColor: fondo,
           }}
         >
-          <div className="flex items-center gap-2 text-white">
-            <span className="grid size-7 place-items-center rounded-lg bg-white/15">
+          <div
+            className={`flex items-center gap-2 ${
+              esClaro ? "text-gray-900" : "text-white"
+            }`}
+          >
+            <span
+              className={`grid size-7 place-items-center rounded-lg ${
+                esClaro ? "bg-gray-900/10" : "bg-white/15"
+              }`}
+            >
               <Settings className="size-3.5" />
             </span>
 
@@ -1585,7 +1593,11 @@ function PreviewSidebar({
                 Cloud Esther
               </p>
 
-              <p className="text-[7px] text-white/70">
+              <p
+                className={`text-[7px] ${
+                  esClaro ? "text-gray-500" : "text-white/70"
+                }`}
+              >
                 Tu clínica, en la nube
               </p>
             </div>
@@ -1606,8 +1618,12 @@ function PreviewSidebar({
                 key={item}
                 className={`rounded-lg px-2.5 py-1.5 text-[8px] ${
                   item === "Configuración"
-                    ? "bg-white/20 font-bold text-white"
-                    : "text-white/80"
+                    ? esClaro
+                      ? "bg-gray-900/10 font-bold text-gray-900"
+                      : "bg-white/20 font-bold text-white"
+                    : esClaro
+                      ? "text-gray-600"
+                      : "text-white/80"
                 }`}
               >
                 {item}

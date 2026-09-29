@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import {
   MODULES,
   availableIn,
-  planLevel,
   ModuleIcon,
   PLANS,
   useCloudEsther,
@@ -161,7 +160,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6 [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:color-mix(in_oklab,var(--color-sidebar-foreground,currentColor)_18%,transparent)_transparent]">
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
-        const visible = items.filter((m) => availableIn(m, plan) || planLevel(m.minPlan) <= planLevel(plan) + 1);
+        // Se muestran todos los módulos: los de planes superiores aparecen con candado.
+        const visible = items;
         if (!visible.length) return null;
 
         return (

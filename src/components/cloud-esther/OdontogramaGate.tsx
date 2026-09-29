@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Lock, Sparkles, Grid3x3, Box, RotateCcw, Check, ListChecks } from "lucide-react";
+import { Lock, Sparkles, Grid3x3, Box, RotateCcw, Check, ListChecks, Download } from "lucide-react";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
@@ -11,7 +11,7 @@ import {
   type ToothState,
 } from "@/lib/odontogram/fdi";
 import { odontogramKey } from "@/lib/odontograma2d/types";
-import { registrarCambio } from "@/lib/odontogram/historial";
+import { cargarTratamientos, registrarCambio } from "@/lib/odontogram/historial";
 import { RadiografiasPanel } from "./RadiografiasPanel";
 import { ToothDetailPanel } from "@/components/odontogram/ToothDetailPanel";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
@@ -30,6 +30,8 @@ type Props = {
 };
 
 const PLAN_MINIMO_3D: PlanId = "avanzada";
+/** "Odontograma 3D avanzado" (Grupo Odontológico): exportar el informe del odontograma. */
+const PLAN_INFORME_3D: PlanId = "grupo";
 /** Esther IA (chat clínico) está incluida desde Clínica Avanzada, igual que el módulo IA Esther. */
 const PLAN_MINIMO_IA: PlanId = "avanzada";
 
@@ -99,6 +101,37 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
 
   const tieneAcceso3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
   const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA);
+  const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
+
+  const exportarInforme = () => {
+    if (!tieneInforme) {
+      onToast(`El informe del odontograma 3D requiere plan ${PLANS[PLAN_INFORME_3D].name}`);
+      return;
+    }
+    const tratamientos = cargarTratamientos(clavePaciente);
+    const celda = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const filas = Object.keys(chart)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((fdi) =>
+        [
+          String(fdi),
+          TEETH_BY_FDI[fdi]?.name ?? "",
+          TOOTH_STATE_META[chart[fdi] ?? "sano"].label,
+          tratamientos[fdi] ?? "",
+        ]
+          .map(celda)
+          .join(","),
+      );
+    const csv = ["Pieza,Nombre,Estado,Tratamiento planificado", ...filas].join("\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `odontograma-3d-${(pacienteNombre ?? pacienteId).replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onToast("Informe del odontograma descargado");
+  };
 
   const handleChange = (fdi: number, state: ToothState, next: Record<number, ToothState>) => {
     const anterior = chart[fdi] ?? "sano";
@@ -197,6 +230,18 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
                 3D
               </button>
             </>
+          )}
+
+          {modo === "3d" && tieneAcceso3D && (
+            <button
+              type="button"
+              onClick={exportarInforme}
+              title={tieneInforme ? undefined : `Disponible en ${PLANS[PLAN_INFORME_3D].name}`}
+              className={tieneInforme ? TAB_INACTIVO : `${TAB_INACTIVO} opacity-60`}
+            >
+              {tieneInforme ? <Download className="size-3.5" /> : <Lock className="size-3.5" />}
+              Exportar informe
+            </button>
           )}
 
           {modo === "3d" && tieneAcceso3D && (

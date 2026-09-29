@@ -198,6 +198,72 @@
   box-shadow: var(--shadow-glow);
 }
 
+/* Botones estándar de la app (mismo tamaño que "Nueva cita" de Agenda).
+   btn-ce: acción principal · btn-ce-outline: acción secundaria. */
+@utility btn-ce {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  padding: 0.375rem 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
+  transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px oklch(0.45 0.2 292 / 0.22);
+  }
+  &:disabled {
+    opacity: 0.5;
+    transform: none;
+    cursor: not-allowed;
+  }
+  & svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+}
+
+@utility btn-ce-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 20%, transparent);
+  background-color: var(--color-card);
+  color: var(--color-foreground);
+  padding: calc(0.375rem - 1px) 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04);
+  transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s, border-color 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+    background-color: color-mix(in oklab, var(--color-primary) 5%, var(--color-card));
+  }
+  &:disabled {
+    opacity: 0.5;
+    transform: none;
+    cursor: not-allowed;
+  }
+  & svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+}
+
 /* Tarjetas del Odontograma 2D (mismo estilo que el resto de las tarjetas de la app) */
 @utility card-clinic {
   background-color: var(--color-card);

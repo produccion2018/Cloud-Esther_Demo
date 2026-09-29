@@ -129,6 +129,16 @@ export function cerrarSesion() {
   ponerSesion(null);
 }
 
+/* ---------- acceso fuera de React ---------- */
+
+/** Clínica (empresa) de la sesión actual, o null si no hay sesión. En el servidor siempre es null. */
+export function clinicaActualId(): string | null {
+  return leer()?.clinica.id ?? null;
+}
+
+/** Avisa cada vez que cambia la sesión (login, registro o logout). */
+export const suscribirSesion = suscribir;
+
 /* ---------- hook ---------- */
 
 export function useSesion() {

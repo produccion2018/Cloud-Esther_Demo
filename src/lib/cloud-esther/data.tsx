@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { claveTenant, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -86,7 +87,8 @@ function getStoredPlan(): PlanId {
     return "avanzada";
   }
 
-  const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
+  // El plan se guarda por empresa: cada clínica tiene el suyo.
+  const raw = window.localStorage.getItem(claveTenant(PLAN_STORAGE_KEY));
 
   return raw && isPlanId(raw) ? raw : "avanzada";
 }
@@ -96,7 +98,7 @@ export function setStoredPlan(id: PlanId) {
     return;
   }
 
-  window.localStorage.setItem(PLAN_STORAGE_KEY, id);
+  window.localStorage.setItem(claveTenant(PLAN_STORAGE_KEY), id);
 }
 
 export function mapSitePlanToPlanId(siteId: string): PlanId {
@@ -469,7 +471,13 @@ export function CloudEstherProvider({
 }: {
   children: ReactNode;
 }) {
-  const [plan, setPlanState] = useState<PlanId>(() => getStoredPlan());
+  // Arranca igual en servidor y cliente ("avanzada") y después de montar lee el plan
+  // guardado de la empresa de la sesión; se vuelve a leer si cambia la sesión.
+  const [plan, setPlanState] = useState<PlanId>("avanzada");
+  const tenant = useTenantActual();
+  useEffect(() => {
+    setPlanState(getStoredPlan());
+  }, [tenant]);
   const [clinic, setClinic] = useState("centro");
   const [role] = useState("admin");
   const [disabled] = useState<string[]>([]);

@@ -1,3 +1,4 @@
+import { useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { useEffect, useState } from "react";
 import {
   Settings,
@@ -39,6 +40,7 @@ import { useCloudEsther } from "@/lib/cloud-esther/data";
 
 import {
   cargarSettings,
+  DEFAULT_SETTINGS,
   guardarSettings,
   SIDEBAR_COLORS,
   FONT_SIZES,
@@ -207,13 +209,13 @@ export function ConfiguracionModule({ onToast }: Props) {
 
   const [tab, setTab] = useState<TabId>("general");
 
-  const [settings, setSettings] = useState<ClinicSettings>(() =>
-    cargarSettings(clinic),
-  );
+  const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
+  // Ajustes de la empresa de la sesión (se recargan si cambia la sesión).
+  const tenant = useTenantActual();
 
   useEffect(() => {
     setSettings(cargarSettings(clinic));
-  }, [clinic]);
+  }, [clinic, tenant]);
 
   const actualizar = <K extends keyof ClinicSettings>(
     key: K,

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import type { FormEvent, ReactNode } from "react";
 import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
@@ -661,36 +662,26 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
     },
 };
 
-/* Los registros viven a nivel módulo para compartirse entre la página de Pacientes y las
-   páginas de acceso directo del sidebar (Historia, Recetas, Estudios…). Al conectar el backend
-   este store se reemplaza por las consultas a la API. */
-let registrosActuales: Record<number, Registros> = REGISTROS_INICIALES;
-const oyentesRegistros = new Set<() => void>();
-const emitirRegistros = () => oyentesRegistros.forEach((f) => f());
-const suscribirRegistros = (f: () => void) => {
-  oyentesRegistros.add(f);
-  return () => {
-    oyentesRegistros.delete(f);
-  };
-};
-const leerRegistros = () => registrosActuales;
+/* Los registros se comparten entre la página de Pacientes y las páginas de acceso directo del
+   sidebar (Historia, Recetas, Estudios…), separados por empresa: cada clínica tiene su propia
+   copia y nunca ve los datos de otra. Al conectar el backend se reemplaza por la API. */
+const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES);
 
 export function useRegistrosPacientes() {
-  const porPaciente = useSyncExternalStore(suscribirRegistros, leerRegistros, leerRegistros);
+  const porPaciente = storeRegistros.usar();
 
   const de = (id: number): Registros => porPaciente[id] ?? VACIO;
 
   function cambiar<K extends keyof Registros>(id: number, clave: K, fn: (prev: Registros[K]) => Registros[K]) {
-    const actual = registrosActuales[id] ?? VACIO;
+    const todos = storeRegistros.leer();
+    const actual = todos[id] ?? VACIO;
     const siguiente = { ...actual, [clave]: fn(actual[clave]) } as Registros;
-    registrosActuales = { ...registrosActuales, [id]: siguiente };
-    emitirRegistros();
+    storeRegistros.poner({ ...todos, [id]: siguiente });
   }
 
   const quitar = (id: number) => {
-    const { [id]: _borrado, ...resto } = registrosActuales;
-    registrosActuales = resto;
-    emitirRegistros();
+    const { [id]: _borrado, ...resto } = storeRegistros.leer();
+    storeRegistros.poner(resto);
   };
 
   return { de, cambiar, quitar };
@@ -751,10 +742,10 @@ const TEXTAREA =
   "min-h-16 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const BTN_PRIMARIO =
-  "flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-primary to-[oklch(0.5_0.2_292)] px-4 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
+  "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
 
 const BTN_SECUNDARIO =
-  "flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
+  "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
 
 const CIRCULO_ICONO =
   "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15 shadow-[0_5px_14px_-8px_rgba(124,58,237,0.32)]";
@@ -930,9 +921,11 @@ function BotonMini({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1 rounded-full border border-border bg-card font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-        compacto ? "min-h-7 px-2 py-0.5 text-[10px]" : "px-3 py-1 text-[11px]"
-      }`}
+      className={
+        compacto
+          ? "flex min-h-7 items-center justify-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          : "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      }
     >
       {Icon && <Icon className={compacto ? "size-2.5" : "size-3"} />}
       {label}
@@ -4266,7 +4259,11 @@ function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
 
 /* ───────────── Resumen visual del paciente ───────────── */
 
+const TIMELINE_VISIBLES = 5;
+
 function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+  // Se muestran los más recientes; el resto se despliega con "Ver todos" para no dejar la ficha tan larga.
+  const [verTodos, setVerTodos] = useState(false);
   type Evento = { id: string; fecha: string; hora?: string; titulo: string; detalle: string; icon: LucideIcon; seccion: SeccionRegistros; tono: Tono };
   const eventos: Evento[] = ([
     ...datos.turnos.map((t) => ({ id: `turno-${t.id}`, fecha: t.fecha, hora: t.hora, titulo: "Turno", detalle: `${t.motivo}${t.profesional ? ` · ${t.profesional}` : ""}`, icon: CalendarDays, seccion: "turnos" as SeccionRegistros, tono: TONO_TURNO[t.estado] })),
@@ -4282,7 +4279,7 @@ function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (
     ...datos.cuenta.map((m) => ({ id: `mov-${m.id}`, fecha: m.fecha, titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo, detalle: m.concepto, icon: Wallet, seccion: "cuenta" as SeccionRegistros, tono: TONO_MOVIMIENTO[m.tipo] })),
   ] as Evento[]).sort((a, b) => `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`)).slice(0, 16);
 
-  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{eventos.map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}</div>}</div>;
+  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
 }
 
 function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
@@ -4342,8 +4339,8 @@ function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; con
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
       <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${formatearFecha(proximoTurno.fecha)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
     </section>
-    <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
-    <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>
+    <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
+    <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>
   </>;
 }
 

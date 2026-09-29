@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 export type EstadoAutomatizacion = "Activa" | "Pausada";
 
@@ -29,39 +29,19 @@ const DATOS_INICIALES: Automatizacion[] = [
 
 /* ───────────── Store a nivel módulo (mismo patrón que pacientes.ts) ───────────── */
 
-let automatizaciones: Automatizacion[] = DATOS_INICIALES;
-const listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot() {
-  return automatizaciones;
-}
+/* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
+const store = crearStorePorEmpresa<Automatizacion[]>(() => DATOS_INICIALES);
 
 function setAutomatizacionesGlobal(
-  actualizar:
-    | Automatizacion[]
-    | ((prev: Automatizacion[]) => Automatizacion[]),
+  actualizar: Automatizacion[] | ((prev: Automatizacion[]) => Automatizacion[]),
 ) {
-  automatizaciones =
-    typeof actualizar === "function"
-      ? (actualizar as (prev: Automatizacion[]) => Automatizacion[])(
-          automatizaciones,
-        )
-      : actualizar;
-
-  emit();
+  store.poner(
+    typeof actualizar === "function" ? actualizar(store.leer()) : actualizar,
+  );
 }
 
 export function useAutomatizaciones() {
-  const lista = useSyncExternalStore(subscribe, getSnapshot);
+  const lista = store.usar();
 
   return {
     automatizaciones: lista,

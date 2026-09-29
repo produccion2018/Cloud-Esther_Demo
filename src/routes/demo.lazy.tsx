@@ -741,6 +741,7 @@ function TopBanner({
   onMarcarLeidas,
   onToast,
   nombre,
+  clinica,
   iniciales: inicialesUsuario,
 }: {
   notificaciones: Actividad[];
@@ -748,6 +749,7 @@ function TopBanner({
   onMarcarLeidas: () => void;
   onToast: (msg: string) => void;
   nombre: string;
+  clinica?: string | undefined;
   iniciales: string;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -827,11 +829,13 @@ function TopBanner({
           >
             <Settings className="size-4 text-muted-foreground" />
           </button>
-          <div className="flex items-center gap-2 rounded-full bg-background/90 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm">
-            <span className="brand-gradient grid size-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{inicialesUsuario}</span>
-            <span className="hidden leading-tight sm:block">
-              <span className="block text-xs font-medium">{nombre}</span>
-              <span className="block text-[10px] text-muted-foreground">Dueño/a</span>
+          <div className="flex max-w-[16rem] items-center gap-2 rounded-full bg-background/95 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm">
+            <span className="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{inicialesUsuario}</span>
+            <span className="hidden min-w-0 leading-tight sm:block">
+              <span className="block truncate text-xs font-semibold text-foreground">{nombre}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">
+                {clinica ? `Dueño/a · ${clinica}` : "Dueño/a"}
+              </span>
             </span>
             <ChevronDown className="size-3.5 text-muted-foreground" />
           </div>
@@ -1240,6 +1244,7 @@ function DashboardInner() {
           onMarcarLeidas={marcarLeidas}
           onToast={show}
           nombre={nombreUsuario}
+          clinica={clinica?.nombre}
           iniciales={iniciales(nombreUsuario)}
         />
         <CentroOperacionesBanner

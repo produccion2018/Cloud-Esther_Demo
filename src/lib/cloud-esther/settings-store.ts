@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tenantActual, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 
 export type SidebarColor =
   | "violeta"
@@ -61,8 +62,10 @@ export const DEFAULT_SETTINGS: ClinicSettings = {
   auditLogEnabled: true,
 };
 
+/* Los ajustes (colores, modo oscuro, etc.) se guardan por empresa de la sesión:
+   lo que configura una clínica nunca cambia la apariencia de otra. */
 function clave(clinicId: string) {
-  return `cloud-esther:settings:${clinicId}`;
+  return `cloud-esther:settings:${tenantActual()}:${clinicId}`;
 }
 
 const EVENTO_CAMBIO = "cloud-esther-settings-changed";
@@ -103,7 +106,8 @@ export function guardarSettings(clinicId: string, settings: ClinicSettings) {
 /** Hook para leer los settings de una clínica y reaccionar cuando cambian
  *  (incluso desde otro componente, como la página de Configuración). */
 export function useClinicSettings(clinicId: string): ClinicSettings {
-  const [settings, setSettings] = useState<ClinicSettings>(() => cargarSettings(clinicId));
+  const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
+  const tenant = useTenantActual();
 
   useEffect(() => {
     setSettings(cargarSettings(clinicId));
@@ -117,7 +121,7 @@ export function useClinicSettings(clinicId: string): ClinicSettings {
 
     window.addEventListener(EVENTO_CAMBIO, handler);
     return () => window.removeEventListener(EVENTO_CAMBIO, handler);
-  }, [clinicId]);
+  }, [clinicId, tenant]);
 
   // Mantiene el color del sidebar aplicado en <html> al cargar y al cambiar.
   useEffect(() => {

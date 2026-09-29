@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 export type EstadoConector = "Conectado" | "Desconectado";
 
@@ -88,35 +88,19 @@ const DATOS_INICIALES: Conector[] = [
 
 /* ───────────── Store a nivel módulo (mismo patrón que pacientes.ts / automatizaciones.ts) ───────────── */
 
-let conectores: Conector[] = DATOS_INICIALES;
-const listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot() {
-  return conectores;
-}
+/* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
+const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES);
 
 function setConectoresGlobal(
   actualizar: Conector[] | ((prev: Conector[]) => Conector[]),
 ) {
-  conectores =
-    typeof actualizar === "function"
-      ? (actualizar as (prev: Conector[]) => Conector[])(conectores)
-      : actualizar;
-
-  emit();
+  store.poner(
+    typeof actualizar === "function" ? actualizar(store.leer()) : actualizar,
+  );
 }
 
 export function useIntegraciones() {
-  const lista = useSyncExternalStore(subscribe, getSnapshot);
+  const lista = store.usar();
 
   return {
     conectores: lista,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { claveTenant, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import {
   BarChart3,
   ChevronRight,
@@ -177,9 +178,10 @@ const BUTTON_SECONDARY =
 const INPUT =
   "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";
 
+/* Las claves se separan por empresa: cada clínica tiene sus propias campañas, leads y promos. */
 function load<T>(key: string, fallback: T): T {
   try {
-    const value = localStorage.getItem(key);
+    const value = localStorage.getItem(claveTenant(key));
     return value ? (JSON.parse(value) as T) : fallback;
   } catch {
     return fallback;
@@ -188,7 +190,7 @@ function load<T>(key: string, fallback: T): T {
 
 function save(key: string, value: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(claveTenant(key), JSON.stringify(value));
   } catch {
     // Si el navegador bloquea el almacenamiento, la app sigue funcionando.
   }
@@ -306,11 +308,13 @@ export default function Marketing() {
   const [leads, setLeads] = useState<Lead[]>(LEADS_INICIALES);
   const [promos, setPromos] = useState<Promocion[]>(PROMOS_INICIALES);
 
+  // Se vuelve a leer al cambiar de empresa (sesión) para no mezclar datos.
+  const tenant = useTenantActual();
   useEffect(() => {
     setCampanias(load(STORAGE_CAMPANIAS, CAMPANIAS_INICIALES));
     setLeads(load(STORAGE_LEADS, LEADS_INICIALES));
     setPromos(load(STORAGE_PROMOS, PROMOS_INICIALES));
-  }, []);
+  }, [tenant]);
 
   const [busqueda, setBusqueda] = useState("");
   const [modal, setModal] = useState<"campania" | "lead" | "promo" | null>(

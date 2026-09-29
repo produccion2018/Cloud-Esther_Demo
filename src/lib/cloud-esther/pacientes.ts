@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación sugerida: src/lib/cloud-esther/pacientes.ts
 
@@ -51,28 +51,18 @@ type Estado = {
   activoId: number | null;
 };
 
-let estado: Estado = { pacientes: [PACIENTE_EJEMPLO], activoId: null };
-const oyentes = new Set<() => void>();
-
-const suscribir = (f: () => void) => {
-  oyentes.add(f);
-  return () => {
-    oyentes.delete(f);
-  };
-};
-const leer = () => estado;
-const poner = (siguiente: Estado) => {
-  estado = siguiente;
-  oyentes.forEach((f) => f());
-};
+/* Separado por empresa: cada clínica tiene su propio listado de pacientes. */
+const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: [PACIENTE_EJEMPLO], activoId: null }));
 
 export function usePacientes() {
-  const actual = useSyncExternalStore(suscribir, leer, leer);
+  const actual = store.usar();
 
-  const setPacientes = (fn: (prev: Paciente[]) => Paciente[]) =>
-    poner({ ...estado, pacientes: fn(estado.pacientes) });
+  const setPacientes = (fn: (prev: Paciente[]) => Paciente[]) => {
+    const estado = store.leer();
+    store.poner({ ...estado, pacientes: fn(estado.pacientes) });
+  };
 
-  const setActivoId = (id: number | null) => poner({ ...estado, activoId: id });
+  const setActivoId = (id: number | null) => store.poner({ ...store.leer(), activoId: id });
 
   return { pacientes: actual.pacientes, activoId: actual.activoId, setPacientes, setActivoId };
 }

@@ -485,7 +485,7 @@ function ModalFactura({
           <button onClick={onClose} className="rounded-full border border-primary/20 bg-card px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/5">
             Cancelar
           </button>
-          <button onClick={guardar} className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+          <button onClick={guardar} className="btn-ce">
             Emitir factura
           </button>
         </div>
@@ -566,7 +566,7 @@ function ModalNota({
           <button onClick={onClose} className="rounded-full border border-primary/20 bg-card px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/5">
             Cancelar
           </button>
-          <button onClick={guardar} className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+          <button onClick={guardar} className="btn-ce">
             Emitir nota
           </button>
         </div>
@@ -656,7 +656,7 @@ export function Facturacion() {
         </div>
         <button
           onClick={() => setModalFactura(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          className="btn-ce"
         >
           <Plus className="h-4 w-4" /> Nueva factura
         </button>
@@ -821,7 +821,7 @@ export function Facturacion() {
                         registrarEvento({ modulo: "Facturación", accion: "Recordatorio de cobro", entidad: "Factura", despues: f.numero });
                         toast.success(`Recordatorio enviado a ${f.cliente}`);
                       }}
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                      className="btn-ce"
                     >
                       Enviar recordatorio
                     </button>

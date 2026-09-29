@@ -208,7 +208,9 @@
   border-radius: 9999px;
   background-color: var(--color-primary);
   color: var(--color-primary-foreground);
-  padding: 0.375rem 1rem;
+  /* Altura fija: igual en todos los módulos aunque el contenedor estire a sus hijos. */
+  height: 1.875rem;
+  padding: 0 1rem;
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;
@@ -240,7 +242,8 @@
   border: 1px solid color-mix(in oklab, var(--color-primary) 20%, transparent);
   background-color: var(--color-card);
   color: var(--color-foreground);
-  padding: calc(0.375rem - 1px) 1rem;
+  height: 1.875rem;
+  padding: 0 1rem;
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;

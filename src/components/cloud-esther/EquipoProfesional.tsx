@@ -23,14 +23,13 @@ import {
 } from "lucide-react"
 
 import {
-  TEAM_MEMBERS,
-  ESPECIALIDADES,
   emptyMember,
   permsFor,
   type TeamMember,
   type TeamRole,
   type MemberStatus,
 } from "@/lib/cloud-esther/equipo-profesional-data"
+import { useEquipo } from "@/lib/cloud-esther/equipo-store"
 
 /* ───────────── Ícono de diente propio (lucide-react no trae uno) ───────────── */
 
@@ -304,7 +303,8 @@ function Modal({
 type DetailTab = "info" | "agenda" | "permisos" | "comisiones"
 
 export function EquipoProfesional() {
-  const [members, setMembers] = useState<TeamMember[]>(TEAM_MEMBERS)
+  // Equipo compartido con Especialidades / Agendas / Permisos, separado por empresa.
+  const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica } = useEquipo()
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<FilterKey>("todos")
   const [selected, setSelected] = useState<TeamMember | null>(null)
@@ -517,7 +517,7 @@ export function EquipoProfesional() {
             setEditingMember(null)
             setAddOpen(true)
           }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+          className="btn-ce"
         >
           <Plus className="size-4" />
           Agregar integrante
@@ -1097,7 +1097,7 @@ export function EquipoProfesional() {
                           specialties: [v],
                         })
                       }
-                      options={ESPECIALIDADES}
+                      options={especialidadesClinica}
                       placeholder="Elegir especialidad"
                     />
                   </Field>
@@ -1201,7 +1201,7 @@ export function EquipoProfesional() {
 
               <button
                 onClick={saveDraft}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                className="btn-ce"
               >
                 {editingMember
                   ? "Guardar cambios"
@@ -1260,7 +1260,7 @@ export function EquipoProfesional() {
 
               <button
                 onClick={saveCommission}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                className="btn-ce"
               >
                 Guardar comisión
               </button>

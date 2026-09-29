@@ -170,10 +170,10 @@ const CARD =
   "relative overflow-hidden rounded-2xl border border-violet-300/70 bg-white shadow-[0_2px_10px_rgba(124,58,237,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/80 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]";
 
 const BUTTON_PRIMARY =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md active:translate-y-0";
+  "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const BUTTON_SECONDARY =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/60 hover:shadow-sm";
+  "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const INPUT =
   "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";

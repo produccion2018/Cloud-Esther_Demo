@@ -242,10 +242,10 @@ const BTN =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const BTN_PRIMARY =
-  `${BTN} bg-primary text-primary-foreground shadow-sm hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md`;
+  "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const BTN_SECONDARY =
-  `${BTN} border border-border bg-background hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5`;
+  "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const CARD =
   "rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md md:p-5";

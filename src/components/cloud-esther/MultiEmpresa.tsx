@@ -1082,7 +1082,7 @@ export function MultiEmpresa() {
 
           <button
             onClick={() => setModalClinica({})}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="btn-ce"
           >
             <Plus className="h-4 w-4" />
             Nueva clínica
@@ -1299,7 +1299,7 @@ export function MultiEmpresa() {
           action={
             <button
               onClick={() => setModalSucursal(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              className="btn-ce"
             >
               <Plus className="h-4 w-4" />
               Nueva sucursal

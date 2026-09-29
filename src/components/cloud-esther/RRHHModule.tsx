@@ -310,7 +310,7 @@ function AutomatizacionesN8n({
               </p>
             </div>
           </div>
-          <button className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90">
+          <button className="btn-ce">
             <Plus className="size-3.5" />
             Nuevo flujo
           </button>

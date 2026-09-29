@@ -826,9 +826,7 @@ function GraficoEvolucion() {
                 {p.mes}
               </text>
 
-              <title>
-                {p.mes}: {p.turnos} turnos · {p.cancelados} cancelados
-              </title>
+              <title>{`${p.mes}: ${p.turnos} turnos · ${p.cancelados} cancelados`}</title>
             </g>
           ))}
         </svg>

@@ -274,7 +274,7 @@ function FormActions({ submitLabel, onCancel }: { submitLabel: string; onCancel:
       </button>
       <button
         type="submit"
-        className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+        className="btn-ce"
       >
         {submitLabel}
       </button>

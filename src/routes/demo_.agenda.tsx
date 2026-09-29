@@ -596,7 +596,7 @@ function FormActions({
 
       <button
         type="submit"
-        className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+        className="btn-ce"
       >
         {submitLabel}
       </button>
@@ -1904,7 +1904,7 @@ function AgendaInner() {
 
               <button
                 onClick={() => setModal({ tipo: "cita" })}
-                className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className="btn-ce"
               >
                 <Plus className="size-3.5" />
                 Nueva cita

@@ -55,7 +55,7 @@ function Dashboard() {
               <p className="mt-1 text-sm text-muted-foreground">Todo lo que pasa hoy en la Clínica Centro, en una sola pantalla.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Nuevo turno</button>
+              <button className="btn-ce">Nuevo turno</button>
               <button className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted">Nuevo paciente</button>
             </div>
           </div>

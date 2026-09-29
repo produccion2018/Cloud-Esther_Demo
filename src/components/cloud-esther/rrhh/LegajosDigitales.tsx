@@ -131,7 +131,7 @@ export function LegajosDigitales({ onToast }: { onToast: (msg: string) => void }
           </div>
           <button
             onClick={subirDocumento}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            className="btn-ce"
           >
             <Upload className="size-3.5" />
             Subir documento

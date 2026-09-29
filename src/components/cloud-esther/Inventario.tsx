@@ -246,7 +246,7 @@ export function Inventario() {
               setDraftOrder(emptyOrder())
               setAddOrderOpen(true)
             }}
-            className="flex items-center gap-2 rounded-lg border border-border bg-background px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
+            className="btn-ce-outline"
           >
             <ShoppingCart className="size-4" />
             Nueva orden
@@ -256,7 +256,7 @@ export function Inventario() {
               setDraftSupply(emptySupply())
               setAddSupplyOpen(true)
             }}
-            className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+            className="btn-ce"
           >
             <Plus className="size-4" />
             Nuevo insumo
@@ -423,7 +423,7 @@ export function Inventario() {
                   </div>
                   <button
                     onClick={() => markReponer(s)}
-                    className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                    className="btn-ce"
                   >
                     <ShoppingCart className="size-3.5" />
                     Reponer
@@ -558,7 +558,7 @@ export function Inventario() {
               </button>
               <button
                 onClick={saveSupply}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                className="btn-ce"
               >
                 Guardar insumo
               </button>
@@ -597,7 +597,7 @@ export function Inventario() {
               </button>
               <button
                 onClick={saveOrder}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                className="btn-ce"
               >
                 Crear orden
               </button>

@@ -411,7 +411,7 @@ function GeneralTab({
         <button
           type="button"
           onClick={() => onToast("Cambios guardados")}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-90"
+          className="btn-ce mt-4"
         >
           <CheckCircle2 className="size-4" />
           Guardar cambios

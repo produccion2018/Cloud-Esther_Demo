@@ -122,10 +122,10 @@ const INPUT =
   "h-10 w-full rounded-xl border border-primary/10 bg-white/80 px-3.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white focus:ring-4 focus:ring-primary/10";
 
 const BTN_PRIMARIO =
-  "inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-[0_8px_20px_-12px_rgba(124,58,237,0.75)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_12px_24px_-12px_rgba(124,58,237,0.8)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20";
+  "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const BTN_SECUNDARIO =
-  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary/12 bg-white/90 px-4 py-2 text-[13px] font-medium text-foreground shadow-[0_6px_18px_-16px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-primary/[0.035] hover:shadow-[0_10px_22px_-15px_rgba(124,58,237,0.5)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";
+  "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 const BTN_ICONO =
   "grid size-9 place-items-center rounded-xl border border-primary/12 bg-white/90 text-muted-foreground shadow-[0_5px_16px_-14px_rgba(124,58,237,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary hover:shadow-[0_9px_20px_-14px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15";

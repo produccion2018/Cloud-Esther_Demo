@@ -1000,7 +1000,7 @@ function ModalEgreso({
 
           <button
             onClick={guardar}
-            className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="btn-ce"
           >
             Guardar egreso
           </button>
@@ -1409,7 +1409,7 @@ export function Finanzas() {
           action={
             <button
               onClick={() => setModalEgreso(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              className="btn-ce"
             >
               <Plus className="h-4 w-4" />
               Nuevo egreso
@@ -1644,7 +1644,7 @@ export function Finanzas() {
                             `Recordatorio enviado a ${c.paciente}`,
                           );
                         }}
-                        className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                        className="btn-ce"
                       >
                         Enviar recordatorio
                       </button>

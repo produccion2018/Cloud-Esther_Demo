@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { iniciales, useEmpresas } from "@/lib/cloud-esther/empresa-store";
 // Capas del banner (de atrás hacia adelante). Los 4 archivos van en src/assets/
 import heroFondo from "@/assets/hero-fondo.webp";
 import heroPersonaje1 from "@/assets/hero-personaje-1.webp";
@@ -750,6 +751,7 @@ function TopBanner({
   onToast: (msg: string) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const { activa } = useEmpresas();
   const ahora = new Date();
   const fecha = ahora.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
   const hora = ahora.toLocaleTimeString("es-AR", { hour: "numeric", minute: "2-digit" });
@@ -827,10 +829,14 @@ function TopBanner({
             <Settings className="size-4 text-muted-foreground" />
           </button>
           <div className="flex items-center gap-2 rounded-full bg-background/90 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm">
-            <span className="brand-gradient grid size-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">PC</span>
+            <span className="brand-gradient grid size-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">
+              {activa ? iniciales(activa.contacto) : "PC"}
+            </span>
             <span className="hidden leading-tight sm:block">
-              <span className="block text-xs font-medium">Pinto Castro Mauro</span>
-              <span className="block text-[10px] text-muted-foreground">Dueño/a</span>
+              <span className="block text-xs font-medium">{activa?.contacto ?? "Pinto Castro Mauro"}</span>
+              <span className="block text-[10px] text-muted-foreground">
+                {activa ? `Dueño/a · ${activa.nombre}` : "Dueño/a"}
+              </span>
             </span>
             <ChevronDown className="size-3.5 text-muted-foreground" />
           </div>
@@ -852,6 +858,9 @@ function CentroOperacionesBanner({
   onNuevaCita: () => void;
   onNuevoPaciente: () => void;
 }) {
+  const { activa } = useEmpresas();
+  const saludo = activa ? activa.contacto.split(/\s+/)[0] : "Pinto";
+
   return (
     <div className="co-hero relative isolate mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.56_0.21_295)] via-[oklch(0.47_0.22_292)] to-[oklch(0.35_0.2_290)] px-6 py-6 text-white shadow-lg shadow-[oklch(0.45_0.22_292)]/25 ring-1 ring-inset ring-white/15 md:px-8">
       <style>{`
@@ -947,9 +956,11 @@ function CentroOperacionesBanner({
       {/* ───── Contenido ───── */}
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Hola, Pinto</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Hola, {saludo}</p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight drop-shadow-sm md:text-3xl">Centro de operaciones</h1>
-          <p className="mt-1.5 text-sm leading-relaxed text-white/85">Todo lo que pasa hoy en tu clínica, en una sola pantalla.</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-white/85">
+            Todo lo que pasa hoy en {activa ? <strong className="font-semibold text-white">{activa.nombre}</strong> : "tu clínica"}, en una sola pantalla.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button
@@ -1102,6 +1113,8 @@ function DashboardInner() {
   const [modal, setModal] = useState<ModalActivo>(null);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const { activa } = useEmpresas();
+  const usuario = activa?.contacto ?? "Pinto Castro Mauro";
 
   // Atajo ⌘K / Ctrl+K para enfocar el buscador
   useEffect(() => {
@@ -1139,7 +1152,7 @@ function DashboardInner() {
         ].sort((x, y) => x.hora.localeCompare(y.hora)),
       );
     }
-    registrar("Pinto Castro Mauro", `Agendó un turno para ${c.paciente} el ${fechaTexto} a las ${c.hora}`);
+    registrar(usuario, `Agendó un turno para ${c.paciente} el ${fechaTexto} a las ${c.hora}`);
     cerrarModal();
     show(esHoy ? "Turno agendado para hoy" : `Turno agendado para el ${fechaTexto}`);
   };
@@ -1147,7 +1160,7 @@ function DashboardInner() {
   const agregarPaciente = (p: NuevoPaciente) => {
     const nombreCompleto = `${p.nombre} ${p.apellido}`;
     setPacientesNuevos((prev) => [...prev, { nombre: nombreCompleto, documento: p.documento }]);
-    registrar("Pinto Castro Mauro", `Registró al paciente ${nombreCompleto}`);
+    registrar(usuario, `Registró al paciente ${nombreCompleto}`);
     cerrarModal();
     show("Paciente registrado");
   };
@@ -1156,7 +1169,7 @@ function DashboardInner() {
     const numero = `PR-2026-${String(142 + presupuestosNuevos).padStart(4, "0")}`;
     setPresupuestosNuevos((n) => n + 1);
     registrar(
-      "Pinto Castro Mauro",
+      usuario,
       `Creó el presupuesto ${numero} para ${p.paciente} (${p.tratamiento}) por $ ${p.monto.toLocaleString("es-AR")}`,
     );
     cerrarModal();
@@ -1168,7 +1181,7 @@ function DashboardInner() {
     if (!turno) return;
     const nuevo: EstadoTurno = turno.estado === "Confirmado" ? "Pendiente" : "Confirmado";
     setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estado: nuevo } : t)));
-    registrar("Pinto Castro Mauro", `Marcó el turno de ${turno.paciente} como ${nuevo.toLowerCase()}`);
+    registrar(usuario, `Marcó el turno de ${turno.paciente} como ${nuevo.toLowerCase()}`);
   };
 
   const enviarRecordatorios = () => {

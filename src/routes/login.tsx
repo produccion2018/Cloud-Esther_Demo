@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { iniciarSesionEmpresa } from "@/lib/cloud-esther/empresa-store";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -285,6 +286,8 @@ function Login() {
                   className="mt-7 space-y-4.5"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    const email = new FormData(e.currentTarget).get("email");
+                    if (typeof email === "string") iniciarSesionEmpresa(email);
                     navigate({ to: "/demo" });
                   }}
                 >
@@ -304,6 +307,7 @@ function Login() {
 
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       required
                       placeholder="esther.mendez@esther.com"

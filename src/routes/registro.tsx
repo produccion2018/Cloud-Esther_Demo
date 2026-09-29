@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
+import { registrarEmpresa } from "@/lib/cloud-esther/empresa-store";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -34,6 +35,9 @@ function Registro() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(plan ?? "profesional");
   const [sent, setSent] = useState(false);
+  const [clinica, setClinica] = useState("");
+  const [contacto, setContacto] = useState("");
+  const [email, setEmail] = useState("");
 
   return (
     <PublicLayout>
@@ -61,7 +65,9 @@ function Registro() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    setStoredPlan(mapSitePlanToPlanId(selected));
+                    const planId = mapSitePlanToPlanId(selected);
+                    setStoredPlan(planId);
+                    registrarEmpresa({ nombre: clinica, contacto, email, plan: planId });
                     setSent(true);
                   }}
                   className="card-premium mt-10 space-y-5 p-6 lg:p-8"
@@ -69,11 +75,23 @@ function Registro() {
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="clinica">Nombre de la clínica</Label>
-                      <Input id="clinica" required placeholder="Clínica Dental Esther" />
+                      <Input
+                        id="clinica"
+                        required
+                        value={clinica}
+                        onChange={(e) => setClinica(e.target.value)}
+                        placeholder="Clínica Dental Esther"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contacto">Nombre de contacto</Label>
-                      <Input id="contacto" required placeholder="Esther Méndez" />
+                      <Input
+                        id="contacto"
+                        required
+                        value={contacto}
+                        onChange={(e) => setContacto(e.target.value)}
+                        placeholder="Esther Méndez"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
@@ -81,6 +99,8 @@ function Registro() {
                         id="email"
                         type="email"
                         required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="esther.mendez@esther.com"
                       />
                     </div>
@@ -146,7 +166,8 @@ function Registro() {
                   Revisá tu correo electrónico
                 </h1>
                 <p className="mt-3 text-muted-foreground">
-                  Te enviamos un correo de confirmación.
+                  Te enviamos un correo de confirmación a{" "}
+                  <span className="font-medium text-foreground">{email}</span>.
                 </p>
 
                 <motion.div
@@ -162,14 +183,14 @@ function Registro() {
                     <div className="leading-tight">
                       <p className="text-xs font-semibold">Cloud Esther</p>
                       <p className="text-[11px] text-muted-foreground">
-                        hola@cloudesther.com · para vos
+                        hola@cloudesther.com · para {email}
                       </p>
                     </div>
                   </div>
                   <p className="mt-3 text-sm font-semibold">Confirmá tu cuenta</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Hola Esther, tu cuenta de Clínica Dental Esther está casi lista. Confirmá
-                    tu correo para entrar al panel de Cloud Esther.
+                    Hola {contacto.trim().split(/\s+/)[0]}, tu cuenta de {clinica.trim()} está casi
+                    lista. Confirmá tu correo para entrar al panel de Cloud Esther.
                   </p>
                   <span className="bg-brand mt-4 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground">
                     Confirmar cuenta

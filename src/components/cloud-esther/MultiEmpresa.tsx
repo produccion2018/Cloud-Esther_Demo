@@ -1,6 +1,6 @@
 // src/components/cloud-esther/MultiEmpresa.tsx
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Building2,
   Check,
@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 
 import { registrarEvento } from "@/components/cloud-esther/Finanzas";
+import type { PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
+import { activarEmpresa, useEmpresas } from "@/lib/cloud-esther/empresa-store";
 
 /* ───────────────────────── Tipos y datos demo ───────────────────────── */
 
@@ -98,6 +100,14 @@ const PLAN_INFO: Record<
 const PLANES = Object.keys(PLAN_INFO) as PlanId[];
 const ESTADOS: EstadoClinica[] = ["Activa", "En prueba", "Suspendida"];
 const COLORES = ["#7c3aed", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
+
+/** Equivalencia entre los planes del demo y los de este módulo. */
+const PLAN_DESDE_DEMO: Record<PlanDemoId, PlanId> = {
+  inicial: "Start",
+  profesional: "Pro",
+  avanzada: "Plus",
+  grupo: "Enterprise",
+};
 
 const CLINICAS_INICIALES: Clinica[] = [
   { id: "clinic_demo_001", nombre: "Clínica Dental Esther", razonSocial: "Esther Salud S.A.", cuit: "30-71234567-8", ciudad: "Buenos Aires", adminEmail: "admin@esther.demo", plan: "Plus", estado: "Activa", color: "#7c3aed", almacenamiento: 41, alta: "2026-03-04" },
@@ -822,6 +832,51 @@ export function MultiEmpresa() {
   const [sucursales, setSucursales] = useState<Sucursal[]>(SUCURSALES_INICIALES);
   const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIALES);
   const [activaId, setActivaId] = useState(CLINICAS_INICIALES[0].id);
+  const { empresas: registradas, activa: registradaActiva } = useEmpresas();
+
+  // Las empresas registradas en /registro se suman como clínicas (tenants),
+  // con su contacto como administrador, y la activa queda seleccionada.
+  useEffect(() => {
+    if (registradas.length === 0) return;
+    setClinicas((prev) => {
+      const nuevas = registradas.map((r, i): Clinica => {
+        const previa = prev.find((c) => c.id === r.id);
+        return {
+          razonSocial: r.nombre,
+          cuit: "—",
+          ciudad: "—",
+          estado: "En prueba",
+          color: COLORES[i % COLORES.length] ?? "#7c3aed",
+          almacenamiento: 0,
+          ...previa,
+          id: r.id,
+          nombre: r.nombre,
+          adminEmail: r.email,
+          plan: PLAN_DESDE_DEMO[r.plan],
+          alta: r.alta,
+        };
+      });
+      return [...nuevas, ...prev.filter((c) => !registradas.some((r) => r.id === c.id))];
+    });
+    setUsuarios((prev) => {
+      const faltantes = registradas
+        .filter((r) => !prev.some((u) => u.clinic_id === r.id))
+        .map((r): Usuario => ({
+          id: `u_${r.id}`,
+          clinic_id: r.id,
+          nombre: r.contacto,
+          email: r.email,
+          rol: "Administrador",
+          activo: true,
+          ultimoAcceso: "Hoy",
+        }));
+      return faltantes.length ? [...faltantes, ...prev] : prev;
+    });
+  }, [registradas]);
+
+  useEffect(() => {
+    if (registradaActiva) setActivaId(registradaActiva.id);
+  }, [registradaActiva]);
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroPlan, setFiltroPlan] = useState<"Todos" | PlanId>("Todos");
@@ -884,6 +939,7 @@ export function MultiEmpresa() {
 
   function usarClinica(c: Clinica) {
     setActivaId(c.id);
+    activarEmpresa(c.id);
     setDetalleId(null);
     registrarEvento({
       modulo: "Multiempresa",

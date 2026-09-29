@@ -17,6 +17,12 @@ import {
   FONT_SIZE_PX,
 } from "@/lib/cloud-esther/settings-store";
 import {
+  activarEmpresa,
+  cerrarSesionEmpresa,
+  iniciales,
+  useEmpresas,
+} from "@/lib/cloud-esther/empresa-store";
+import {
   Sheet,
   SheetContent,
   SheetTitle,
@@ -257,6 +263,49 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   );
 }
 
+/** Empresa registrada con la que se entró al demo. Si hay varias
+ *  registradas en este navegador, permite cambiar entre ellas. */
+function EmpresaActiva() {
+  const { setPlan } = useCloudEsther();
+  const { empresas, activa } = useEmpresas();
+  if (!activa) return null;
+
+  return (
+    <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
+        {iniciales(activa.nombre)}
+      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        {empresas.length > 1 ? (
+          <div className="relative">
+            <select
+              value={activa.id}
+              onChange={(e) => {
+                const empresa = empresas.find((x) => x.id === e.target.value);
+                if (!empresa) return;
+                activarEmpresa(empresa.id);
+                setPlan(empresa.plan);
+              }}
+              aria-label="Empresa activa"
+              className="w-full appearance-none truncate bg-transparent pr-5 font-display text-sm font-semibold text-sidebar-foreground outline-none"
+            >
+              {empresas.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.nombre}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45" />
+          </div>
+        ) : (
+          <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">{activa.nombre}</p>
+        )}
+        <p className="truncate text-[11px] text-sidebar-foreground/55">{activa.contacto}</p>
+      </div>
+    </div>
+  );
+}
+
 function PlanFooter() {
   const { plan, setPlan } = useCloudEsther();
   return (
@@ -281,6 +330,7 @@ function PlanFooter() {
       </div>
       <Link
         to={"/" as never}
+        onClick={cerrarSesionEmpresa}
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
@@ -296,6 +346,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined })
       <div className="px-4 py-4">
         <Logo />
       </div>
+      <EmpresaActiva />
       <NavList onNavigate={onNavigate} />
       <PlanFooter />
     </div>

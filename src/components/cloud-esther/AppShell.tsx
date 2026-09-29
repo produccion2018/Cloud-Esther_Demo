@@ -284,26 +284,40 @@ function EmpresaActiva() {
 }
 
 function PlanFooter() {
-  const { plan, setPlan } = useCloudEsther();
+  const { plan, setPlan, planContratado } = useCloudEsther();
   return (
     <div className="border-t border-sidebar-border p-3">
       <div className="rounded-xl bg-sidebar-accent/60 p-3">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/45">Plan activo</p>
-        <div className="relative mt-1">
-          <select
-            value={plan}
-            onChange={(e) => setPlan(e.target.value as PlanId)}
-            className="w-full appearance-none rounded-lg border border-sidebar-border bg-sidebar px-2.5 py-2 pr-8 font-display text-sm font-semibold text-sidebar-foreground outline-none transition-colors hover:border-sidebar-primary/40 focus:border-sidebar-primary/60 focus:ring-2 focus:ring-sidebar-primary/15"
-          >
-            {(Object.keys(PLANS) as PlanId[]).map((id) => (
-              <option key={id} value={id}>
-                {PLANS[id].name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45" />
-        </div>
-        <p className="mt-1.5 text-[11px] text-sidebar-foreground/55">{PLANS[plan].audience}</p>
+        <p className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          {planContratado ? "Plan contratado" : "Plan del demo"}
+        </p>
+        {planContratado ? (
+          // Empresa con plan comprado: se muestra fijo, sin opción de cambiarlo.
+          <p className="mt-1 flex items-center gap-1.5 rounded-lg border border-sidebar-border bg-sidebar px-2.5 py-2 font-display text-sm font-semibold text-sidebar-foreground">
+            <Lock className="size-3.5 shrink-0 text-sidebar-foreground/45" />
+            {PLANS[plan].name}
+          </p>
+        ) : (
+          // Demo: el visitante puede recorrer los planes para compararlos.
+          <div className="relative mt-1">
+            <select
+              value={plan}
+              onChange={(e) => setPlan(e.target.value as PlanId)}
+              aria-label="Probar otro plan"
+              className="w-full appearance-none rounded-lg border border-sidebar-border bg-sidebar px-2.5 py-2 pr-8 font-display text-sm font-semibold text-sidebar-foreground outline-none transition-colors hover:border-sidebar-primary/40 focus:border-sidebar-primary/60 focus:ring-2 focus:ring-sidebar-primary/15"
+            >
+              {(Object.keys(PLANS) as PlanId[]).map((id) => (
+                <option key={id} value={id}>
+                  {PLANS[id].name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45" />
+          </div>
+        )}
+        <p className="mt-1.5 text-[11px] text-sidebar-foreground/55">
+          {planContratado ? PLANS[plan].audience : "Probá cada plan antes de elegir"}
+        </p>
       </div>
       <Link
         to={"/" as never}
@@ -311,7 +325,7 @@ function PlanFooter() {
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
-        Cerrar sesión
+        {planContratado ? "Cerrar sesión" : "Salir del demo"}
       </Link>
     </div>
   );

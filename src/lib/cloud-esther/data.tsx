@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { claveTenant, useTenantActual } from "@/lib/cloud-esther/tenant-store";
+import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -463,6 +463,9 @@ export function ModuleIcon({
 interface CloudEstherContextValue {
   plan: PlanId;
   setPlan: (p: PlanId) => void;
+  /** true cuando hay una empresa con plan contratado: el plan no se puede cambiar.
+   *  false en el demo (sin sesión), donde se pueden probar todos los planes. */
+  planContratado: boolean;
   clinic: string;
   setClinic: (c: string) => void;
   role: string;
@@ -488,7 +491,11 @@ export function CloudEstherProvider({
   const [role] = useState("admin");
   const [disabled] = useState<string[]>([]);
 
+  // Demo (sin sesión): se puede cambiar de plan para conocerlos.
+  // Empresa registrada: el plan es el contratado y no se cambia desde la app.
+  const planContratado = tenant !== TENANT_DEMO;
   const setPlan = (p: PlanId) => {
+    if (planContratado) return;
     setPlanState(p);
     setStoredPlan(p);
   };
@@ -498,6 +505,7 @@ export function CloudEstherProvider({
       value={{
         plan,
         setPlan,
+        planContratado,
         clinic,
         setClinic,
         role,

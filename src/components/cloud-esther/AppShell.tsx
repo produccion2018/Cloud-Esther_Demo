@@ -472,11 +472,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
+          blanco debajo aunque el contenido sea largo) y el menú queda fijo al hacer scroll. */}
       <aside
-        className="sticky top-0 hidden h-screen w-[264px] shrink-0 border-r border-sidebar-border lg:block"
+        className="hidden w-[264px] shrink-0 self-stretch border-r border-sidebar-border bg-sidebar lg:block"
         style={sidebarStyle}
       >
-        <SidebarInner />
+        <div className="sticky top-0 h-screen">
+          <SidebarInner />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

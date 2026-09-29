@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { iniciarSesion } from "@/lib/cloud-esther/auth-store";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -35,6 +36,8 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <PublicLayout>
@@ -285,6 +288,12 @@ function Login() {
                   className="mt-7 space-y-4.5"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    const res = iniciarSesion(email);
+                    if (!res.ok) {
+                      setError(res.error);
+                      return;
+                    }
+                    setError(null);
                     navigate({ to: "/demo" });
                   }}
                 >
@@ -306,6 +315,8 @@ function Login() {
                       id="email"
                       type="email"
                       required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="esther.mendez@esther.com"
                       className="h-11 rounded-xl border-border/80 bg-background px-4 text-sm transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
                     />
@@ -377,6 +388,12 @@ function Login() {
                       ¿Olvidaste tu contraseña?
                     </button>
                   </motion.div>
+
+                  {error && (
+                    <p role="alert" className="text-sm font-medium text-destructive">
+                      {error}
+                    </p>
+                  )}
 
                   {/* BOTÓN */}
                   <motion.div

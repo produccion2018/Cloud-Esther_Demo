@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 import heroFondo from "@/assets/hero-fondo.webp";
 import heroPersonaje1 from "@/assets/hero-personaje-1.webp";
 import heroPersonaje2 from "@/assets/hero-personaje-2.webp";
@@ -116,6 +117,18 @@ function hoyISO() {
   const mes = String(d.getMonth() + 1).padStart(2, "0");
   const dia = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+function primerNombre(nombreCompleto: string) {
+  return nombreCompleto.trim().split(/\s+/)[0] ?? "";
+}
+
+function iniciales(nombreCompleto: string) {
+  const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  const primera = partes[0][0] ?? "";
+  const segunda = partes.length > 1 ? (partes[1][0] ?? "") : "";
+  return (primera + segunda).toUpperCase();
 }
 
 function useToast() {
@@ -727,11 +740,15 @@ function TopBanner({
   sinLeer,
   onMarcarLeidas,
   onToast,
+  nombre,
+  iniciales: inicialesUsuario,
 }: {
   notificaciones: Actividad[];
   sinLeer: number;
   onMarcarLeidas: () => void;
   onToast: (msg: string) => void;
+  nombre: string;
+  iniciales: string;
 }) {
   const [abierto, setAbierto] = useState(false);
   const ahora = new Date();
@@ -811,9 +828,9 @@ function TopBanner({
             <Settings className="size-4 text-muted-foreground" />
           </button>
           <div className="flex items-center gap-2 rounded-full bg-background/90 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm">
-            <span className="brand-gradient grid size-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">PC</span>
+            <span className="brand-gradient grid size-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{inicialesUsuario}</span>
             <span className="hidden leading-tight sm:block">
-              <span className="block text-xs font-medium">Pinto Castro Mauro</span>
+              <span className="block text-xs font-medium">{nombre}</span>
               <span className="block text-[10px] text-muted-foreground">Dueño/a</span>
             </span>
             <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -827,9 +844,11 @@ function TopBanner({
 function CentroOperacionesBanner({
   onNuevaCita,
   onNuevoPaciente,
+  nombre,
 }: {
   onNuevaCita: () => void;
   onNuevoPaciente: () => void;
+  nombre: string;
 }) {
   return (
     <div className="co-hero relative isolate mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.56_0.21_295)] via-[oklch(0.47_0.22_292)] to-[oklch(0.35_0.2_290)] px-6 py-6 text-white shadow-lg shadow-[oklch(0.45_0.22_292)]/25 ring-1 ring-inset ring-white/15 md:px-8">
@@ -918,7 +937,7 @@ function CentroOperacionesBanner({
 
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Hola, Pinto</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Hola, {nombre}</p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight drop-shadow-sm md:text-3xl">Centro de operaciones</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-white/85">Todo lo que pasa hoy en tu clínica, en una sola pantalla.</p>
         </div>
@@ -1062,6 +1081,9 @@ function AccesosRapidos({
 /* ───────────── Página ───────────── */
 
 function DashboardInner() {
+  const { usuario } = useSesion();
+  const nombreUsuario = usuario?.nombre ?? "Invitado";
+
   const { message, show } = useToast();
   const [turnos, setTurnos] = useState<Turno[]>(TURNOS_INICIALES);
   const [actividad, setActividad] = useState<Actividad[]>(ACTIVIDAD_INICIAL);
@@ -1109,7 +1131,7 @@ function DashboardInner() {
         ].sort((x, y) => x.hora.localeCompare(y.hora)),
       );
     }
-    registrar("Pinto Castro Mauro", `Agendó un turno para ${c.paciente} el ${fechaTexto} a las ${c.hora}`);
+    registrar(nombreUsuario, `Agendó un turno para ${c.paciente} el ${fechaTexto} a las ${c.hora}`);
     cerrarModal();
     show(esHoy ? "Turno agendado para hoy" : `Turno agendado para el ${fechaTexto}`);
   };
@@ -1117,7 +1139,7 @@ function DashboardInner() {
   const agregarPaciente = (p: NuevoPaciente) => {
     const nombreCompleto = `${p.nombre} ${p.apellido}`;
     setPacientesNuevos((prev) => [...prev, { nombre: nombreCompleto, documento: p.documento }]);
-    registrar("Pinto Castro Mauro", `Registró al paciente ${nombreCompleto}`);
+    registrar(nombreUsuario, `Registró al paciente ${nombreCompleto}`);
     cerrarModal();
     show("Paciente registrado");
   };
@@ -1126,7 +1148,7 @@ function DashboardInner() {
     const numero = `PR-2026-${String(142 + presupuestosNuevos).padStart(4, "0")}`;
     setPresupuestosNuevos((n) => n + 1);
     registrar(
-      "Pinto Castro Mauro",
+      nombreUsuario,
       `Creó el presupuesto ${numero} para ${p.paciente} (${p.tratamiento}) por $ ${p.monto.toLocaleString("es-AR")}`,
     );
     cerrarModal();
@@ -1138,7 +1160,7 @@ function DashboardInner() {
     if (!turno) return;
     const nuevo: EstadoTurno = turno.estado === "Confirmado" ? "Pendiente" : "Confirmado";
     setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estado: nuevo } : t)));
-    registrar("Pinto Castro Mauro", `Marcó el turno de ${turno.paciente} como ${nuevo.toLowerCase()}`);
+    registrar(nombreUsuario, `Marcó el turno de ${turno.paciente} como ${nuevo.toLowerCase()}`);
   };
 
   const enviarRecordatorios = () => {
@@ -1213,10 +1235,13 @@ function DashboardInner() {
           sinLeer={sinLeer}
           onMarcarLeidas={marcarLeidas}
           onToast={show}
+          nombre={nombreUsuario}
+          iniciales={iniciales(nombreUsuario)}
         />
         <CentroOperacionesBanner
           onNuevaCita={() => setModal("cita")}
           onNuevoPaciente={() => setModal("paciente")}
+          nombre={primerNombre(nombreUsuario)}
         />
         <SearchBar value={query} onChange={setQuery} inputRef={searchRef} />
         {q && (

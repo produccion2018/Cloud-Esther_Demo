@@ -23,13 +23,16 @@ export const Route = createFileRoute("/planes")({
       {
         name: "description",
         content:
-          "Cuatro planes para clínicas odontológicas, con módulos adicionales que podés contratar por separado.",
+          "Cuatro planes para clínicas odontológicas, desde consultorios que comienzan hasta grupos odontológicos y organizaciones multiempresa.",
       },
-      { property: "og:title", content: "Planes y precios de Cloud Esther" },
+      {
+        property: "og:title",
+        content: "Planes y precios de Cloud Esther",
+      },
       {
         property: "og:description",
         content:
-          "Elegí tu plan y agregá solamente los módulos que necesitás para hacer crecer tu clínica.",
+          "Elegí el plan que corresponde a la escala de tu organización y ampliá Cloud Esther a medida que tu operación crece.",
       },
     ],
   }),
@@ -88,7 +91,6 @@ function Planes() {
         />
 
         <div className="relative mx-auto max-w-5xl px-5 pb-10 pt-10 text-center sm:pt-12 lg:px-8 lg:pb-12 lg:pt-14">
-          {/* Eyebrow */}
           <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -130,7 +132,6 @@ function Planes() {
             </motion.span>
           </motion.div>
 
-          {/* Title */}
           <div className="mt-6 text-4xl font-bold leading-[1.05] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl">
             <div className="overflow-hidden">
               {heroLine.split("").map((char, index) => (
@@ -203,7 +204,6 @@ function Planes() {
             </div>
           </div>
 
-          {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -214,8 +214,8 @@ function Planes() {
             }}
             className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-lg"
           >
-            Precios claros, implementación acompañada y módulos que se suman
-            cuando los necesitás.
+            Precios claros, implementación acompañada y una plataforma que
+            crece con tu organización.
           </motion.p>
 
           <motion.div
@@ -279,7 +279,6 @@ function Planes() {
           MÓDULOS ADICIONALES
       ========================================================= */}
       <section className="relative overflow-hidden border-y border-border/60 bg-soft/60">
-        {/* Ambient glow */}
         <motion.div
           animate={{
             opacity: [0.15, 0.3, 0.15],
@@ -301,25 +300,27 @@ function Planes() {
             </span>
 
             <h2 className="mt-5 text-3xl font-bold tracking-tight lg:text-4xl">
-              Elegí tu plan.{" "}
-              <span className="text-gradient">Sumá lo que necesitás.</span>
+              Ampliá Cloud Esther.{" "}
+              <span className="text-gradient">Sumá nuevas capacidades.</span>
             </h2>
 
             <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-lg">
-              No necesitás cambiar de plan para acceder a una función
-              específica. También podés contratar módulos por separado y
-              agregarlos a tu suscripción cuando los necesites.
+              Algunos módulos pueden contratarse adicionalmente cuando estén
+              disponibles para el plan correspondiente. Así podés ampliar la
+              plataforma sin cambiar innecesariamente de nivel.
             </p>
           </Reveal>
 
-          {/* Ejemplo comercial */}
           <Reveal delay={0.08}>
             <motion.div
               whileHover={{ y: -4 }}
-              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 22,
+              }}
               className="group relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-primary/15 bg-card/80 p-5 shadow-[0_18px_50px_rgba(88,28,135,0.08)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_22px_60px_rgba(88,28,135,0.14)] sm:p-6"
             >
-              {/* Glow pulsante */}
               <motion.div
                 animate={{
                   opacity: [0.12, 0.28, 0.12],
@@ -333,7 +334,6 @@ function Planes() {
                 className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/20 blur-[70px]"
               />
 
-              {/* Brillo en barrido al pasar el mouse */}
               <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
 
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -352,10 +352,11 @@ function Planes() {
 
                   <div>
                     <p className="text-sm font-semibold">
-                      Un ejemplo de contratación
+                      Ejemplo de ampliación
                     </p>
+
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Plan Start + Odontograma + Esther IA
+                      Plan Start + módulo adicional disponible
                     </p>
                   </div>
                 </div>
@@ -375,13 +376,12 @@ function Planes() {
                   }}
                   className="shrink-0 rounded-full bg-lavender px-3 py-1.5 text-xs font-semibold text-lavender-foreground"
                 >
-                  Sin cambiar de plan
+                  Según disponibilidad del plan
                 </motion.span>
               </div>
             </motion.div>
           </Reveal>
 
-          {/* Module cards */}
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {additionalModules.map((module, index) => (
               <motion.div
@@ -397,7 +397,6 @@ function Planes() {
                 whileHover={{ y: -6, scale: 1.015 }}
                 className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/85 p-5 shadow-[0_12px_35px_rgba(88,28,135,0.05)] backdrop-blur-xl transition-shadow duration-300 hover:border-primary/25 hover:shadow-[0_18px_45px_rgba(88,28,135,0.11)]"
               >
-                {/* Brillo en barrido al pasar el mouse */}
                 <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
 
                 <div className="relative flex items-start justify-between gap-3">
@@ -437,6 +436,7 @@ function Planes() {
                       <span className="text-xl font-bold text-foreground">
                         {module.price}
                       </span>
+
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {module.billing}
                       </p>
@@ -455,7 +455,6 @@ function Planes() {
                   </div>
                 </div>
 
-                {/* Línea inferior */}
                 <div className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-30 bg-gradient-to-r from-primary to-brand opacity-40 transition-all duration-500 group-hover:scale-x-100 group-hover:opacity-100" />
               </motion.div>
             ))}
@@ -463,18 +462,18 @@ function Planes() {
 
           <Reveal delay={0.15}>
             <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-              Los módulos adicionales se agregan al plan contratado y se
-              facturan por separado. Los precios indicados no incluyen impuestos.
+              Los módulos adicionales se agregan al plan contratado cuando
+              estén disponibles para ese nivel. Los precios indicados no
+              incluyen impuestos.
             </p>
           </Reveal>
         </div>
       </section>
 
       {/* =========================================================
-          COMPARADOR — con fondo púrpura suave
+          COMPARADOR
       ========================================================= */}
       <section className="relative overflow-hidden bg-soft">
-        {/* Glow púrpura de fondo */}
         <motion.div
           animate={{
             opacity: [0.15, 0.3, 0.15],
@@ -500,7 +499,8 @@ function Planes() {
             </h2>
 
             <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-              Mirá qué módulos y funcionalidades están incluidos en cada plan.
+              Conocé los límites, módulos y capacidades disponibles en cada
+              nivel de Cloud Esther.
             </p>
           </Reveal>
 
@@ -509,28 +509,28 @@ function Planes() {
               <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/5 to-transparent" />
 
               <div className="relative overflow-x-auto">
-                <table className="w-full min-w-[780px] text-sm">
+                <table className="w-full min-w-[820px] text-[13px]">
                   <thead>
                     <tr className="border-b border-border/70">
                       <th className="p-5 text-left font-semibold">
                         Función
                       </th>
 
-                      {plans.map((p) => (
+                      {plans.map((plan) => (
                         <th
-                          key={p.id}
+                          key={plan.id}
                           className={`p-5 text-center font-semibold ${
-                            p.featured ? "text-primary" : ""
+                            plan.featured ? "text-primary" : ""
                           }`}
                         >
                           <div className="flex flex-col items-center gap-1">
-                            {p.featured && (
+                            {plan.featured && (
                               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
                                 Más elegido
                               </span>
                             )}
 
-                            <span>{p.name}</span>
+                            <span>{plan.name}</span>
                           </div>
                         </th>
                       ))}
@@ -538,20 +538,20 @@ function Planes() {
                   </thead>
 
                   <tbody>
-                    {comparison.map((row, i) => (
+                    {comparison.map((row, index) => (
                       <tr
                         key={row.feature}
                         className={`border-b border-border/60 transition-colors last:border-0 hover:bg-lavender/50 ${
-                          i % 2 ? "bg-muted/20" : ""
+                          index % 2 ? "bg-muted/20" : ""
                         }`}
                       >
-                        <td className="p-4 font-medium">
+                        <td className="p-4 font-medium text-foreground/85">
                           {row.feature}
                         </td>
 
-                        {row.values.map((value, j) => (
+                        {row.values.map((value, valueIndex) => (
                           <td
-                            key={j}
+                            key={valueIndex}
                             className={`p-4 text-center ${
                               value === "—"
                                 ? "text-muted-foreground/50"
@@ -581,7 +581,9 @@ function Planes() {
             </div>
           </Reveal>
 
-          {/* Final CTA */}
+          {/* =====================================================
+              CTA FINAL
+          ===================================================== */}
           <Reveal delay={0.15}>
             <div className="relative mx-auto mt-12 max-w-4xl overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-[#4c1d95] via-[#7c3aed] to-[#9333ea] p-8 text-center text-white shadow-[0_25px_70px_rgba(88,28,135,0.35)] lg:p-10">
               <div className="pointer-events-none absolute -left-16 -top-16 size-64 rounded-full bg-white/10 blur-[90px]" />
@@ -597,12 +599,13 @@ function Planes() {
                 </svg>
 
                 <h3 className="mt-4 text-2xl font-bold text-white lg:text-3xl">
-                  Tu clínica, a tu medida.
+                  Cloud Esther crece con tu organización.
                 </h3>
 
                 <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/80">
-                  Elegí el plan que necesitás hoy y agregá nuevos módulos a
-                  medida que tu clínica crece.
+                  Comenzá con el plan que corresponde a tu operación y
+                  evolucioná hacia una gestión más completa a medida que tu
+                  clínica o grupo odontológico crece.
                 </p>
 
                 <div className="mt-6">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Lock, Sparkles, Grid3x3, Box, RotateCcw, Check, ListChecks, Download } from "lucide-react";
+import { Lock, Sparkles, RotateCcw, Check, ListChecks, Download } from "lucide-react";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
@@ -64,8 +64,6 @@ function guardarChart(clavePaciente: string, chart: Record<number, ToothState>) 
 const CARD =
   "rounded-2xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]";
 
-const TAB_ACTIVO =
-  "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground";
 const TAB_INACTIVO =
   "inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/60";
 const BTN_ICONO =
@@ -85,7 +83,6 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
   const clavePaciente = odontogramKey(tenantId, pacienteId);
   const plan = PLANS[planId].name;
 
-  const [modo, setModo] = useState<"2d" | "3d">(vista === "3d" ? "3d" : "2d");
   const [chart, setChart] = useState<Record<number, ToothState>>(() => cargarChart(clavePaciente));
   const [fdiSeleccionado, setFdiSeleccionado] = useState<number | null>(null);
   const radiografiasRef = useRef<HTMLDivElement>(null);
@@ -95,11 +92,11 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
     setFdiSeleccionado(null);
   }, [clavePaciente]);
 
-  useEffect(() => {
-    if (vista !== "ambos") setModo(vista);
-  }, [vista]);
-
   const tieneAcceso3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
+  /* Un solo odontograma según el plan: si el plan incluye 3D se usa el 3D (el 2D ya no
+     tiene sentido); si no, el 2D. La página "Odontograma 3D" en un plan sin 3D muestra el aviso. */
+  const modo: "2d" | "3d" = tieneAcceso3D || vista === "3d" ? "3d" : "2d";
+  const titulo = vista === "ambos" ? TITULO.ambos : modo === "3d" ? TITULO["3d"] : TITULO["2d"];
   const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA);
   const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
 
@@ -187,7 +184,7 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold tracking-tight text-foreground">{TITULO[vista]}</h2>
+          <h2 className="text-base font-bold tracking-tight text-foreground">{titulo}</h2>
 
           {(modo === "2d" || tieneAcceso3D) && (
             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -198,40 +195,6 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
         </div>
 
         <div className="flex gap-2">
-          {vista === "ambos" && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setModo("2d");
-                  setFdiSeleccionado(null);
-                }}
-                className={modo === "2d" ? TAB_ACTIVO : TAB_INACTIVO}
-              >
-                <Grid3x3 className="size-3.5" />
-                2D
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (!tieneAcceso3D) {
-                    onToast(
-                      `El Odontograma 3D requiere plan ${PLANS[PLAN_MINIMO_3D].name} o superior`,
-                    );
-                    return;
-                  }
-                  setModo("3d");
-                  setFdiSeleccionado(null);
-                }}
-                className={modo === "3d" ? TAB_ACTIVO : TAB_INACTIVO}
-              >
-                {tieneAcceso3D ? <Box className="size-3.5" /> : <Lock className="size-3.5" />}
-                3D
-              </button>
-            </>
-          )}
-
           {modo === "3d" && tieneAcceso3D && (
             <button
               type="button"

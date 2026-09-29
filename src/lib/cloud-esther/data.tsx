@@ -145,6 +145,8 @@ export interface AppModule {
   path: string;
   group: ModuleGroup;
   minPlan: PlanId;
+  /** Último plan que lo muestra (ej. el 2D deja de verse cuando el plan ya tiene 3D). */
+  maxPlan?: PlanId;
 }
 
 export const MODULES: AppModule[] = [
@@ -190,6 +192,7 @@ export const MODULES: AppModule[] = [
     path: "/demo/odontograma",
     group: "Clínico",
     minPlan: "inicial",
+    maxPlan: "profesional",
   },
   {
     id: "odontograma3d",
@@ -370,7 +373,10 @@ export const MODULES: AppModule[] = [
 ];
 
 export function availableIn(module: AppModule, plan: PlanId) {
-  return planLevel(module.minPlan) <= planLevel(plan);
+  return (
+    planLevel(module.minPlan) <= planLevel(plan) &&
+    (!module.maxPlan || planLevel(plan) <= planLevel(module.maxPlan))
+  );
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {

@@ -753,9 +753,16 @@ function TopBanner({
   iniciales: string;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const ahora = new Date();
-  const fecha = ahora.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
-  const hora = ahora.toLocaleTimeString("es-AR", { hour: "numeric", minute: "2-digit" });
+  // Fecha y hora se calculan en el navegador (el servidor las formatea distinto y
+  // rompía la hidratación) y se actualizan cada minuto.
+  const [ahora, setAhora] = useState<Date | null>(null);
+  useEffect(() => {
+    setAhora(new Date());
+    const id = window.setInterval(() => setAhora(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const fecha = ahora?.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" }) ?? "";
+  const hora = ahora?.toLocaleTimeString("es-AR", { hour: "numeric", minute: "2-digit" }) ?? "";
 
   return (
     <div className="relative h-56 w-full rounded-2xl md:h-64">
@@ -767,7 +774,7 @@ function TopBanner({
       <div className="absolute inset-0 flex flex-wrap items-start justify-between gap-2 p-4">
         <span className="flex items-center gap-2 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm">
           <Calendar className="size-3.5 text-muted-foreground" />
-          {fecha} · {hora}
+          {ahora ? `${fecha} · ${hora}` : "\u00a0"}
         </span>
 
         <div className="flex flex-wrap items-center gap-2">

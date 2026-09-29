@@ -18,11 +18,7 @@ import { MouthScene } from "./MouthScene";
 export interface Odontogram3DProps {
   value?: Record<number, ToothState>;
   defaultValue?: Record<number, ToothState>;
-  onChange?: (
-    fdi: number,
-    state: ToothState,
-    chart: Record<number, ToothState>,
-  ) => void;
+  onChange?: (fdi: number, state: ToothState, chart: Record<number, ToothState>) => void;
   onSelectTooth?: (fdi: number | null) => void;
   className?: string;
   showUI?: boolean;
@@ -53,6 +49,8 @@ export function Odontogram3D({
   const [hovered, setHovered] = useState<number | null>(null);
   const [view, setView] = useState<CameraView>("anterior");
   const [nonce, setNonce] = useState(0);
+  // El modelo tarda un momento en crearse (WebGL + geometría): se muestra un cargador hasta el primer cuadro.
+  const [listo, setListo] = useState(false);
 
   const handleSelect = useCallback(
     (fdi: number) => {
@@ -75,15 +73,11 @@ export function Odontogram3D({
   const def = selected ? TEETH_BY_FDI[selected] : null;
 
   return (
-    <div
-      className={cn(
-        "relative h-full w-full overflow-hidden bg-background",
-        className,
-      )}
-    >
+    <div className={cn("relative h-full w-full overflow-hidden bg-background", className)}>
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
+        onCreated={() => requestAnimationFrame(() => setListo(true))}
         camera={{
           position: CAMERA_VIEWS.anterior.position,
           fov: 38,
@@ -99,16 +93,14 @@ export function Odontogram3D({
 
         <ambientLight intensity={0.55} />
 
-        <hemisphereLight
-          args={["#eaf3ff", "#3a2026", 0.7]}
-        />
+        <hemisphereLight args={["#eaf3ff", "#3a2026", 0.7]} />
 
         <directionalLight
           position={[4, 9, 8]}
           intensity={2.1}
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
           shadow-camera-left={-8}
           shadow-camera-right={8}
           shadow-camera-top={8}
@@ -124,18 +116,10 @@ export function Odontogram3D({
           color="#ffffff"
         />
 
-        <pointLight
-          position={[-6, -3, 6]}
-          intensity={22}
-          color="#9fd4ff"
-        />
+        <pointLight position={[-6, -3, 6]} intensity={22} color="#9fd4ff" />
 
-        <Environment>
-          <Lightformer
-            intensity={2.4}
-            position={[0, 6, 4]}
-            scale={[10, 6, 1]}
-          />
+        <Environment resolution={128}>
+          <Lightformer intensity={2.4} position={[0, 6, 4]} scale={[10, 6, 1]} />
 
           <Lightformer
             intensity={1.2}
@@ -164,11 +148,17 @@ export function Odontogram3D({
           />
         </Suspense>
 
-        <CameraRig
-          view={view}
-          nonce={nonce}
-        />
+        <CameraRig view={view} nonce={nonce} />
       </Canvas>
+
+      {!listo && (
+        <div className="absolute inset-0 z-20 grid place-items-center bg-[#0f1720]">
+          <div className="flex flex-col items-center gap-3 text-white/80">
+            <span className="size-9 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+            <p className="text-sm font-medium">Cargando modelo 3D…</p>
+          </div>
+        </div>
+      )}
 
       {showUI && (
         <>
@@ -205,8 +195,7 @@ export function Odontogram3D({
             </div>
 
             <p className="max-w-[11rem] text-[10.5px] leading-snug text-white/40">
-              Arrastrá para rotar · rueda para zoom · click derecho para
-              desplazar
+              Arrastrá para rotar · rueda para zoom · click derecho para desplazar
             </p>
           </div>
 
@@ -218,10 +207,7 @@ export function Odontogram3D({
 
             <ul className="mt-2.5 space-y-1.5">
               {TOOTH_STATES.map((s) => (
-                <li
-                  key={s}
-                  className="flex items-center gap-2.5 text-xs font-medium text-white/85"
-                >
+                <li key={s} className="flex items-center gap-2.5 text-xs font-medium text-white/85">
                   <span
                     className="size-3 shrink-0 rounded-full ring-2 ring-white/10"
                     style={{
@@ -245,26 +231,18 @@ export function Odontogram3D({
                   </span>
 
                   <div className="leading-tight">
-                    <p className="text-sm font-semibold text-foreground">
-                      {def.name}
-                    </p>
+                    <p className="text-sm font-semibold text-foreground">{def.name}</p>
 
                     <p className="text-xs text-muted-foreground">
-                      {def.arch === "upper"
-                        ? "Arcada superior"
-                        : "Arcada inferior"}{" "}
-                      ·{" "}
-                      {def.side === "right"
-                        ? "derecha"
-                        : "izquierda"}
+                      {def.arch === "upper" ? "Arcada superior" : "Arcada inferior"} ·{" "}
+                      {def.side === "right" ? "derecha" : "izquierda"}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-1 flex-wrap justify-end gap-1.5">
                   {TOOTH_STATES.map((s) => {
-                    const active =
-                      (chart[def.fdi] ?? "sano") === s;
+                    const active = (chart[def.fdi] ?? "sano") === s;
 
                     return (
                       <button
@@ -280,8 +258,7 @@ export function Odontogram3D({
                         <span
                           className="size-2.5 rounded-full"
                           style={{
-                            backgroundColor:
-                              TOOTH_STATE_META[s].color,
+                            backgroundColor: TOOTH_STATE_META[s].color,
                           }}
                         />
 
@@ -293,8 +270,7 @@ export function Odontogram3D({
               </div>
             ) : (
               <p className="text-center text-sm text-muted-foreground">
-                Hacé click en cualquier diente para seleccionarlo y cambiar su
-                estado.
+                Hacé click en cualquier diente para seleccionarlo y cambiar su estado.
               </p>
             )}
 
@@ -307,21 +283,14 @@ export function Odontogram3D({
                   ["lowerLeft", FDI_ROWS.lowerLeft],
                 ] as const
               ).map(([key, row]) => (
-                <div
-                  key={key}
-                  className="flex justify-center gap-0.5"
-                >
+                <div key={key} className="flex justify-center gap-0.5">
                   {row.map((fdi) => (
                     <button
                       key={fdi}
                       onClick={() => handleSelect(fdi)}
                       onMouseEnter={() => setHovered(fdi)}
                       onMouseLeave={() => setHovered(null)}
-                      title={`${fdi} · ${
-                        TOOTH_STATE_META[
-                          chart[fdi] ?? "sano"
-                        ].label
-                      }`}
+                      title={`${fdi} · ${TOOTH_STATE_META[chart[fdi] ?? "sano"].label}`}
                       className={cn(
                         "flex size-6 items-center justify-center rounded border text-[10px] font-semibold transition-colors",
                         selected === fdi
@@ -329,11 +298,7 @@ export function Odontogram3D({
                           : "border-border/70 text-muted-foreground hover:border-primary/60",
                       )}
                       style={{
-                        backgroundColor: `${
-                          TOOTH_STATE_META[
-                            chart[fdi] ?? "sano"
-                          ].color
-                        }33`,
+                        backgroundColor: `${TOOTH_STATE_META[chart[fdi] ?? "sano"].color}33`,
                       }}
                     >
                       {fdi}

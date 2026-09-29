@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -160,8 +160,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6 [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:color-mix(in_oklab,var(--color-sidebar-foreground,currentColor)_18%,transparent)_transparent]">
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
-        // Se muestran todos los módulos: los de planes superiores aparecen con candado.
-        const visible = items;
+        // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
+        const visible = items.filter((m) => availableIn(m, plan));
         if (!visible.length) return null;
 
         return (
@@ -402,9 +402,43 @@ function buildSidebarPalette(baseHex: string, dark: boolean): React.CSSPropertie
   return vars as React.CSSProperties;
 }
 
+/** Módulo al que pertenece la ruta actual (el de path más largo que coincide). */
+function moduloDeRuta(pathname: string) {
+  return MODULES.filter(
+    (m) => m.path !== "/demo" && (pathname === m.path || pathname.startsWith(`${m.path}/`)),
+  ).sort((a, b) => b.path.length - a.path.length)[0];
+}
+
+/** Aviso cuando se entra por URL a un módulo que no incluye el plan activo. */
+function ModuloNoIncluido({ label }: { label: string }) {
+  const { plan } = useCloudEsther();
+  return (
+    <div className="grid min-h-[70vh] place-items-center p-6">
+      <div className="card-premium max-w-md p-8 text-center">
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+          <Lock className="size-5" />
+        </span>
+        <p className="mt-4 text-base font-semibold text-foreground">{label} no está incluido en tu plan</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Tu plan actual es {PLANS[plan].name}. Mejorá tu plan para acceder a este módulo.
+        </p>
+        <Link to={"/demo" as never} className="btn-ce mt-5">
+          Volver al Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { clinic } = useCloudEsther();
+  const { clinic, plan } = useCloudEsther();
   const settings = useClinicSettings(clinic);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const modulo = moduloDeRuta(pathname);
+  const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
+  const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
+  // Con un plan que ya tiene 3D, el 2D no tiene sentido: se va directo al 3D.
+  const irAl3D = bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
@@ -433,7 +467,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader sidebarStyle={sidebarStyle} />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">
+          {irAl3D ? (
+            <Navigate to={"/demo/odontograma-3d" as never} replace />
+          ) : bloqueado ? (
+            <ModuloNoIncluido label={bloqueado.label} />
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );

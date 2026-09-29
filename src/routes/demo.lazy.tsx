@@ -1,3 +1,4 @@
+import { capitalizarNombre } from "@/lib/utils";
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
@@ -432,8 +433,8 @@ function NuevoPacienteForm({
       return;
     }
     onSubmit({
-      nombre: nombre.trim(),
-      apellido: apellido.trim(),
+      nombre: capitalizarNombre(nombre),
+      apellido: capitalizarNombre(apellido),
       documento: soloDigitos,
       fechaNacimiento,
       genero,

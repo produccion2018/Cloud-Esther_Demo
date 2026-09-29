@@ -30,6 +30,7 @@ import {
   type MemberStatus,
 } from "@/lib/cloud-esther/equipo-profesional-data"
 import { useEquipo } from "@/lib/cloud-esther/equipo-store"
+import { capitalizarNombre } from "@/lib/utils"
 
 /* ───────────── Ícono de diente propio (lucide-react no trae uno) ───────────── */
 
@@ -420,21 +421,28 @@ export function EquipoProfesional() {
       return
     }
 
+    // Nombres siempre con mayúscula inicial, sin importar cómo se escribieron.
+    const normalizado = {
+      ...draft,
+      firstName: capitalizarNombre(draft.firstName),
+      lastName: capitalizarNombre(draft.lastName),
+    }
+
     if (editingMember) {
       setMembers((prev) =>
         prev.map((m) =>
-          m.id === editingMember.id ? draft : m
+          m.id === editingMember.id ? normalizado : m
         )
       )
 
       setSelected((prev) =>
-        prev?.id === draft.id ? draft : prev
+        prev?.id === normalizado.id ? normalizado : prev
       )
 
-      showToast(`${fullName(draft)} fue actualizado/a`)
+      showToast(`${fullName(normalizado)} fue actualizado/a`)
     } else {
-      setMembers((prev) => [...prev, draft])
-      showToast(`${fullName(draft)} se agregó al equipo`)
+      setMembers((prev) => [...prev, normalizado])
+      showToast(`${fullName(normalizado)} se agregó al equipo`)
     }
 
     setAddOpen(false)

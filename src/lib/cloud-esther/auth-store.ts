@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { capitalizarNombre } from "@/lib/utils";
 
 /* Ubicación: src/lib/cloud-esther/auth-store.ts
 
@@ -61,9 +62,18 @@ const suscribir = (f: () => void) => {
   };
 };
 
+/* Cuentas guardadas antes de normalizar nombres: se muestran igual con mayúscula inicial. */
+function normalizarSesion(s: Sesion | null): Sesion | null {
+  if (!s) return s;
+  return {
+    usuario: { ...s.usuario, nombre: capitalizarNombre(s.usuario.nombre) },
+    clinica: { ...s.clinica, nombre: capitalizarNombre(s.clinica.nombre) },
+  };
+}
+
 const leer = (): Sesion | null => {
   if (sesionActual === undefined) {
-    sesionActual = leerJSON<Sesion | null>(KEY_SESION, null);
+    sesionActual = normalizarSesion(leerJSON<Sesion | null>(KEY_SESION, null));
   }
   return sesionActual;
 };
@@ -98,10 +108,10 @@ export function registrarCuenta(datos: {
   }
 
   // Cada registro crea una clínica NUEVA: es lo que separa una empresa de otra.
-  const clinica: Clinica = { id: nuevoId("clinica"), nombre: datos.clinica.trim() };
+  const clinica: Clinica = { id: nuevoId("clinica"), nombre: capitalizarNombre(datos.clinica) };
   const usuario: Usuario = {
     id: nuevoId("usuario"),
-    nombre: datos.nombre.trim(),
+    nombre: capitalizarNombre(datos.nombre),
     email,
     clinicId: clinica.id,
   };
@@ -119,10 +129,14 @@ export function iniciarSesion(emailCrudo: string): Resultado {
   const cuenta = cuentas.find((c) => c.usuario.email === email);
 
   if (!cuenta) {
-    return { ok: false, error: "No encontramos una cuenta con ese correo. Creá una cuenta primero." };
+    return {
+      ok: false,
+      error: "No encontramos una cuenta con ese correo. Creá una cuenta primero.",
+    };
   }
-  ponerSesion(cuenta);
-  return { ok: true, sesion: cuenta };
+  const sesion = normalizarSesion(cuenta) as Sesion;
+  ponerSesion(sesion);
+  return { ok: true, sesion };
 }
 
 export function cerrarSesion() {

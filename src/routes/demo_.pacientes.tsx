@@ -1,3 +1,4 @@
+import { capitalizarNombre } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
@@ -134,15 +135,8 @@ function etiquetaObraSocial(o: string) {
 }
 
 function normalizarNombre(valor: string) {
-  return valor
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("es-AR")
-    .replace(
-      /(^|[\s'-])([a-záéíóúüñ])/giu,
-      (_, separador: string, letra: string) =>
-        `${separador}${letra.toLocaleUpperCase("es-AR")}`,
-    );
+  // Misma regla en toda la app: primera letra de cada palabra en mayúscula.
+  return capitalizarNombre(valor);
 }
 
 function nombreCompleto(

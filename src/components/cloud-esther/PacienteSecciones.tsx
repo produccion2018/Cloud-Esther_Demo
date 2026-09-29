@@ -15,6 +15,7 @@ import {
   CalendarDays, Wallet, HeartPulse, Check, Paperclip, ExternalLink, Upload, Pill, Printer,
   Images, GitCompare, Ruler, Link2, Activity, Download, Mail, ZoomIn, ZoomOut, Eye, FlaskConical,
   Truck, PackageCheck, Mic, Square, Clock3, Camera, Sparkles, RotateCw, SunMedium, Contrast, ScanLine, Maximize2, RefreshCcw, Bell, ClipboardList, CircleDollarSign, UserRound,
+  ShieldAlert, PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -366,7 +367,46 @@ export type TrabajoLaboratorio = {
   notas: string;
 };
 
+/* Antecedentes y alertas médicas del paciente (alergias, enfermedades, medicación…). */
+export type Antecedentes = {
+  alergias: string[];
+  enfermedades: string[];
+  medicacion: string;
+  habitos: string[];
+  grupoSanguineo: string;
+  observaciones: string;
+  actualizado: string;
+};
+
+const ANTECEDENTES_VACIOS: Antecedentes = {
+  alergias: [],
+  enfermedades: [],
+  medicacion: "",
+  habitos: [],
+  grupoSanguineo: "",
+  observaciones: "",
+  actualizado: "",
+};
+
+const ENFERMEDADES_COMUNES = [
+  "Hipertensión",
+  "Diabetes",
+  "Cardiopatía",
+  "Trastornos de coagulación",
+  "Asma",
+  "Hepatitis",
+  "HIV",
+  "Epilepsia",
+  "Tiroides",
+  "Embarazo",
+  "Osteoporosis / bifosfonatos",
+];
+const HABITOS_COMUNES = ["Fumador/a", "Bruxismo", "Onicofagia (se come las uñas)", "Respiración bucal", "Consumo de alcohol"];
+const ALERGIAS_SUGERIDAS = ["Penicilina", "AINES (ibuprofeno, diclofenac)", "Látex", "Anestesia local", "Yodo", "Sulfas"];
+const GRUPOS_SANGUINEOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
+
 export type Registros = {
+  antecedentes: Antecedentes;
   historia: Evolucion[];
   notasClinicas: NotaClinica[];
   notasVoz: NotaVoz[];
@@ -397,6 +437,7 @@ export type SeccionRegistros =
 export type ContextoPaciente = { paciente?: string; email?: string; clinica?: string };
 
 const VACIO: Registros = {
+  antecedentes: ANTECEDENTES_VACIOS,
   historia: [],
   notasClinicas: [],
   notasVoz: [],
@@ -423,6 +464,15 @@ const VACIO: Registros = {
 
 const REGISTROS_INICIALES: Record<number, Registros> = {
     1: {
+      antecedentes: {
+        alergias: ["Penicilina"],
+        enfermedades: ["Hipertensión"],
+        medicacion: "Losartán 50 mg por la mañana",
+        habitos: ["Bruxismo"],
+        grupoSanguineo: "0+",
+        observaciones: "Usa placa de descanso nocturna.",
+        actualizado: "2026-08-21",
+      },
       historia: [
         {
           id: 1,
@@ -1394,7 +1444,6 @@ function NotaVozRecorder({
         <div className="rounded-xl border border-border bg-background p-3">
           <audio controls src={audioUrl} className="w-full" />
           <div className="mt-2 flex flex-wrap justify-end gap-2">
-            <BotonMini icon={Sparkles} label="Transcripción futura" onClick={() => onToast("Speech-to-Text pendiente de integración; no se generó una transcripción simulada")} />
             <BotonMini icon={Check} label="Guardar nota de voz" onClick={guardar} />
           </div>
         </div>
@@ -1461,11 +1510,11 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
           </div>
         </div>
         <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Flujo preparado</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Notas de voz</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-            <Badge tono="primary">Voz</Badge><span>→</span><Badge tono="primary">Transcripción</Badge><span>→</span><Badge tono="verde">Revisión</Badge><span>→</span><Badge tono="verde">Nota</Badge>
+            <Badge tono="primary">Grabar</Badge><span>→</span><Badge tono="primary">Escuchar</Badge><span>→</span><Badge tono="verde">Guardar en la ficha</Badge>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">No se ejecuta Speech-to-Text todavía.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.</p>
         </div>
       </div>
 
@@ -1493,7 +1542,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
 
       {datos.notasVoz.length > 0 && <div className="space-y-2"><p className="text-sm font-semibold">Notas de voz guardadas</p>{datos.notasVoz.map((v) => <div key={v.id} className={ITEM}><div className="flex flex-wrap items-center gap-2"><Mic className="size-4 text-primary" /><span className="text-sm font-semibold">{formatearFecha(v.fecha)} · {v.hora}</span><Badge tono="gris">{v.estadoTranscripcion}</Badge><span className="text-[11px] text-muted-foreground">{v.profesional} · {v.duracionSegundos}s</span></div><audio className="mt-2 w-full" controls src={v.audioUrl} /></div>)}</div>}
 
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div className="card-grad p-3">
         <div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Notas rápidas</p><p className="text-xs text-muted-foreground">Observaciones, indicaciones y recordatorios internos.</p></div><BotonMini icon={Plus} label="Nueva" onClick={() => setRapidaAbierta(true)} /></div>
         {datos.notasRapidas.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p> : <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">{datos.notasRapidas.map((n) => <div key={n.id} className="rounded-xl border border-border bg-background p-2.5"><div className="flex items-center justify-between gap-2"><Badge tono="primary">{n.tipo}</Badge><span className="text-[10px] text-muted-foreground">{formatearFecha(n.fecha)} · {n.hora}</span></div><p className="mt-1 whitespace-pre-line text-xs">{n.texto}</p><div className="mt-1 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar nota rápida" onClick={() => { if (!window.confirm("¿Eliminar esta nota rápida?")) return; cambiar("notasRapidas", (prev) => prev.filter((x) => x.id !== n.id)); onToast("Nota rápida eliminada"); }} /></div></div>)}</div>}
       </div>
@@ -1505,21 +1554,321 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
   );
 }
 
-function HistoriaSec({ datos, cambiar, onToast }: PropsSeccion) {
+/* ───────────── Antecedentes y alertas médicas ───────────── */
+
+function ChipsSeleccion({
+  opciones,
+  seleccion,
+  onCambiar,
+  tono,
+}: {
+  opciones: string[];
+  seleccion: string[];
+  onCambiar: (v: string[]) => void;
+  tono: "rojo" | "ambar" | "primary";
+}) {
+  const activo =
+    tono === "rojo"
+      ? "border-destructive/40 bg-destructive/10 text-destructive"
+      : tono === "ambar"
+        ? "border-amber-400/50 bg-amber-50 text-amber-800"
+        : "border-primary/40 bg-primary/10 text-primary";
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {opciones.map((o) => {
+        const on = seleccion.includes(o);
+        return (
+          <button
+            key={o}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onCambiar(on ? seleccion.filter((x) => x !== o) : [...seleccion, o])}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              on ? activo : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            }`}
+          >
+            {on && <Check className="size-3" />}
+            {o}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AntecedentesForm({
+  inicial,
+  onSubmit,
+  onCancel,
+}: {
+  inicial: Antecedentes;
+  onSubmit: (a: Antecedentes) => void;
+  onCancel: () => void;
+}) {
+  const [alergias, setAlergias] = useState<string[]>(inicial.alergias);
+  const [otraAlergia, setOtraAlergia] = useState("");
+  const [enfermedades, setEnfermedades] = useState<string[]>(inicial.enfermedades);
+  const [habitos, setHabitos] = useState<string[]>(inicial.habitos);
+  const [medicacion, setMedicacion] = useState(inicial.medicacion);
+  const [grupoSanguineo, setGrupoSanguineo] = useState(inicial.grupoSanguineo);
+  const [observaciones, setObservaciones] = useState(inicial.observaciones);
+  const opcionesAlergia = Array.from(new Set([...ALERGIAS_SUGERIDAS, ...alergias]));
+
+  const agregarAlergia = () => {
+    const a = otraAlergia.trim();
+    if (a && !alergias.includes(a)) setAlergias([...alergias, a]);
+    setOtraAlergia("");
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({
+          alergias,
+          enfermedades,
+          habitos,
+          medicacion: medicacion.trim(),
+          grupoSanguineo,
+          observaciones: observaciones.trim(),
+          actualizado: hoyISO(),
+        });
+      }}
+      className="space-y-3"
+    >
+      <Field label="Alergias">
+        <ChipsSeleccion opciones={opcionesAlergia} seleccion={alergias} onCambiar={setAlergias} tono="rojo" />
+        <div className="mt-2 flex gap-2">
+          <input
+            value={otraAlergia}
+            onChange={(e) => setOtraAlergia(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                agregarAlergia();
+              }
+            }}
+            className={INPUT}
+            placeholder="Otra alergia (ej: Ibuprofeno)"
+          />
+          <button type="button" onClick={agregarAlergia} className="btn-ce-outline shrink-0" disabled={!otraAlergia.trim()}>
+            <Plus />
+            Agregar
+          </button>
+        </div>
+      </Field>
+      <Field label="Enfermedades y condiciones">
+        <ChipsSeleccion opciones={ENFERMEDADES_COMUNES} seleccion={enfermedades} onCambiar={setEnfermedades} tono="ambar" />
+      </Field>
+      <Field label="Hábitos">
+        <ChipsSeleccion opciones={HABITOS_COMUNES} seleccion={habitos} onCambiar={setHabitos} tono="primary" />
+      </Field>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-[1fr_160px]">
+        <Field label="Medicación habitual">
+          <input value={medicacion} onChange={(e) => setMedicacion(e.target.value)} className={INPUT} placeholder="Ej: Losartán 50 mg por la mañana" />
+        </Field>
+        <Field label="Grupo sanguíneo">
+          <SelectField value={grupoSanguineo} onChange={setGrupoSanguineo} options={GRUPOS_SANGUINEOS} placeholder="Sin dato" />
+        </Field>
+      </div>
+      <Field label="Observaciones">
+        <textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Cirugías previas, reacciones a tratamientos anteriores, etc." />
+      </Field>
+      <Acciones etiqueta="Guardar antecedentes" onCancel={onCancel} />
+    </form>
+  );
+}
+
+function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
+  const [abierto, setAbierto] = useState(false);
+  const a = datos.antecedentes ?? ANTECEDENTES_VACIOS;
+  const sinDatos =
+    !a.alergias.length && !a.enfermedades.length && !a.habitos.length && !a.medicacion && !a.grupoSanguineo && !a.observaciones;
+
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
+            <ShieldAlert className="size-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Antecedentes y alertas médicas</p>
+            <p className="text-xs text-muted-foreground">
+              {a.actualizado ? `Actualizado el ${formatearFecha(a.actualizado)}` : "Revisalos antes de indicar medicación o anestesia."}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={() => setAbierto(true)} className="btn-ce-outline">
+          <PencilLine />
+          {sinDatos ? "Completar" : "Editar"}
+        </button>
+      </div>
+
+      {sinDatos ? (
+        <p className="mt-3 rounded-xl border border-dashed border-primary/20 px-3 py-2.5 text-xs text-muted-foreground">
+          Todavía no se cargaron alergias, enfermedades ni medicación de este paciente.
+        </p>
+      ) : (
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="space-y-2.5">
+            <DatoAntecedente titulo="Alergias">
+              {a.alergias.length ? (
+                a.alergias.map((x) => (
+                  <span key={x} className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive">
+                    {x}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Sin alergias conocidas</span>
+              )}
+            </DatoAntecedente>
+            <DatoAntecedente titulo="Enfermedades y condiciones">
+              {a.enfermedades.length ? (
+                a.enfermedades.map((x) => (
+                  <span key={x} className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                    {x}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Ninguna registrada</span>
+              )}
+            </DatoAntecedente>
+            <DatoAntecedente titulo="Hábitos">
+              {a.habitos.length ? (
+                a.habitos.map((x) => (
+                  <span key={x} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    {x}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Sin datos</span>
+              )}
+            </DatoAntecedente>
+          </div>
+          <div className="space-y-2.5">
+            <DatoAntecedente titulo="Medicación habitual">
+              <span className="text-sm">{a.medicacion || "—"}</span>
+            </DatoAntecedente>
+            <DatoAntecedente titulo="Grupo sanguíneo">
+              <span className="text-sm font-semibold">{a.grupoSanguineo || "—"}</span>
+            </DatoAntecedente>
+            <DatoAntecedente titulo="Observaciones">
+              <span className="text-sm text-muted-foreground">{a.observaciones || "—"}</span>
+            </DatoAntecedente>
+          </div>
+        </div>
+      )}
+
+      {abierto && (
+        <Modal title="Antecedentes y alertas médicas" onClose={() => setAbierto(false)}>
+          <AntecedentesForm
+            inicial={a}
+            onCancel={() => setAbierto(false)}
+            onSubmit={(nuevo) => {
+              // TODO backend: PUT /pacientes/:id/antecedentes
+              cambiar("antecedentes", () => nuevo);
+              setAbierto(false);
+              onToast("Antecedentes actualizados");
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function DatoAntecedente({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{titulo}</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/* Historia clínica completa lista para imprimir o guardar como PDF. */
+function imprimirHistoria(datos: Registros, paciente: string) {
+  const a = datos.antecedentes ?? ANTECEDENTES_VACIOS;
+  const lista = (xs: string[]) => (xs.length ? xs.map(escapar).join(", ") : "—");
+  const notas = [...datos.notasClinicas]
+    .sort((x, y) => `${y.fecha}${y.hora}`.localeCompare(`${x.fecha}${x.hora}`))
+    .map(
+      (n) => `<div class="item"><h3>${escapar(formatearFecha(n.fecha))} ${escapar(n.hora)} · ${escapar(n.motivoConsulta)}</h3>
+      <p class="meta">${escapar(n.profesional)}${n.piezas ? ` · Pieza(s) ${escapar(n.piezas)}` : ""}</p>
+      ${[
+        ["Anamnesis", n.anamnesis],
+        ["Diagnóstico", n.diagnostico],
+        ["Procedimiento", n.procedimiento],
+        ["Evolución", n.evolucion],
+        ["Indicaciones", n.indicaciones],
+        ["Observaciones", n.observaciones],
+      ]
+        .filter(([, v]) => v)
+        .map(([k, v]) => `<p><b>${k}:</b> ${escapar(v ?? "")}</p>`)
+        .join("")}</div>`,
+    )
+    .join("");
+  const evoluciones = [...datos.historia]
+    .sort((x, y) => y.fecha.localeCompare(x.fecha))
+    .map(
+      (e) => `<div class="item"><h3>${escapar(formatearFecha(e.fecha))} · ${escapar(e.motivo)}${e.pieza ? ` · Pieza ${escapar(e.pieza)}` : ""}</h3>
+      <p>${escapar(e.detalle)}</p><p class="meta">${escapar(e.profesional)}</p></div>`,
+    )
+    .join("");
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Historia clínica · ${escapar(paciente)}</title>
+  <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:12px}h1{font-size:20px;margin:0}
+  h2{font-size:14px;color:#6d28d9;border-bottom:1px solid #e9e3fb;padding-bottom:4px;margin-top:22px}h3{font-size:12.5px;margin:0 0 2px}
+  .item{border:1px solid #eee8fb;border-radius:10px;padding:8px 10px;margin:8px 0}.meta{color:#6b6480;font-size:11px;margin:2px 0}
+  .alerta{color:#b91c1c;font-weight:700}p{margin:3px 0}</style></head><body>
+  <h1>Historia clínica</h1><p class="meta">${escapar(paciente)} · Impresa el ${escapar(formatearFecha(hoyISO()))}</p>
+  <h2>Antecedentes y alertas médicas</h2>
+  <p><b>Alergias:</b> <span class="${a.alergias.length ? "alerta" : ""}">${lista(a.alergias)}</span></p>
+  <p><b>Enfermedades:</b> ${lista(a.enfermedades)}</p><p><b>Hábitos:</b> ${lista(a.habitos)}</p>
+  <p><b>Medicación habitual:</b> ${escapar(a.medicacion || "—")}</p><p><b>Grupo sanguíneo:</b> ${escapar(a.grupoSanguineo || "—")}</p>
+  <p><b>Observaciones:</b> ${escapar(a.observaciones || "—")}</p>
+  <h2>Notas clínicas</h2>${notas || "<p class='meta'>Sin notas clínicas.</p>"}
+  <h2>Evoluciones</h2>${evoluciones || "<p class='meta'>Sin evoluciones.</p>"}
+  <script>window.onload=()=>{window.print()}</script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  w.document.write(html);
+  w.document.close();
+  return true;
+}
+
+function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const lista = [...datos.historia].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
 
   return (
     <div className="space-y-3">
-      <Encabezado
-        titulo="Historia clínica"
-        descripcion="Evolución de cada consulta: motivo, pieza y detalle de lo realizado."
-        etiquetaBoton="Agregar evolución"
-        onAgregar={() => setAbierto(true)}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-lg font-semibold">Historia clínica</h4>
+          <p className="text-sm text-muted-foreground">Antecedentes, notas clínicas y evolución de cada consulta.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!imprimirHistoria(datos, contexto?.paciente ?? "Paciente")) onToast("Permití las ventanas emergentes para imprimir");
+            }}
+            className={BTN_SECUNDARIO}
+          >
+            <Printer />
+            Imprimir historia
+          </button>
+          <button type="button" onClick={() => setAbierto(true)} className={BTN_PRIMARIO}>
+            <Plus />
+            Agregar evolución
+          </button>
+        </div>
+      </div>
+      <AntecedentesCard datos={datos} cambiar={cambiar} onToast={onToast} />
       <NotasClinicasPanel datos={datos} cambiar={cambiar} onToast={onToast} contexto={undefined} />
       <div className="border-t border-border pt-3">
-        <div className="mb-2"><p className="text-sm font-semibold">Evoluciones históricas</p><p className="text-xs text-muted-foreground">Registro legado de evolución rápida, conservado y conectado a la misma ficha.</p></div>
+        <div className="mb-2"><p className="text-sm font-semibold">Evoluciones históricas</p><p className="text-xs text-muted-foreground">Evoluciones rápidas registradas en consultas anteriores.</p></div>
       {lista.length === 0 ? (
         <EstadoVacio icon={History} titulo="Sin evoluciones" texto="Agregá la primera evolución del paciente." />
       ) : (
@@ -3966,14 +4315,14 @@ function MovimientoForm({
 
 function ResumenCuenta({ etiqueta, valor, icon: Icon, tono }: { etiqueta: string; valor: string; icon: LucideIcon; tono?: string }) {
   return (
-    <div className={`${ITEM} min-h-[86px]`}>
-      <div className="pointer-events-none absolute -right-7 -top-7 grid size-24 place-items-center rounded-full bg-gradient-to-br from-primary/16 via-primary/8 to-transparent ring-1 ring-primary/10">
-        <span className="grid size-9 place-items-center rounded-full bg-white/55 text-primary shadow-sm ring-1 ring-primary/10 backdrop-blur">
-          <Icon className="size-4" />
-        </span>
+    <div className="card-grad flex min-h-[80px] items-start justify-between gap-2 p-3.5">
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</p>
+        <p className={`mt-1.5 text-lg font-bold leading-tight tracking-tight ${tono ?? "text-foreground"}`}>{valor}</p>
       </div>
-      <p className="relative z-10 pr-12 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</p>
-      <p className={`relative z-10 mt-1 text-lg font-bold tracking-tight ${tono ?? ""}`}>{valor}</p>
+      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <Icon className="size-4" />
+      </span>
     </div>
   );
 }
@@ -4343,7 +4692,7 @@ function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (
     ...datos.cuenta.map((m) => ({ id: `mov-${m.id}`, fecha: m.fecha, titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo, detalle: m.concepto, icon: Wallet, seccion: "cuenta" as SeccionRegistros, tono: TONO_MOVIMIENTO[m.tipo] })),
   ] as Evento[]).sort((a, b) => `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`)).slice(0, 16);
 
-  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
+  return <div className="card-grad p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
 }
 
 function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
@@ -4379,12 +4728,12 @@ function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: 
   const estudios = datos.estudios.filter((e) => (e.pieza || e.zona).split(/[,;\s]+/).includes(pieza));
   const fotos = datos.fotografias.filter((f) => f.pieza === pieza);
   if (piezas.length === 0) return null;
-  return <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Contexto clínico por pieza</p><p className="text-xs text-muted-foreground">Conexión conceptual con el odontograma y el odontograma 3D existentes.</p></div><div className="flex flex-wrap gap-1.5">{piezas.map((p) => <button key={p} type="button" onClick={() => setPieza(p)} className={`grid size-8 place-items-center rounded-full text-xs font-semibold transition ${pieza === p ? "bg-primary text-primary-foreground shadow" : "border border-border bg-background hover:border-primary/40 hover:text-primary"}`}>{p}</button>)}</div></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{diagnosticos.length}</p><p className="text-[10px] text-muted-foreground">Diagnósticos</p></button><button type="button" onClick={() => onSeccion("tratamientos")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{tratamientos.length}</p><p className="text-[10px] text-muted-foreground">Tratamientos</p></button><button type="button" onClick={() => onSeccion("historia")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{notas.length}</p><p className="text-[10px] text-muted-foreground">Notas clínicas</p></button><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{estudios.length + fotos.length}</p><p className="text-[10px] text-muted-foreground">Imágenes / estudios</p></button></div></div>;
+  return <div className="card-grad p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Contexto clínico por pieza</p><p className="text-xs text-muted-foreground">Diagnósticos, tratamientos, notas e imágenes de cada pieza.</p></div><div className="flex flex-wrap gap-1.5">{piezas.map((p) => <button key={p} type="button" onClick={() => setPieza(p)} className={`grid size-8 place-items-center rounded-full text-xs font-semibold transition ${pieza === p ? "bg-primary text-primary-foreground shadow" : "border border-border bg-background hover:border-primary/40 hover:text-primary"}`}>{p}</button>)}</div></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{diagnosticos.length}</p><p className="text-[10px] text-muted-foreground">Diagnósticos</p></button><button type="button" onClick={() => onSeccion("tratamientos")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{tratamientos.length}</p><p className="text-[10px] text-muted-foreground">Tratamientos</p></button><button type="button" onClick={() => onSeccion("historia")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{notas.length}</p><p className="text-[10px] text-muted-foreground">Notas clínicas</p></button><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{estudios.length + fotos.length}</p><p className="text-[10px] text-muted-foreground">Imágenes / estudios</p></button></div></div>;
 }
 
 function AuditoriaSec({ datos }: { datos: Registros }) {
   const lista = [...datos.auditoria].sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`)).slice(0, 8);
-  return <div className="rounded-2xl border border-border bg-card p-3 shadow-sm"><div className="flex items-center gap-2"><span className={`${CIRCULO_ICONO} size-8`}><UserRound className="size-3.5" /></span><div><p className="text-sm font-semibold">Historial de cambios</p><p className="text-xs text-muted-foreground">Auditoría preparada para reutilizar el sistema existente cuando se conecte.</p></div></div>{lista.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin acciones registradas.</p> : <div className="mt-2 divide-y divide-border">{lista.map((a) => <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"><span><strong>{a.usuario}</strong> · {a.accion}</span><span className="text-[10px] text-muted-foreground">{formatearFecha(a.fecha)} · {a.hora}</span></div>)}</div>}</div>;
+  return <div className="card-grad p-3"><div className="flex items-center gap-2"><span className={`${CIRCULO_ICONO} size-8`}><UserRound className="size-3.5" /></span><div><p className="text-sm font-semibold">Historial de cambios</p><p className="text-xs text-muted-foreground">Quién hizo cada cambio en la ficha y cuándo.</p></div></div>{lista.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin acciones registradas.</p> : <div className="mt-2 divide-y divide-border">{lista.map((a) => <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"><span><strong>{a.usuario}</strong> · {a.accion}</span><span className="text-[10px] text-muted-foreground">{formatearFecha(a.fecha)} · {a.hora}</span></div>)}</div>}</div>;
 }
 
 function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; contexto?: ContextoPaciente; onSeccion: (s: SeccionRegistros) => void }) {
@@ -4400,8 +4749,8 @@ function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; con
   return <>
     <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
       <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" /><div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
-      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${formatearFecha(proximoTurno.fecha)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{(datos.antecedentes?.alergias.length ?? 0) > 0 && <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive"><ShieldAlert className="size-3" />Alergia: {datos.antecedentes.alergias.join(", ")}</p>}{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${proximoTurno.fecha.slice(8, 10)}/${proximoTurno.fecha.slice(5, 7)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
     </section>
     <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
     <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>

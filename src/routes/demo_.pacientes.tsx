@@ -1,4 +1,5 @@
-import { capitalizarNombre } from "@/lib/utils";
+import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
+import { SUCURSALES, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
@@ -8,9 +9,7 @@ import {
   ChevronUp,
   Download,
   Clock3,
-  DollarSign,
   Bell,
-  TriangleAlert,
   UserPlus,
   FolderOpen,
   Pencil,
@@ -109,11 +108,18 @@ const SECCIONES: {
 
 /* ───────────── Datos ───────────── */
 
-// TODO backend: las sucursales las completa la API.
-const SUCURSALES: string[] = [];
-
-// TODO backend: las obras sociales las completa la API.
-const OBRAS_SOCIALES = ["No aplica / particular"];
+// TODO backend: las sucursales y obras sociales las completa la API.
+const OBRAS_SOCIALES = [
+  "No aplica / particular",
+  "OSDE",
+  "Swiss Medical",
+  "Galeno",
+  "Medicus",
+  "OMINT",
+  "Sancor Salud",
+  "PAMI",
+  "IOMA",
+];
 
 const GENEROS = [
   "Femenino",
@@ -1086,12 +1092,18 @@ function CarpetaPaciente({
 
   const hoy = hoyISO();
 
+  // Próximo turno: los de la ficha más los de la Agenda de la empresa para este paciente.
+  const { turnos: turnosAgenda } = storeAgenda.usar();
+  const turnosDeAgenda = turnosAgenda
+    .filter((t) => t.paciente === nombreCompleto(paciente) && (t.estado === "Pendiente" || t.estado === "Confirmada"))
+    .map((t) => ({ fecha: t.fecha, hora: t.hora, motivo: t.tratamiento, profesional: t.odontologo, estado: t.estado }));
   const proximoTurno =
-    datos.turnos
+    [...datos.turnos, ...turnosDeAgenda]
       .filter(
         (t) =>
           (t.estado === "Pendiente" ||
-            t.estado === "Confirmado") &&
+            t.estado === "Confirmado" ||
+            t.estado === "Confirmada") &&
           t.fecha >= hoy,
       )
       .sort((a, b) =>
@@ -1382,6 +1394,18 @@ function CarpetaPaciente({
 /* ───────────── Página ───────────── */
 
 function PacientesInner() {
+  // Turnos de la agenda de la empresa (mismo store que "Agenda y turnos" y el Dashboard).
+  const { turnos: turnosAgenda } = storeAgenda.usar();
+  const hoyAgenda = hoyISO();
+  const en7Dias = (() => {
+    const d = new Date(`${hoyAgenda}T12:00:00`);
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  })();
+  const turnosHoyAgenda = turnosAgenda.filter((t) => t.fecha === hoyAgenda && t.estado !== "Cancelada");
+  const turnosSemanaAgenda = turnosAgenda.filter(
+    (t) => t.fecha >= hoyAgenda && t.fecha <= en7Dias && t.estado !== "Cancelada",
+  );
   const { message, show } = useToast();
 
   const registros =
@@ -1412,9 +1436,8 @@ function PacientesInner() {
 
   /* Filtros */
 
-  const q = busqueda
-    .trim()
-    .toLowerCase();
+  // Búsqueda sin distinguir mayúsculas ni acentos ("gomez" encuentra "Gómez").
+  const q = normalizarBusqueda(busqueda);
 
   const qDigitos = q.replace(
     /\D/g,
@@ -1423,9 +1446,7 @@ function PacientesInner() {
 
   const coincide = (p: Paciente) =>
     !q ||
-    `${p.nombre} ${p.apellido}`
-      .toLowerCase()
-      .includes(q) ||
+    normalizarBusqueda(`${p.nombre} ${p.apellido} ${p.email}`).includes(q) ||
     (qDigitos.length > 0 &&
       (p.documento.includes(
         qDigitos,
@@ -1620,28 +1641,6 @@ function PacientesInner() {
       <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
         <FondoPacientes />
 
-        <div className="fixed right-4 top-4 z-40 flex items-center gap-2 md:right-6 md:top-5">
-          <button
-            onClick={exportar}
-            className={`${BTN_SECUNDARIO} bg-white/95 backdrop-blur-md`}
-          >
-            <Download className="size-4" />
-            Exportar
-          </button>
-
-          <button
-            onClick={() =>
-              setModal({
-                tipo: "form",
-              })
-            }
-            className={`${BTN_PRIMARIO} shadow-[0_10px_24px_-10px_rgba(124,58,237,0.72)]`}
-          >
-            <UserPlus className="size-4" />
-            Nuevo paciente
-          </button>
-        </div>
-
         <div
           className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8"
           style={{
@@ -1685,45 +1684,69 @@ function PacientesInner() {
                   </p>
                 </div>
 
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            onClick={exportar}
+            className={BTN_SECUNDARIO}
+          >
+            <Download className="size-4" />
+            Exportar
+          </button>
+
+          <button
+            onClick={() =>
+              setModal({
+                tipo: "form",
+              })
+            }
+            className={BTN_PRIMARIO}
+          >
+            <UserPlus className="size-4" />
+            Nuevo paciente
+          </button>
+        </div>
               </div>
 
               {/* Mini resumen */}
 
               <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
-                  label="Turnos de hoy"
-                  value="11"
-                  icon={Clock3}
+                  label="Pacientes registrados"
+                  value={String(pacientes.length)}
+                  icon={Users}
                   tone="primary"
-                  trend="+9%"
-                  detail="7 confirmados · 2 pendientes"
+                  trend={`${pacientes.filter((p) => p.estado === "Activo").length} activos`}
+                  detail={`${pacientes.filter((p) => p.estado !== "Activo").length} inactivos`}
                 />
 
                 <StatCard
-                  label="Ingresos del día"
-                  value="$1.284.000"
-                  icon={DollarSign}
+                  label="Turnos de hoy"
+                  value={String(turnosHoyAgenda.length)}
+                  icon={Clock3}
                   tone="emerald"
-                  trend="+14%"
-                  detail="6 cobros registrados"
+                  trend={`${turnosHoyAgenda.filter((t) => t.estado === "Confirmada" || t.estado === "Atendida").length} confirmados`}
+                  detail={`${turnosHoyAgenda.filter((t) => t.estado === "Pendiente").length} pendientes`}
                 />
 
                 <StatCard
-                  label="Recordatorios enviados"
-                  value="34"
+                  label="Próximos 7 días"
+                  value={String(turnosSemanaAgenda.length)}
                   icon={Bell}
-                  tone="violet"
-                  trend="94%"
-                  detail="entregados"
+                  tone="primary"
+                  trend={`${new Set(turnosSemanaAgenda.map((t) => t.paciente)).size} pacientes`}
+                  detail="con turno agendado"
                 />
 
                 <StatCard
-                  label="Deuda vencida"
-                  value="$572.000"
-                  icon={TriangleAlert}
-                  tone="danger"
-                  trend="-4%"
-                  detail="2 pacientes"
+                  label="Obras sociales"
+                  value={String(new Set(pacientes.map((p) => p.obraSocial).filter((o) => o && !o.startsWith("No aplica"))).size)}
+                  icon={ShieldCheck}
+                  tone="violet"
+                  trend={(() => {
+                    const n = pacientes.filter((p) => !p.obraSocial || p.obraSocial.startsWith("No aplica")).length;
+                    return `${n} ${n === 1 ? "particular" : "particulares"}`;
+                  })()}
+                  detail="sin cobertura"
                 />
               </div>
 

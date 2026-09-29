@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import type { FormEvent, ReactNode } from "react";
 import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
@@ -4324,10 +4325,15 @@ function AuditoriaSec({ datos }: { datos: Registros }) {
 }
 
 function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; contexto?: ContextoPaciente; onSeccion: (s: SeccionRegistros) => void }) {
+  const { turnos: turnosAgenda } = storeAgenda.usar();
   if (!contexto?.paciente) return null;
   const hoy = hoyISO();
   const tratamientosActivos = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento").length;
-  const proximoTurno = [...datos.turnos].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
+  // Próximo turno: los de la ficha más los de la Agenda de la empresa para este paciente.
+  const deAgenda = turnosAgenda
+    .filter((t) => t.paciente === contexto?.paciente && (t.estado === "Pendiente" || t.estado === "Confirmada"))
+    .map((t) => ({ fecha: t.fecha, hora: t.hora, estado: t.estado as string }));
+  const proximoTurno = [...datos.turnos.map((t) => ({ fecha: t.fecha, hora: t.hora, estado: t.estado as string })), ...deAgenda].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
   const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
   const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);

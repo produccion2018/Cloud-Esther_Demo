@@ -48,3 +48,12 @@ export function capitalizarNombre(texto: string) {
     )
     .join(" ");
 }
+
+/** Texto para comparar en búsquedas: minúsculas y sin acentos ("Gómez" → "gomez"). */
+export function normalizarBusqueda(texto: string) {
+  return texto
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}

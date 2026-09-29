@@ -114,6 +114,9 @@ function turnosEjemplo(hoy: string): Turno[] {
     [2, "09:30", "Valeria Gómez", "Evaluación de implante", 2, "Gabinete 3", "Pendiente"],
     [3, "11:00", "Carlos Méndez", "Control", 0, "Gabinete 1", "Pendiente"],
     [-1, "12:00", "Florencia Díaz", "Limpieza dental", 1, "Gabinete 2", "Atendida"],
+    [2, "11:30", "Mauro Pinto", "Control", 0, "Gabinete 1", "Pendiente"],
+    [-32, "15:00", "Mauro Pinto", "Restauración", 0, "Gabinete 1", "Atendida"],
+    [-50, "10:30", "Mauro Pinto", "Primera consulta", 0, "Gabinete 1", "Atendida"],
   ];
   return base.map(([d, hora, paciente, tratamiento, o, gabinete, estado], i) => ({
     id: i + 1,

@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
-import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import {
+  SUCURSALES as SUCURSALES_AGENDA,
+  TRATAMIENTOS as TRATAMIENTOS_AGENDA,
+  setTurnosStore,
+  storeAgenda,
+  type EstadoTurno as EstadoTurnoAgenda,
+  type Turno as TurnoAgenda,
+} from "@/lib/cloud-esther/agenda-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { FormEvent, ReactNode } from "react";
 import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
@@ -11,14 +19,25 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 /* ───────────── Catálogos ─────────────
-   TODO backend: estos catálogos los completa la API (por clínica).
-   Hoy están vacíos a propósito: no hay datos de relleno. */
+   Sugerencias para practicar. Los profesionales salen del equipo de la empresa
+   (ver Datalists). TODO backend: estos catálogos los completa la API (por clínica). */
 
-const PROFESIONALES: string[] = [];
-const SUCURSALES: string[] = [];
-const PRACTICAS: string[] = [];
-const MEDICAMENTOS: string[] = [];
-const LABORATORIOS_PROVEEDORES: string[] = [];
+const SUCURSALES = SUCURSALES_AGENDA;
+const PRACTICAS = TRATAMIENTOS_AGENDA;
+const MEDICAMENTOS = [
+  "Amoxicilina 500 mg",
+  "Amoxicilina + ácido clavulánico 875/125 mg",
+  "Ibuprofeno 400 mg",
+  "Ibuprofeno 600 mg",
+  "Ketorolac 10 mg",
+  "Paracetamol 500 mg",
+  "Diclofenac 50 mg",
+  "Metronidazol 500 mg",
+  "Clindamicina 300 mg",
+  "Dexametasona 4 mg",
+  "Clorhexidina 0,12 % (colutorio)",
+];
+const LABORATORIOS_PROVEEDORES = ["Laboratorio Dental Sur", "ProDent Lab", "OrthoLab Argentina", "Cerámica Dental Norte"];
 
 /* ───────────── Opciones fijas del producto ───────────── */
 
@@ -601,26 +620,7 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           profesional: "Dr. Carlos Rodríguez",
         },
       ],
-      turnos: [
-        {
-          id: 1,
-          fecha: "2026-08-28",
-          hora: "15:00",
-          motivo: "Restauración pieza 21",
-          profesional: "Dr. Carlos Rodríguez",
-          sucursal: "",
-          estado: "Confirmado",
-        },
-        {
-          id: 2,
-          fecha: "2026-08-10",
-          hora: "10:30",
-          motivo: "Control y evaluación",
-          profesional: "Dr. Carlos Rodríguez",
-          sucursal: "",
-          estado: "Atendido",
-        },
-      ],
+      turnos: [], // Los turnos de Mauro Pinto están en la Agenda (agenda-store).
       cuenta: [
         {
           id: 1,
@@ -1089,11 +1089,20 @@ function Acciones({ etiqueta, onCancel }: { etiqueta: string; onCancel: () => vo
   );
 }
 
+/** Odontólogos activos del equipo de la empresa. */
+function useProfesionales() {
+  const { miembros } = useEquipo();
+  return miembros
+    .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
+    .map((m) => `${m.firstName} ${m.lastName}`.trim());
+}
+
 function Datalists() {
+  const profesionales = useProfesionales();
   return (
     <>
       <datalist id="dl-profesionales">
-        {PROFESIONALES.map((n) => (
+        {profesionales.map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -3719,6 +3728,33 @@ function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
 
 /* ───────────── Turnos ───────────── */
 
+/* Los turnos del paciente son los de la Agenda de la empresa (un solo lugar de turnos). */
+const ESTADO_DESDE_AGENDA: Record<EstadoTurnoAgenda, EstadoTurnoPaciente> = {
+  Pendiente: "Pendiente",
+  Confirmada: "Confirmado",
+  Atendida: "Atendido",
+  Cancelada: "Cancelado",
+  Ausente: "Cancelado",
+};
+const ESTADO_HACIA_AGENDA: Record<EstadoTurnoPaciente, EstadoTurnoAgenda> = {
+  Pendiente: "Pendiente",
+  Confirmado: "Confirmada",
+  Atendido: "Atendida",
+  Cancelado: "Cancelada",
+};
+
+function turnoDeAgenda(t: TurnoAgenda): TurnoPaciente {
+  return {
+    id: t.id,
+    fecha: t.fecha,
+    hora: t.hora,
+    motivo: t.tratamiento,
+    profesional: t.odontologo,
+    sucursal: t.sucursal,
+    estado: ESTADO_DESDE_AGENDA[t.estado],
+  };
+}
+
 function TurnoForm({
   onSubmit,
   onCancel,
@@ -3729,8 +3765,9 @@ function TurnoForm({
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
   const [motivo, setMotivo] = useState("");
-  const [profesional, setProfesional] = useState("");
-  const [sucursal, setSucursal] = useState("");
+  const profesionales = useProfesionales();
+  const [profesional, setProfesional] = useState(profesionales[0] ?? "");
+  const [sucursal, setSucursal] = useState(SUCURSALES[0] ?? "");
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
@@ -3751,8 +3788,8 @@ function TurnoForm({
         <input required list="dl-practicas" value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT} placeholder="Ej: Control, limpieza, urgencia" />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-        <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+        <Field label="Profesional *">
+          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
         </Field>
         <Field label="Sucursal">
           <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} placeholder="Seleccionar" />
@@ -3763,13 +3800,13 @@ function TurnoForm({
   );
 }
 
-function TurnosSec({ datos, cambiar, onToast }: PropsSeccion) {
+function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const lista = [...datos.turnos].sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
 
+  // datos.turnos ya viene de la Agenda (ver SeccionPaciente); los cambios se guardan en la Agenda.
   const cambiarEstado = (t: TurnoPaciente, estado: EstadoTurnoPaciente) => {
-    // TODO backend: PATCH /turnos/:id { estado }
-    cambiar("turnos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
+    setTurnosStore((prev) => prev.map((x) => (x.id === t.id ? { ...x, estado: ESTADO_HACIA_AGENDA[estado] } : x)));
     onToast(`Turno del ${formatearFecha(t.fecha)}: ${estado.toLowerCase()}`);
   };
 
@@ -3777,7 +3814,7 @@ function TurnosSec({ datos, cambiar, onToast }: PropsSeccion) {
     <div className="space-y-3">
       <Encabezado
         titulo="Turnos"
-        descripcion="Turnos pasados y próximos del paciente."
+        descripcion="Turnos pasados y próximos del paciente, sincronizados con la Agenda."
         etiquetaBoton="Nuevo turno"
         onAgregar={() => setAbierto(true)}
       />
@@ -3815,8 +3852,7 @@ function TurnosSec({ datos, cambiar, onToast }: PropsSeccion) {
                 <BotonBorrar
                   etiqueta="Eliminar turno"
                   onClick={() => {
-                    // TODO backend: DELETE /turnos/:id
-                    cambiar("turnos", (prev) => prev.filter((x) => x.id !== t.id));
+                    setTurnosStore((prev) => prev.filter((x) => x.id !== t.id));
                     onToast("Turno eliminado");
                   }}
                 />
@@ -3830,10 +3866,37 @@ function TurnosSec({ datos, cambiar, onToast }: PropsSeccion) {
           <TurnoForm
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
-              // TODO backend: POST /turnos (con el paciente)
-              cambiar("turnos", (prev) => [...prev, { ...nuevo, id: Date.now(), estado: "Pendiente" as const }]);
+              const choque = storeAgenda
+                .leer()
+                .turnos.some(
+                  (t) =>
+                    t.estado !== "Cancelada" &&
+                    t.fecha === nuevo.fecha &&
+                    t.hora === nuevo.hora &&
+                    t.odontologo === nuevo.profesional,
+                );
+              if (choque) {
+                onToast(`${nuevo.profesional} ya tiene un turno a las ${nuevo.hora}`);
+                return;
+              }
+              // Se agenda en la Agenda de la empresa: aparece también en Agenda y Dashboard.
+              setTurnosStore((prev) => [
+                ...prev,
+                {
+                  id: Date.now(),
+                  fecha: nuevo.fecha,
+                  hora: nuevo.hora,
+                  paciente: contexto?.paciente ?? "Paciente",
+                  tratamiento: nuevo.motivo,
+                  odontologo: nuevo.profesional,
+                  sucursal: nuevo.sucursal || SUCURSALES[0] || "",
+                  gabinete: "Gabinete 1",
+                  estado: "Pendiente",
+                  notas: "",
+                },
+              ]);
               setAbierto(false);
-              onToast("Turno agendado");
+              onToast("Turno agendado (también figura en la Agenda)");
             }}
           />
         </Modal>
@@ -4325,15 +4388,10 @@ function AuditoriaSec({ datos }: { datos: Registros }) {
 }
 
 function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; contexto?: ContextoPaciente; onSeccion: (s: SeccionRegistros) => void }) {
-  const { turnos: turnosAgenda } = storeAgenda.usar();
   if (!contexto?.paciente) return null;
   const hoy = hoyISO();
   const tratamientosActivos = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento").length;
-  // Próximo turno: los de la ficha más los de la Agenda de la empresa para este paciente.
-  const deAgenda = turnosAgenda
-    .filter((t) => t.paciente === contexto?.paciente && (t.estado === "Pendiente" || t.estado === "Confirmada"))
-    .map((t) => ({ fecha: t.fecha, hora: t.hora, estado: t.estado as string }));
-  const proximoTurno = [...datos.turnos.map((t) => ({ fecha: t.fecha, hora: t.hora, estado: t.estado as string })), ...deAgenda].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
+  const proximoTurno = [...datos.turnos].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
   const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
   const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);
@@ -4367,7 +4425,13 @@ export function SeccionPaciente({
 }) {
   const [seccionActiva, setSeccionActiva] = useState<SeccionRegistros>(seccion);
   useEffect(() => setSeccionActiva(seccion), [seccion]);
-  const props = { datos, cambiar, onToast, contexto, onSeccion: setSeccionActiva };
+  // Los turnos del paciente salen de la Agenda de la empresa (resumen, timeline, alertas y pestaña Turnos).
+  const { turnos: turnosAgenda } = storeAgenda.usar();
+  const datosConAgenda: Registros = {
+    ...datos,
+    turnos: turnosAgenda.filter((t) => t.paciente === contexto?.paciente).map(turnoDeAgenda),
+  };
+  const props = { datos: datosConAgenda, cambiar, onToast, contexto, onSeccion: setSeccionActiva };
   return (
     <div className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4">
       {/* Fondo visual del módulo Paciente: suave, clínico y alineado al lenguaje violeta del SaaS. */}
@@ -4388,7 +4452,7 @@ export function SeccionPaciente({
 
       <div className="relative z-10">
         <Datalists />
-        <ResumenPaciente datos={datos} contexto={contexto} onSeccion={setSeccionActiva} />
+        <ResumenPaciente datos={datosConAgenda} contexto={contexto} onSeccion={setSeccionActiva} />
 
         {seccionActiva === "historia" && <HistoriaSec {...props} />}
         {seccionActiva === "tratamientos" && <TratamientosSec {...props} />}

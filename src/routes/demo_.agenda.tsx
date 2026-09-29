@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   CalendarDays,
@@ -31,6 +31,10 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { TEAM_MEMBERS } from "@/lib/cloud-esther/equipo-profesional-data";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/agenda")({
@@ -89,7 +93,7 @@ type Tarea = {
 type NuevaTarea = Omit<Tarea, "id" | "hecha">;
 type Vista = "dia" | "semana" | "mes" | "turnos";
 type ModalActivo =
-  | { tipo: "cita"; turno?: Turno }
+  | { tipo: "cita"; turno?: Turno; prefill?: Partial<NuevaCita>; esperaId?: number }
   | { tipo: "bloqueo" }
   | { tipo: "espera" }
   | { tipo: "tarea" }
@@ -100,33 +104,130 @@ type ItemDia =
 
 /* ───────────── Datos ───────────── */
 
-const SUCURSALES = ["Clínica Centro"];
-const ODONTOLOGOS = ["Dra. Lucía Ferrer"];
-const GABINETES = ["Gabinete 1"];
-const TRATAMIENTOS = ["Primera consulta"];
+const SUCURSALES = ["Clínica Centro", "Clínica Norte", "Clínica Sur"];
+/* Odontólogos de ejemplo = los del equipo de ejemplo. En la agenda se usan los del
+   equipo real de la empresa (useEquipo), así que si agregás uno en Equipo aparece acá. */
+const ODONTOLOGOS = TEAM_MEMBERS.filter((m) => m.role === "odontologo").map((m) =>
+  `${m.firstName} ${m.lastName}`.trim(),
+);
+const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3"];
+const TRATAMIENTOS = [
+  "Primera consulta",
+  "Control",
+  "Limpieza dental",
+  "Restauración",
+  "Endodoncia",
+  "Extracción",
+  "Control de ortodoncia",
+  "Blanqueamiento",
+  "Evaluación de implante",
+  "Urgencia",
+];
+/* Horario de atención usado para mostrar los turnos libres del día. */
+const HORARIOS_DEL_DIA = Array.from({ length: 24 }, (_, i) => {
+  const minutos = 8 * 60 + i * 30;
+  return `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${minutos % 60 === 0 ? "00" : "30"}`;
+});
+
+/* Opciones de los formularios y filtros (equipo y pacientes de la empresa). */
+type OpcionesAgenda = {
+  odontologos: string[];
+  pacientes: string[];
+};
+const OpcionesAgendaCtx = createContext<OpcionesAgenda>({
+  odontologos: ODONTOLOGOS,
+  pacientes: [],
+});
+const useOpcionesAgenda = () => useContext(OpcionesAgendaCtx);
 const FRANJAS = ["Mañanas", "Tardes", "Hoy"];
 const CATEGORIAS_TAREA = ["Llamar al paciente", "Comprar / reponer", "Otro"];
-
-const TURNO_EJEMPLO: Omit<Turno, "id" | "fecha"> = {
-  hora: "09:00",
-  paciente: "Marina Delgado",
-  tratamiento: TRATAMIENTOS[0],
-  odontologo: ODONTOLOGOS[0],
-  sucursal: SUCURSALES[0],
-  gabinete: GABINETES[0],
-  estado: "Pendiente",
-  notas: "",
-};
 
 const ESPERA_EJEMPLO: Espera[] = [
   {
     id: 1,
     nombre: "Carla Núñez",
-    motivo: TRATAMIENTOS[0],
+    motivo: "Primera consulta",
     franja: "Tardes",
-    sucursal: SUCURSALES[0],
+    sucursal: "Clínica Centro",
+  },
+  {
+    id: 2,
+    nombre: "Tomás Herrera",
+    motivo: "Limpieza dental",
+    franja: "Mañanas",
+    sucursal: "Clínica Norte",
   },
 ];
+
+/* Turnos de ejemplo para practicar: varios hoy y otros en la semana. */
+function turnosEjemplo(hoy: string): Turno[] {
+  const od = (i: number) => ODONTOLOGOS[i % ODONTOLOGOS.length] ?? "Odontólogo/a";
+  const dia = (n: number) => {
+    const d = new Date(`${hoy}T12:00:00`);
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const base: [number, string, string, string, number, string, EstadoTurno][] = [
+    [0, "09:00", "Marina Delgado", "Primera consulta", 0, "Gabinete 1", "Confirmada"],
+    [0, "09:30", "Julián Ortega", "Control", 1, "Gabinete 2", "Atendida"],
+    [0, "10:30", "Lucía Paz", "Limpieza dental", 0, "Gabinete 1", "Pendiente"],
+    [0, "11:30", "Ramiro Sosa", "Endodoncia", 2, "Gabinete 3", "Confirmada"],
+    [0, "15:00", "Paula Medina", "Restauración", 1, "Gabinete 2", "Pendiente"],
+    [0, "16:30", "Sergio Luna", "Control de ortodoncia", 2, "Gabinete 3", "Ausente"],
+    [1, "10:00", "Ana Torres", "Blanqueamiento", 0, "Gabinete 1", "Pendiente"],
+    [1, "14:00", "Diego Ruiz", "Extracción", 1, "Gabinete 2", "Confirmada"],
+    [2, "09:30", "Valeria Gómez", "Evaluación de implante", 2, "Gabinete 3", "Pendiente"],
+    [3, "11:00", "Carlos Méndez", "Control", 0, "Gabinete 1", "Pendiente"],
+    [-1, "12:00", "Florencia Díaz", "Limpieza dental", 1, "Gabinete 2", "Atendida"],
+  ];
+  return base.map(([d, hora, paciente, tratamiento, o, gabinete, estado], i) => ({
+    id: i + 1,
+    fecha: dia(d),
+    hora,
+    paciente,
+    tratamiento,
+    odontologo: od(o),
+    sucursal: i % 3 === 2 ? "Clínica Norte" : "Clínica Centro",
+    gabinete,
+    estado,
+    notas: "",
+  }));
+}
+
+/* Estado de la agenda separado por empresa: se conserva al navegar por el demo
+   y ninguna clínica ve los turnos de otra. TODO backend: API de turnos por clinicId. */
+type EstadoAgenda = {
+  turnos: Turno[];
+  bloqueos: Bloqueo[];
+  espera: Espera[];
+  recordatorios: Recordatorio[];
+  tareas: Tarea[];
+};
+const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(() => {
+  const hoy = hoyISO();
+  return {
+    turnos: turnosEjemplo(hoy),
+    bloqueos: [],
+    espera: ESPERA_EJEMPLO,
+    recordatorios: RECORDATORIOS_INICIAL,
+    tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
+  };
+});
+
+type Actualizar<T> = T | ((prev: T) => T);
+function setterAgenda<K extends keyof EstadoAgenda>(clave: K) {
+  return (a: Actualizar<EstadoAgenda[K]>) => {
+    const actual = storeAgenda.leer();
+    const valor =
+      typeof a === "function" ? (a as (p: EstadoAgenda[K]) => EstadoAgenda[K])(actual[clave]) : a;
+    storeAgenda.poner({ ...actual, [clave]: valor });
+  };
+}
+const setTurnosStore = setterAgenda("turnos");
+const setBloqueosStore = setterAgenda("bloqueos");
+const setEsperaStore = setterAgenda("espera");
+const setRecordatoriosStore = setterAgenda("recordatorios");
+const setTareasStore = setterAgenda("tareas");
 
 const TAREA_EJEMPLO: Omit<Tarea, "id" | "fecha"> = {
   texto: "Llamar para confirmar el turno",
@@ -151,10 +252,7 @@ const ESTADO_STYLES: Record<EstadoTurno, string> = {
   Cancelada: "bg-muted text-muted-foreground",
 };
 
-const ESTADO_ACCENT: Record<
-  EstadoTurno,
-  { bar: string; tile: string; soft: string }
-> = {
+const ESTADO_ACCENT: Record<EstadoTurno, { bar: string; tile: string; soft: string }> = {
   Atendida: {
     bar: "bg-primary",
     tile: "bg-primary/10 text-primary",
@@ -231,10 +329,7 @@ const FRANJA_META: Record<string, { icon: LucideIcon; chip: string }> = {
   },
 };
 
-const CATEGORIA_META: Record<
-  string,
-  { icon: LucideIcon; bar: string; chip: string }
-> = {
+const CATEGORIA_META: Record<string, { icon: LucideIcon; bar: string; chip: string }> = {
   "Llamar al paciente": {
     icon: Phone,
     bar: "bg-sky-500",
@@ -408,17 +503,9 @@ function FondoPacientes() {
       <div className="absolute -left-24 -top-24 size-96 rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute -bottom-32 -right-24 size-[28rem] rounded-full bg-primary/5 blur-3xl" />
 
-      <svg
-        className="absolute inset-0 size-full text-primary"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg className="absolute inset-0 size-full text-primary" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern
-            id="patron-pacientes"
-            width="170"
-            height="170"
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id="patron-pacientes" width="170" height="170" patternUnits="userSpaceOnUse">
             <g
               fill="none"
               stroke="currentColor"
@@ -494,9 +581,7 @@ function Modal({
             <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
 
             {subtitle && (
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                {subtitle}
-              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
             )}
           </div>
 
@@ -515,24 +600,14 @@ function Modal({
   );
 }
 
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) {
+function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
 
       {children}
 
-      {error && (
-        <span className="mt-1.5 block text-xs text-destructive">{error}</span>
-      )}
+      {error && <span className="mt-1.5 block text-xs text-destructive">{error}</span>}
     </label>
   );
 }
@@ -555,9 +630,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${compact ? INPUT_SM : INPUT} appearance-none ${
-          compact ? "pr-9" : "pr-10"
-        }`}
+        className={`${compact ? INPUT_SM : INPUT} appearance-none ${compact ? "pr-9" : "pr-10"}`}
       >
         {placeholder && <option value="">{placeholder}</option>}
 
@@ -577,13 +650,7 @@ function SelectField({
   );
 }
 
-function FormActions({
-  submitLabel,
-  onCancel,
-}: {
-  submitLabel: string;
-  onCancel: () => void;
-}) {
+function FormActions({ submitLabel, onCancel }: { submitLabel: string; onCancel: () => void }) {
   return (
     <div className="flex justify-end gap-2.5 pt-2">
       <button
@@ -594,10 +661,7 @@ function FormActions({
         Cancelar
       </button>
 
-      <button
-        type="submit"
-        className="btn-ce"
-      >
+      <button type="submit" className="btn-ce">
         {submitLabel}
       </button>
     </div>
@@ -628,30 +692,29 @@ function BotonAccion({
 
 function CitaForm({
   inicial,
+  prefill,
   pacientes,
   onSubmit,
   onCancel,
 }: {
-  inicial?: Turno;
+  inicial?: Turno | undefined;
+  prefill?: Partial<NuevaCita> | undefined;
   pacientes: string[];
   onSubmit: (c: NuevaCita) => void;
   onCancel: () => void;
 }) {
-  const [paciente, setPaciente] = useState(inicial?.paciente ?? "");
-  const [sucursal, setSucursal] = useState(
-    inicial?.sucursal ?? SUCURSALES[0],
-  );
+  const { odontologos } = useOpcionesAgenda();
+  const [paciente, setPaciente] = useState(inicial?.paciente ?? prefill?.paciente ?? "");
+  const [sucursal, setSucursal] = useState(inicial?.sucursal ?? prefill?.sucursal ?? SUCURSALES[0]);
   const [odontologo, setOdontologo] = useState(
-    inicial?.odontologo ?? ODONTOLOGOS[0],
+    inicial?.odontologo ?? prefill?.odontologo ?? odontologos[0] ?? "",
   );
-  const [gabinete, setGabinete] = useState(
-    inicial?.gabinete ?? GABINETES[0],
-  );
+  const [gabinete, setGabinete] = useState(inicial?.gabinete ?? GABINETES[0]);
   const [tratamiento, setTratamiento] = useState(
-    inicial?.tratamiento ?? TRATAMIENTOS[0],
+    inicial?.tratamiento ?? prefill?.tratamiento ?? TRATAMIENTOS[0],
   );
-  const [fecha, setFecha] = useState(inicial?.fecha ?? "");
-  const [hora, setHora] = useState(inicial?.hora ?? "");
+  const [fecha, setFecha] = useState(inicial?.fecha ?? prefill?.fecha ?? "");
+  const [hora, setHora] = useState(inicial?.hora ?? prefill?.hora ?? "");
   const [notas, setNotas] = useState(inicial?.notas ?? "");
 
   const enviar = (e: FormEvent) => {
@@ -691,35 +754,19 @@ function CitaForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Sucursal">
-          <SelectField
-            value={sucursal}
-            onChange={setSucursal}
-            options={SUCURSALES}
-          />
+          <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
         </Field>
 
         <Field label="Odontólogo">
-          <SelectField
-            value={odontologo}
-            onChange={setOdontologo}
-            options={ODONTOLOGOS}
-          />
+          <SelectField value={odontologo} onChange={setOdontologo} options={odontologos} />
         </Field>
 
         <Field label="Gabinete">
-          <SelectField
-            value={gabinete}
-            onChange={setGabinete}
-            options={GABINETES}
-          />
+          <SelectField value={gabinete} onChange={setGabinete} options={GABINETES} />
         </Field>
 
         <Field label="Tratamiento">
-          <SelectField
-            value={tratamiento}
-            onChange={setTratamiento}
-            options={TRATAMIENTOS}
-          />
+          <SelectField value={tratamiento} onChange={setTratamiento} options={TRATAMIENTOS} />
         </Field>
 
         <Field label="Fecha">
@@ -753,10 +800,7 @@ function CitaForm({
         />
       </Field>
 
-      <FormActions
-        submitLabel={inicial ? "Guardar cambios" : "Crear cita"}
-        onCancel={onCancel}
-      />
+      <FormActions submitLabel={inicial ? "Guardar cambios" : "Crear cita"} onCancel={onCancel} />
     </form>
   );
 }
@@ -842,10 +886,7 @@ function BloqueoForm({
         />
       </Field>
 
-      <FormActions
-        submitLabel="Bloquear horario"
-        onCancel={onCancel}
-      />
+      <FormActions submitLabel="Bloquear horario" onCancel={onCancel} />
     </form>
   );
 }
@@ -896,35 +937,20 @@ function EsperaForm({
       </Field>
 
       <Field label="Motivo">
-        <SelectField
-          value={motivo}
-          onChange={setMotivo}
-          options={TRATAMIENTOS}
-        />
+        <SelectField value={motivo} onChange={setMotivo} options={TRATAMIENTOS} />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Franja horaria">
-          <SelectField
-            value={franja}
-            onChange={setFranja}
-            options={FRANJAS}
-          />
+          <SelectField value={franja} onChange={setFranja} options={FRANJAS} />
         </Field>
 
         <Field label="Sucursal">
-          <SelectField
-            value={sucursal}
-            onChange={setSucursal}
-            options={SUCURSALES}
-          />
+          <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
         </Field>
       </div>
 
-      <FormActions
-        submitLabel="Agregar a la lista"
-        onCancel={onCancel}
-      />
+      <FormActions submitLabel="Agregar a la lista" onCancel={onCancel} />
     </form>
   );
 }
@@ -970,11 +996,7 @@ function TareaForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Categoría">
-          <SelectField
-            value={categoria}
-            onChange={setCategoria}
-            options={CATEGORIAS_TAREA}
-          />
+          <SelectField value={categoria} onChange={setCategoria} options={CATEGORIAS_TAREA} />
         </Field>
 
         <Field label="Fecha (opcional)">
@@ -1003,10 +1025,7 @@ function TareaForm({
         </datalist>
       </Field>
 
-      <FormActions
-        submitLabel="Guardar recordatorio"
-        onCancel={onCancel}
-      />
+      <FormActions submitLabel="Guardar recordatorio" onCancel={onCancel} />
     </form>
   );
 }
@@ -1051,9 +1070,7 @@ function StatCard({
         {label}
       </p>
 
-      <p className="relative mt-1 text-2xl font-bold leading-tight tabular-nums">
-        {value}
-      </p>
+      <p className="relative mt-1 text-2xl font-bold leading-tight tabular-nums">{value}</p>
     </div>
   );
 }
@@ -1086,18 +1103,13 @@ function TurnoCard({
     <div
       className={`group relative overflow-hidden rounded-2xl border bg-card/80 p-3.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
     >
-      <span
-        aria-hidden
-        className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`}
-      />
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
 
       <div className="flex flex-col gap-3 pl-2 sm:flex-row sm:items-center">
         <div
           className={`flex w-full shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 sm:w-[100px] sm:flex-col sm:items-center sm:gap-1 ${accent.tile}`}
         >
-          <span className="text-lg font-bold leading-none tabular-nums">
-            {turno.hora}
-          </span>
+          <span className="text-lg font-bold leading-none tabular-nums">{turno.hora}</span>
 
           <Clock className="size-3.5 opacity-60" />
 
@@ -1112,9 +1124,7 @@ function TurnoCard({
             <EstadoBadge estado={turno.estado} />
           </div>
 
-          <p className="mt-1 text-[13px] font-medium text-muted-foreground">
-            {turno.tratamiento}
-          </p>
+          <p className="mt-1 text-[13px] font-medium text-muted-foreground">{turno.tratamiento}</p>
 
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>{turno.odontologo}</span>
@@ -1122,13 +1132,10 @@ function TurnoCard({
           </div>
 
           {turno.notas && (
-            <p className="mt-1.5 text-xs italic text-muted-foreground">
-              {turno.notas}
-            </p>
+            <p className="mt-1.5 text-xs italic text-muted-foreground">{turno.notas}</p>
           )}
 
-          {(turno.estado === "Pendiente" ||
-            turno.estado === "Confirmada") && (
+          {(turno.estado === "Pendiente" || turno.estado === "Confirmada") && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                 <Bell className="size-3.5 text-primary" />
@@ -1150,9 +1157,7 @@ function TurnoCard({
                   );
                 })
               ) : (
-                <span className="text-[11px] text-muted-foreground">
-                  Sin avisos automáticos
-                </span>
+                <span className="text-[11px] text-muted-foreground">Sin avisos automáticos</span>
               )}
             </div>
           )}
@@ -1160,10 +1165,7 @@ function TurnoCard({
 
         <div className="flex flex-wrap justify-start gap-1.5 sm:justify-end">
           {turno.estado === "Atendida" && (
-            <BotonAccion
-              label="Marcar ausente"
-              onClick={() => onEstado(turno, "Ausente")}
-            />
+            <BotonAccion label="Marcar ausente" onClick={() => onEstado(turno, "Ausente")} />
           )}
 
           {turno.estado === "Confirmada" && (
@@ -1174,23 +1176,11 @@ function TurnoCard({
                 onClick={() => onEstado(turno, "Atendida")}
               />
 
-              <BotonAccion
-                icon={Bell}
-                label="Recordar"
-                onClick={() => onRecordar(turno)}
-              />
+              <BotonAccion icon={Bell} label="Recordar" onClick={() => onRecordar(turno)} />
 
-              <BotonAccion
-                icon={Pencil}
-                label="Editar"
-                onClick={() => onEditar(turno)}
-              />
+              <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
 
-              <BotonAccion
-                icon={X}
-                label="Cancelar"
-                onClick={() => onEstado(turno, "Cancelada")}
-              />
+              <BotonAccion icon={X} label="Cancelar" onClick={() => onEstado(turno, "Cancelada")} />
             </>
           )}
 
@@ -1202,33 +1192,16 @@ function TurnoCard({
                 onClick={() => onEstado(turno, "Confirmada")}
               />
 
-              <BotonAccion
-                icon={Bell}
-                label="Recordar"
-                onClick={() => onRecordar(turno)}
-              />
+              <BotonAccion icon={Bell} label="Recordar" onClick={() => onRecordar(turno)} />
 
-              <BotonAccion
-                icon={Pencil}
-                label="Editar"
-                onClick={() => onEditar(turno)}
-              />
+              <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
 
-              <BotonAccion
-                icon={X}
-                label="Cancelar"
-                onClick={() => onEstado(turno, "Cancelada")}
-              />
+              <BotonAccion icon={X} label="Cancelar" onClick={() => onEstado(turno, "Cancelada")} />
             </>
           )}
 
-          {(turno.estado === "Ausente" ||
-            turno.estado === "Cancelada") && (
-            <BotonAccion
-              icon={Pencil}
-              label="Editar"
-              onClick={() => onEditar(turno)}
-            />
+          {(turno.estado === "Ausente" || turno.estado === "Cancelada") && (
+            <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
           )}
         </div>
       </div>
@@ -1251,9 +1224,7 @@ function PeriodNavigator({
     vista === "dia"
       ? `${nombreDiaLargo(fecha)} ${parseISO(fecha).getDate()}`
       : vista === "semana"
-        ? `${formatearFecha(obtenerSemana(fecha)[0])} — ${formatearFecha(
-            obtenerSemana(fecha)[6],
-          )}`
+        ? `${formatearFecha(obtenerSemana(fecha)[0])} — ${formatearFecha(obtenerSemana(fecha)[6])}`
         : vista === "mes"
           ? nombreMes(fecha)
           : "Todos los turnos";
@@ -1283,9 +1254,7 @@ function PeriodNavigator({
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
             Vista general
           </p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">
-            Todos los turnos
-          </h2>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight">Todos los turnos</h2>
         </div>
       </div>
     );
@@ -1302,9 +1271,7 @@ function PeriodNavigator({
               : "Calendario mensual"}
         </p>
 
-        <h2 className="mt-1 truncate text-lg font-semibold capitalize tracking-tight">
-          {titulo}
-        </h2>
+        <h2 className="mt-1 truncate text-lg font-semibold capitalize tracking-tight">{titulo}</h2>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -1376,11 +1343,7 @@ function SemanaView({
                   {nombreDiaCorto(fecha)}
                 </p>
 
-                <p
-                  className={`mt-0.5 text-lg font-bold ${
-                    esHoy ? "text-primary" : ""
-                  }`}
-                >
+                <p className={`mt-0.5 text-lg font-bold ${esHoy ? "text-primary" : ""}`}>
                   {parseISO(fecha).getDate()}
                 </p>
               </div>
@@ -1400,22 +1363,16 @@ function SemanaView({
                     onClick={() => onEditar(turno)}
                     className={`group relative w-full overflow-hidden rounded-xl border p-2.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
                   >
-                    <span
-                      className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`}
-                    />
+                    <span className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
 
                     <div className="pl-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold tabular-nums">
-                          {turno.hora}
-                        </span>
+                        <span className="text-[11px] font-bold tabular-nums">{turno.hora}</span>
 
                         <span className="size-1.5 rounded-full bg-current opacity-60" />
                       </div>
 
-                      <p className="mt-1 truncate text-xs font-semibold">
-                        {turno.paciente}
-                      </p>
+                      <p className="mt-1 truncate text-xs font-semibold">{turno.paciente}</p>
 
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                         {turno.tratamiento}
@@ -1437,17 +1394,13 @@ function SemanaView({
                     </span>
                   </div>
 
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    {bloqueo.motivo}
-                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{bloqueo.motivo}</p>
                 </div>
               ))}
 
               {turnosDia.length === 0 && bloqueosDia.length === 0 && (
                 <div className="rounded-xl border border-dashed border-primary/10 px-2 py-5 text-center">
-                  <p className="text-[10px] text-muted-foreground">
-                    Sin turnos
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">Sin turnos</p>
                 </div>
               )}
             </div>
@@ -1474,92 +1427,86 @@ function MesView({
   return (
     <div className="overflow-x-auto rounded-2xl border border-primary/20 bg-white/75 shadow-sm shadow-primary/5">
       <div className="min-w-[720px] overflow-hidden rounded-2xl">
-      <div className="grid grid-cols-7 border-b border-primary/15 bg-primary/[0.035]">
-        {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((dia) => (
-          <div
-            key={dia}
-            className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            {dia}
-          </div>
-        ))}
-      </div>
+        <div className="grid grid-cols-7 border-b border-primary/15 bg-primary/[0.035]">
+          {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((dia) => (
+            <div
+              key={dia}
+              className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+            >
+              {dia}
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-7">
-        {dias.map((fechaDia, index) => {
-          if (!fechaDia) {
+        <div className="grid grid-cols-7">
+          {dias.map((fechaDia, index) => {
+            if (!fechaDia) {
+              return (
+                <div
+                  key={`empty-${index}`}
+                  className="min-h-[92px] border-b border-r border-primary/10 bg-muted/[0.08]"
+                />
+              );
+            }
+
+            const turnosDia = turnos
+              .filter((t) => t.fecha === fechaDia)
+              .sort((a, b) => a.hora.localeCompare(b.hora));
+
+            const esHoy = fechaDia === hoyISO();
+
             return (
               <div
-                key={`empty-${index}`}
-                className="min-h-[92px] border-b border-r border-primary/10 bg-muted/[0.08]"
-              />
-            );
-          }
-
-          const turnosDia = turnos
-            .filter((t) => t.fecha === fechaDia)
-            .sort((a, b) => a.hora.localeCompare(b.hora));
-
-          const esHoy = fechaDia === hoyISO();
-
-          return (
-            <div
-              key={fechaDia}
-              className={`min-h-[92px] border-b border-r border-primary/10 p-1.5 transition-colors hover:bg-primary/[0.025] ${
-                esHoy ? "bg-primary/[0.045]" : ""
-              }`}
-            >
-              <div className="mb-1.5 flex items-center justify-between">
-                <span
-                  className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${
-                    esHoy
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {parseISO(fechaDia).getDate()}
-                </span>
-
-                {turnosDia.length > 0 && (
-                  <span className="text-[9px] font-semibold text-primary">
-                    {turnosDia.length}
+                key={fechaDia}
+                className={`min-h-[92px] border-b border-r border-primary/10 p-1.5 transition-colors hover:bg-primary/[0.025] ${
+                  esHoy ? "bg-primary/[0.045]" : ""
+                }`}
+              >
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span
+                    className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${
+                      esHoy ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {parseISO(fechaDia).getDate()}
                   </span>
-                )}
+
+                  {turnosDia.length > 0 && (
+                    <span className="text-[9px] font-semibold text-primary">
+                      {turnosDia.length}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  {turnosDia.slice(0, 3).map((turno) => {
+                    const accent = ESTADO_ACCENT[turno.estado];
+
+                    return (
+                      <button
+                        key={turno.id}
+                        onClick={() => onEditar(turno)}
+                        className={`w-full rounded-lg border px-1.5 py-1 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm ${accent.soft}`}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-bold tabular-nums">{turno.hora}</span>
+
+                          <span className="truncate text-[9px] font-medium">{turno.paciente}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {turnosDia.length > 3 && (
+                    <p className="px-1 text-[9px] font-semibold text-primary">
+                      +{turnosDia.length - 3} más
+                    </p>
+                  )}
+                </div>
               </div>
-
-              <div className="space-y-1">
-                {turnosDia.slice(0, 3).map((turno) => {
-                  const accent = ESTADO_ACCENT[turno.estado];
-
-                  return (
-                    <button
-                      key={turno.id}
-                      onClick={() => onEditar(turno)}
-                      className={`w-full rounded-lg border px-1.5 py-1 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm ${accent.soft}`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-bold tabular-nums">
-                          {turno.hora}
-                        </span>
-
-                        <span className="truncate text-[9px] font-medium">
-                          {turno.paciente}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {turnosDia.length > 3 && (
-                  <p className="px-1 text-[9px] font-semibold text-primary">
-                    +{turnosDia.length - 3} más
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1573,18 +1520,21 @@ function AgendaInner() {
   const [hoy] = useState(hoyISO);
   const [fechaVista, setFechaVista] = useState(hoyISO);
 
-  const [turnos, setTurnos] = useState<Turno[]>(() => [
-    { ...TURNO_EJEMPLO, id: 1, fecha: hoyISO() },
-  ]);
+  // Agenda de la empresa de la sesión (se conserva al navegar; no se cruza entre empresas).
+  const { turnos, bloqueos, espera, recordatorios, tareas } = storeAgenda.usar();
+  const setTurnos = setTurnosStore;
+  const setBloqueos = setBloqueosStore;
+  const setEspera = setEsperaStore;
+  const setRecordatorios = setRecordatoriosStore;
+  const setTareas = setTareasStore;
 
-  const [bloqueos, setBloqueos] = useState<Bloqueo[]>([]);
-  const [espera, setEspera] = useState<Espera[]>(ESPERA_EJEMPLO);
-  const [recordatorios, setRecordatorios] = useState<Recordatorio[]>(
-    RECORDATORIOS_INICIAL,
-  );
-  const [tareas, setTareas] = useState<Tarea[]>(() => [
-    { ...TAREA_EJEMPLO, id: 1, fecha: hoyISO() },
-  ]);
+  // Odontólogos del equipo de la empresa y pacientes de su listado.
+  const { miembros } = useEquipo();
+  const { pacientes: listaPacientes } = usePacientes();
+  const odontologosEquipo = miembros
+    .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
+    .map((m) => `${m.firstName} ${m.lastName}`.trim())
+    .filter(Boolean);
 
   const [vista, setVista] = useState<Vista>("dia");
   const [modal, setModal] = useState<ModalActivo>(null);
@@ -1599,7 +1549,39 @@ function AgendaInner() {
   const cerrarModal = () => setModal(null);
 
   const nombresPacientes = Array.from(
-    new Set(turnos.map((t) => t.paciente)),
+    new Set([
+      ...listaPacientes.map((p) => `${p.nombre} ${p.apellido}`.trim()),
+      ...turnos.map((t) => t.paciente),
+      ...espera.map((e) => e.nombre),
+    ]),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const opcionesAgenda: OpcionesAgenda = {
+    odontologos: odontologosEquipo.length ? odontologosEquipo : ODONTOLOGOS,
+    pacientes: nombresPacientes,
+  };
+
+  /* Horarios libres del día visto (según filtros de odontólogo/gabinete si hay). */
+  const horariosLibres = HORARIOS_DEL_DIA.filter((hora) => {
+    const bloqueado = bloqueos.some(
+      (b) => b.fecha === fechaVista && hora >= b.desde && hora < b.hasta,
+    );
+    if (bloqueado) return false;
+    const ocupados = turnos.filter(
+      (t) =>
+        t.fecha === fechaVista &&
+        t.hora === hora &&
+        t.estado !== "Cancelada" &&
+        (!filtros.odontologo || t.odontologo === filtros.odontologo) &&
+        (!filtros.gabinete || t.gabinete === filtros.gabinete),
+    );
+    // Sin filtro: el horario está libre si queda algún odontólogo sin turno a esa hora.
+    return filtros.odontologo || filtros.gabinete
+      ? ocupados.length === 0
+      : ocupados.length < opcionesAgenda.odontologos.length;
+  }).filter(
+    (hora) =>
+      fechaVista > hoy || (fechaVista === hoy && hora > new Date().toTimeString().slice(0, 5)),
   );
 
   /* Datos derivados */
@@ -1614,12 +1596,9 @@ function AgendaInner() {
 
   const turnosHoy = turnos.filter((t) => t.fecha === hoy);
 
-  const contar = (estado: EstadoTurno) =>
-    turnosHoy.filter((t) => t.estado === estado).length;
+  const contar = (estado: EstadoTurno) => turnosHoy.filter((t) => t.estado === estado).length;
 
-  const turnosDia = turnos
-    .filter((t) => t.fecha === fechaVista)
-    .filter(pasaFiltros);
+  const turnosDia = turnos.filter((t) => t.fecha === fechaVista).filter(pasaFiltros);
 
   const bloqueosDia = bloqueos.filter((b) => b.fecha === fechaVista);
 
@@ -1638,9 +1617,7 @@ function AgendaInner() {
 
   const turnosLista = turnos
     .filter(pasaFiltros)
-    .sort((a, b) =>
-      `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`),
-    );
+    .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
 
   const semana = obtenerSemana(fechaVista);
 
@@ -1648,16 +1625,12 @@ function AgendaInner() {
 
   const turnosMes = turnos.filter(pasaFiltros);
 
-  const canalesActivos = recordatorios
-    .filter((r) => r.activo)
-    .map((r) => r.canal);
+  const canalesActivos = recordatorios.filter((r) => r.activo).map((r) => r.canal);
 
   const tareasOrdenadas = [...tareas].sort(
     (a, b) =>
       Number(a.hecha) - Number(b.hecha) ||
-      (a.fecha || "9999-99-99").localeCompare(
-        b.fecha || "9999-99-99",
-      ),
+      (a.fecha || "9999-99-99").localeCompare(b.fecha || "9999-99-99"),
   );
 
   const tareasPendientes = tareas.filter((t) => !t.hecha).length;
@@ -1665,9 +1638,7 @@ function AgendaInner() {
   /* Acciones */
 
   const cambiarEstado = (t: Turno, estado: EstadoTurno) => {
-    setTurnos((prev) =>
-      prev.map((x) => (x.id === t.id ? { ...x, estado } : x)),
-    );
+    setTurnos((prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
 
     show(`${t.paciente}: ${estado.toLowerCase()}`);
   };
@@ -1690,10 +1661,7 @@ function AgendaInner() {
     }
 
     const choqueBloqueo = bloqueos.some(
-      (b) =>
-        b.fecha === c.fecha &&
-        c.hora >= b.desde &&
-        c.hora < b.hasta,
+      (b) => b.fecha === c.fecha && c.hora >= b.desde && c.hora < b.hasta,
     );
 
     if (choqueBloqueo) {
@@ -1702,11 +1670,7 @@ function AgendaInner() {
     }
 
     if (editando) {
-      setTurnos((prev) =>
-        prev.map((t) =>
-          t.id === editando.id ? { ...t, ...c } : t,
-        ),
-      );
+      setTurnos((prev) => prev.map((t) => (t.id === editando.id ? { ...t, ...c } : t)));
 
       show("Cita actualizada");
     } else {
@@ -1720,34 +1684,28 @@ function AgendaInner() {
       ]);
 
       show(
-        c.fecha === hoy
-          ? "Cita creada para hoy"
-          : `Cita creada para el ${formatearFecha(c.fecha)}`,
+        c.fecha === hoy ? "Cita creada para hoy" : `Cita creada para el ${formatearFecha(c.fecha)}`,
       );
+
+      // Si la cita vino de la lista de espera, el paciente sale de la lista.
+      const esperaId = modal?.tipo === "cita" ? modal.esperaId : undefined;
+      if (esperaId) setEspera((prev) => prev.filter((e) => e.id !== esperaId));
     }
 
     cerrarModal();
   };
 
-  const agregarBloqueo = (
-    b: Omit<Bloqueo, "id">,
-  ): string | null => {
+  const agregarBloqueo = (b: Omit<Bloqueo, "id">): string | null => {
     const conTurnos = turnos.some(
       (t) =>
-        t.estado !== "Cancelada" &&
-        t.fecha === b.fecha &&
-        t.hora >= b.desde &&
-        t.hora < b.hasta,
+        t.estado !== "Cancelada" && t.fecha === b.fecha && t.hora >= b.desde && t.hora < b.hasta,
     );
 
     if (conTurnos) {
       return "Hay turnos en ese rango. Reprogramalos o cancelalos antes de bloquear.";
     }
 
-    setBloqueos((prev) => [
-      ...prev,
-      { ...b, id: Date.now() },
-    ]);
+    setBloqueos((prev) => [...prev, { ...b, id: Date.now() }]);
 
     cerrarModal();
     show(`Horario bloqueado: ${b.desde} a ${b.hasta}`);
@@ -1756,52 +1714,32 @@ function AgendaInner() {
   };
 
   const quitarBloqueo = (id: number) => {
-    setBloqueos((prev) =>
-      prev.filter((b) => b.id !== id),
-    );
+    setBloqueos((prev) => prev.filter((b) => b.id !== id));
 
     show("Horario desbloqueado");
   };
 
   const agregarEspera = (e: Omit<Espera, "id">) => {
-    setEspera((prev) => [
-      ...prev,
-      { ...e, id: Date.now() },
-    ]);
+    setEspera((prev) => [...prev, { ...e, id: Date.now() }]);
 
     cerrarModal();
     show(`${e.nombre} agregado a la lista de espera`);
   };
 
   const quitarEspera = (p: Espera) => {
-    setEspera((prev) =>
-      prev.filter((i) => i.id !== p.id),
-    );
+    setEspera((prev) => prev.filter((i) => i.id !== p.id));
 
     show(`${p.nombre} salió de la lista de espera`);
   };
 
   const alternarRecordatorio = (r: Recordatorio) => {
-    setRecordatorios((prev) =>
-      prev.map((x) =>
-        x.id === r.id
-          ? { ...x, activo: !x.activo }
-          : x,
-      ),
-    );
+    setRecordatorios((prev) => prev.map((x) => (x.id === r.id ? { ...x, activo: !x.activo } : x)));
 
-    show(
-      `Recordatorio por ${r.canal}: ${
-        r.activo ? "pausado" : "activado"
-      }`,
-    );
+    show(`Recordatorio por ${r.canal}: ${r.activo ? "pausado" : "activado"}`);
   };
 
   const agregarTarea = (t: NuevaTarea) => {
-    setTareas((prev) => [
-      ...prev,
-      { ...t, id: Date.now(), hecha: false },
-    ]);
+    setTareas((prev) => [...prev, { ...t, id: Date.now(), hecha: false }]);
 
     cerrarModal();
     show("Recordatorio guardado");
@@ -1810,12 +1748,7 @@ function AgendaInner() {
   const recordarLlamada = (t: Turno) => {
     const texto = `Llamar a ${t.paciente} por su turno de las ${t.hora}`;
 
-    const yaExiste = tareas.some(
-      (x) =>
-        !x.hecha &&
-        x.texto === texto &&
-        x.fecha === t.fecha,
-    );
+    const yaExiste = tareas.some((x) => !x.hecha && x.texto === texto && x.fecha === t.fecha);
 
     if (yaExiste) {
       show("Ya tenés ese recordatorio");
@@ -1838,890 +1771,829 @@ function AgendaInner() {
   };
 
   const alternarTarea = (t: Tarea) => {
-    setTareas((prev) =>
-      prev.map((x) =>
-        x.id === t.id
-          ? { ...x, hecha: !x.hecha }
-          : x,
-      ),
-    );
+    setTareas((prev) => prev.map((x) => (x.id === t.id ? { ...x, hecha: !x.hecha } : x)));
 
-    show(
-      t.hecha
-        ? "Recordatorio reabierto"
-        : "Recordatorio completado",
-    );
+    show(t.hecha ? "Recordatorio reabierto" : "Recordatorio completado");
   };
 
   const quitarTarea = (t: Tarea) => {
-    setTareas((prev) =>
-      prev.filter((x) => x.id !== t.id),
-    );
+    setTareas((prev) => prev.filter((x) => x.id !== t.id));
 
     show("Recordatorio eliminado");
   };
 
-  const modalCita =
-    modal?.tipo === "cita" ? modal : null;
+  const modalCita = modal?.tipo === "cita" ? modal : null;
 
   const mensajeVacio = hayFiltros
     ? "No hay turnos para los filtros elegidos."
     : "Todavía no hay turnos. Creá el primero con «Nueva cita».";
 
   return (
-    <AppShell>
-      <div className="relative min-h-full antialiased">
-        <FondoPacientes />
+    <OpcionesAgendaCtx.Provider value={opcionesAgenda}>
+      <AppShell>
+        <div className="relative min-h-full antialiased">
+          <FondoPacientes />
 
-        <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8">
-          {/* Encabezado */}
+          <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8">
+            {/* Encabezado */}
 
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-card/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary shadow-sm backdrop-blur-sm">
-                <CalendarDays className="size-3" />
-                Agenda
-              </div>
-
-              <h1 className="text-2xl font-bold tracking-tight">
-                Agenda y turnos
-              </h1>
-
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Gestioná citas, disponibilidad, profesionales,
-                gabinetes y lista de espera desde una única agenda.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setModal({ tipo: "bloqueo" })}
-                className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-card/80 px-3.5 py-1.5 text-xs font-semibold shadow-sm backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/5 hover:shadow-md"
-              >
-                <Lock className="size-3.5" />
-                Bloquear horario
-              </button>
-
-              <button
-                onClick={() => setModal({ tipo: "cita" })}
-                className="btn-ce"
-              >
-                <Plus className="size-3.5" />
-                Nueva cita
-              </button>
-            </div>
-          </div>
-
-          {/* Estadísticas */}
-
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard
-              label="Turnos de hoy"
-              value={turnosHoy.length}
-              icon={CalendarDays}
-            />
-
-            <StatCard
-              label="Confirmados"
-              value={contar("Confirmada")}
-              icon={Check}
-            />
-
-            <StatCard
-              label="Pendientes"
-              value={contar("Pendiente")}
-              icon={Clock}
-            />
-
-            <StatCard
-              label="Atendidos"
-              value={contar("Atendida")}
-              icon={CalendarCheck}
-            />
-          </div>
-
-          {/* Filtros */}
-
-          <div className={`${CARD} mt-3`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <IconTile icon={CalendarCheck} />
-
-                <div>
-                  <h2 className="text-sm font-semibold tracking-tight">
-                    Filtros de agenda
-                  </h2>
-
-                  <p className="hidden text-[11px] text-muted-foreground sm:block">
-                    Filtrá por sucursal, profesional, gabinete o tratamiento.
-                  </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-card/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary shadow-sm backdrop-blur-sm">
+                  <CalendarDays className="size-3" />
+                  Agenda
                 </div>
+
+                <h1 className="text-2xl font-bold tracking-tight">Agenda y turnos</h1>
+
+                <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera desde
+                  una única agenda.
+                </p>
               </div>
 
-              {hayFiltros && (
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() =>
-                    setFiltros({
-                      sucursal: "",
-                      odontologo: "",
-                      gabinete: "",
-                      tratamiento: "",
-                    })
-                  }
-                  className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
+                  onClick={() => setModal({ tipo: "bloqueo" })}
+                  className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-card/80 px-3.5 py-1.5 text-xs font-semibold shadow-sm backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/5 hover:shadow-md"
                 >
-                  Limpiar filtros
+                  <Lock className="size-3.5" />
+                  Bloquear horario
                 </button>
-              )}
+
+                <button onClick={() => setModal({ tipo: "cita" })} className="btn-ce">
+                  <Plus className="size-3.5" />
+                  Nueva cita
+                </button>
+              </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              <SelectField
-                compact
-                value={filtros.sucursal}
-                onChange={(v) =>
-                  setFiltros((f) => ({
-                    ...f,
-                    sucursal: v,
-                  }))
-                }
-                options={SUCURSALES}
-                placeholder="Todas las sucursales"
-              />
+            {/* Estadísticas */}
 
-              <SelectField
-                compact
-                value={filtros.odontologo}
-                onChange={(v) =>
-                  setFiltros((f) => ({
-                    ...f,
-                    odontologo: v,
-                  }))
-                }
-                options={ODONTOLOGOS}
-                placeholder="Todos los odontólogos"
-              />
+            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <StatCard label="Turnos de hoy" value={turnosHoy.length} icon={CalendarDays} />
 
-              <SelectField
-                compact
-                value={filtros.gabinete}
-                onChange={(v) =>
-                  setFiltros((f) => ({
-                    ...f,
-                    gabinete: v,
-                  }))
-                }
-                options={GABINETES}
-                placeholder="Todos los gabinetes"
-              />
+              <StatCard label="Confirmados" value={contar("Confirmada")} icon={Check} />
 
-              <SelectField
-                compact
-                value={filtros.tratamiento}
-                onChange={(v) =>
-                  setFiltros((f) => ({
-                    ...f,
-                    tratamiento: v,
-                  }))
-                }
-                options={TRATAMIENTOS}
-                placeholder="Todos los tratamientos"
-              />
+              <StatCard label="Pendientes" value={contar("Pendiente")} icon={Clock} />
+
+              <StatCard label="Atendidos" value={contar("Atendida")} icon={CalendarCheck} />
             </div>
-          </div>
 
-          {/* Selector de vistas */}
+            {/* Filtros */}
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-full border border-primary/20 bg-card/75 p-1 shadow-sm backdrop-blur-sm">
-              {VISTAS.map((v) => {
-                const Icon = v.icon;
-                const activa = vista === v.id;
+            <div className={`${CARD} mt-3`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <IconTile icon={CalendarCheck} />
 
-                return (
+                  <div>
+                    <h2 className="text-sm font-semibold tracking-tight">Filtros de agenda</h2>
+
+                    <p className="hidden text-[11px] text-muted-foreground sm:block">
+                      Filtrá por sucursal, profesional, gabinete o tratamiento.
+                    </p>
+                  </div>
+                </div>
+
+                {hayFiltros && (
                   <button
-                    key={v.id}
-                    onClick={() => setVista(v.id)}
-                    aria-pressed={activa}
-                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-all ${
-                      activa
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                    }`}
+                    onClick={() =>
+                      setFiltros({
+                        sucursal: "",
+                        odontologo: "",
+                        gabinete: "",
+                        tratamiento: "",
+                      })
+                    }
+                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
                   >
-                    <Icon className="size-3.5" />
-                    {v.label}
+                    Limpiar filtros
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                <SelectField
+                  compact
+                  value={filtros.sucursal}
+                  onChange={(v) =>
+                    setFiltros((f) => ({
+                      ...f,
+                      sucursal: v,
+                    }))
+                  }
+                  options={SUCURSALES}
+                  placeholder="Todas las sucursales"
+                />
+
+                <SelectField
+                  compact
+                  value={filtros.odontologo}
+                  onChange={(v) =>
+                    setFiltros((f) => ({
+                      ...f,
+                      odontologo: v,
+                    }))
+                  }
+                  options={opcionesAgenda.odontologos}
+                  placeholder="Todos los odontólogos"
+                />
+
+                <SelectField
+                  compact
+                  value={filtros.gabinete}
+                  onChange={(v) =>
+                    setFiltros((f) => ({
+                      ...f,
+                      gabinete: v,
+                    }))
+                  }
+                  options={GABINETES}
+                  placeholder="Todos los gabinetes"
+                />
+
+                <SelectField
+                  compact
+                  value={filtros.tratamiento}
+                  onChange={(v) =>
+                    setFiltros((f) => ({
+                      ...f,
+                      tratamiento: v,
+                    }))
+                  }
+                  options={TRATAMIENTOS}
+                  placeholder="Todos los tratamientos"
+                />
+              </div>
             </div>
 
-            <div className="text-[11px] font-medium text-muted-foreground">
-              {vista === "dia" && `${turnosDia.length} turnos`}
-              {vista === "semana" &&
-                `${turnosSemana.filter((t) => semana.includes(t.fecha)).length} turnos esta semana`}
-              {vista === "mes" &&
-                `${turnosMes.filter(
-                  (t) =>
-                    t.fecha.startsWith(
-                      fechaVista.slice(0, 7),
-                    ),
-                ).length} turnos este mes`}
-              {vista === "turnos" &&
-                `${turnosLista.length} turnos registrados`}
+            {/* Selector de vistas */}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="inline-flex rounded-full border border-primary/20 bg-card/75 p-1 shadow-sm backdrop-blur-sm">
+                {VISTAS.map((v) => {
+                  const Icon = v.icon;
+                  const activa = vista === v.id;
+
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setVista(v.id)}
+                      aria-pressed={activa}
+                      className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-all ${
+                        activa
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="size-3.5" />
+                      {v.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="text-[11px] font-medium text-muted-foreground">
+                {vista === "dia" && `${turnosDia.length} turnos`}
+                {vista === "semana" &&
+                  `${turnosSemana.filter((t) => semana.includes(t.fecha)).length} turnos esta semana`}
+                {vista === "mes" &&
+                  `${
+                    turnosMes.filter((t) => t.fecha.startsWith(fechaVista.slice(0, 7))).length
+                  } turnos este mes`}
+                {vista === "turnos" && `${turnosLista.length} turnos registrados`}
+              </div>
             </div>
-          </div>
 
-          {/* Layout principal */}
+            {/* Layout principal */}
 
-          <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-            {/* Columna principal */}
+            <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+              {/* Columna principal */}
 
-            <div className={CARD}>
-              {vista === "dia" && (
-                <>
-                  <PeriodNavigator
-                    vista={vista}
-                    fecha={fechaVista}
-                    onChange={setFechaVista}
-                  />
+              <div className={CARD}>
+                {vista === "dia" && (
+                  <>
+                    <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
 
-                  <div className="my-4 border-t border-primary/10" />
+                    <div className="my-4 border-t border-primary/10" />
 
-                  {itemsDia.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
-                      <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
-                        <CalendarDays className="size-5" />
+                    {itemsDia.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
+                        <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                          <CalendarDays className="size-5" />
+                        </div>
+
+                        <p className="mt-3 text-sm font-semibold">No hay actividad para este día</p>
+
+                        <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+                          {mensajeVacio}
+                        </p>
                       </div>
-
-                      <p className="mt-3 text-sm font-semibold">
-                        No hay actividad para este día
-                      </p>
-
-                      <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-                        {mensajeVacio}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {itemsDia.map((item) =>
-                        item.tipo === "bloqueo" ? (
-                          <div
-                            key={`b-${item.bloqueo.id}`}
-                            className="group relative flex flex-wrap items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/[0.035] p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md"
-                          >
-                            <div className="flex w-20 shrink-0 flex-col items-center rounded-2xl border border-primary/15 bg-primary/10 py-2.5 text-primary">
-                              <span className="text-lg font-bold leading-none tabular-nums">
-                                {item.bloqueo.desde}
-                              </span>
-
-                              <Lock className="mt-1 size-3.5 opacity-70" />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold">
-                                  Horario bloqueado
-                                </p>
-
-                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                  Bloqueado
+                    ) : (
+                      <div className="space-y-2.5">
+                        {itemsDia.map((item) =>
+                          item.tipo === "bloqueo" ? (
+                            <div
+                              key={`b-${item.bloqueo.id}`}
+                              className="group relative flex flex-wrap items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/[0.035] p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md"
+                            >
+                              <div className="flex w-20 shrink-0 flex-col items-center rounded-2xl border border-primary/15 bg-primary/10 py-2.5 text-primary">
+                                <span className="text-lg font-bold leading-none tabular-nums">
+                                  {item.bloqueo.desde}
                                 </span>
+
+                                <Lock className="mt-1 size-3.5 opacity-70" />
                               </div>
 
-                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                {item.bloqueo.desde} a{" "}
-                                {item.bloqueo.hasta} ·{" "}
-                                {item.bloqueo.motivo}
-                              </p>
-                            </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold">Horario bloqueado</p>
 
-                            <BotonAccion
-                              label="Desbloquear"
-                              onClick={() =>
-                                quitarBloqueo(
-                                  item.bloqueo.id,
-                                )
-                              }
-                            />
-                          </div>
-                        ) : (
-                          <TurnoCard
-                            key={`t-${item.turno.id}`}
-                            turno={item.turno}
-                            canalesActivos={canalesActivos}
-                            onEstado={cambiarEstado}
-                            onRecordar={recordarLlamada}
-                            onEditar={(turno) =>
-                              setModal({
-                                tipo: "cita",
-                                turno,
-                              })
-                            }
-                          />
-                        ),
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
+                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                    Bloqueado
+                                  </span>
+                                </div>
 
-              {vista === "semana" && (
-                <>
-                  <PeriodNavigator
-                    vista={vista}
-                    fecha={fechaVista}
-                    onChange={setFechaVista}
-                  />
-
-                  <div className="my-4 border-t border-primary/10" />
-
-                  <SemanaView
-                    semana={semana}
-                    turnos={turnosSemana}
-                    bloqueos={bloqueos}
-                    onEditar={(turno) =>
-                      setModal({
-                        tipo: "cita",
-                        turno,
-                      })
-                    }
-                  />
-                </>
-              )}
-
-              {vista === "mes" && (
-                <>
-                  <PeriodNavigator
-                    vista={vista}
-                    fecha={fechaVista}
-                    onChange={setFechaVista}
-                  />
-
-                  <div className="my-4 border-t border-primary/10" />
-
-                  <MesView
-                    fecha={fechaVista}
-                    turnos={turnosMes}
-                    onEditar={(turno) =>
-                      setModal({
-                        tipo: "cita",
-                        turno,
-                      })
-                    }
-                  />
-                </>
-              )}
-
-              {vista === "turnos" && (
-                <>
-                  <PeriodNavigator
-                    vista={vista}
-                    fecha={fechaVista}
-                    onChange={setFechaVista}
-                  />
-
-                  <div className="my-4 border-t border-primary/10" />
-
-                  {turnosLista.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
-                      <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
-                        <CalendarCheck className="size-5" />
-                      </div>
-
-                      <p className="mt-3 text-sm font-semibold">
-                        No hay turnos
-                      </p>
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {mensajeVacio}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {turnosLista.map((turno) => (
-                        <div
-                          key={turno.id}
-                          className="group rounded-2xl border border-primary/15 bg-card/75 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                        >
-                          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                            <div className="flex shrink-0 items-center gap-2.5 md:w-[155px]">
-                              <div className="grid size-10 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
-                                <CalendarDays className="size-4" />
-                              </div>
-
-                              <div>
-                                <p className="text-xs font-bold tabular-nums">
-                                  {formatearFecha(
-                                    turno.fecha,
-                                  )}
-                                </p>
-
-                                <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
-                                  {turno.hora}
+                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                  {item.bloqueo.desde} a {item.bloqueo.hasta} ·{" "}
+                                  {item.bloqueo.motivo}
                                 </p>
                               </div>
+
+                              <BotonAccion
+                                label="Desbloquear"
+                                onClick={() => quitarBloqueo(item.bloqueo.id)}
+                              />
                             </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold">
-                                  {turno.paciente}
-                                </p>
-
-                                <EstadoBadge
-                                  estado={turno.estado}
-                                />
-                              </div>
-
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {turno.tratamiento}
-                              </p>
-
-                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                                <span>{turno.odontologo}</span>
-                                <span>{turno.sucursal}</span>
-                                <span>{turno.gabinete}</span>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() =>
+                          ) : (
+                            <TurnoCard
+                              key={`t-${item.turno.id}`}
+                              turno={item.turno}
+                              canalesActivos={canalesActivos}
+                              onEstado={cambiarEstado}
+                              onRecordar={recordarLlamada}
+                              onEditar={(turno) =>
                                 setModal({
                                   tipo: "cita",
                                   turno,
                                 })
                               }
-                              className="flex items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-card px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
-                            >
-                              <Pencil className="size-3.5" />
-                              Editar
-                            </button>
-                          </div>
+                            />
+                          ),
+                        )}
+                      </div>
+                    )}
+
+                    {/* Horarios libres: tocás uno y se abre la cita con fecha y hora cargadas */}
+                    {fechaVista >= hoy && (
+                      <div className="mt-5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-3.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold">
+                            Horarios libres
+                            {filtros.odontologo ? ` · ${filtros.odontologo}` : ""}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {horariosLibres.length} disponibles · tocá uno para agendar
+                          </p>
                         </div>
-                      ))}
+                        {horariosLibres.length === 0 ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            No quedan horarios libres para este día.
+                          </p>
+                        ) : (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {horariosLibres.map((hora) => (
+                              <button
+                                key={hora}
+                                type="button"
+                                onClick={() =>
+                                  setModal({
+                                    tipo: "cita",
+                                    prefill: {
+                                      fecha: fechaVista,
+                                      hora,
+                                      ...(filtros.odontologo
+                                        ? { odontologo: filtros.odontologo }
+                                        : {}),
+                                      ...(filtros.gabinete ? { gabinete: filtros.gabinete } : {}),
+                                      ...(filtros.sucursal ? { sucursal: filtros.sucursal } : {}),
+                                    },
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold tabular-nums text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                              >
+                                <Plus className="size-3" />
+                                {hora}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {vista === "semana" && (
+                  <>
+                    <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
+
+                    <div className="my-4 border-t border-primary/10" />
+
+                    <SemanaView
+                      semana={semana}
+                      turnos={turnosSemana}
+                      bloqueos={bloqueos}
+                      onEditar={(turno) =>
+                        setModal({
+                          tipo: "cita",
+                          turno,
+                        })
+                      }
+                    />
+                  </>
+                )}
+
+                {vista === "mes" && (
+                  <>
+                    <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
+
+                    <div className="my-4 border-t border-primary/10" />
+
+                    <MesView
+                      fecha={fechaVista}
+                      turnos={turnosMes}
+                      onEditar={(turno) =>
+                        setModal({
+                          tipo: "cita",
+                          turno,
+                        })
+                      }
+                    />
+                  </>
+                )}
+
+                {vista === "turnos" && (
+                  <>
+                    <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
+
+                    <div className="my-4 border-t border-primary/10" />
+
+                    {turnosLista.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
+                        <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                          <CalendarCheck className="size-5" />
+                        </div>
+
+                        <p className="mt-3 text-sm font-semibold">No hay turnos</p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">{mensajeVacio}</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {turnosLista.map((turno) => (
+                          <div
+                            key={turno.id}
+                            className="group rounded-2xl border border-primary/15 bg-card/75 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                          >
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="flex shrink-0 items-center gap-2.5 md:w-[155px]">
+                                <div className="grid size-10 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+                                  <CalendarDays className="size-4" />
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-bold tabular-nums">
+                                    {formatearFecha(turno.fecha)}
+                                  </p>
+
+                                  <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
+                                    {turno.hora}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold">{turno.paciente}</p>
+
+                                  <EstadoBadge estado={turno.estado} />
+                                </div>
+
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {turno.tratamiento}
+                                </p>
+
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                                  <span>{turno.odontologo}</span>
+                                  <span>{turno.sucursal}</span>
+                                  <span>{turno.gabinete}</span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() =>
+                                  setModal({
+                                    tipo: "cita",
+                                    turno,
+                                  })
+                                }
+                                className="flex items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-card px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
+                              >
+                                <Pencil className="size-3.5" />
+                                Editar
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Columna derecha */}
+
+              <div className="space-y-3">
+                {/* Lista de espera */}
+
+                <div className={CARD}>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <IconTile icon={Users} />
+
+                      <div>
+                        <h2 className="text-sm font-semibold tracking-tight">Lista de espera</h2>
+
+                        <p className="text-[10px] text-muted-foreground">
+                          Pacientes aguardando disponibilidad
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
 
-            {/* Columna derecha */}
-
-            <div className="space-y-3">
-              {/* Lista de espera */}
-
-              <div className={CARD}>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <IconTile icon={Users} />
-
-                    <div>
-                      <h2 className="text-sm font-semibold tracking-tight">
-                        Lista de espera
-                      </h2>
-
-                      <p className="text-[10px] text-muted-foreground">
-                        Pacientes aguardando disponibilidad
-                      </p>
-                    </div>
+                    <button
+                      onClick={() => setModal({ tipo: "espera" })}
+                      className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <UserPlus className="size-3.5" />
+                      Agregar
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() =>
-                      setModal({ tipo: "espera" })
-                    }
-                    className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
-                  >
-                    <UserPlus className="size-3.5" />
-                    Agregar
-                  </button>
-                </div>
-
-                {espera.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-primary/15 py-5 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      No hay pacientes en espera
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2.5">
-                    {espera.map((p) => {
-                      const franja =
-                        FRANJA_META[p.franja] ?? {
+                  {espera.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-primary/15 py-5 text-center">
+                      <p className="text-xs text-muted-foreground">No hay pacientes en espera</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {espera.map((p) => {
+                        const franja = FRANJA_META[p.franja] ?? {
                           icon: Clock,
-                          chip:
-                            "bg-primary/10 text-primary",
+                          chip: "bg-primary/10 text-primary",
                         };
 
-                      const FranjaIcon = franja.icon;
+                        const FranjaIcon = franja.icon;
 
-                      return (
-                        <li
-                          key={p.id}
-                          className={`${ITEM} p-3`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-bold text-primary">
-                              {iniciales(p.nombre)}
-                            </span>
+                        return (
+                          <li key={p.id} className={`${ITEM} p-3`}>
+                            <div className="flex items-start gap-3">
+                              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-bold text-primary">
+                                {iniciales(p.nombre)}
+                              </span>
 
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold">
-                                {p.nombre}
-                              </p>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold">{p.nombre}</p>
 
-                              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                {p.motivo}
-                              </p>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                  {p.motivo}
+                                </p>
+                              </div>
+
+                              <button
+                                onClick={() => quitarEspera(p)}
+                                aria-label={`Quitar a ${p.nombre} de la lista de espera`}
+                                className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="mt-2.5 flex flex-wrap gap-1.5">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${franja.chip}`}
+                              >
+                                <FranjaIcon className="size-3" />
+                                {p.franja}
+                              </span>
+
+                              <span className="inline-flex items-center gap-1 rounded-full border border-primary/10 bg-card px-2.5 py-0.5 text-[10px] font-medium">
+                                <MapPin className="size-3 text-muted-foreground" />
+                                {p.sucursal}
+                              </span>
                             </div>
 
                             <button
-                              onClick={() => quitarEspera(p)}
-                              aria-label={`Quitar a ${p.nombre} de la lista de espera`}
+                              type="button"
+                              onClick={() =>
+                                setModal({
+                                  tipo: "cita",
+                                  esperaId: p.id,
+                                  prefill: {
+                                    paciente: p.nombre,
+                                    tratamiento: TRATAMIENTOS.includes(p.motivo)
+                                      ? p.motivo
+                                      : TRATAMIENTOS[0]!,
+                                    sucursal: p.sucursal,
+                                    fecha: fechaVista >= hoy ? fechaVista : hoy,
+                                  },
+                                })
+                              }
+                              className="btn-ce-outline mt-2.5 w-full"
+                            >
+                              <CalendarDays />
+                              Asignar turno
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Recordatorios y tareas */}
+
+                <div className={CARD}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <IconTile icon={Bell} />
+
+                      <div>
+                        <h2 className="text-sm font-semibold tracking-tight">
+                          Recordatorios y tareas
+                        </h2>
+
+                        <p className="text-[10px] text-muted-foreground">
+                          Pendientes internos del consultorio
+                        </p>
+                      </div>
+
+                      {tareasPendientes > 0 && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary tabular-nums">
+                          {tareasPendientes}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setModal({ tipo: "tarea" })}
+                      className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <Plus className="size-3.5" />
+                      Agregar
+                    </button>
+                  </div>
+
+                  <p className="mb-3 mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Llamar a un paciente, comprar insumos y otros pendientes del equipo.
+                  </p>
+
+                  {tareasOrdenadas.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-primary/15 py-5 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        No hay recordatorios pendientes
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {tareasOrdenadas.map((t) => {
+                        const vencida = !t.hecha && !!t.fecha && t.fecha < hoy;
+
+                        const cat = CATEGORIA_META[t.categoria] ?? CATEGORIA_DEFAULT;
+
+                        const CatIcon = cat.icon;
+
+                        const barra = t.hecha
+                          ? "bg-muted-foreground/30"
+                          : vencida
+                            ? "bg-destructive"
+                            : cat.bar;
+
+                        return (
+                          <li
+                            key={t.id}
+                            className={`${ITEM} relative flex items-start gap-3 overflow-hidden p-3 pl-4`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`absolute inset-y-0 left-0 w-1 ${barra}`}
+                            />
+
+                            <button
+                              onClick={() => alternarTarea(t)}
+                              aria-label={t.hecha ? "Marcar como pendiente" : "Marcar como hecho"}
+                              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors ${
+                                t.hecha
+                                  ? "border-emerald-500 bg-emerald-500 text-white"
+                                  : "border-primary/15 bg-card hover:border-primary"
+                              }`}
+                            >
+                              {t.hecha && <Check className="size-3.5" />}
+                            </button>
+
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-sm font-medium leading-snug ${
+                                  t.hecha ? "text-muted-foreground line-through" : ""
+                                }`}
+                              >
+                                {t.texto}
+                              </p>
+
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${cat.chip}`}
+                                >
+                                  <CatIcon className="size-3" />
+                                  {t.categoria}
+                                </span>
+
+                                {t.paciente && (
+                                  <span className="rounded-full border border-primary/10 bg-card px-2.5 py-0.5 text-[10px] font-medium">
+                                    {t.paciente}
+                                  </span>
+                                )}
+
+                                {t.fecha && (
+                                  <span
+                                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                                      vencida
+                                        ? "bg-destructive/10 text-destructive"
+                                        : t.fecha === hoy && !t.hecha
+                                          ? "bg-primary/10 text-primary"
+                                          : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {vencida
+                                      ? `Vencido · ${formatearFecha(t.fecha)}`
+                                      : t.fecha === hoy
+                                        ? "Hoy"
+                                        : formatearFecha(t.fecha)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => quitarTarea(t)}
+                              aria-label="Eliminar recordatorio"
                               className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             >
                               <Trash2 className="size-3.5" />
                             </button>
-                          </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
 
-                          <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${franja.chip}`}
-                            >
-                              <FranjaIcon className="size-3" />
-                              {p.franja}
-                            </span>
+                {/* Recordatorios automáticos */}
 
-                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/10 bg-card px-2.5 py-0.5 text-[10px] font-medium">
-                              <MapPin className="size-3 text-muted-foreground" />
-                              {p.sucursal}
-                            </span>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-
-              {/* Recordatorios y tareas */}
-
-              <div className={CARD}>
-                <div className="mb-1 flex items-center justify-between gap-2">
+                <div className={CARD}>
                   <div className="flex items-center gap-2">
-                    <IconTile icon={Bell} />
+                    <IconTile icon={BellRing} />
 
                     <div>
                       <h2 className="text-sm font-semibold tracking-tight">
-                        Recordatorios y tareas
+                        Recordatorios automáticos
                       </h2>
 
                       <p className="text-[10px] text-muted-foreground">
-                        Pendientes internos del consultorio
+                        Canales activos para tus pacientes
                       </p>
                     </div>
-
-                    {tareasPendientes > 0 && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary tabular-nums">
-                        {tareasPendientes}
-                      </span>
-                    )}
                   </div>
 
-                  <button
-                    onClick={() =>
-                      setModal({ tipo: "tarea" })
-                    }
-                    className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
-                  >
-                    <Plus className="size-3.5" />
-                    Agregar
-                  </button>
-                </div>
+                  <p className="mb-3 mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Mensajes que se envían solos antes de cada cita.
+                  </p>
 
-                <p className="mb-3 mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Llamar a un paciente, comprar insumos y otros
-                  pendientes del equipo.
-                </p>
-
-                {tareasOrdenadas.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-primary/15 py-5 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      No hay recordatorios pendientes
-                    </p>
-                  </div>
-                ) : (
                   <ul className="space-y-2.5">
-                    {tareasOrdenadas.map((t) => {
-                      const vencida =
-                        !t.hecha &&
-                        !!t.fecha &&
-                        t.fecha < hoy;
-
-                      const cat =
-                        CATEGORIA_META[t.categoria] ??
-                        CATEGORIA_DEFAULT;
-
-                      const CatIcon = cat.icon;
-
-                      const barra = t.hecha
-                        ? "bg-muted-foreground/30"
-                        : vencida
-                          ? "bg-destructive"
-                          : cat.bar;
+                    {recordatorios.map((r) => {
+                      const { icon: CanalIcon, tile } = canalMeta(r.canal);
 
                       return (
                         <li
-                          key={t.id}
-                          className={`${ITEM} relative flex items-start gap-3 overflow-hidden p-3 pl-4`}
+                          key={r.id}
+                          className={`${ITEM} flex items-center justify-between gap-3 p-3 ${
+                            r.activo ? "" : "opacity-70"
+                          }`}
                         >
-                          <span
-                            aria-hidden
-                            className={`absolute inset-y-0 left-0 w-1 ${barra}`}
-                          />
-
-                          <button
-                            onClick={() =>
-                              alternarTarea(t)
-                            }
-                            aria-label={
-                              t.hecha
-                                ? "Marcar como pendiente"
-                                : "Marcar como hecho"
-                            }
-                            className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors ${
-                              t.hecha
-                                ? "border-emerald-500 bg-emerald-500 text-white"
-                                : "border-primary/15 bg-card hover:border-primary"
-                            }`}
-                          >
-                            {t.hecha && (
-                              <Check className="size-3.5" />
-                            )}
-                          </button>
-
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={`text-sm font-medium leading-snug ${
-                                t.hecha
-                                  ? "text-muted-foreground line-through"
-                                  : ""
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span
+                              className={`grid size-9 shrink-0 place-items-center rounded-xl border border-primary/10 transition-colors ${
+                                r.activo ? tile : "bg-muted text-muted-foreground"
                               }`}
                             >
-                              {t.texto}
-                            </p>
+                              <CanalIcon className="size-4" />
+                            </span>
 
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${cat.chip}`}
-                              >
-                                <CatIcon className="size-3" />
-                                {t.categoria}
-                              </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold">{r.canal}</p>
 
-                              {t.paciente && (
-                                <span className="rounded-full border border-primary/10 bg-card px-2.5 py-0.5 text-[10px] font-medium">
-                                  {t.paciente}
-                                </span>
-                              )}
-
-                              {t.fecha && (
-                                <span
-                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                                    vencida
-                                      ? "bg-destructive/10 text-destructive"
-                                      : t.fecha === hoy &&
-                                          !t.hecha
-                                        ? "bg-primary/10 text-primary"
-                                        : "bg-muted text-muted-foreground"
-                                  }`}
-                                >
-                                  {vencida
-                                    ? `Vencido · ${formatearFecha(
-                                        t.fecha,
-                                      )}`
-                                    : t.fecha === hoy
-                                      ? "Hoy"
-                                      : formatearFecha(
-                                          t.fecha,
-                                        )}
-                                </span>
-                              )}
+                              <p className="mt-0.5 text-[10px] text-muted-foreground">{r.cuando}</p>
                             </div>
                           </div>
 
                           <button
-                            onClick={() => quitarTarea(t)}
-                            aria-label="Eliminar recordatorio"
-                            className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => alternarRecordatorio(r)}
+                            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold transition-colors ${
+                              r.activo
+                                ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                                : "bg-muted text-muted-foreground hover:bg-muted/70"
+                            }`}
                           >
-                            <Trash2 className="size-3.5" />
+                            <span
+                              className={`size-1.5 rounded-full ${
+                                r.activo ? "bg-emerald-500" : "bg-muted-foreground/50"
+                              }`}
+                            />
+
+                            {r.activo ? "Activo" : "Pausado"}
                           </button>
                         </li>
                       );
                     })}
                   </ul>
-                )}
-              </div>
-
-              {/* Recordatorios automáticos */}
-
-              <div className={CARD}>
-                <div className="flex items-center gap-2">
-                  <IconTile icon={BellRing} />
-
-                  <div>
-                    <h2 className="text-sm font-semibold tracking-tight">
-                      Recordatorios automáticos
-                    </h2>
-
-                    <p className="text-[10px] text-muted-foreground">
-                      Canales activos para tus pacientes
-                    </p>
-                  </div>
                 </div>
-
-                <p className="mb-3 mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Mensajes que se envían solos antes de cada cita.
-                </p>
-
-                <ul className="space-y-2.5">
-                  {recordatorios.map((r) => {
-                    const {
-                      icon: CanalIcon,
-                      tile,
-                    } = canalMeta(r.canal);
-
-                    return (
-                      <li
-                        key={r.id}
-                        className={`${ITEM} flex items-center justify-between gap-3 p-3 ${
-                          r.activo ? "" : "opacity-70"
-                        }`}
-                      >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span
-                            className={`grid size-9 shrink-0 place-items-center rounded-xl border border-primary/10 transition-colors ${
-                              r.activo
-                                ? tile
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <CanalIcon className="size-4" />
-                          </span>
-
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold">
-                              {r.canal}
-                            </p>
-
-                            <p className="mt-0.5 text-[10px] text-muted-foreground">
-                              {r.cuando}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() =>
-                            alternarRecordatorio(r)
-                          }
-                          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold transition-colors ${
-                            r.activo
-                              ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
-                              : "bg-muted text-muted-foreground hover:bg-muted/70"
-                          }`}
-                        >
-                          <span
-                            className={`size-1.5 rounded-full ${
-                              r.activo
-                                ? "bg-emerald-500"
-                                : "bg-muted-foreground/50"
-                            }`}
-                          />
-
-                          {r.activo
-                            ? "Activo"
-                            : "Pausado"}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modales */}
+        {/* Modales */}
 
-      {modalCita && (
-        <Modal
-          title={
-            modalCita.turno
-              ? "Editar cita"
-              : "Nueva cita"
-          }
-          subtitle="Asigná paciente, odontólogo, gabinete y horario."
-          onClose={cerrarModal}
-        >
-          <CitaForm
-            inicial={modalCita.turno}
-            pacientes={nombresPacientes}
-            onSubmit={guardarCita}
-            onCancel={cerrarModal}
-          />
-        </Modal>
-      )}
+        {modalCita && (
+          <Modal
+            title={modalCita.turno ? "Editar cita" : "Nueva cita"}
+            subtitle="Asigná paciente, odontólogo, gabinete y horario."
+            onClose={cerrarModal}
+          >
+            <CitaForm
+              inicial={modalCita.turno}
+              prefill={modalCita.prefill}
+              pacientes={nombresPacientes}
+              onSubmit={guardarCita}
+              onCancel={cerrarModal}
+            />
+          </Modal>
+        )}
 
-      {modal?.tipo === "bloqueo" && (
-        <Modal
-          title="Bloquear horario"
-          subtitle="Reservá un rango horario para que no se agenden citas."
-          onClose={cerrarModal}
-        >
-          <BloqueoForm
-            onSubmit={agregarBloqueo}
-            onCancel={cerrarModal}
-          />
-        </Modal>
-      )}
+        {modal?.tipo === "bloqueo" && (
+          <Modal
+            title="Bloquear horario"
+            subtitle="Reservá un rango horario para que no se agenden citas."
+            onClose={cerrarModal}
+          >
+            <BloqueoForm onSubmit={agregarBloqueo} onCancel={cerrarModal} />
+          </Modal>
+        )}
 
-      {modal?.tipo === "espera" && (
-        <Modal
-          title="Agregar a la lista de espera"
-          subtitle="Avisaremos cuando se libere un turno."
-          onClose={cerrarModal}
-        >
-          <EsperaForm
-            pacientes={nombresPacientes}
-            onSubmit={agregarEspera}
-            onCancel={cerrarModal}
-          />
-        </Modal>
-      )}
+        {modal?.tipo === "espera" && (
+          <Modal
+            title="Agregar a la lista de espera"
+            subtitle="Avisaremos cuando se libere un turno."
+            onClose={cerrarModal}
+          >
+            <EsperaForm
+              pacientes={nombresPacientes}
+              onSubmit={agregarEspera}
+              onCancel={cerrarModal}
+            />
+          </Modal>
+        )}
 
-      {modal?.tipo === "tarea" && (
-        <Modal
-          title="Nuevo recordatorio"
-          subtitle="Anotá algo pendiente: llamar a un paciente, comprar insumos, etc."
-          onClose={cerrarModal}
-        >
-          <TareaForm
-            pacientes={nombresPacientes}
-            onSubmit={agregarTarea}
-            onCancel={cerrarModal}
-          />
-        </Modal>
-      )}
+        {modal?.tipo === "tarea" && (
+          <Modal
+            title="Nuevo recordatorio"
+            subtitle="Anotá algo pendiente: llamar a un paciente, comprar insumos, etc."
+            onClose={cerrarModal}
+          >
+            <TareaForm
+              pacientes={nombresPacientes}
+              onSubmit={agregarTarea}
+              onCancel={cerrarModal}
+            />
+          </Modal>
+        )}
 
-      {message && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-full border border-primary/20 bg-foreground px-4 py-2 text-sm font-medium text-background shadow-xl">
-          {message}
-        </div>
-      )}
-    </AppShell>
+        {message && (
+          <div className="fixed bottom-6 right-6 z-50 rounded-full border border-primary/20 bg-foreground px-4 py-2 text-sm font-medium text-background shadow-xl">
+            {message}
+          </div>
+        )}
+      </AppShell>
+    </OpcionesAgendaCtx.Provider>
   );
 }
 

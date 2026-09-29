@@ -43,7 +43,7 @@ import type {
   Cambiar,
   Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
-import { OdontogramaSec } from "@/components/cloud-esther/Odontograma2D";
+import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type {
   Paciente,
@@ -1361,8 +1361,10 @@ function CarpetaPaciente({
               </div>
             </div>
           ) : seccion === "odontograma" ? (
-            <OdontogramaSec
-              pacienteId={paciente.id}
+            <OdontogramaGate
+              key={paciente.id}
+              pacienteId={String(paciente.id)}
+              pacienteNombre={nombreCompleto(paciente)}
               onToast={onToast}
             />
           ) : (

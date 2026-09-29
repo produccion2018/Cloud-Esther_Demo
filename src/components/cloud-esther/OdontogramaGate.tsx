@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock, Sparkles, Grid3x3, Box, RotateCcw, Check } from "lucide-react";
-import { PLANS, planLevel, type PlanId } from "@/lib/cloud-esther/data";
+import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 import { Odontogram3D } from "@/components/odontogram/Odontogram3D";
 import { defaultChart, TEETH_BY_FDI, type ToothState } from "@/lib/odontogram/fdi";
 import { registrarCambio } from "@/lib/odontogram/historial";
@@ -12,16 +14,11 @@ import { EstherAIChat } from "@/components/odontogram/EstherAIChat";
 
 type Props = {
   pacienteId: string;
+  pacienteNombre?: string | undefined;
   onToast: (msg: string) => void;
-  plan: string;
 };
 
 const PLAN_MINIMO_3D: PlanId = "avanzada";
-
-function resolverPlanId(nombrePlan: string): PlanId {
-  const encontrado = Object.values(PLANS).find((p) => p.name === nombrePlan);
-  return encontrado?.id ?? "inicial";
-}
 
 function claveAlmacenamiento(pacienteId: string) {
   return `cloud-esther:odontograma3d:${pacienteId}`;
@@ -53,7 +50,11 @@ const TAB_INACTIVO =
 const BTN_ICONO =
   "inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive";
 
-export function OdontogramaGate({ pacienteId, onToast, plan }: Props) {
+export function OdontogramaGate({ pacienteId, pacienteNombre, onToast }: Props) {
+  // Plan elegido en el sidebar ("Plan activo") y clínica de la sesión (tenant).
+  const { plan: planId } = useCloudEsther();
+  const { clinicId } = useSesion();
+  const plan = PLANS[planId].name;
   const [modo, setModo] = useState<"2d" | "3d">("2d");
   const [chart, setChart] = useState<Record<number, ToothState>>(() => cargarChart(pacienteId));
   const [fdiSeleccionado, setFdiSeleccionado] = useState<number | null>(null);
@@ -64,7 +65,6 @@ export function OdontogramaGate({ pacienteId, onToast, plan }: Props) {
     setFdiSeleccionado(null);
   }, [pacienteId]);
 
-  const planId = resolverPlanId(plan);
   const tieneAcceso3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
 
   const handleChange = (fdi: number, state: ToothState, next: Record<number, ToothState>) => {
@@ -190,7 +190,13 @@ export function OdontogramaGate({ pacienteId, onToast, plan }: Props) {
         </div>
       ) : (
         <>
-          <Odontograma2DPlaceholder pacienteId={pacienteId} />
+          <Odontograma2D
+            tenantId={clinicId ?? "demo"}
+            patientId={pacienteId}
+            patientName={pacienteNombre ?? "este paciente"}
+            plan={planId}
+            onToast={onToast}
+          />
 
           <div ref={radiografiasRef}>
             <RadiografiasPanel
@@ -219,24 +225,6 @@ function UpgradeAviso({ planActual }: { planActual: string }) {
 
         <p className="mt-1 text-sm text-muted-foreground">
           Plan actual: {planActual}. Necesitás {PLANS[PLAN_MINIMO_3D].name} o superior para activarlo.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Odontograma2DPlaceholder({ pacienteId }: { pacienteId: string }) {
-  return (
-    <div className={`${CARD} grid min-h-64 place-items-center border-dashed text-center`}>
-      <div>
-        <Grid3x3 className="mx-auto size-8 text-primary/50" />
-
-        <p className="mt-2 text-sm font-semibold text-foreground">
-          Odontograma 2D
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Paciente: {pacienteId}
         </p>
       </div>
     </div>

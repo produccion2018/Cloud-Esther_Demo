@@ -18,10 +18,6 @@ import type { Paciente } from "@/lib/cloud-esther/pacientes";
 
 export type SeccionDirectaId = SeccionRegistros | "odontograma";
 
-/* TODO: reemplazar por el origen real del plan contratado de la clínica
-   (contexto de auth, AppShell, etc). Placeholder temporal para que compile. */
-const PLAN_ACTUAL = "Clínica Avanzada";
-
 /* Head común de las rutas (título + tipografía Inter, igual que Pacientes). */
 export const headSeccion = (titulo: string) => () => ({
   meta: [{ title: `${titulo} | Cloud Esther` }],
@@ -359,7 +355,12 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
               {/* Sección */}
               <div className="mt-4 rounded-2xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]">
                 {seccion === "odontograma" ? (
-                  <OdontogramaGate key={activo.id} pacienteId={activo.id} onToast={show} plan={PLAN_ACTUAL} />
+                  <OdontogramaGate
+                    key={activo.id}
+                    pacienteId={String(activo.id)}
+                    pacienteNombre={`${activo.nombre} ${activo.apellido}`.trim()}
+                    onToast={show}
+                  />
                 ) : (
                   <SeccionPaciente
                     key={`${activo.id}-${seccion}`}

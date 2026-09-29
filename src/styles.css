@@ -113,6 +113,20 @@
   --gradient-glow: radial-gradient(60% 60% at 50% 0%, oklch(0.75 0.16 300 / 0.35), transparent 70%);
   --shadow-soft: 0 1px 2px oklch(0.32 0.14 296 / 0.06), 0 12px 30px oklch(0.32 0.14 296 / 0.08);
   --shadow-glow: 0 20px 60px oklch(0.52 0.22 296 / 0.28);
+
+  /* Odontograma 2D: color de las piezas y de cada hallazgo (sirven en claro y oscuro) */
+  --tooth: oklch(0.96 0.017 85);
+  --tooth-shade: oklch(0.89 0.035 80);
+  --tooth-line: oklch(0.62 0.07 60);
+  --caries: oklch(0.65 0.2 15);
+  --obturacion: oklch(0.68 0.16 240);
+  --sellante: oklch(0.74 0.16 155);
+  --fractura: oklch(0.72 0.16 60);
+  --corona: oklch(0.82 0.16 95);
+  --endodoncia: oklch(0.63 0.19 310);
+  --implante: oklch(0.72 0.12 210);
+  --extraccion: oklch(0.62 0.21 22);
+  --ausente: oklch(0.6 0.02 290);
 }
 
 .dark {
@@ -182,6 +196,14 @@
 
 @utility shadow-glow {
   box-shadow: var(--shadow-glow);
+}
+
+/* Tarjetas del Odontograma 2D (mismo estilo que el resto de las tarjetas de la app) */
+@utility card-clinic {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft);
 }
 
 @utility card-premium {

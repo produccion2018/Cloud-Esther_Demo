@@ -13,15 +13,15 @@ export type Plan = {
 };
 
 /**
- * Precios de referencia. Los valores no incluyen IVA;
- * el texto "+ IVA" se agrega en el componente de presentación (PlanCards).
+ * Precios de referencia. Los valores no incluyen impuestos;
+ * el texto "+ impuestos" se agrega en el componente de presentación (PlanCards).
  */
 export const plans: Plan[] = [
   {
     id: "esencial",
-    name: "Esencial",
+    name: "Start",
     tagline: "Para clínicas que están comenzando.",
-    price: "$79.900",
+    price: "$250.000",
     setup: "$149.000",
     branches: "1 sucursal",
     users: "Hasta 5 usuarios",
@@ -42,16 +42,16 @@ export const plans: Plan[] = [
 
   {
     id: "profesional",
-    name: "Profesional",
+    name: "Pro",
     tagline: "Para clínicas en crecimiento.",
-    price: "$139.900",
+    price: "$350.000",
     setup: "$259.000",
     branches: "Hasta 3 sucursales",
     users: "Hasta 15 usuarios",
     support: "Soporte prioritario",
     modules: "Módulos esenciales + gestión",
     features: [
-      "Todo lo del plan Esencial",
+      "Todo lo del plan Start",
       "Comunicación con pacientes",
       "Presupuestos y pagos",
       "Estudios y diagnóstico",
@@ -68,16 +68,16 @@ export const plans: Plan[] = [
 
   {
     id: "avanzado",
-    name: "Avanzado",
+    name: "Plus",
     tagline: "Para clínicas con mayor volumen.",
-    price: "$249.900",
+    price: "$650.000",
     setup: "$449.000",
     branches: "Hasta 6 sucursales",
     users: "Hasta 40 usuarios",
     support: "Soporte prioritario 24/5",
     modules: "Módulos avanzados",
     features: [
-      "Todo lo del plan Profesional",
+      "Todo lo del plan Pro",
       "Odontograma 3D",
       "Estudios y diagnóstico avanzado",
       "Comunicación con pacientes",
@@ -95,14 +95,14 @@ export const plans: Plan[] = [
     id: "enterprise",
     name: "Enterprise",
     tagline: "Para grupos odontológicos y organizaciones.",
-    price: "$429.900",
+    price: "$850.000",
     setup: "$749.000",
     branches: "Sucursales ilimitadas",
     users: "Usuarios ilimitados",
     support: "Soporte dedicado 24/7",
     modules: "Todos los módulos",
     features: [
-      "Todo lo del plan Avanzado",
+      "Todo lo del plan Plus",
       "Odontograma 3D avanzado",
       "Comunicación avanzada",
       "Marketing y captación avanzada",
@@ -121,9 +121,9 @@ export const plans: Plan[] = [
  * Comparación de módulos incluidos en cada plan.
  *
  * Orden:
- * 0 = Esencial
- * 1 = Profesional
- * 2 = Avanzado
+ * 0 = Start
+ * 1 = Pro
+ * 2 = Plus
  * 3 = Enterprise
  */
 export const comparison: { feature: string; values: string[] }[] = [
@@ -189,7 +189,7 @@ export const comparison: { feature: string; values: string[] }[] = [
  * independientemente del plan contratado.
  *
  * Los precios son valores de referencia iniciales.
- * Se muestran sin IVA para luego calcular el impuesto.
+ * Se muestran sin impuestos para luego calcularlos.
  */
 export type AdditionalModule = {
   id: string;
@@ -206,7 +206,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Odontograma en 3D para visualizar piezas, tratamientos, estados y evolución clínica. El odontograma básico ya está incluido en todos los planes.",
     price: "$34.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "esther-ia",
@@ -214,7 +214,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Asistente inteligente para resúmenes clínicos, agenda y análisis del rendimiento.",
     price: "$49.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "auditoria",
@@ -222,7 +222,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Registro y trazabilidad de acciones de usuarios para control y cumplimiento.",
     price: "$29.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "marketing",
@@ -230,7 +230,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Herramientas para campañas, captación y seguimiento de oportunidades.",
     price: "$42.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "comunicacion",
@@ -238,7 +238,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Herramientas avanzadas para comunicación y seguimiento de pacientes.",
     price: "$42.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "inventario",
@@ -246,7 +246,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Control de insumos, stock, movimientos y disponibilidad.",
     price: "$34.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "recursos-humanos",
@@ -254,7 +254,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Gestión del equipo y automatizaciones de procesos mediante n8n.",
     price: "$54.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "portal-paciente",
@@ -262,7 +262,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Acceso del paciente a información, documentos, turnos y comunicaciones.",
     price: "$34.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "analitica-avanzada",
@@ -270,7 +270,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Indicadores y análisis avanzados para conocer el rendimiento de la clínica.",
     price: "$42.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "laboratorio",
@@ -278,7 +278,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Gestión y seguimiento de trabajos enviados al laboratorio.",
     price: "$34.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "estudios-diagnostico",
@@ -286,7 +286,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Gestión de estudios, imágenes, diagnósticos y documentación asociada.",
     price: "$34.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
   {
     id: "integraciones",
@@ -294,7 +294,7 @@ export const additionalModules: AdditionalModule[] = [
     description:
       "Conexión con servicios externos y automatización de procesos.",
     price: "$49.900",
-    billing: "por mes + IVA",
+    billing: "por mes + impuestos",
   },
 ];
 
@@ -344,11 +344,11 @@ export const faqs = [
   },
   {
     q: "¿Puedo contratar módulos adicionales?",
-    a: "Sí. Podés contratar módulos individuales además de tu plan actual. Por ejemplo, una clínica puede contratar el plan Esencial y agregar el Odontograma 3D o Esther IA sin necesidad de cambiar de plan.",
+    a: "Sí. Podés contratar módulos individuales además de tu plan actual. Por ejemplo, una clínica puede contratar el plan Start y agregar el Odontograma 3D o Esther IA sin necesidad de cambiar de plan.",
   },
   {
     q: "¿Puedo administrar varias sucursales?",
-    a: "Desde el plan Profesional podés gestionar múltiples sucursales con agendas, equipos y reportes independientes.",
+    a: "Desde el plan Pro podés gestionar múltiples sucursales con agendas, equipos y reportes independientes.",
   },
   {
     q: "¿Puedo agregar diferentes usuarios?",

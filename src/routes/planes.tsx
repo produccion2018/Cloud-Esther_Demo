@@ -355,7 +355,7 @@ function Planes() {
                       Un ejemplo de contratación
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Plan Esencial + Odontograma + Esther IA
+                      Plan Start + Odontograma + Esther IA
                     </p>
                   </div>
                 </div>
@@ -464,7 +464,7 @@ function Planes() {
           <Reveal delay={0.15}>
             <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
               Los módulos adicionales se agregan al plan contratado y se
-              facturan por separado. Los precios indicados no incluyen IVA.
+              facturan por separado. Los precios indicados no incluyen impuestos.
             </p>
           </Reveal>
         </div>

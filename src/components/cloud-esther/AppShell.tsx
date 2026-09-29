@@ -321,10 +321,6 @@ function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
   );
 }
 
-/* ───────────── Utilidades de color: generar toda la paleta del sidebar
-   a partir de un único color elegido por el usuario, en tono SUAVE
-   (pastel), acorde a la estética de baja saturación del resto de la app ───────────── */
-
 function hexToRgb(hex: string) {
   const clean = hex.replace("#", "");
   const bigint = parseInt(clean, 16);
@@ -351,20 +347,13 @@ function luminance(hex: string) {
   return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
 }
 
-/** A partir de un color base, arma toda la paleta de variables del sidebar,
- *  siempre en versión suavizada (pastel), nunca el color puro y fuerte. */
 function buildSidebarPalette(baseHex: string, dark: boolean): React.CSSProperties {
-  // Fondo: en modo claro, un tinte muy suave del color (85% hacia blanco);
-  // en modo oscuro, el color se apaga bastante hacia un gris oscuro neutro
-  // en vez de quedar un fondo saturado tipo "rojo intenso".
   const background = dark ? mix(baseHex, "black", 0.86) : mix(baseHex, "white", 0.87);
 
   const foreground = dark ? mix(baseHex, "white", 0.82) : mix(baseHex, "black", 0.72);
   const accent = dark ? mix(baseHex, "black", 0.72) : mix(baseHex, "white", 0.72);
   const accentForeground = foreground;
   const border = dark ? mix(baseHex, "black", 0.68) : mix(baseHex, "white", 0.62);
-  // El acento "primary" (detalle del ítem activo, botones) mantiene algo
-  // más de presencia del color elegido, pero sigue siendo suave.
   const primary = dark ? mix(baseHex, "white", 0.28) : mix(baseHex, "black", 0.12);
   const primaryForeground = "#ffffff";
 
@@ -392,6 +381,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
     document.documentElement.style.fontSize = FONT_SIZE_PX[settings.fontSize];
+
+    // Al salir de esta sección (por ejemplo, al cerrar sesión y volver a la
+    // landing pública), se restaura el documento a su estado normal para no
+    // dejar el modo oscuro o el tamaño de fuente "pegado" fuera de la app.
+    return () => {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.fontSize = "";
+    };
   }, [settings.darkModePage, settings.fontSize]);
 
   const colorHex = SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed";

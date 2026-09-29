@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Lock } from "lucide-react";
+import { ClipboardList, History, Lock, MousePointerClick } from "lucide-react";
 import { Tooth } from "./Tooth";
 import { PLANS, planLevel, type PlanId } from "@/lib/cloud-esther/data";
-import { Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, type ToothDef } from "@/lib/odontograma2d/teeth";
+import { cargarTratamientos, guardarTratamiento } from "@/lib/odontogram/historial";
+import {
+  Q1,
+  Q2,
+  Q3,
+  Q4,
+  Q5,
+  Q6,
+  Q7,
+  Q8,
+  TOOTH_BY_FDI,
+  type ToothDef,
+} from "@/lib/odontograma2d/teeth";
 import {
   FINDING_COLOR_VAR,
   FINDING_LABELS,
@@ -54,6 +66,59 @@ function cargar(tenantId: string, patientId: string): OdontogramState {
   }
 }
 
+/* Historial / evolución del odontograma 2D (qué se marcó o quitó, cuándo y en qué pieza). */
+interface EntradaHistorial {
+  id: string;
+  fecha: string;
+  fdi: string;
+  detalle: string;
+}
+
+function claveHistorial(tenantId: string, patientId: string) {
+  return `${claveGuardado(tenantId, patientId)}:historial`;
+}
+
+function cargarHistorial2D(tenantId: string, patientId: string): EntradaHistorial[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(claveHistorial(tenantId, patientId));
+    return raw ? (JSON.parse(raw) as EntradaHistorial[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarHistorial2D(tenantId: string, patientId: string, entradas: EntradaHistorial[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(claveHistorial(tenantId, patientId), JSON.stringify(entradas));
+  } catch {
+    /* almacenamiento no disponible: se ignora */
+  }
+}
+
+const NOMBRE_TIPO: Record<ToothDef["type"], string> = {
+  incisivo: "Incisivo",
+  canino: "Canino",
+  premolar: "Premolar",
+  molar: "Molar",
+};
+
+function nombrePieza(t: ToothDef) {
+  const arcada = t.arch === "upper" ? "superior" : "inferior";
+  const lado = [1, 4, 5, 8].includes(t.quadrant) ? "derecho" : "izquierdo";
+  return `${NOMBRE_TIPO[t.type]} ${arcada} ${lado}${t.primary ? " (temporal)" : ""}`;
+}
+
+function formatearFecha(iso: string) {
+  return new Date(iso).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function guardar(tenantId: string, patientId: string, state: OdontogramState) {
   if (typeof window === "undefined") return;
   try {
@@ -69,11 +134,23 @@ interface OdontogramProps {
   patientName: string;
   plan: PlanId;
   onToast?: ((msg: string) => void) | undefined;
+  /** Avisa qué pieza está seleccionada (para imágenes clínicas y radiografías). */
+  onSelectTooth?: ((fdi: number | null) => void) | undefined;
 }
 
-export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: OdontogramProps) {
+export function Odontogram({
+  tenantId,
+  patientId,
+  patientName,
+  plan,
+  onToast,
+  onSelectTooth,
+}: OdontogramProps) {
   const [tool, setTool] = useState<Tool>("caries");
   const [store, setStore] = useState<TenantOdontograms>({});
+  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [historial, setHistorial] = useState<EntradaHistorial[]>([]);
+  const [nota, setNota] = useState("");
   const completo = planLevel(plan) >= planLevel(PLAN_COMPLETO);
 
   // Carga lo guardado de este paciente al montar o al cambiar de paciente/clínica.
@@ -83,7 +160,39 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
       ...prev,
       [tenantId]: { ...(prev[tenantId] ?? {}), [patientId]: guardado },
     }));
+    setHistorial(cargarHistorial2D(tenantId, patientId));
+    setSeleccionada(null);
   }, [tenantId, patientId]);
+
+  // Nota / tratamiento planificado de la pieza seleccionada (compartido con el 3D).
+  useEffect(() => {
+    setNota(
+      seleccionada
+        ? (cargarTratamientos(odontogramKey(tenantId, patientId))[Number(seleccionada)] ?? "")
+        : "",
+    );
+  }, [tenantId, patientId, seleccionada]);
+
+  const seleccionar = (fdi: string | null) => {
+    setSeleccionada(fdi);
+    onSelectTooth?.(fdi ? Number(fdi) : null);
+  };
+
+  const registrar = (fdi: string, detalle: string) => {
+    setHistorial((prev) => {
+      const next = [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          fecha: new Date().toISOString(),
+          fdi,
+          detalle,
+        },
+        ...prev,
+      ].slice(0, 200);
+      guardarHistorial2D(tenantId, patientId, next);
+      return next;
+    });
+  };
 
   // Si el plan baja y la herramienta elegida ya no está incluida, vuelve a Caries.
   useEffect(() => {
@@ -105,6 +214,19 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
 
   const handleSurface = (fdi: string, surface: Surface) => {
     if (isWholeFinding(tool)) return handleWhole(fdi);
+    seleccionar(fdi);
+    const previo = state[fdi]?.surfaces[surface];
+    const zona = SURFACE_LABELS[surface];
+    if (tool === "borrar" || previo === tool) {
+      if (previo) registrar(fdi, `Quitó ${FINDING_LABELS[previo]} (${zona})`);
+    } else {
+      registrar(
+        fdi,
+        previo
+          ? `${FINDING_LABELS[previo]} → ${FINDING_LABELS[tool]} (${zona})`
+          : `Marcó ${FINDING_LABELS[tool]} (${zona})`,
+      );
+    }
     update((prev) => {
       const t = prev[fdi] ?? EMPTY;
       const surfaces = { ...t.surfaces };
@@ -115,6 +237,19 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
   };
 
   const handleWhole = (fdi: string) => {
+    seleccionar(fdi);
+    const actual = state[fdi] ?? EMPTY;
+    if (tool === "borrar") {
+      if (actual.whole.length || Object.keys(actual.surfaces).length)
+        registrar(fdi, "Limpió la pieza");
+    } else if (isWholeFinding(tool)) {
+      registrar(
+        fdi,
+        actual.whole.includes(tool)
+          ? `Quitó ${FINDING_LABELS[tool]} (pieza completa)`
+          : `Marcó ${FINDING_LABELS[tool]} (pieza completa)`,
+      );
+    }
     update((prev) => {
       const t = prev[fdi] ?? EMPTY;
       if (tool === "borrar") return { ...prev, [fdi]: { surfaces: {}, whole: [] } };
@@ -126,7 +261,26 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
 
   const clearAll = () => {
     update(() => ({}));
+    setHistorial((prev) => {
+      const next = [
+        {
+          id: `${Date.now()}`,
+          fecha: new Date().toISOString(),
+          fdi: "—",
+          detalle: "Limpió todo el odontograma",
+        },
+        ...prev,
+      ];
+      guardarHistorial2D(tenantId, patientId, next);
+      return next;
+    });
     onToast?.("Odontograma limpiado");
+  };
+
+  const guardarNota = (texto: string) => {
+    setNota(texto);
+    if (seleccionada)
+      guardarTratamiento(odontogramKey(tenantId, patientId), Number(seleccionada), texto);
   };
 
   const findings = useMemo(() => {
@@ -165,9 +319,17 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
           className={`${WIDTH[t.type]} ${primary ? "max-w-[46px]" : ""} flex flex-col items-center gap-1`}
         >
           {t.arch === "lower" && (
-            <span className="text-[0.6rem] font-semibold text-muted-foreground">{t.fdi}</span>
+            <EtiquetaFdi
+              fdi={t.fdi}
+              activa={seleccionada === t.fdi}
+              onClick={() => seleccionar(seleccionada === t.fdi ? null : t.fdi)}
+            />
           )}
-          <div className={`w-full ${primary ? "aspect-[100/150]" : "aspect-[100/190]"}`}>
+          <div
+            className={`w-full rounded-md ${primary ? "aspect-[100/150]" : "aspect-[100/190]"} ${
+              seleccionada === t.fdi ? "bg-primary/10 ring-2 ring-primary/40" : ""
+            }`}
+          >
             <Tooth
               tooth={t}
               state={state[t.fdi] ?? EMPTY}
@@ -176,7 +338,11 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
             />
           </div>
           {t.arch === "upper" && (
-            <span className="text-[0.6rem] font-semibold text-muted-foreground">{t.fdi}</span>
+            <EtiquetaFdi
+              fdi={t.fdi}
+              activa={seleccionada === t.fdi}
+              onClick={() => seleccionar(seleccionada === t.fdi ? null : t.fdi)}
+            />
           )}
         </div>
       ))}
@@ -264,6 +430,37 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
         </div>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Pieza seleccionada */}
+        <PiezaSeleccionada
+          fdi={seleccionada}
+          estado={seleccionada ? (state[seleccionada] ?? EMPTY) : EMPTY}
+          nota={nota}
+          onNota={guardarNota}
+          notasHabilitadas={completo}
+          planNecesario={PLANS[PLAN_COMPLETO].name}
+        />
+
+        {/* Historial / evolución */}
+        <div className="card-clinic p-4 sm:p-5">
+          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+            <History className="h-4 w-4 text-primary" />
+            Historial / Evolución {seleccionada ? `· pieza ${seleccionada}` : ""}
+          </h2>
+          {!completo ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3 w-3" />
+              El historial de evolución está disponible desde el plan {PLANS[PLAN_COMPLETO].name}.
+            </p>
+          ) : (
+            <HistorialLista
+              entradas={seleccionada ? historial.filter((e) => e.fdi === seleccionada) : historial}
+              porPieza={!!seleccionada}
+            />
+          )}
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* Lista de hallazgos */}
         <div className="card-clinic p-4 sm:p-5">
@@ -318,6 +515,162 @@ export function Odontogram({ tenantId, patientId, patientName, plan, onToast }: 
         </div>
       </section>
     </div>
+  );
+}
+
+function EtiquetaFdi({
+  fdi,
+  activa,
+  onClick,
+}: {
+  fdi: string;
+  activa: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Ver detalle de la pieza ${fdi}`}
+      className={`rounded px-1 text-[0.6rem] font-semibold transition-colors ${
+        activa ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-primary"
+      }`}
+    >
+      {fdi}
+    </button>
+  );
+}
+
+function PiezaSeleccionada({
+  fdi,
+  estado,
+  nota,
+  onNota,
+  notasHabilitadas,
+  planNecesario,
+}: {
+  fdi: string | null;
+  estado: ToothState;
+  nota: string;
+  onNota: (texto: string) => void;
+  notasHabilitadas: boolean;
+  planNecesario: string;
+}) {
+  const def = fdi ? TOOTH_BY_FDI[fdi] : undefined;
+  if (!fdi || !def) {
+    return (
+      <div className="card-clinic grid place-items-center p-4 text-center sm:p-5">
+        <div>
+          <MousePointerClick className="mx-auto h-6 w-6 text-primary/60" />
+          <p className="mt-2 text-sm font-semibold">Detalle de la pieza</p>
+          <p className="text-xs text-muted-foreground">
+            Tocá un diente o su número para ver sus hallazgos y notas.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  const superficies = Object.keys(estado.surfaces) as Surface[];
+  return (
+    <div className="card-clinic p-4 sm:p-5">
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
+          {fdi}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold">{nombrePieza(def)}</p>
+          <p className="text-xs text-muted-foreground">
+            {def.arch === "upper" ? "Arcada superior" : "Arcada inferior"} · cuadrante{" "}
+            {def.quadrant}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-1.5">
+        {estado.whole.length === 0 && superficies.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Pieza sana: sin hallazgos registrados.</p>
+        ) : (
+          <>
+            {estado.whole.map((w) => (
+              <p key={w} className="flex items-center gap-2 text-xs">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: FINDING_COLOR_VAR[w] }}
+                />
+                <span className="font-medium">{FINDING_LABELS[w]}</span>
+                <span className="text-muted-foreground">· pieza completa</span>
+              </p>
+            ))}
+            {superficies.map((sup) => {
+              const f = estado.surfaces[sup]!;
+              return (
+                <p key={sup} className="flex items-center gap-2 text-xs">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: FINDING_COLOR_VAR[f] }}
+                  />
+                  <span className="font-medium">{FINDING_LABELS[f]}</span>
+                  <span className="text-muted-foreground">· {SURFACE_LABELS[sup]}</span>
+                </p>
+              );
+            })}
+          </>
+        )}
+      </div>
+
+      <label className="mt-4 block">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <ClipboardList className="h-3.5 w-3.5" />
+          Tratamiento planificado / notas
+        </span>
+        {notasHabilitadas ? (
+          <textarea
+            value={nota}
+            onChange={(e) => onNota(e.target.value)}
+            rows={3}
+            placeholder="Ej: Obturación con resina en oclusal, control en 6 meses…"
+            className="mt-1.5 w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
+          />
+        ) : (
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Lock className="h-3 w-3" />
+            Disponible desde el plan {planNecesario}.
+          </p>
+        )}
+      </label>
+    </div>
+  );
+}
+
+function HistorialLista({
+  entradas,
+  porPieza,
+}: {
+  entradas: EntradaHistorial[];
+  porPieza: boolean;
+}) {
+  if (entradas.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {porPieza
+          ? "Todavía no hay cambios registrados para esta pieza."
+          : "Todavía no hay cambios registrados en este odontograma."}
+      </p>
+    );
+  }
+  return (
+    <ol className="max-h-64 space-y-1.5 overflow-y-auto border-l border-border pl-3">
+      {entradas.slice(0, 30).map((e) => (
+        <li key={e.id} className="relative py-0.5">
+          <span className="absolute -left-[17px] top-[5px] h-2 w-2 rounded-full border-2 border-card bg-primary" />
+          <p className="text-[10px] font-semibold text-muted-foreground">
+            {formatearFecha(e.fecha)}
+            {!porPieza && e.fdi !== "—" ? ` · Pieza ${e.fdi}` : ""}
+          </p>
+          <p className="text-xs">{e.detalle}</p>
+        </li>
+      ))}
+    </ol>
   );
 }
 

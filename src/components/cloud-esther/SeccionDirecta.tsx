@@ -16,7 +16,7 @@ import type { Paciente } from "@/lib/cloud-esther/pacientes";
    y se abre directamente la sección elegida (historia, recetas, estudios, tratamientos, odontograma…).
    Usa exactamente los mismos componentes y datos que la carpeta del paciente. */
 
-export type SeccionDirectaId = SeccionRegistros | "odontograma";
+export type SeccionDirectaId = SeccionRegistros | "odontograma" | "odontograma-3d";
 
 /* Head común de las rutas (título + tipografía Inter, igual que Pacientes). */
 export const headSeccion = (titulo: string) => () => ({
@@ -354,9 +354,10 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
 
               {/* Sección */}
               <div className="mt-4 rounded-2xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]">
-                {seccion === "odontograma" ? (
+                {seccion === "odontograma" || seccion === "odontograma-3d" ? (
                   <OdontogramaGate
-                    key={activo.id}
+                    key={`${activo.id}-${seccion}`}
+                    vista={seccion === "odontograma" ? "2d" : "3d"}
                     pacienteId={String(activo.id)}
                     pacienteNombre={`${activo.nombre} ${activo.apellido}`.trim()}
                     onToast={show}

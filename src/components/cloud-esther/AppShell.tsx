@@ -173,7 +173,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
               {visible.map((m) => {
                 const unlocked = availableIn(m, plan);
                 const off = disabled.includes(m.id);
-                const active = m.path === "/demo" ? pathname === "/demo" : pathname.startsWith(m.path);
+                const active =
+                  m.path === "/demo" ? pathname === "/demo" : pathname === m.path || pathname.startsWith(`${m.path}/`);
 
                 if (!unlocked) {
                   return (

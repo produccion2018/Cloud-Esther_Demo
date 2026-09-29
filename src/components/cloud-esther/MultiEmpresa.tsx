@@ -23,8 +23,8 @@ import {
 import { toast } from "sonner";
 
 import { registrarEvento } from "@/components/cloud-esther/Finanzas";
-import type { PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
-import { activarEmpresa, useEmpresas } from "@/lib/cloud-esther/empresa-store";
+import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 
 /* ───────────────────────── Tipos y datos demo ───────────────────────── */
 
@@ -832,51 +832,49 @@ export function MultiEmpresa() {
   const [sucursales, setSucursales] = useState<Sucursal[]>(SUCURSALES_INICIALES);
   const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIALES);
   const [activaId, setActivaId] = useState(CLINICAS_INICIALES[0].id);
-  const { empresas: registradas, activa: registradaActiva } = useEmpresas();
+  const { usuario: usuarioSesion, clinica: clinicaSesion } = useSesion();
+  const { plan: planDemo } = useCloudEsther();
 
-  // Las empresas registradas en /registro se suman como clínicas (tenants),
-  // con su contacto como administrador, y la activa queda seleccionada.
+  // La clínica de la sesión (la empresa que se registró) se suma como tenant,
+  // con su usuario como administrador, y queda como clínica activa.
   useEffect(() => {
-    if (registradas.length === 0) return;
+    if (!clinicaSesion || !usuarioSesion) return;
     setClinicas((prev) => {
-      const nuevas = registradas.map((r, i): Clinica => {
-        const previa = prev.find((c) => c.id === r.id);
-        return {
-          razonSocial: r.nombre,
-          cuit: "—",
-          ciudad: "—",
-          estado: "En prueba",
-          color: COLORES[i % COLORES.length] ?? "#7c3aed",
-          almacenamiento: 0,
-          ...previa,
-          id: r.id,
-          nombre: r.nombre,
-          adminEmail: r.email,
-          plan: PLAN_DESDE_DEMO[r.plan],
-          alta: r.alta,
-        };
-      });
-      return [...nuevas, ...prev.filter((c) => !registradas.some((r) => r.id === c.id))];
+      const previa = prev.find((c) => c.id === clinicaSesion.id);
+      const propia: Clinica = {
+        razonSocial: clinicaSesion.nombre,
+        cuit: "—",
+        ciudad: "—",
+        estado: "En prueba",
+        color: "#7c3aed",
+        almacenamiento: 0,
+        alta: new Date().toISOString().slice(0, 10),
+        ...previa,
+        id: clinicaSesion.id,
+        nombre: clinicaSesion.nombre,
+        adminEmail: usuarioSesion.email,
+        plan: PLAN_DESDE_DEMO[planDemo],
+      };
+      return [propia, ...prev.filter((c) => c.id !== clinicaSesion.id)];
     });
-    setUsuarios((prev) => {
-      const faltantes = registradas
-        .filter((r) => !prev.some((u) => u.clinic_id === r.id))
-        .map((r): Usuario => ({
-          id: `u_${r.id}`,
-          clinic_id: r.id,
-          nombre: r.contacto,
-          email: r.email,
-          rol: "Administrador",
-          activo: true,
-          ultimoAcceso: "Hoy",
-        }));
-      return faltantes.length ? [...faltantes, ...prev] : prev;
-    });
-  }, [registradas]);
-
-  useEffect(() => {
-    if (registradaActiva) setActivaId(registradaActiva.id);
-  }, [registradaActiva]);
+    setUsuarios((prev) =>
+      prev.some((u) => u.id === usuarioSesion.id)
+        ? prev
+        : [
+            {
+              id: usuarioSesion.id,
+              clinic_id: clinicaSesion.id,
+              nombre: usuarioSesion.nombre,
+              email: usuarioSesion.email,
+              rol: "Administrador",
+              activo: true,
+              ultimoAcceso: "Hoy",
+            },
+            ...prev,
+          ],
+    );
+    setActivaId(clinicaSesion.id);
+  }, [clinicaSesion, usuarioSesion, planDemo]);
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroPlan, setFiltroPlan] = useState<"Todos" | PlanId>("Todos");
@@ -939,7 +937,6 @@ export function MultiEmpresa() {
 
   function usarClinica(c: Clinica) {
     setActivaId(c.id);
-    activarEmpresa(c.id);
     setDetalleId(null);
     registrarEvento({
       modulo: "Multiempresa",

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
-import { registrarEmpresa } from "@/lib/cloud-esther/empresa-store";
+import { registrarCuenta } from "@/lib/cloud-esther/auth-store";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -35,9 +35,10 @@ function Registro() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(plan ?? "profesional");
   const [sent, setSent] = useState(false);
-  const [clinica, setClinica] = useState("");
-  const [contacto, setContacto] = useState("");
-  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
+
+  const primerNombre = cuenta?.nombre.split(" ")[0] ?? "";
 
   return (
     <PublicLayout>
@@ -65,9 +66,23 @@ function Registro() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const planId = mapSitePlanToPlanId(selected);
-                    setStoredPlan(planId);
-                    registrarEmpresa({ nombre: clinica, contacto, email, plan: planId });
+                    const form = new FormData(e.currentTarget);
+                    const clinica = String(form.get("clinica") ?? "");
+                    const nombre = String(form.get("contacto") ?? "");
+                    const email = String(form.get("email") ?? "");
+
+                    const res = registrarCuenta({ clinica, nombre, email });
+                    if (!res.ok) {
+                      setError(res.error);
+                      return;
+                    }
+
+                    setError(null);
+                    setStoredPlan(mapSitePlanToPlanId(selected));
+                    setCuenta({
+                      nombre: res.sesion.usuario.nombre,
+                      clinica: res.sesion.clinica.nombre,
+                    });
                     setSent(true);
                   }}
                   className="card-premium mt-10 space-y-5 p-6 lg:p-8"
@@ -77,36 +92,28 @@ function Registro() {
                       <Label htmlFor="clinica">Nombre de la clínica</Label>
                       <Input
                         id="clinica"
+                        name="clinica"
                         required
-                        value={clinica}
-                        onChange={(e) => setClinica(e.target.value)}
                         placeholder="Clínica Dental Esther"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contacto">Nombre de contacto</Label>
-                      <Input
-                        id="contacto"
-                        required
-                        value={contacto}
-                        onChange={(e) => setContacto(e.target.value)}
-                        placeholder="Esther Méndez"
-                      />
+                      <Input id="contacto" name="contacto" required placeholder="Esther Méndez" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="esther.mendez@esther.com"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
-                      <Input id="pass" type="password" required placeholder="••••••••" />
+                      <Input id="pass" name="pass" type="password" required placeholder="••••••••" />
                     </div>
                   </div>
 
@@ -133,6 +140,12 @@ function Registro() {
                       ))}
                     </div>
                   </div>
+
+                  {error && (
+                    <p role="alert" className="text-sm font-medium text-destructive">
+                      {error}
+                    </p>
+                  )}
 
                   <Button type="submit" variant="hero" size="xl" className="w-full">
                     Crear cuenta y entrar al panel <ArrowRight className="size-4" />
@@ -166,8 +179,7 @@ function Registro() {
                   Revisá tu correo electrónico
                 </h1>
                 <p className="mt-3 text-muted-foreground">
-                  Te enviamos un correo de confirmación a{" "}
-                  <span className="font-medium text-foreground">{email}</span>.
+                  Te enviamos un correo de confirmación.
                 </p>
 
                 <motion.div
@@ -183,14 +195,14 @@ function Registro() {
                     <div className="leading-tight">
                       <p className="text-xs font-semibold">Cloud Esther</p>
                       <p className="text-[11px] text-muted-foreground">
-                        hola@cloudesther.com · para {email}
+                        hola@cloudesther.com · para vos
                       </p>
                     </div>
                   </div>
                   <p className="mt-3 text-sm font-semibold">Confirmá tu cuenta</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Hola {contacto.trim().split(/\s+/)[0]}, tu cuenta de {clinica.trim()} está casi
-                    lista. Confirmá tu correo para entrar al panel de Cloud Esther.
+                    Hola {primerNombre}, tu cuenta de {cuenta?.clinica} está casi lista. Confirmá
+                    tu correo para entrar al panel de Cloud Esther.
                   </p>
                   <span className="bg-brand mt-4 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground">
                     Confirmar cuenta

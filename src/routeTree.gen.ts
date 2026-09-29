@@ -62,7 +62,7 @@ const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/demo.lazy').then((d) => d.Route))
 const DemostracionRoute = DemostracionRouteImport.update({
   id: '/demostracion',
   path: '/demostracion',

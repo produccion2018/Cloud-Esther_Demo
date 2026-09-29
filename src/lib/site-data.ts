@@ -2,10 +2,35 @@ export type Plan = {
   id: string;
   name: string;
   tagline: string;
-  price: string;
-  setup: string;
+  /** Los precios se cargan desde el panel administrativo (backend). */
+  price?: string;
+  setup?: string;
+
+  /** Límite de sucursales dentro del tenant/organización. */
   branches: string;
+
+  /**
+   * Usuarios internos del tenant:
+   * odontólogos, asistentes, secretarias, administradores, etc.
+   * Se mantiene `users` por compatibilidad con PlanCards.
+   */
   users: string;
+
+  /**
+   * Se mantiene el campo por compatibilidad con componentes existentes.
+   * Comercialmente se muestra como pacientes registrados, no como
+   * "usuarios externos", ya que los pacientes no son necesariamente
+   * usuarios del sistema.
+   */
+  externalUsers: string;
+
+  /**
+   * Se mantiene por compatibilidad.
+   * Vacío mientras el portal de pacientes no forme parte de la oferta
+   * comercial activa del producto.
+   */
+  portalLimit: string;
+
   support: string;
   modules: string;
   features: string[];
@@ -13,18 +38,24 @@ export type Plan = {
 };
 
 /**
- * Precios de referencia. Los valores no incluyen IVA;
- * el texto "+ IVA" se agrega en el componente de presentación (PlanCards).
+ * Los planes no incluyen precios:
+ * se cargan desde el panel administrativo.
+ *
+ * Arquitectura comercial:
+ * Start → Pro → Plus → Enterprise
+ *
+ * Cloud Esther funciona como SaaS multitenant.
+ * Los límites indicados corresponden a cada tenant/organización.
  */
 export const plans: Plan[] = [
   {
     id: "esencial",
-    name: "Esencial",
+    name: "Start",
     tagline: "Para clínicas que están comenzando.",
-    price: "$79.900",
-    setup: "$149.000",
     branches: "1 sucursal",
-    users: "Hasta 5 usuarios",
+    users: "Hasta 5 usuarios internos",
+    externalUsers: "Hasta 100 pacientes registrados",
+    portalLimit: "",
     support: "Soporte por email",
     modules: "Módulos esenciales",
     features: [
@@ -34,60 +65,64 @@ export const plans: Plan[] = [
       "Gestión clínica",
       "Historia clínica",
       "Odontograma básico",
+      "Recetas y tratamientos",
+      "Estudios clínicos",
       "Finanzas y facturación básica",
-      "Notificaciones básicas",
-      "Configuración de la clínica",
+      "Notificaciones y recordatorios básicos",
     ],
   },
 
   {
     id: "profesional",
-    name: "Profesional",
+    name: "Pro",
     tagline: "Para clínicas en crecimiento.",
-    price: "$139.900",
-    setup: "$259.000",
     branches: "Hasta 3 sucursales",
-    users: "Hasta 15 usuarios",
+    users: "Hasta 15 usuarios internos",
+    externalUsers: "Hasta 500 pacientes registrados",
+    portalLimit: "",
     support: "Soporte prioritario",
     modules: "Módulos esenciales + gestión",
     features: [
-      "Todo lo del plan Esencial",
+      "Todo lo del plan Start",
       "Comunicación con pacientes",
-      "Presupuestos y pagos",
+      "Presupuestos",
+      "Pagos y facturación avanzada",
       "Estudios y diagnóstico",
       "Laboratorio",
       "Analítica y reportes",
-      "Portal del paciente",
       "Documentos",
       "Seguridad y permisos",
       "Notificaciones avanzadas",
       "Integraciones básicas",
+      "Configuración avanzada",
     ],
     featured: true,
   },
 
   {
     id: "avanzado",
-    name: "Avanzado",
+    name: "Plus",
     tagline: "Para clínicas con mayor volumen.",
-    price: "$249.900",
-    setup: "$449.000",
     branches: "Hasta 6 sucursales",
-    users: "Hasta 40 usuarios",
-    support: "Soporte prioritario 24/5",
+    users: "Hasta 40 usuarios internos",
+    externalUsers: "Hasta 2.000 pacientes registrados",
+    portalLimit: "",
+    support: "Soporte prioritario con atención ampliada",
     modules: "Módulos avanzados",
     features: [
-      "Todo lo del plan Profesional",
+      "Todo lo del plan Pro",
       "Odontograma 3D",
       "Estudios y diagnóstico avanzado",
-      "Comunicación con pacientes",
+      "Comunicación avanzada con pacientes",
       "Marketing y captación",
       "Inventario",
-      "Recursos Humanos + automatizaciones n8n",
+      "Recursos Humanos",
+      "Automatizaciones con n8n",
       "Esther IA",
       "Analítica avanzada",
       "Auditoría",
       "Integraciones avanzadas",
+      "Configuración avanzada",
     ],
   },
 
@@ -95,23 +130,28 @@ export const plans: Plan[] = [
     id: "enterprise",
     name: "Enterprise",
     tagline: "Para grupos odontológicos y organizaciones.",
-    price: "$429.900",
-    setup: "$749.000",
-    branches: "Sucursales ilimitadas",
-    users: "Usuarios ilimitados",
+    branches: "Hasta 20 sucursales",
+    users: "Hasta 150 usuarios internos",
+    externalUsers: "Hasta 10.000 pacientes registrados",
+    portalLimit: "",
     support: "Soporte dedicado 24/7",
     modules: "Todos los módulos",
     features: [
-      "Todo lo del plan Avanzado",
+      "Todo lo del plan Plus",
+      "Hasta 5 empresas por cuenta corporativa",
+      "Administración multiempresa",
+      "Gestión centralizada de sucursales",
       "Odontograma 3D avanzado",
       "Comunicación avanzada",
       "Marketing y captación avanzada",
-      "Recursos Humanos + automatizaciones n8n",
+      "Recursos Humanos avanzado",
+      "Automatizaciones avanzadas con n8n",
       "Esther IA avanzada",
+      "Analítica avanzada",
       "Auditoría completa",
-      "Administración multiempresa",
-      "Integraciones a medida",
-      "Documentos y seguridad avanzada",
+      "Integraciones personalizadas",
+      "Documentos avanzados",
+      "Seguridad avanzada",
       "Gerente de cuenta asignado",
     ],
   },
@@ -121,12 +161,34 @@ export const plans: Plan[] = [
  * Comparación de módulos incluidos en cada plan.
  *
  * Orden:
- * 0 = Esencial
- * 1 = Profesional
- * 2 = Avanzado
+ * 0 = Start
+ * 1 = Pro
+ * 2 = Plus
  * 3 = Enterprise
+ *
+ * Los límites pertenecen al tenant/organización correspondiente.
  */
 export const comparison: { feature: string; values: string[] }[] = [
+  {
+    feature: "Sucursales",
+    values: ["1", "Hasta 3", "Hasta 6", "Hasta 20"],
+  },
+
+  {
+    feature: "Usuarios internos",
+    values: ["Hasta 5", "Hasta 15", "Hasta 40", "Hasta 150"],
+  },
+
+  {
+    feature: "Pacientes registrados",
+    values: ["Hasta 100", "Hasta 500", "Hasta 2.000", "Hasta 10.000"],
+  },
+
+  {
+    feature: "Empresas por cuenta",
+    values: ["1", "1", "1", "Hasta 5"],
+  },
+
   { feature: "Dashboard", values: ["✓", "✓", "✓", "✓"] },
 
   { feature: "Agenda y turnos", values: ["✓", "✓", "✓", "✓"] },
@@ -139,64 +201,140 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Odontograma básico", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma 3D", values: ["Adicional", "Adicional", "✓", "✓"] },
+  { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
 
-  { feature: "Estudios y diagnóstico", values: ["—", "✓", "✓", "✓"] },
+  {
+    feature: "Odontograma 3D avanzado",
+    values: ["—", "—", "—", "✓"],
+  },
+
+  {
+    feature: "Estudios y diagnóstico",
+    values: ["✓", "✓", "✓", "✓"],
+  },
+
+  {
+    feature: "Diagnóstico avanzado",
+    values: ["—", "—", "✓", "✓"],
+  },
 
   { feature: "Laboratorio", values: ["—", "✓", "✓", "✓"] },
 
   { feature: "Finanzas", values: ["Básicas", "✓", "✓", "✓"] },
 
-  { feature: "Facturación y pagos", values: ["Simple", "✓", "✓", "✓"] },
+  {
+    feature: "Facturación y pagos",
+    values: ["Básica", "Avanzada", "Avanzada", "Avanzada"],
+  },
 
   { feature: "Presupuestos", values: ["—", "✓", "✓", "✓"] },
 
-  { feature: "Analítica", values: ["—", "✓", "Avanzada", "Avanzada"] },
+  {
+    feature: "Analítica",
+    values: ["—", "✓", "Avanzada", "Avanzada"],
+  },
 
-  { feature: "Notificaciones", values: ["Básicas", "Avanzadas", "Avanzadas", "A medida"] },
+  {
+    feature: "Notificaciones",
+    values: ["Básicas", "Avanzadas", "Avanzadas", "Avanzadas"],
+  },
 
-  { feature: "Comunicación", values: ["—", "—", "✓", "Avanzada"] },
+  {
+    feature: "Comunicación",
+    values: ["—", "✓", "Avanzada", "Avanzada"],
+  },
 
-  { feature: "Marketing y captación", values: ["—", "—", "✓", "Avanzada"] },
+  {
+    feature: "Marketing y captación",
+    values: ["—", "—", "✓", "Avanzada"],
+  },
 
-  { feature: "Portal del paciente", values: ["—", "✓", "✓", "✓"] },
+  {
+    feature: "Inventario",
+    values: ["—", "—", "✓", "✓"],
+  },
 
-  { feature: "Inventario", values: ["—", "—", "✓", "✓"] },
+  {
+    feature: "Recursos Humanos",
+    values: ["—", "—", "✓", "Avanzada"],
+  },
 
-  { feature: "Recursos Humanos", values: ["—", "—", "✓ + n8n", "✓ + n8n"] },
+  {
+    feature: "Automatizaciones n8n",
+    values: ["—", "—", "✓", "Avanzadas"],
+  },
 
-  { feature: "Equipo profesional", values: ["✓", "✓", "✓", "✓"] },
+  {
+    feature: "Esther IA",
+    values: ["—", "—", "✓", "Avanzada"],
+  },
 
-  { feature: "Documentos", values: ["—", "✓", "✓", "✓"] },
+  {
+    feature: "Documentos",
+    values: ["—", "✓", "✓", "Avanzados"],
+  },
 
-  { feature: "Seguridad y permisos", values: ["Básica", "✓", "Avanzada", "Avanzada"] },
+  {
+    feature: "Seguridad y permisos",
+    values: ["Básica", "✓", "Avanzada", "Avanzada"],
+  },
 
-  { feature: "Auditoría", values: ["Adicional", "Adicional", "✓", "Completa"] },
+  {
+    feature: "Auditoría",
+    values: ["—", "—", "✓", "Completa"],
+  },
 
-  { feature: "Configuración", values: ["✓", "✓", "✓", "✓"] },
+  {
+    feature: "Configuración",
+    values: ["Básica", "Avanzada", "Avanzada", "Avanzada"],
+  },
 
-  { feature: "Esther IA", values: ["Adicional", "Adicional", "✓", "✓"] },
+  {
+    feature: "Integraciones",
+    values: ["—", "Básicas", "Avanzadas", "Personalizadas"],
+  },
 
-  { feature: "Integraciones", values: ["—", "Básicas", "Avanzadas", "A medida"] },
+  {
+    feature: "Multiempresa",
+    values: ["—", "—", "—", "✓"],
+  },
 
-  { feature: "Multiempresa", values: ["—", "—", "—", "✓"] },
+  {
+    feature: "Gestión centralizada",
+    values: ["—", "—", "—", "✓"],
+  },
 
-  { feature: "Soporte prioritario", values: ["—", "✓", "24/5", "24/7"] },
+  {
+    feature: "Portal de pacientes",
+    values: ["—", "—", "—", "—"],
+  },
+
+  {
+    feature: "Soporte",
+    values: ["Email", "Prioritario", "Atención ampliada", "24/7"],
+  },
+
+  {
+    feature: "Gerente de cuenta",
+    values: ["—", "—", "—", "✓"],
+  },
 ];
 
 /**
- * Módulos que el cliente puede contratar por separado,
- * independientemente del plan contratado.
+ * Módulos que pueden contratarse adicionalmente.
  *
- * Los precios son valores de referencia iniciales.
- * Se muestran sin IVA para luego calcular el impuesto.
+ * Importante:
+ * "Adicional" significa que el módulo puede comercializarse
+ * fuera del paquete principal cuando Cloud Esther lo habilite.
+ * No implica que todos los módulos puedan agregarse a cualquier
+ * plan sin restricciones comerciales.
  */
 export type AdditionalModule = {
   id: string;
   name: string;
   description: string;
-  price: string;
-  billing: string;
+  price?: string;
+  billing?: string;
 };
 
 export const additionalModules: AdditionalModule[] = [
@@ -204,174 +342,162 @@ export const additionalModules: AdditionalModule[] = [
     id: "odontograma-3d",
     name: "Odontograma 3D",
     description:
-      "Odontograma en 3D para visualizar piezas, tratamientos, estados y evolución clínica. El odontograma básico ya está incluido en todos los planes.",
-    price: "$34.900",
-    billing: "por mes + IVA",
+      "Visualización odontológica tridimensional para explorar piezas, tratamientos, estados y evolución clínica.",
   },
   {
     id: "esther-ia",
     name: "Esther IA",
     description:
-      "Asistente inteligente para resúmenes clínicos, agenda y análisis del rendimiento.",
-    price: "$49.900",
-    billing: "por mes + IVA",
+      "Asistente inteligente para resúmenes clínicos, análisis de información y apoyo en la gestión de la clínica.",
   },
   {
     id: "auditoria",
     name: "Auditoría",
     description:
-      "Registro y trazabilidad de acciones de usuarios para control y cumplimiento.",
-    price: "$29.900",
-    billing: "por mes + IVA",
+      "Registro y trazabilidad de acciones para control interno, seguridad y seguimiento de actividad.",
   },
   {
     id: "marketing",
     name: "Marketing y captación",
     description:
-      "Herramientas para campañas, captación y seguimiento de oportunidades.",
-    price: "$42.900",
-    billing: "por mes + IVA",
+      "Herramientas para campañas, captación de pacientes y seguimiento de oportunidades.",
   },
   {
     id: "comunicacion",
     name: "Comunicación",
     description:
-      "Herramientas avanzadas para comunicación y seguimiento de pacientes.",
-    price: "$42.900",
-    billing: "por mes + IVA",
+      "Herramientas para comunicación y seguimiento de pacientes a través de los canales habilitados.",
   },
   {
     id: "inventario",
     name: "Inventario",
     description:
-      "Control de insumos, stock, movimientos y disponibilidad.",
-    price: "$34.900",
-    billing: "por mes + IVA",
+      "Control de insumos, existencias, movimientos y disponibilidad.",
   },
   {
     id: "recursos-humanos",
-    name: "Recursos Humanos + n8n",
+    name: "Recursos Humanos",
     description:
-      "Gestión del equipo y automatizaciones de procesos mediante n8n.",
-    price: "$54.900",
-    billing: "por mes + IVA",
-  },
-  {
-    id: "portal-paciente",
-    name: "Portal del paciente",
-    description:
-      "Acceso del paciente a información, documentos, turnos y comunicaciones.",
-    price: "$34.900",
-    billing: "por mes + IVA",
+      "Gestión del equipo, empleados, asistencia, vacaciones, documentación y procesos internos.",
   },
   {
     id: "analitica-avanzada",
     name: "Analítica avanzada",
     description:
       "Indicadores y análisis avanzados para conocer el rendimiento de la clínica.",
-    price: "$42.900",
-    billing: "por mes + IVA",
   },
   {
     id: "laboratorio",
     name: "Laboratorio",
     description:
       "Gestión y seguimiento de trabajos enviados al laboratorio.",
-    price: "$34.900",
-    billing: "por mes + IVA",
   },
   {
     id: "estudios-diagnostico",
     name: "Estudios y diagnóstico",
     description:
-      "Gestión de estudios, imágenes, diagnósticos y documentación asociada.",
-    price: "$34.900",
-    billing: "por mes + IVA",
+      "Gestión de estudios, imágenes, diagnósticos y documentación clínica asociada.",
   },
   {
     id: "integraciones",
     name: "Integraciones",
     description:
-      "Conexión con servicios externos y automatización de procesos.",
-    price: "$49.900",
-    billing: "por mes + IVA",
+      "Conexión de Cloud Esther con servicios externos y herramientas compatibles.",
+  },
+  {
+    id: "automatizaciones-n8n",
+    name: "Automatizaciones n8n",
+    description:
+      "Automatización de procesos y flujos de trabajo mediante n8n.",
   },
 ];
 
 /**
- * Módulos disponibles para mostrar en formularios de interés,
+ * Módulos disponibles para formularios de interés,
  * demostraciones y contratación.
  */
 export const modulesOfInterest = [
-  "Agenda y gestión de citas",
+  "Dashboard",
+  "Agenda y gestión de turnos",
   "Gestión de pacientes",
   "Gestión clínica",
+  "Historia clínica",
   "Odontograma básico",
   "Odontograma 3D",
-  "Turnos",
-  "Notificaciones",
-  "Comunicación con pacientes",
+  "Recetas y tratamientos",
+  "Estudios y diagnóstico",
+  "Laboratorio",
   "Facturación y pagos",
   "Presupuestos",
   "Analítica y reportes",
   "Analítica avanzada",
-  "Laboratorio",
-  "Caja / Finanzas",
+  "Notificaciones",
+  "Comunicación con pacientes",
   "Marketing y captación",
+  "Inventario",
+  "Recursos Humanos",
+  "Automatizaciones n8n",
   "Directorio de clínicas y odontólogos",
   "Seguridad y control de accesos",
   "Auditoría",
   "Configuración",
-  "Inventario",
-  "Recursos Humanos + n8n",
   "Equipo profesional",
   "Administración multiempresa",
   "IA Esther",
-  "Estudios y diagnóstico por imagen",
-  "Portal del paciente",
-  "Integraciones",
   "Documentos",
+  "Integraciones",
 ];
 
+/**
+ * Preguntas frecuentes.
+ */
 export const faqs = [
   {
     q: "¿Cloud Esther sirve para cualquier clínica?",
-    a: "Sí. Funciona tanto para consultorios individuales como para clínicas con varias sucursales y equipos grandes.",
+    a: "Sí. Cloud Esther funciona como una plataforma SaaS multitenant para consultorios, clínicas con varias sucursales y organizaciones odontológicas.",
+  },
+  {
+    q: "¿Cada clínica tiene sus propios datos?",
+    a: "Sí. Cada empresa opera dentro de su propio tenant, con aislamiento de información, usuarios, pacientes, sucursales y permisos.",
   },
   {
     q: "¿Puedo cambiar de plan?",
-    a: "Podés subir o bajar de plan cuando lo necesites. Los módulos se activan al instante desde la administración.",
+    a: "Sí. Podés subir o bajar de plan según las necesidades de tu organización. La disponibilidad de módulos y límites se actualiza según el plan contratado.",
   },
   {
     q: "¿Puedo contratar módulos adicionales?",
-    a: "Sí. Podés contratar módulos individuales además de tu plan actual. Por ejemplo, una clínica puede contratar el plan Esencial y agregar el Odontograma 3D o Esther IA sin necesidad de cambiar de plan.",
+    a: "Algunos módulos pueden contratarse por separado cuando estén disponibles para contratación adicional. Su disponibilidad depende del plan y de las condiciones comerciales vigentes.",
   },
   {
     q: "¿Puedo administrar varias sucursales?",
-    a: "Desde el plan Profesional podés gestionar múltiples sucursales con agendas, equipos y reportes independientes.",
+    a: "Sí. El plan Pro permite administrar hasta 3 sucursales, Plus hasta 6 y Enterprise hasta 20 sucursales dentro de la organización.",
   },
   {
-    q: "¿Puedo agregar diferentes usuarios?",
-    a: "Sí, con roles y permisos diferenciados para profesionales, recepción, administración y dirección.",
+    q: "¿Cuántos usuarios puedo tener?",
+    a: "Start permite hasta 5 usuarios internos, Pro hasta 15, Plus hasta 40 y Enterprise hasta 150 usuarios internos.",
+  },
+  {
+    q: "¿Cloud Esther permite administrar varias empresas?",
+    a: "Sí. La administración multiempresa está disponible en Enterprise, con hasta 5 empresas por cuenta corporativa.",
   },
   {
     q: "¿Puedo migrar la información de mi clínica?",
-    a: "Acompañamos la migración de pacientes, historias clínicas y agenda dentro del proceso de implementación.",
+    a: "La migración de información puede acompañarse durante el proceso de implementación, según el origen, formato y alcance de los datos.",
   },
   {
     q: "¿Existe período de prueba?",
-    a: "Podés explorar una demo completa de la plataforma con datos de ejemplo antes de contratar.",
+    a: "Podés explorar una demostración de la plataforma con datos de ejemplo antes de contratar.",
   },
   {
     q: "¿Necesito instalar algún programa?",
-    a: "No. Cloud Esther funciona en la nube desde cualquier navegador, computadora o tablet.",
+    a: "No. Cloud Esther funciona en la nube y puede utilizarse desde un navegador compatible.",
   },
   {
     q: "¿Mis datos están protegidos?",
-    a: "Trabajamos con cifrado, control de accesos por rol y registros de auditoría de cada acción.",
+    a: "Cloud Esther contempla aislamiento entre tenants, control de accesos por roles y permisos, y registros de auditoría según el plan contratado.",
   },
   {
     q: "¿Cloud Esther tiene inteligencia artificial?",
-    a: "Esther IA te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
+    a: "Sí. Esther IA forma parte de los planes superiores y está orientada al apoyo de la gestión, análisis y procesos clínicos definidos por la plataforma.",
   },
 ];

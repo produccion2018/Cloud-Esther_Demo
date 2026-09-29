@@ -16,12 +16,7 @@ import {
   SIDEBAR_COLORS,
   FONT_SIZE_PX,
 } from "@/lib/cloud-esther/settings-store";
-import {
-  activarEmpresa,
-  cerrarSesionEmpresa,
-  iniciales,
-  useEmpresas,
-} from "@/lib/cloud-esther/empresa-store";
+import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import {
   Sheet,
   SheetContent,
@@ -263,44 +258,25 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   );
 }
 
-/** Empresa registrada con la que se entró al demo. Si hay varias
- *  registradas en este navegador, permite cambiar entre ellas. */
+function iniciales(nombre: string) {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase() || "CE";
+}
+
+/** Clínica (empresa) y usuario de la sesión activa. Cada cuenta pertenece a
+ *  una clínica, así que el sidebar muestra con qué empresa se está trabajando. */
 function EmpresaActiva() {
-  const { setPlan } = useCloudEsther();
-  const { empresas, activa } = useEmpresas();
-  if (!activa) return null;
+  const { usuario, clinica } = useSesion();
+  if (!usuario || !clinica) return null;
 
   return (
     <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
-        {iniciales(activa.nombre)}
+        {iniciales(clinica.nombre)}
       </span>
       <div className="min-w-0 flex-1 leading-tight">
-        {empresas.length > 1 ? (
-          <div className="relative">
-            <select
-              value={activa.id}
-              onChange={(e) => {
-                const empresa = empresas.find((x) => x.id === e.target.value);
-                if (!empresa) return;
-                activarEmpresa(empresa.id);
-                setPlan(empresa.plan);
-              }}
-              aria-label="Empresa activa"
-              className="w-full appearance-none truncate bg-transparent pr-5 font-display text-sm font-semibold text-sidebar-foreground outline-none"
-            >
-              {empresas.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.nombre}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45" />
-          </div>
-        ) : (
-          <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">{activa.nombre}</p>
-        )}
-        <p className="truncate text-[11px] text-sidebar-foreground/55">{activa.contacto}</p>
+        <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">{clinica.nombre}</p>
+        <p className="truncate text-[11px] text-sidebar-foreground/55">{usuario.nombre}</p>
       </div>
     </div>
   );
@@ -330,7 +306,7 @@ function PlanFooter() {
       </div>
       <Link
         to={"/" as never}
-        onClick={cerrarSesionEmpresa}
+        onClick={cerrarSesion}
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
@@ -372,10 +348,6 @@ function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
   );
 }
 
-/* ───────────── Utilidades de color: generar toda la paleta del sidebar
-   a partir de un único color elegido por el usuario, en tono SUAVE
-   (pastel), acorde a la estética de baja saturación del resto de la app ───────────── */
-
 function hexToRgb(hex: string) {
   const clean = hex.replace("#", "");
   const bigint = parseInt(clean, 16);
@@ -402,20 +374,13 @@ function luminance(hex: string) {
   return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
 }
 
-/** A partir de un color base, arma toda la paleta de variables del sidebar,
- *  siempre en versión suavizada (pastel), nunca el color puro y fuerte. */
 function buildSidebarPalette(baseHex: string, dark: boolean): React.CSSProperties {
-  // Fondo: en modo claro, un tinte muy suave del color (85% hacia blanco);
-  // en modo oscuro, el color se apaga bastante hacia un gris oscuro neutro
-  // en vez de quedar un fondo saturado tipo "rojo intenso".
   const background = dark ? mix(baseHex, "black", 0.86) : mix(baseHex, "white", 0.87);
 
   const foreground = dark ? mix(baseHex, "white", 0.82) : mix(baseHex, "black", 0.72);
   const accent = dark ? mix(baseHex, "black", 0.72) : mix(baseHex, "white", 0.72);
   const accentForeground = foreground;
   const border = dark ? mix(baseHex, "black", 0.68) : mix(baseHex, "white", 0.62);
-  // El acento "primary" (detalle del ítem activo, botones) mantiene algo
-  // más de presencia del color elegido, pero sigue siendo suave.
   const primary = dark ? mix(baseHex, "white", 0.28) : mix(baseHex, "black", 0.12);
   const primaryForeground = "#ffffff";
 
@@ -443,6 +408,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
     document.documentElement.style.fontSize = FONT_SIZE_PX[settings.fontSize];
+
+    // Al salir de esta sección (por ejemplo, al cerrar sesión y volver a la
+    // landing pública), se restaura el documento a su estado normal para no
+    // dejar el modo oscuro o el tamaño de fuente "pegado" fuera de la app.
+    return () => {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.fontSize = "";
+    };
   }, [settings.darkModePage, settings.fontSize]);
 
   const colorHex = SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed";

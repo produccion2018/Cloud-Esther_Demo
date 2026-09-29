@@ -1,4 +1,14 @@
 import { capitalizarNombre } from "@/lib/utils";
+import {
+  GABINETES,
+  ODONTOLOGOS,
+  SUCURSALES,
+  TRATAMIENTOS,
+  setTurnosStore,
+  storeAgenda,
+  type EstadoTurno,
+} from "@/lib/cloud-esther/agenda-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
@@ -21,7 +31,7 @@ export const Route = createLazyFileRoute("/demo")({
 
 /* ───────────── Tipos ───────────── */
 
-type EstadoTurno = "Confirmado" | "Pendiente";
+/* Los turnos del dashboard son los de "Agenda y turnos" (mismo store por empresa). */
 type Turno = { id: number; hora: string; paciente: string; detalle: string; estado: EstadoTurno };
 type Actividad = { id: number; hora: string; quien: string; accion: string };
 type ModalActivo = "cita" | "paciente" | "presupuesto" | null;
@@ -33,13 +43,6 @@ const STATS = [
   { label: "Ingresos del día", value: "$ 1.284.000", valueColor: "text-emerald-600", icon: DollarSign, delta: "+14%", deltaColor: "text-emerald-600", sub: "6 cobros registrados" },
   { label: "Recordatorios enviados", value: "34", valueColor: "text-foreground", icon: Bell, delta: "94% entregados", deltaColor: "text-muted-foreground", sub: "" },
   { label: "Deuda vencida", value: "$ 572.000", valueColor: "text-destructive", icon: TriangleAlert, delta: "-4%", deltaColor: "text-destructive", sub: "2 pacientes" },
-];
-
-const TURNOS_INICIALES: Turno[] = [
-  { id: 1, hora: "08:00", paciente: "María González", detalle: "Control de ortodoncia · Dra. Ana Martínez", estado: "Confirmado" },
-  { id: 2, hora: "08:45", paciente: "Carlos Rodríguez", detalle: "Implante · fase 2 · Dr. Carlos López", estado: "Confirmado" },
-  { id: 3, hora: "09:30", paciente: "Laura Fernández", detalle: "Colocación de brackets · Dra. Ana Martínez", estado: "Pendiente" },
-  { id: 4, hora: "10:15", paciente: "Juan Pérez", detalle: "Endodoncia pieza 26 · Dra. Sofía Gómez", estado: "Confirmado" },
 ];
 
 const PRODUCCION = [
@@ -59,19 +62,6 @@ const ACTIVIDAD_INICIAL: Actividad[] = [
   { id: 6, hora: "08:12", quien: "Dr. Carlos López", accion: "Aprobó el presupuesto PR-2026-0141" },
 ];
 
-const SUCURSALES = ["Clínica Centro", "Clínica Norte", "Clínica Sur"];
-const ODONTOLOGOS = ["Dra. Lucía Ferrer", "Dr. Martín Salas", "Dra. Camila Ríos"];
-const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3"];
-const TRATAMIENTOS = [
-  "Primera consulta",
-  "Limpieza y profilaxis",
-  "Control de ortodoncia",
-  "Endodoncia",
-  "Implante",
-  "Blanqueamiento",
-  "Urgencia dolor",
-];
-const PACIENTES_CONOCIDOS = TURNOS_INICIALES.map((t) => t.paciente);
 const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
 const OBRAS_SOCIALES = ["No aplica / particular", "OSDE", "Swiss Medical", "Galeno", "Medicus", "PAMI", "IOMA"];
 
@@ -298,14 +288,16 @@ function NuevaCitaForm({
   onSubmit,
   onCancel,
   pacientes,
+  odontologos,
 }: {
   onSubmit: (c: NuevaCita) => void;
   onCancel: () => void;
   pacientes: string[];
+  odontologos: string[];
 }) {
   const [paciente, setPaciente] = useState("");
   const [sucursal, setSucursal] = useState(SUCURSALES[0]);
-  const [odontologo, setOdontologo] = useState(ODONTOLOGOS[0]);
+  const [odontologo, setOdontologo] = useState(odontologos[0] ?? "");
   const [gabinete, setGabinete] = useState(GABINETES[0]);
   const [tratamiento, setTratamiento] = useState(TRATAMIENTOS[0]);
   const [fecha, setFecha] = useState("");
@@ -337,7 +329,7 @@ function NuevaCitaForm({
           <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
         </Field>
         <Field label="Odontólogo">
-          <SelectField value={odontologo} onChange={setOdontologo} options={ODONTOLOGOS} />
+          <SelectField value={odontologo} onChange={setOdontologo} options={odontologos} />
         </Field>
         <Field label="Gabinete">
           <SelectField value={gabinete} onChange={setGabinete} options={GABINETES} />
@@ -588,18 +580,24 @@ function NuevoPresupuestoForm({
 
 /* ───────────── Componentes de la página ───────────── */
 
+const ESTADO_BADGE: Record<EstadoTurno, { chip: string; punto: string }> = {
+  Confirmada: { chip: "bg-emerald-100 text-emerald-700", punto: "bg-emerald-600" },
+  Pendiente: { chip: "bg-amber-100 text-amber-700", punto: "bg-amber-600" },
+  Atendida: { chip: "bg-primary/10 text-primary", punto: "bg-primary" },
+  Ausente: { chip: "bg-destructive/10 text-destructive", punto: "bg-destructive" },
+  Cancelada: { chip: "bg-muted text-muted-foreground", punto: "bg-muted-foreground" },
+};
+
 function EstadoBadge({ estado, onClick }: { estado: EstadoTurno; onClick: () => void }) {
-  const confirmado = estado === "Confirmado";
+  const estilo = ESTADO_BADGE[estado];
   return (
     <button
       type="button"
       onClick={onClick}
       title="Clic para cambiar el estado"
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
-        confirmado ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${estilo.chip}`}
     >
-      <span className={`size-1.5 rounded-full ${confirmado ? "bg-emerald-600" : "bg-amber-600"}`} />
+      <span className={`size-1.5 rounded-full ${estilo.punto}`} />
       {estado}
     </button>
   );
@@ -1101,13 +1099,31 @@ function DashboardInner() {
   const nombreUsuario = usuario?.nombre ?? "Invitado";
 
   const { message, show } = useToast();
-  const [turnos, setTurnos] = useState<Turno[]>(TURNOS_INICIALES);
+  // Turnos de hoy tomados de la agenda de la empresa (lo que se agenda acá aparece en Agenda y viceversa).
+  const { turnos: turnosAgenda } = storeAgenda.usar();
+  const { miembros } = useEquipo();
+  const odontologosEquipo = miembros
+    .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
+    .map((m) => `${m.firstName} ${m.lastName}`.trim());
+  const hoy = hoyISO();
+  const turnos: Turno[] = turnosAgenda
+    .filter((t) => t.fecha === hoy && t.estado !== "Cancelada")
+    .sort((a, b) => a.hora.localeCompare(b.hora))
+    .map((t) => ({
+      id: t.id,
+      hora: t.hora,
+      paciente: t.paciente,
+      detalle: `${t.tratamiento} · ${t.odontologo}`,
+      estado: t.estado,
+    }));
   const [actividad, setActividad] = useState<Actividad[]>(ACTIVIDAD_INICIAL);
   const [sinLeer, setSinLeer] = useState(3);
   const [recordatoriosExtra, setRecordatoriosExtra] = useState(0);
   const [presupuestosNuevos, setPresupuestosNuevos] = useState(0);
   const [pacientesNuevos, setPacientesNuevos] = useState<{ nombre: string; documento: string }[]>([]);
-  const sugerenciasPacientes = [...PACIENTES_CONOCIDOS, ...pacientesNuevos.map((p) => p.nombre)];
+  const sugerenciasPacientes = Array.from(
+    new Set([...turnosAgenda.map((t) => t.paciente), ...pacientesNuevos.map((p) => p.nombre)]),
+  );
   const [modal, setModal] = useState<ModalActivo>(null);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -1132,24 +1148,17 @@ function DashboardInner() {
 
   const agregarCita = (c: NuevaCita) => {
     const fechaTexto = c.fecha.split("-").reverse().join("/");
-    const esHoy = c.fecha === hoyISO();
-    if (esHoy) {
-      setTurnos((prev) =>
-        [
-          ...prev,
-          {
-            id: Date.now(),
-            hora: c.hora,
-            paciente: c.paciente,
-            detalle: `${c.tratamiento} · ${c.odontologo}`,
-            estado: "Pendiente" as const,
-          },
-        ].sort((x, y) => x.hora.localeCompare(y.hora)),
-      );
+    const choque = turnosAgenda.some(
+      (t) => t.estado !== "Cancelada" && t.fecha === c.fecha && t.hora === c.hora && t.odontologo === c.odontologo,
+    );
+    if (choque) {
+      show(`${c.odontologo} ya tiene un turno a las ${c.hora}`);
+      return;
     }
+    setTurnosStore((prev) => [...prev, { ...c, id: Date.now(), estado: "Pendiente" }]);
     registrar(nombreUsuario, `Agendó un turno para ${c.paciente} el ${fechaTexto} a las ${c.hora}`);
     cerrarModal();
-    show(esHoy ? "Turno agendado para hoy" : `Turno agendado para el ${fechaTexto}`);
+    show(c.fecha === hoy ? "Turno agendado para hoy" : `Turno agendado para el ${fechaTexto}`);
   };
 
   const agregarPaciente = (p: NuevoPaciente) => {
@@ -1174,8 +1183,12 @@ function DashboardInner() {
   const alternarEstado = (id: number) => {
     const turno = turnos.find((t) => t.id === id);
     if (!turno) return;
-    const nuevo: EstadoTurno = turno.estado === "Confirmado" ? "Pendiente" : "Confirmado";
-    setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estado: nuevo } : t)));
+    if (turno.estado !== "Pendiente" && turno.estado !== "Confirmada") {
+      show(`Turno ${turno.estado.toLowerCase()}: cambialo desde Agenda y turnos`);
+      return;
+    }
+    const nuevo: EstadoTurno = turno.estado === "Confirmada" ? "Pendiente" : "Confirmada";
+    setTurnosStore((prev) => prev.map((t) => (t.id === id ? { ...t, estado: nuevo } : t)));
     registrar(nombreUsuario, `Marcó el turno de ${turno.paciente} como ${nuevo.toLowerCase()}`);
   };
 
@@ -1235,9 +1248,10 @@ function DashboardInner() {
   const turnosFiltrados = turnos.filter((t) => !q || `${t.paciente} ${t.detalle}`.toLowerCase().includes(q));
   const actividadFiltrada = actividad.filter((a) => !q || `${a.quien} ${a.accion}`.toLowerCase().includes(q));
 
-  const citasNuevas = turnos.length - TURNOS_INICIALES.length;
+  const confirmadosHoy = turnos.filter((t) => t.estado === "Confirmada" || t.estado === "Atendida").length;
+  const pendientesHoy = turnos.filter((t) => t.estado === "Pendiente").length;
   const stats = [
-    { ...STATS[0], value: String(11 + citasNuevas) },
+    { ...STATS[0], value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
     STATS[1],
     { ...STATS[2], value: String(34 + recordatoriosExtra) },
     STATS[3],
@@ -1352,7 +1366,12 @@ function DashboardInner() {
 
       {modal === "cita" && (
         <Modal title="Nueva cita" subtitle="Asigná paciente, odontólogo, gabinete y horario." onClose={cerrarModal}>
-          <NuevaCitaForm onSubmit={agregarCita} onCancel={cerrarModal} pacientes={sugerenciasPacientes} />
+          <NuevaCitaForm
+            onSubmit={agregarCita}
+            onCancel={cerrarModal}
+            pacientes={sugerenciasPacientes}
+            odontologos={odontologosEquipo.length ? odontologosEquipo : ODONTOLOGOS}
+          />
         </Modal>
       )}
       {modal === "paciente" && (

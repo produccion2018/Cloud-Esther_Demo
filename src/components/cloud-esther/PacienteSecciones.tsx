@@ -2231,10 +2231,35 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
 
 type MedicamentoForm = { nombre: string; presentacion: string; via: string; cantidad: string; posologia: string };
 
+/* Choques entre alergias del paciente y medicamentos (por familia de droga). */
+const FAMILIAS_ALERGIA: { alergia: RegExp; droga: RegExp; familia: string }[] = [
+  { alergia: /penicil|betalact/i, droga: /amoxic|ampicil|penicil|clavul|cefal|cefa/i, familia: "penicilinas / betalactámicos" },
+  { alergia: /aine|ibuprof|diclof|ketorol|aspirin|antiinflam/i, droga: /ibuprof|diclof|ketorol|naprox|aspirin|meloxic|aine/i, familia: "antiinflamatorios (AINES)" },
+  { alergia: /sulfa/i, droga: /sulfa|trimetoprim|cotrimox/i, familia: "sulfas" },
+  { alergia: /anestesia|lidoca|articai|mepivac/i, droga: /lidoca|articai|mepivac|prilocai|anest/i, familia: "anestésicos locales" },
+  { alergia: /metronid/i, droga: /metronid/i, familia: "metronidazol" },
+  { alergia: /clindam/i, droga: /clindam/i, familia: "clindamicina" },
+];
+
+/** Devuelve la alergia con la que choca el medicamento (o null). */
+function choqueAlergia(medicamento: string, alergias: string[]): { alergia: string; familia: string } | null {
+  const med = medicamento.trim();
+  if (!med) return null;
+  for (const alergia of alergias) {
+    const familia = FAMILIAS_ALERGIA.find((f) => f.alergia.test(alergia) && f.droga.test(med));
+    if (familia) return { alergia, familia: familia.familia };
+    const clave = alergia.split(/[\s(]/)[0]?.toLowerCase() ?? "";
+    if (clave.length >= 4 && med.toLowerCase().includes(clave)) return { alergia, familia: alergia };
+  }
+  return null;
+}
+
 function RecetaForm({
   onSubmit,
   onCancel,
+  alergias = [],
 }: {
+  alergias?: string[];
   onSubmit: (r: {
     fecha: string;
     profesional: string;
@@ -2247,7 +2272,9 @@ function RecetaForm({
   onCancel: () => void;
 }) {
   const [fecha, setFecha] = useState(hoyISO());
-  const [profesional, setProfesional] = useState("");
+  const profesionales = useProfesionales();
+  const [profesional, setProfesional] = useState(profesionales[0] ?? "");
+  const [aceptaRiesgo, setAceptaRiesgo] = useState(false);
   const [matricula, setMatricula] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
   const [vencimiento, setVencimiento] = useState("");
@@ -2267,6 +2294,11 @@ function RecetaForm({
     const validos = medicamentos.filter((m) => m.nombre.trim() && m.posologia.trim());
     if (validos.length === 0) {
       setError("Agregá al menos un medicamento con su posología.");
+      return;
+    }
+    const conChoque = validos.filter((m) => choqueAlergia(m.nombre, alergias));
+    if (conChoque.length && !aceptaRiesgo) {
+      setError(`Atención: ${conChoque.map((m) => m.nombre.trim()).join(", ")} puede causar una reacción alérgica. Revisalo o confirmá que querés emitir la receta igual.`);
       return;
     }
     onSubmit({
@@ -2296,12 +2328,23 @@ function RecetaForm({
           <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} className={INPUT} />
         </Field>
         <Field label="Profesional *">
-          <input autoFocus required list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
         </Field>
         <Field label="Matrícula">
           <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className={INPUT} placeholder="Ej: MN 00000" />
         </Field>
       </div>
+
+      {alergias.length > 0 ? (
+        <p className="flex items-center gap-1.5 rounded-lg border border-destructive/25 bg-destructive/[0.06] px-3 py-2 text-xs font-medium text-destructive">
+          <ShieldAlert className="size-3.5 shrink-0" />
+          Alergias del paciente: {alergias.join(", ")}
+        </p>
+      ) : (
+        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Sin alergias registradas en los antecedentes del paciente.
+        </p>
+      )}
 
       <Field label="Diagnóstico">
         <input value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={INPUT} placeholder="Ej: Pericoronaritis pieza 38" />
@@ -2352,6 +2395,15 @@ function RecetaForm({
                 className={`${INPUT} mt-2`}
                 placeholder="Posología (ej: 1 comprimido cada 8 hs por 5 días)"
               />
+              {(() => {
+                const choque = choqueAlergia(m.nombre, alergias);
+                return choque ? (
+                  <p className="mt-2 flex items-start gap-1.5 rounded-md bg-destructive/10 px-2.5 py-1.5 text-[11px] font-semibold text-destructive">
+                    <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
+                    Alergia a {choque.alergia}: este medicamento pertenece a {choque.familia}.
+                  </p>
+                ) : null;
+              })()}
             </div>
           ))}
         </div>
@@ -2369,6 +2421,20 @@ function RecetaForm({
           Agregar medicamento
         </button>
         {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
+        {medicamentos.some((m) => choqueAlergia(m.nombre, alergias)) && (
+          <label className="mt-2 flex items-center gap-2 text-xs font-medium text-destructive">
+            <input
+              type="checkbox"
+              checked={aceptaRiesgo}
+              onChange={(e) => {
+                setAceptaRiesgo(e.target.checked);
+                setError("");
+              }}
+              className="size-4 accent-[var(--color-destructive)]"
+            />
+            Revisé la alergia y quiero emitir la receta igual
+          </label>
+        )}
       </div>
 
       <Field label="Indicaciones generales">
@@ -2765,6 +2831,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       {abierto && (
         <Modal title="Nueva receta digital" onClose={() => setAbierto(false)}>
           <RecetaForm
+            alergias={datos.antecedentes?.alergias ?? []}
             onCancel={() => setAbierto(false)}
             onSubmit={(nueva) => {
               // TODO backend: POST /pacientes/:id/recetas (el número y la firma digital los asigna el servidor)

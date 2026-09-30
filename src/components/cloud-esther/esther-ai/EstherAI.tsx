@@ -5,6 +5,7 @@ import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { ROL_IA_LABEL } from "@/lib/cloud-esther/esther-motor";
 import type { RolIA } from "@/lib/cloud-esther/ia-store";
 import { Modal } from "@/components/cloud-esther/rrhh/ui";
@@ -48,6 +49,9 @@ export function EstherAI({
   const [aviso, setAviso] = useState("");
   const [modo, setModo] = useState<"asistente" | "contact">("asistente");
   const sedes = sucursalesDelPlan(plan === "grupo");
+  // n8n viene con Enterprise o como módulo adicional de Automatizaciones.
+  const conN8n =
+    plan === "grupo" || storeModulosExtra.usar().activos.some((m) => m.id === "automatizaciones");
   const nombreUsuario = usuario?.nombre ?? "Jesús Méndez";
   const esther = useEstherAI({
     context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId },
@@ -198,7 +202,7 @@ export function EstherAI({
         </header>
 
         {modo === "contact" ? (
-          <ContactCenter usuario={nombreUsuario} automatizado={plan === "grupo"} />
+          <ContactCenter usuario={nombreUsuario} automatizado={conN8n} />
         ) : (
           <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1.05fr_1fr]">
             <motion.div

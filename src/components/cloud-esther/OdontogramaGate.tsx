@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Lock, Sparkles, RotateCcw, Check, ListChecks, Download } from "lucide-react";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 // El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
 // así Pacientes e Historia cargan rápido en los planes con 2D.
@@ -96,12 +97,15 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
     setFdiSeleccionado(null);
   }, [clavePaciente]);
 
-  const tieneAcceso3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
+  // El 3D también se habilita si se compró como módulo adicional (lo mismo la IA).
+  const extras = storeModulosExtra.usar().activos.map((x) => x.id);
+  const tieneAcceso3D =
+    planLevel(planId) >= planLevel(PLAN_MINIMO_3D) || extras.includes("odontograma3d");
   /* Un solo odontograma según el plan: si el plan incluye 3D se usa el 3D (el 2D ya no
      tiene sentido); si no, el 2D. La página "Odontograma 3D" en un plan sin 3D muestra el aviso. */
   const modo: "2d" | "3d" = tieneAcceso3D || vista === "3d" ? "3d" : "2d";
   const titulo = vista === "ambos" ? TITULO.ambos : modo === "3d" ? TITULO["3d"] : TITULO["2d"];
-  const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA);
+  const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA) || extras.includes("ia");
   const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
 
   const exportarInforme = () => {

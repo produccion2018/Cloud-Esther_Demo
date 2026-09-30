@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   MODULES,
   availableIn,
+  incluidoEnPlan,
   planLevel,
   ModuleIcon,
   PLANS,
@@ -14,6 +15,7 @@ import {
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
+import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
@@ -157,6 +159,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const { plan, disabled } = useCloudEsther();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  // Módulos adicionales comprados: al agregarlos aparecen en el menú sin recargar.
+  const extras = storeModulosExtra.usar().activos.map((x) => x.id);
   const toggle = (key: string, current: boolean) =>
     setOpenMap((prev) => ({ ...prev, [key]: !current }));
   // Contador de avisos sin leer (solo en el cliente, para no generar diferencias de hidratación).
@@ -221,6 +225,11 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                             className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
                           />
                           <span className="truncate">{m.label}</span>
+                          {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
+                            <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
+                              Adicional
+                            </span>
+                          )}
                           {off && (
                             <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>
                           )}
@@ -276,6 +285,11 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                         className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
                       />
                       <span className="truncate">{m.label}</span>
+                      {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
+                        <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
+                          Adicional
+                        </span>
+                      )}
                       {off && (
                         <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>
                       )}
@@ -496,8 +510,20 @@ const SUBRUTAS_PLAN: { path: string; label: string; minPlan: PlanId }[] = Object
 
 /** Aviso cuando se entra a algo que no incluye el plan activo. En el demo se puede probar el
     plan que lo incluye ahí mismo, sin salir de la página ni volver a registrarse. */
-function ModuloNoIncluido({ label, minPlan }: { label: string; minPlan: PlanId }) {
+function ModuloNoIncluido({
+  label,
+  minPlan,
+  moduloId,
+}: {
+  label: string;
+  minPlan: PlanId;
+  moduloId?: string | undefined;
+}) {
   const { plan, setPlan, planContratado } = useCloudEsther();
+  const { usuario } = useSesion();
+  const modulo = MODULES.find((m) => m.id === moduloId);
+  // Start, Pro y Plus pueden comprar el módulo suelto sin cambiar de plan.
+  const comprable = !!modulo && planLevel(minPlan) > planLevel(plan);
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
       <div className="card-premium max-w-md p-8 text-center">
@@ -509,12 +535,25 @@ function ModuloNoIncluido({ label, minPlan }: { label: string; minPlan: PlanId }
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           {planContratado
-            ? `Tu plan contratado es ${PLANS[plan].name}. Para sumarlo, pedile el cambio de plan a tu ejecutivo de cuenta.`
-            : `Estás viendo el demo con el plan ${PLANS[plan].name}. Probá el plan ${PLANS[minPlan].name} sin salir de acá.`}
+            ? `Tu plan contratado es ${PLANS[plan].name}. Podés contratarlo como módulo adicional; el cargo se suma a tu próxima factura de Cloud Esther.`
+            : `Estás viendo el demo con el plan ${PLANS[plan].name}. Podés sumarlo como módulo adicional o probar el plan ${PLANS[minPlan].name}, sin salir de acá.`}
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {comprable && (
+            <button
+              type="button"
+              className="btn-ce"
+              onClick={() => agregarModuloExtra(modulo.id, usuario?.nombre ?? "Administración")}
+            >
+              {planContratado ? `Contratar ${label}` : `Agregar ${label} a mi plan`}
+            </button>
+          )}
           {!planContratado && (
-            <button type="button" className="btn-ce" onClick={() => setPlan(minPlan)}>
+            <button
+              type="button"
+              className={comprable ? "btn-ce-outline" : "btn-ce"}
+              onClick={() => setPlan(minPlan)}
+            >
               Probar el plan {PLANS[minPlan].name}
             </button>
           )}
@@ -532,6 +571,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const modulo = moduloDeRuta(pathname);
+  storeModulosExtra.usar(); // al comprar un módulo, se desbloquea en el momento
   const subBloqueada = SUBRUTAS_PLAN.find(
     (x) =>
       (pathname === x.path || pathname.startsWith(`${x.path}/`)) &&
@@ -581,7 +621,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : bloqueado ? (
-            <ModuloNoIncluido label={bloqueado.label} minPlan={bloqueado.minPlan} />
+            <ModuloNoIncluido
+              label={bloqueado.label}
+              minPlan={bloqueado.minPlan}
+              moduloId={bloqueado.id}
+            />
           ) : subBloqueada ? (
             <ModuloNoIncluido label={subBloqueada.label} minPlan={subBloqueada.minPlan} />
           ) : (

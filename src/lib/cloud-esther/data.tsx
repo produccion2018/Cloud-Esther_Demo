@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
+import { modulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -79,7 +80,9 @@ export function planLevel(id: PlanId) {
 const PLAN_STORAGE_KEY = "cloud-esther-demo:plan";
 
 function isPlanId(value: string): value is PlanId {
-  return value === "inicial" || value === "profesional" || value === "avanzada" || value === "grupo";
+  return (
+    value === "inicial" || value === "profesional" || value === "avanzada" || value === "grupo"
+  );
 }
 
 function getStoredPlan(): PlanId {
@@ -131,12 +134,7 @@ export const ROLES = [
 ];
 
 export type ModuleGroup =
-  | "Clínico"
-  | "Operación"
-  | "Administración"
-  | "Inteligencia"
-  | "Organización"
-  | "Sistema";
+  "Clínico" | "Operación" | "Administración" | "Inteligencia" | "Organización" | "Sistema";
 
 export interface AppModule {
   id: string;
@@ -372,11 +370,25 @@ export const MODULES: AppModule[] = [
   },
 ];
 
-export function availableIn(module: AppModule, plan: PlanId) {
+/** ¿El plan incluye el módulo? (sin contar módulos adicionales comprados). */
+export function incluidoEnPlan(module: AppModule, plan: PlanId) {
   return (
     planLevel(module.minPlan) <= planLevel(plan) &&
     (!module.maxPlan || planLevel(plan) <= planLevel(module.maxPlan))
   );
+}
+
+/** Módulos que el plan no incluye y se pueden comprar como adicionales (Start, Pro y Plus). */
+export function comprableEn(module: AppModule, plan: PlanId) {
+  return planLevel(module.minPlan) > planLevel(plan);
+}
+
+/** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados.
+    Si se compró el Odontograma 3D, el 2D deja de mostrarse (igual que en los planes con 3D). */
+export function availableIn(module: AppModule, plan: PlanId) {
+  const extras = modulosExtra();
+  if (module.id === "odontograma" && extras.includes("odontograma3d")) return false;
+  return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
@@ -412,12 +424,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "IA Esther",
     "Automatizaciones",
   ],
-  grupo: [
-    "Todo lo anterior",
-    "Odontograma 3D avanzado",
-    "Multi-clínica",
-    "Multiempresa",
-  ],
+  grupo: ["Todo lo anterior", "Odontograma 3D avanzado", "Multi-clínica", "Multiempresa"],
 };
 
 const ICONS: Record<string, typeof LayoutDashboard> = {
@@ -449,13 +456,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   documentos: FolderOpen,
 };
 
-export function ModuleIcon({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}) {
+export function ModuleIcon({ name, className }: { name: string; className?: string }) {
   const Icon = ICONS[name] ?? LayoutDashboard;
   return <Icon className={className} />;
 }
@@ -472,14 +473,9 @@ interface CloudEstherContextValue {
   disabled: string[];
 }
 
-const CloudEstherContext =
-  createContext<CloudEstherContextValue | null>(null);
+const CloudEstherContext = createContext<CloudEstherContextValue | null>(null);
 
-export function CloudEstherProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function CloudEstherProvider({ children }: { children: ReactNode }) {
   // Arranca igual en servidor y cliente ("avanzada") y después de montar lee el plan
   // guardado de la empresa de la sesión; se vuelve a leer si cambia la sesión.
   const [plan, setPlanState] = useState<PlanId>("avanzada");
@@ -521,9 +517,7 @@ export function useCloudEsther() {
   const ctx = useContext(CloudEstherContext);
 
   if (!ctx) {
-    throw new Error(
-      "useCloudEsther must be used within CloudEstherProvider",
-    );
+    throw new Error("useCloudEsther must be used within CloudEstherProvider");
   }
 
   return ctx;

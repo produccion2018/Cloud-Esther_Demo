@@ -16,7 +16,20 @@ import {
 } from "lucide-react";
 import { PlanCard } from "@/components/site/PlanCards";
 import { plans as PLANES_SITIO, type Plan } from "@/lib/site-data";
-import { PLANS, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import {
+  MODULES,
+  ModuleIcon,
+  PLANS,
+  comprableEn,
+  useCloudEsther,
+  type PlanId,
+} from "@/lib/cloud-esther/data";
+import {
+  agregarModuloExtra,
+  quitarModuloExtra,
+  storeModulosExtra,
+} from "@/lib/cloud-esther/modulos-extra-store";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 import {
   setFacturacion,
   storeFacturacion,
@@ -351,6 +364,8 @@ export function MiPlan({
           </div>
         </div>
       </div>
+
+      <ModulosAdicionales onToast={onToast} />
 
       {pagar && (
         <M titulo={`Pagar ${nombrePeriodo(pagar.periodo)}`} onClose={() => setPagar(null)}>
@@ -687,5 +702,70 @@ function MedioForm({
       )}
       <Acciones etiqueta="Guardar" onCancel={onCancel} />
     </form>
+  );
+}
+
+/* ───────────── Módulos adicionales ───────────── */
+
+/** Start, Pro y Plus pueden sumar módulos que su plan no incluye (el precio lo informa el backend). */
+function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
+  const { plan, planContratado } = useCloudEsther();
+  const { usuario } = useSesion();
+  const activos = storeModulosExtra.usar().activos;
+  const comprables = MODULES.filter((m) => comprableEn(m, plan) && !m.maxPlan);
+  if (!comprables.length) return null;
+  return (
+    <div className="card-grad p-4">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">Módulos adicionales</p>
+          <p className="text-[12px] text-muted-foreground">
+            Sumá a tu plan {PLANS[plan].name} los módulos que necesites, sin cambiar de plan.
+            {planContratado
+              ? " El cargo se agrega a tu próxima factura de Cloud Esther."
+              : " En el demo se activan al instante."}
+          </p>
+        </div>
+        <span className="text-[11px] text-muted-foreground">
+          {activos.filter((a) => comprables.some((m) => m.id === a.id)).length} activos
+        </span>
+      </div>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {comprables.map((m) => {
+          const activo = activos.some((a) => a.id === m.id);
+          return (
+            <li
+              key={m.id}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ring-1 ${activo ? "bg-primary/[0.07] ring-primary/30" : "bg-white/85 ring-primary/10"}`}
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <ModuleIcon name={m.icon} className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <b className="block truncate text-[13px]">{m.label}</b>
+                <span className="text-[11px] text-muted-foreground">
+                  {activo ? "Activo en tu plan" : `Incluido desde ${PLANS[m.minPlan].name}`}
+                </span>
+              </span>
+              <button
+                type="button"
+                className={activo ? BTN_SECUNDARIO : BTN_PRIMARIO}
+                onClick={() => {
+                  if (activo) {
+                    quitarModuloExtra(m.id);
+                    onToast(`${m.label} quitado de tu plan`);
+                  } else {
+                    agregarModuloExtra(m.id, usuario?.nombre ?? "Administración");
+                    onToast(`${m.label} agregado a tu plan ${PLANS[plan].name}`);
+                  }
+                }}
+              >
+                {activo ? "Quitar" : "Agregar"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

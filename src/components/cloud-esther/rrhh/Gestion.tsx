@@ -30,10 +30,12 @@ import {
   saldoVacaciones,
   setRRHH,
   storeRRHH,
+  tasasDe,
   type ConfigRRHH,
   type TipoDocumento,
 } from "@/lib/cloud-esther/rrhh-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { COTIZACIONES_INICIALES, PAISES } from "@/lib/cloud-esther/nomina-paises";
 import {
   Acciones,
   BTN_ICONO,
@@ -443,7 +445,7 @@ export function Gestion({ ctx }: { ctx: Ctx }) {
   const costoPorPeriodo = periodos.map((p) => ({
     p,
     costo: activos.reduce(
-      (a, m) => a + calcularRecibo(m, legajoDe(m, legajos), p, config, todas, ausencias).costo,
+      (a, m) => a + calcularRecibo(m, legajoDe(m, legajos), p, config, todas, ausencias).costoBase,
       0,
     ),
   }));
@@ -725,6 +727,86 @@ export function Gestion({ ctx }: { ctx: Ctx }) {
               </Field>
             ))}
           </div>
+          <p className="pt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+            Cotizaciones (unidades por 1 USD)
+          </p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {Object.entries(cfg.cotizaciones ?? COTIZACIONES_INICIALES).map(([mon, v]) => (
+              <Field key={mon} label={mon}>
+                <input
+                  type="number"
+                  step="any"
+                  min={0}
+                  value={v}
+                  disabled={mon === "USD"}
+                  onChange={(e) =>
+                    setCfg((p) => ({
+                      ...p,
+                      cotizaciones: {
+                        ...(p.cotizaciones ?? COTIZACIONES_INICIALES),
+                        [mon]: Number(e.target.value),
+                      },
+                    }))
+                  }
+                  className={INPUT}
+                  aria-label={`Cotización ${mon}`}
+                />
+              </Field>
+            ))}
+          </div>
+          <p className="pt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+            Tasas por país y tipo de contrato (%)
+          </p>
+          <div className="scroll-sutil max-h-[420px] overflow-auto rounded-2xl ring-1 ring-primary/10">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead className="sticky top-0 bg-white">
+                <tr className="text-left text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <th className="p-2 font-semibold">País · contrato</th>
+                  <th className="p-2 font-semibold">Aportes persona</th>
+                  <th className="p-2 font-semibold">Contrib. clínica</th>
+                  <th className="p-2 font-semibold">Retención</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PAISES.flatMap((pa) =>
+                  pa.contratos.map((k) => {
+                    const t = tasasDe(k, cfg);
+                    const set = (campo: "aportesPct" | "patronalPct" | "retencionPct", v: number) =>
+                      setCfg((p) => ({
+                        ...p,
+                        tasas: { ...(p.tasas ?? {}), [k.id]: { ...tasasDe(k, p), [campo]: v } },
+                      }));
+                    return (
+                      <tr key={k.id} className="border-t border-primary/10">
+                        <td className="p-2">
+                          <span className="font-medium">
+                            {pa.bandera} {pa.nombre}
+                          </span>{" "}
+                          · {k.nombre}
+                        </td>
+                        {(["aportesPct", "patronalPct", "retencionPct"] as const).map((campo) => (
+                          <td key={campo} className="p-1.5">
+                            <input
+                              type="number"
+                              step="any"
+                              min={0}
+                              value={t[campo]}
+                              onChange={(e) => set(campo, Number(e.target.value))}
+                              className={`${INPUT} h-8 w-24`}
+                              aria-label={`${k.nombre} ${campo}`}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  }),
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Valores de referencia: revisalos con tu contador en cada país antes de liquidar.
+          </p>
           <div className="flex justify-end gap-2">
             <button type="button" className={BTN_SECUNDARIO} onClick={() => setCfg(config)}>
               Descartar

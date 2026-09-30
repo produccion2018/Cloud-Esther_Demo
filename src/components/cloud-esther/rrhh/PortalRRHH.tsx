@@ -15,6 +15,7 @@ import {
   storeRRHH,
 } from "@/lib/cloud-esther/rrhh-store";
 import { imprimirRecibo } from "./Nomina";
+import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { ars, fecha, hace } from "./ui";
 
 /* Bloques de RRHH dentro del portal del equipo: comunicados, vacaciones y recibos de sueldo. */
@@ -238,7 +239,7 @@ export function MiRRHHPortal({
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">{nombrePeriodo(p.periodo)}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      Neto {ars(r.neto)} · pagado {fecha(p.pagado)}
+                      Neto {formatoMoneda(r.neto, r.moneda)} · pagado {fecha(p.pagado)}
                     </p>
                   </div>
                   <button

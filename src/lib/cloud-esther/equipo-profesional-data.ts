@@ -1,45 +1,45 @@
-export type TeamRole = "odontologo" | "asistente" | "secretaria" | "administrador"
-export type MemberStatus = "activo" | "pendiente" | "inactivo"
+export type TeamRole = "odontologo" | "asistente" | "secretaria" | "administrador";
+export type MemberStatus = "activo" | "pendiente" | "inactivo";
 
 export interface ScheduleDay {
-  day: "Lunes" | "Martes" | "Miércoles" | "Jueves" | "Viernes" | "Sábado"
-  active: boolean
-  start: string
-  end: string
-  breakStart?: string
-  breakEnd?: string
+  day: "Lunes" | "Martes" | "Miércoles" | "Jueves" | "Viernes" | "Sábado";
+  active: boolean;
+  start: string;
+  end: string;
+  breakStart?: string;
+  breakEnd?: string;
 }
 
 export interface Commission {
-  service: string
-  percentage: number
+  service: string;
+  percentage: number;
 }
 
 export interface Permission {
-  key: string
-  label: string
-  enabled: boolean
+  key: string;
+  label: string;
+  enabled: boolean;
 }
 
 export interface TeamMember {
-  id: string
-  firstName: string
-  lastName: string
-  role: TeamRole
-  specialties?: string[]
-  licenseNumber?: string
-  office?: string
-  email: string
-  phone: string
-  avatarUrl?: string
-  status: MemberStatus
-  schedule: ScheduleDay[]
-  assistantOf?: string[]
-  assistants?: string[]
-  permissions: Permission[]
-  commissions?: Commission[]
-  nextAppointment?: string
-  todayAppointments?: number
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: TeamRole;
+  specialties?: string[];
+  licenseNumber?: string;
+  office?: string;
+  email: string;
+  phone: string;
+  avatarUrl?: string;
+  status: MemberStatus;
+  schedule: ScheduleDay[];
+  assistantOf?: string[];
+  assistants?: string[];
+  permissions: Permission[];
+  commissions?: Commission[];
+  nextAppointment?: string;
+  todayAppointments?: number;
 }
 
 export const ESPECIALIDADES = [
@@ -51,9 +51,14 @@ export const ESPECIALIDADES = [
   "Odontopediatría",
   "Cirugía oral",
   "Prótesis",
-]
+];
 
-const fullWeek = (start: string, end: string, breakStart?: string, breakEnd?: string): ScheduleDay[] =>
+const fullWeek = (
+  start: string,
+  end: string,
+  breakStart?: string,
+  breakEnd?: string,
+): ScheduleDay[] =>
   (["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const).map((day, i) => ({
     day,
     active: i < 5,
@@ -61,7 +66,7 @@ const fullWeek = (start: string, end: string, breakStart?: string, breakEnd?: st
     end,
     breakStart,
     breakEnd,
-  }))
+  }));
 
 function permsFor(role: TeamRole): Permission[] {
   const base: Record<string, string> = {
@@ -76,18 +81,27 @@ function permsFor(role: TeamRole): Permission[] {
     gestionar_inventario: "Gestionar inventario",
     acceder_mensajes: "Acceder a mensajes",
     acceder_configuracion: "Acceder a configuración",
-  }
+  };
   const enabledByRole: Record<TeamRole, string[]> = {
-    odontologo: ["ver_pacientes", "editar_pacientes", "gestionar_turnos", "gestionar_agenda", "ver_historias", "crear_historias", "ver_reportes", "acceder_mensajes"],
+    odontologo: [
+      "ver_pacientes",
+      "editar_pacientes",
+      "gestionar_turnos",
+      "gestionar_agenda",
+      "ver_historias",
+      "crear_historias",
+      "ver_reportes",
+      "acceder_mensajes",
+    ],
     asistente: ["ver_pacientes", "gestionar_turnos", "acceder_mensajes"],
     secretaria: ["ver_pacientes", "gestionar_turnos", "gestionar_agenda", "acceder_mensajes"],
     administrador: Object.keys(base),
-  }
+  };
   return Object.entries(base).map(([key, label]) => ({
     key,
     label,
     enabled: enabledByRole[role].includes(key),
-  }))
+  }));
 }
 
 export const TEAM_MEMBERS: TeamMember[] = [
@@ -218,7 +232,31 @@ export const TEAM_MEMBERS: TeamMember[] = [
       { service: "Tratamientos", percentage: 15 },
     ],
   },
-]
+  {
+    id: "9",
+    firstName: "Valeria",
+    lastName: "Ortiz",
+    role: "secretaria",
+    office: "Atención remota (Bogotá)",
+    email: "valeria.ortiz@cloudesther.com",
+    phone: "+57 300 555 1234",
+    status: "activo",
+    schedule: fullWeek("08:00", "14:00"),
+    permissions: permsFor("secretaria"),
+  },
+  {
+    id: "10",
+    firstName: "Tomás",
+    lastName: "Rivas",
+    role: "administrador",
+    office: "Contabilidad remota (Montevideo)",
+    email: "tomas.rivas@cloudesther.com",
+    phone: "+598 99 123 456",
+    status: "activo",
+    schedule: fullWeek("09:00", "13:00"),
+    permissions: permsFor("administrador"),
+  },
+];
 
 export function emptyMember(): TeamMember {
   return {
@@ -235,7 +273,7 @@ export function emptyMember(): TeamMember {
     schedule: fullWeek("09:00", "17:00"),
     permissions: permsFor("odontologo"),
     commissions: [],
-  }
+  };
 }
 
-export { permsFor }
+export { permsFor };

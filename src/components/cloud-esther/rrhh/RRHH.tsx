@@ -147,8 +147,8 @@ export function RRHH() {
         },
         {
           l: "Costo laboral del mes",
-          v: ars(d.recibos.reduce((a, r) => a + r.costo, 0)),
-          t: ars(d.recibos.reduce((a, r) => a + r.neto, 0)),
+          v: ars(d.recibos.reduce((a, r) => a + r.costoBase, 0)),
+          t: ars(d.recibos.reduce((a, r) => a + r.netoBase, 0)),
           s: "neto a pagar",
           i: CircleDollarSign,
         },
@@ -615,14 +615,14 @@ function Resumen({
               Nómina de {fecha(`${d.periodo.periodo}-01`).slice(3)}
             </p>
             <p className="mt-2 text-3xl font-bold text-primary">
-              {ars(d.recibos.reduce((a, r) => a + r.neto, 0))}
+              {ars(d.recibos.reduce((a, r) => a + r.netoBase, 0))}
             </p>
             <p className="text-[11px] text-muted-foreground">
               neto a pagar · {d.periodo.estado.toLowerCase()}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <Pill clase="bg-primary/10 text-primary">
-                Costo {ars(d.recibos.reduce((a, r) => a + r.costo, 0))}
+                Costo {ars(d.recibos.reduce((a, r) => a + r.costoBase, 0))}
               </Pill>
               {d.recibos.some((r) => r.pierdePresentismo) && (
                 <Pill clase="bg-orange-100 text-orange-700">

@@ -3,6 +3,17 @@ import { storeEquipo, type Ausencia, type TipoAusencia } from "@/lib/cloud-esthe
 import { storeEquipoPortal } from "@/lib/cloud-esther/portal-equipo-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
+import {
+  COTIZACIONES_INICIALES,
+  contratoDe,
+  contratoPorNombre,
+  formatoMoneda,
+  paisDe,
+  type ClaseContrato,
+  type ContratoDef,
+  type EsquemaPago,
+  type PaisId,
+} from "@/lib/cloud-esther/nomina-paises";
 
 /* Ubicación: src/lib/cloud-esther/rrhh-store.ts
 
@@ -20,7 +31,8 @@ export const MODALIDADES = [
   "Monotributo",
   "Pasantía",
 ] as const;
-export type Modalidad = (typeof MODALIDADES)[number];
+/** Nombre del tipo de contrato (depende del país; ver nomina-paises.ts). */
+export type Modalidad = string;
 export const DEPARTAMENTOS = ["Clínico", "Recepción", "Administración", "Dirección"] as const;
 export type Departamento = (typeof DEPARTAMENTOS)[number];
 
@@ -39,6 +51,11 @@ export type Legajo = {
   sucursal: string;
   ingreso: string;
   modalidad: Modalidad;
+  pais: PaisId;
+  contratoId: string;
+  esquema: EsquemaPago;
+  valorHora: number;
+  comisionPct: number;
   finContrato: string;
   jornada: number; // horas semanales
   basico: number; // sueldo u honorario mensual
@@ -72,7 +89,33 @@ export type FichajeRRHH = {
 };
 
 export type EstadoPeriodo = "Borrador" | "Liquidada" | "Pagada";
-export type AjusteRecibo = { horasExtra: number; bono: number; adelanto: number };
+export type AjusteRecibo = {
+  horasExtra: number;
+  bono: number;
+  adelanto: number;
+  descuento?: number;
+  horas?: number; // horas trabajadas (si no, se toman de los fichajes)
+  produccion?: number; // facturación del profesional para la comisión
+  nota?: string;
+};
+
+export type EstadoLote = "Preparado" | "Enviado al banco" | "Pagado";
+export type ItemPago = {
+  miembroId: string;
+  moneda: string;
+  monto: number;
+  cuenta: string;
+  requiereFactura: boolean;
+  factura: string;
+  pagado: boolean;
+};
+export type LotePago = {
+  id: string;
+  periodo: string;
+  creado: string;
+  estado: EstadoLote;
+  items: ItemPago[];
+};
 export type Periodo = {
   periodo: string; // yyyy-mm
   estado: EstadoPeriodo;
@@ -168,6 +211,8 @@ export type ConfigRRHH = {
   recargoExtraPct: number;
   diaPago: number;
   antiguedadPct: number; // por año
+  cotizaciones?: Record<string, number>; // unidades por 1 USD
+  tasas?: Record<string, { aportesPct: number; patronalPct: number; retencionPct: number }>;
 };
 
 export type EstadoRRHH = {
@@ -182,6 +227,7 @@ export type EstadoRRHH = {
   flujos: FlujoRRHH[];
   auditoria: EventoAuditoria[];
   config: ConfigRRHH;
+  lotes?: LotePago[];
 };
 
 /* ───────────── Fechas ───────────── */
@@ -246,6 +292,11 @@ function legajo(
     >,
 ): Legajo {
   return {
+    pais: "AR",
+    contratoId: contratoPorNombre(l.modalidad).id,
+    esquema: "Mensual",
+    valorHora: 0,
+    comisionPct: 0,
     dni: "",
     cuil: "",
     nacimiento: "",
@@ -293,6 +344,8 @@ function legajosEjemplo(): Record<string, Legajo> {
       departamento: "Clínico",
       ingreso: haceAnios(3, 60),
       modalidad: "Monotributo",
+      esquema: "Mixto",
+      comisionPct: 20,
       basico: 1_200_000,
       dni: "28.765.332",
       cuil: "20-28765332-1",
@@ -361,6 +414,8 @@ function legajosEjemplo(): Record<string, Legajo> {
       departamento: "Clínico",
       ingreso: diaISO(-20),
       modalidad: "Monotributo",
+      esquema: "Mixto",
+      comisionPct: 15,
       basico: 780_000,
       dni: "36.441.207",
       cuil: "20-36441207-4",
@@ -398,7 +453,51 @@ function legajosEjemplo(): Record<string, Legajo> {
       emergencia: "María Méndez · +54 11 6677-3344",
       obraSocial: "Galeno",
     }),
+    legajo({
+      miembroId: "9",
+      numero: "L-0009",
+      puesto: "Atención al paciente (remoto)",
+      departamento: "Recepción",
+      ingreso: haceAnios(1, -30),
+      modalidad: "Prestación de servicios",
+      pais: "CO",
+      contratoId: "co-servicios",
+      esquema: "Por hora",
+      valorHora: 32_000,
+      basico: 0,
+      jornada: 30,
+      dni: "1.020.456.789",
+      cuil: "CC 1020456789",
+      nacimiento: haceAnios(29, 70),
+      direccion: "Cra. 15 #93-47, Bogotá",
+      emergencia: "Andrés Ortiz · +57 310 555 0199",
+      obraSocial: "EPS Sura",
+      cbu: "Bancolombia · Ahorros 123-456789-01",
+      convenio: "Cuenta de cobro mensual",
+    }),
+    legajo({
+      miembroId: "10",
+      numero: "L-0010",
+      puesto: "Contabilidad y facturación (remoto)",
+      departamento: "Administración",
+      ingreso: haceAnios(2, 40),
+      modalidad: "Empresa unipersonal",
+      pais: "UY",
+      contratoId: "uy-unipersonal",
+      esquema: "Mensual",
+      basico: 68_000,
+      jornada: 20,
+      dni: "4.512.338-7",
+      cuil: "RUT 21 456789 0012",
+      nacimiento: haceAnios(36, 110),
+      direccion: "Bv. Artigas 1250, Montevideo",
+      emergencia: "Laura Rivas · +598 99 222 333",
+      obraSocial: "Médica Uruguaya",
+      cbu: "BROU · Cta. 001234567-00001",
+      convenio: "Factura mensual",
+    }),
   ];
+
   return Object.fromEntries(lista.map((l) => [l.miembroId, l]));
 }
 
@@ -406,6 +505,8 @@ function legajosEjemplo(): Record<string, Legajo> {
 function fichajesEjemplo(): FichajeRRHH[] {
   const horarios: Record<string, [string, string]> = {
     "1": ["08:00", "16:00"],
+    "9": ["08:00", "14:00"],
+    "10": ["09:00", "13:00"],
     "2": ["10:00", "18:00"],
     "3": ["08:00", "16:00"],
     "4": ["08:00", "17:00"],
@@ -856,12 +957,20 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
       ],
       fichajes: fichajesEjemplo(),
       periodos: [
-        { periodo: periodoAnterior(actual, 2), estado: "Pagada", pagado: diaISO(-55), ajustes: {} },
+        {
+          periodo: periodoAnterior(actual, 2),
+          estado: "Pagada",
+          pagado: diaISO(-55),
+          ajustes: { "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 980_000 } },
+        },
         {
           periodo: periodoAnterior(actual, 1),
           estado: "Pagada",
           pagado: diaISO(-25),
-          ajustes: { "4": { horasExtra: 6, bono: 0, adelanto: 0 } },
+          ajustes: {
+            "4": { horasExtra: 6, bono: 0, adelanto: 0 },
+            "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 1_150_000 },
+          },
         },
         {
           periodo: actual,
@@ -870,6 +979,8 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
           ajustes: {
             "3": { horasExtra: 4, bono: 0, adelanto: 150_000 },
             "8": { horasExtra: 0, bono: 120_000, adelanto: 0 },
+            "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 1_320_000 },
+            "4": { horasExtra: 0, bono: 0, adelanto: 0, descuento: 25_000, nota: "Uniforme" },
           },
         },
       ],
@@ -902,7 +1013,10 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
         recargoExtraPct: 50,
         diaPago: 5,
         antiguedadPct: 1,
+        cotizaciones: COTIZACIONES_INICIALES,
+        tasas: {},
       },
+      lotes: [],
     };
   },
   { persistir: "rrhh" },
@@ -947,10 +1061,30 @@ const PUESTO_POR_ROL: Record<
   administrador: { puesto: "Administración", departamento: "Administración", basico: 1_250_000 },
 };
 
+/** Completa campos nuevos en legajos guardados antes (país, contrato y esquema de pago). */
+export function normalizarLegajo(l: Legajo): Legajo {
+  const contrato = l.contratoId ? contratoDe(l.contratoId, l.pais) : contratoPorNombre(l.modalidad);
+  const pais = (l.pais ?? (PAISES_CONTRATO[contrato.id] as PaisId | undefined) ?? "AR") as PaisId;
+  return {
+    ...l,
+    pais,
+    contratoId: contrato.id,
+    modalidad: contrato.nombre,
+    esquema: l.esquema ?? "Mensual",
+    valorHora: l.valorHora ?? 0,
+    comisionPct: l.comisionPct ?? 0,
+  };
+}
+const PAISES_CONTRATO: Record<string, string> = Object.fromEntries(
+  ["AR", "CO", "MX", "CL", "UY", "PE", "ES", "US"].flatMap((p) =>
+    paisDe(p).contratos.map((k) => [k.id, p]),
+  ),
+);
+
 /** Legajo guardado o uno básico (para integrantes dados de alta desde Equipo). */
 export function legajoDe(m: TeamMember, legajos: Record<string, Legajo>): Legajo {
   const guardado = legajos[m.id];
-  if (guardado) return guardado;
+  if (guardado) return normalizarLegajo(guardado);
   const base = PUESTO_POR_ROL[m.role];
   return legajo({
     miembroId: m.id,
@@ -1032,73 +1166,155 @@ export type Recibo = {
   miembroId: string;
   periodo: string;
   modalidad: Modalidad;
-  basico: number;
+  pais: PaisId;
+  moneda: string;
+  clase: ClaseContrato;
+  esquema: EsquemaPago;
+  requiereFactura: boolean;
+  horasTrabajadas: number;
+  basico: number; // remuneración base del esquema (mensual, horas × valor, etc.)
   antiguedad: number;
   presentismo: number;
   horasExtra: number;
   bono: number;
   comisiones: number;
+  descuento: number;
   bruto: number;
   aportes: number;
+  retencion: number;
   adelanto: number;
   neto: number;
   contribuciones: number;
   costo: number;
+  netoBase: number; // neto convertido a pesos argentinos (moneda base del tablero)
+  costoBase: number;
   llegadasTarde: number;
   pierdePresentismo: boolean;
 };
 
-/** Recibo del período: básico + antigüedad + presentismo + extras + bono − aportes − adelantos. */
+export const MONEDA_BASE = "ARS";
+/** Convierte un monto a la moneda base usando las cotizaciones configuradas. */
+export function aMonedaBase(monto: number, moneda: string, config: ConfigRRHH) {
+  const cot = config.cotizaciones ?? COTIZACIONES_INICIALES;
+  if (moneda === MONEDA_BASE) return monto;
+  const porUsd = cot[moneda] ?? COTIZACIONES_INICIALES[moneda] ?? 1;
+  const base = cot[MONEDA_BASE] ?? COTIZACIONES_INICIALES[MONEDA_BASE] ?? 1;
+  return (monto / porUsd) * base;
+}
+
+/** Tasas del contrato: las configuradas por la clínica o las de referencia del país. */
+export function tasasDe(contrato: ContratoDef, config: ConfigRRHH) {
+  const propia = config.tasas?.[contrato.id];
+  if (propia) return propia;
+  if (contrato.id === "ar-dep" || contrato.id === "ar-plazo" || contrato.id === "ar-eventual")
+    return {
+      aportesPct: config.aportesPct,
+      patronalPct: config.contribucionesPct,
+      retencionPct: 0,
+    };
+  return {
+    aportesPct: contrato.aportesPct,
+    patronalPct: contrato.patronalPct,
+    retencionPct: contrato.retencionPct,
+  };
+}
+
+/** Recibo del período según país, tipo de contrato y esquema de pago:
+    base (mensual / horas × valor hora / comisión / mixto) + adicionales de convenio (Argentina)
+    + horas extra + bono − descuento = bruto; − aportes − retención − adelanto = neto. */
 export function calcularRecibo(
   m: TeamMember,
-  l: Legajo,
+  lOriginal: Legajo,
   periodo: Periodo,
   config: ConfigRRHH,
   todasLasMarcas: Marca[],
   ausencias: Ausencia[],
 ): Recibo {
+  const l = normalizarLegajo(lOriginal);
+  const pais = paisDe(l.pais);
+  const contrato = contratoDe(l.contratoId, l.pais);
+  const tasas = tasasDe(contrato, config);
   const aj = periodo.ajustes[m.id] ?? { horasExtra: 0, bono: 0, adelanto: 0 };
-  const deps = l.modalidad === "Relación de dependencia" || l.modalidad === "Plazo fijo";
+  const deps = contrato.clase === "dependencia";
   const delMes = todasLasMarcas.filter(
     (f) => f.miembroId === m.id && f.fecha.startsWith(periodo.periodo),
   );
+  const horasFichadas = Math.round(delMes.reduce((a, f) => a + f.horas, 0) * 10) / 10;
+  const horasTrabajadas = aj.horas ?? horasFichadas;
   const llegadasTarde = delMes.filter((f) => f.tarde > 0).length;
   const injustificadas = ausencias.filter(
     (a) =>
       a.miembroId === m.id && a.tipo === "Trámite personal" && a.desde.startsWith(periodo.periodo),
   ).length;
-  const pierdePresentismo = llegadasTarde >= 3 || injustificadas > 1;
-  const basico = l.basico;
-  const antig = deps
-    ? Math.round((basico * config.antiguedadPct * antiguedad(l.ingreso)) / 100)
-    : 0;
+  const conAdicionales = deps && pais.adicionalesAR;
+  const pierdePresentismo = conAdicionales && (llegadasTarde >= 3 || injustificadas > 1);
+  const produccion = aj.produccion ?? 0;
+  const porHora = l.esquema === "Por hora";
+  const basico =
+    l.esquema === "Por hora"
+      ? Math.round(horasTrabajadas * l.valorHora)
+      : l.esquema === "Por comisión"
+        ? 0
+        : l.basico;
+  const comisiones =
+    l.esquema === "Por comisión" || l.esquema === "Mixto"
+      ? Math.round((produccion * l.comisionPct) / 100)
+      : 0;
+  const antig =
+    conAdicionales && !porHora
+      ? Math.round((basico * config.antiguedadPct * antiguedad(l.ingreso)) / 100)
+      : 0;
   const presentismo =
-    deps && !pierdePresentismo ? Math.round(((basico + antig) * config.presentismoPct) / 100) : 0;
-  const valorHora = basico / Math.max(1, l.jornada * 4.33);
-  const horasExtra = Math.round(aj.horasExtra * valorHora * (1 + config.recargoExtraPct / 100));
-  const comisiones = deps ? 0 : Math.round((m.commissions?.[0]?.percentage ?? 0) * 12_000);
-  const bruto = basico + antig + presentismo + horasExtra + aj.bono + comisiones;
-  const aportes = deps ? Math.round((bruto * config.aportesPct) / 100) : 0;
-  const contribuciones = deps ? Math.round((bruto * config.contribucionesPct) / 100) : 0;
+    conAdicionales && !pierdePresentismo && !porHora
+      ? Math.round(((basico + antig) * config.presentismoPct) / 100)
+      : 0;
+  const valorHora = porHora ? l.valorHora : l.basico / Math.max(1, l.jornada * 4.33);
+  const horasExtra = Math.round(
+    aj.horasExtra * valorHora * (1 + (deps ? config.recargoExtraPct : 0) / 100),
+  );
+  const descuento = aj.descuento ?? 0;
+  const bruto = Math.max(
+    0,
+    basico + antig + presentismo + horasExtra + aj.bono + comisiones - descuento,
+  );
+  const aportes = Math.round((bruto * tasas.aportesPct) / 100);
+  const retencion = Math.round((bruto * tasas.retencionPct) / 100);
+  const contribuciones = Math.round((bruto * tasas.patronalPct) / 100);
+  const neto = bruto - aportes - retencion - aj.adelanto;
+  const costo = bruto + contribuciones;
   return {
     miembroId: m.id,
     periodo: periodo.periodo,
-    modalidad: l.modalidad,
+    modalidad: contrato.nombre,
+    pais: pais.id,
+    moneda: pais.moneda,
+    clase: contrato.clase,
+    esquema: l.esquema,
+    requiereFactura: contrato.requiereFactura,
+    horasTrabajadas,
     basico,
     antiguedad: antig,
     presentismo,
     horasExtra,
     bono: aj.bono,
     comisiones,
+    descuento,
     bruto,
     aportes,
+    retencion,
     adelanto: aj.adelanto,
-    neto: bruto - aportes - aj.adelanto,
+    neto,
     contribuciones,
-    costo: bruto + contribuciones,
+    costo,
+    netoBase: aMonedaBase(neto, pais.moneda, config),
+    costoBase: aMonedaBase(costo, pais.moneda, config),
     llegadasTarde,
     pierdePresentismo,
   };
+}
+
+export function montoRecibo(r: Pick<Recibo, "neto" | "moneda">) {
+  return formatoMoneda(r.neto, r.moneda);
 }
 
 /** Aprueba una solicitud y la registra como ausencia de Equipo (se ve en Agenda y Equipo). */
@@ -1358,15 +1574,17 @@ export function responderRRHH(pregunta: string): string {
       : "No hay contratos ni documentos por vencer en los próximos 30 días.";
   }
   if (/costo|sueldo|nomina|liquid|masa|pagar/.test(q)) {
-    const neto = recibos.reduce((a, x) => a + x.neto, 0);
-    const costo = recibos.reduce((a, x) => a + x.costo, 0);
-    const top = [...recibos].sort((a, b) => b.costo - a.costo)[0];
+    const neto = recibos.reduce((a, x) => a + x.netoBase, 0);
+    const costo = recibos.reduce((a, x) => a + x.costoBase, 0);
+    const top = [...recibos].sort((a, b) => b.costoBase - a.costoBase)[0];
     const sinPres = recibos.filter((x) => x.pierdePresentismo);
     return [
       `Período ${nombrePeriodo(periodo.periodo)} (${periodo.estado.toLowerCase()}):`,
       `• Neto a pagar: ${ars(neto)}`,
       `• Costo laboral total (con contribuciones): ${ars(costo)}`,
-      top ? `• Mayor costo: ${nombre(top.miembroId)} con ${ars(top.costo)}` : "",
+      top
+        ? `• Mayor costo: ${nombre(top.miembroId)} con ${formatoMoneda(top.costo, top.moneda)}`
+        : "",
       sinPres.length
         ? `• Pierden presentismo: ${sinPres.map((x) => nombre(x.miembroId)).join(", ")}`
         : "• Nadie pierde el presentismo este mes.",
@@ -1441,7 +1659,7 @@ export function responderRRHH(pregunta: string): string {
         ? `• Última evaluación: ${prom.toFixed(1)}/5 (${ev?.ciclo})`
         : "• Sin evaluaciones cerradas",
       rec
-        ? `• Neto estimado del mes: ${ars(rec.neto)}${rec.pierdePresentismo ? " (pierde presentismo)" : ""}`
+        ? `• Neto estimado del mes: ${formatoMoneda(rec.neto, rec.moneda)}${rec.pierdePresentismo ? " (pierde presentismo)" : ""}`
         : "",
     ]
       .filter(Boolean)
@@ -1464,7 +1682,7 @@ export function responderRRHH(pregunta: string): string {
       .join(", ")}.`,
     `Hoy: ${deHoy.length} fichadas, ${ausentesHoy.length} con licencia.`,
     `Solicitudes pendientes: ${r.solicitudes.filter((s) => s.estado === "Pendiente").length}.`,
-    `Costo laboral estimado del mes: ${ars(recibos.reduce((a, x) => a + x.costo, 0))}.`,
+    `Costo laboral estimado del mes: ${ars(recibos.reduce((a, x) => a + x.costoBase, 0))}.`,
     "Podés preguntarme por una persona (ej. «¿Cómo está Sofía?»), vencimientos, llegadas tarde, vacaciones o costos.",
   ].join("\n");
 }

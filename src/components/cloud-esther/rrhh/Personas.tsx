@@ -33,7 +33,6 @@ import { asegurarAcceso } from "@/lib/cloud-esther/portal-equipo-store";
 import {
   COMPETENCIAS,
   DEPARTAMENTOS,
-  MODALIDADES,
   antiguedad,
   auditar,
   diaISO,
@@ -49,6 +48,15 @@ import {
   type Modalidad,
 } from "@/lib/cloud-esther/rrhh-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import {
+  ESQUEMAS,
+  PAISES,
+  contratoDe,
+  formatoMoneda,
+  paisDe,
+  type EsquemaPago,
+  type PaisId,
+} from "@/lib/cloud-esther/nomina-paises";
 import {
   Acciones,
   Avatar,
@@ -384,7 +392,9 @@ export function Personas({ ctx }: { ctx: Ctx }) {
                     ))}
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                    <span>{l.modalidad}</span>
+                    <span>
+                      {paisDe(l.pais).bandera} {l.modalidad}
+                    </span>
                     {finCt !== null && finCt <= 30 && (
                       <Pill
                         clase={
@@ -536,7 +546,11 @@ function AltaForm({
     puesto: "",
     sucursal: ctx.sucursales[0] ?? "",
     ingreso: diaISO(),
-    modalidad: "Relación de dependencia" as Modalidad,
+    pais: "AR" as PaisId,
+    contratoId: "ar-dep",
+    esquema: "Mensual" as EsquemaPago,
+    valorHora: "",
+    comisionPct: "",
     finContrato: "",
     basico: "",
     jornada: "40",
@@ -551,8 +565,9 @@ function AltaForm({
         if (!f.nombre.trim() || !f.apellido.trim()) return setError("Completá nombre y apellido.");
         if (!/^\S+@\S+\.\S+$/.test(f.email.trim()))
           return setError("Cargá un correo válido: lo usa para entrar al portal del equipo.");
-        if (f.modalidad === "Plazo fijo" && !f.finContrato)
-          return setError("Un contrato a plazo fijo necesita fecha de fin.");
+        const errC = validarContrato(f);
+        if (errC) return setError(errC);
+        const contrato = contratoDe(f.contratoId, f.pais);
         const m: TeamMember = {
           ...emptyMember(),
           firstName: titulo(f.nombre),
@@ -580,16 +595,13 @@ function AltaForm({
             puesto: f.puesto.trim() ? titulo(f.puesto) : base.puesto,
             sucursal: f.sucursal,
             ingreso: f.ingreso,
-            modalidad: f.modalidad,
-            finContrato: f.modalidad === "Plazo fijo" ? f.finContrato : "",
-            basico: Number(f.basico) || base.basico,
-            jornada: Number(f.jornada) || 40,
+            ...datosContrato(f, base.basico),
             dni: f.dni.trim(),
             obraSocial: "",
             convenio:
-              f.modalidad === "Monotributo"
+              contrato.clase === "independiente"
                 ? "Sin convenio (factura honorarios)"
-                : "Sanidad (FATSA)",
+                : "Según país",
             historial: [
               { fecha: f.ingreso, texto: `Ingreso como ${f.puesto.trim() || base.puesto}` },
             ],
@@ -678,30 +690,8 @@ function AltaForm({
             className={INPUT}
           />
         </Field>
-        <Field label="Modalidad">
-          <Sel value={f.modalidad} onChange={(v) => set({ modalidad: v })} opciones={MODALIDADES} />
-        </Field>
-        <Field label={f.modalidad === "Monotributo" ? "Honorario mensual" : "Sueldo básico"}>
-          <input
-            type="number"
-            min={0}
-            value={f.basico}
-            onChange={(e) => set({ basico: e.target.value })}
-            className={INPUT}
-            placeholder="Según convenio"
-          />
-        </Field>
-        <Field label="Horas semanales">
-          <input
-            type="number"
-            min={1}
-            max={60}
-            value={f.jornada}
-            onChange={(e) => set({ jornada: e.target.value })}
-            className={INPUT}
-          />
-        </Field>
       </div>
+      <ContratoCampos v={f} set={set} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="DNI">
           <input
@@ -711,16 +701,6 @@ function AltaForm({
             placeholder="Opcional"
           />
         </Field>
-        {f.modalidad === "Plazo fijo" && (
-          <Field label="Fin de contrato *">
-            <input
-              type="date"
-              value={f.finContrato}
-              onChange={(e) => set({ finContrato: e.target.value })}
-              className={INPUT}
-            />
-          </Field>
-        )}
       </div>
       <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
         Se crea en <b className="text-foreground">Equipo</b> con los permisos de su rol, se abre su
@@ -846,14 +826,30 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
         {tab === "contrato" && (
           <Grilla
             filas={[
-              ["Modalidad", l.modalidad],
+              [
+                "País",
+                `${paisDe(l.pais).bandera} ${paisDe(l.pais).nombre} (${paisDe(l.pais).moneda})`,
+              ],
+              ["Tipo de contrato", l.modalidad],
+              [
+                "Forma de pago",
+                l.esquema +
+                  (l.esquema === "Por hora"
+                    ? ` · ${formatoMoneda(l.valorHora, paisDe(l.pais).moneda)}/h`
+                    : "") +
+                  (l.comisionPct ? ` · ${l.comisionPct}% producción` : ""),
+              ],
               ["Fin de contrato", l.finContrato ? fecha(l.finContrato) : "Tiempo indeterminado"],
               ["Convenio", l.convenio],
               ["Departamento", l.departamento],
               ["Jornada", `${l.jornada} h semanales`],
               [
-                l.modalidad === "Monotributo" ? "Honorario mensual" : "Sueldo básico",
-                ars(l.basico),
+                contratoDe(l.contratoId, l.pais).clase === "independiente"
+                  ? "Honorario mensual"
+                  : "Sueldo básico",
+                l.esquema === "Por hora" || l.esquema === "Por comisión"
+                  ? "Variable"
+                  : formatoMoneda(l.basico, paisDe(l.pais).moneda),
               ],
               [
                 "Horario",
@@ -1130,6 +1126,8 @@ function LegajoForm({
     ...l,
     basico: String(l.basico),
     jornada: String(l.jornada),
+    valorHora: String(l.valorHora),
+    comisionPct: String(l.comisionPct),
     email: m.email,
     phone: m.phone,
   });
@@ -1166,13 +1164,19 @@ function LegajoForm({
         e.preventDefault();
         if (f.cuil && !/^\d{2}-?\d{8}-?\d$/.test(f.cuil.trim()))
           return setError("El CUIL tiene que tener 11 números (ej. 20-12345678-9).");
-        if (f.modalidad === "Plazo fijo" && !f.finContrato)
-          return setError("Indicá el fin del contrato a plazo fijo.");
-        const basico = Number(f.basico) || l.basico;
+        const errC = validarContrato(f);
+        if (errC) return setError(errC);
+        const dc = datosContrato(f, l.basico);
+        const basico = dc.basico;
         const cambios: string[] = [];
-        if (basico !== l.basico) cambios.push(`Sueldo ${ars(l.basico)} → ${ars(basico)}`);
+        if (basico !== l.basico)
+          cambios.push(
+            `Sueldo ${formatoMoneda(l.basico, paisDe(l.pais).moneda)} → ${formatoMoneda(basico, paisDe(f.pais).moneda)}`,
+          );
         if (f.puesto !== l.puesto) cambios.push(`Puesto: ${f.puesto}`);
-        if (f.modalidad !== l.modalidad) cambios.push(`Modalidad: ${f.modalidad}`);
+        if (dc.contratoId !== l.contratoId)
+          cambios.push(`Contrato: ${paisDe(dc.pais).nombre} · ${dc.modalidad}`);
+        if (dc.esquema !== l.esquema) cambios.push(`Pago: ${dc.esquema}`);
         if (f.sucursal !== l.sucursal) cambios.push(`Traslado a ${f.sucursal}`);
         onGuardar(
           {
@@ -1188,11 +1192,8 @@ function LegajoForm({
             departamento: f.departamento,
             sucursal: f.sucursal,
             ingreso: f.ingreso,
-            modalidad: f.modalidad,
-            finContrato: f.modalidad === "Plazo fijo" ? f.finContrato : "",
+            ...dc,
             convenio: f.convenio.trim(),
-            basico,
-            jornada: Number(f.jornada) || l.jornada,
           },
           { email: f.email.trim().toLowerCase(), phone: f.phone.trim() },
           cambios.join(" · "),
@@ -1249,40 +1250,9 @@ function LegajoForm({
             className={INPUT}
           />
         </Field>
-        <Field label="Modalidad">
-          <Sel value={f.modalidad} onChange={(v) => set({ modalidad: v })} opciones={MODALIDADES} />
-        </Field>
-        {f.modalidad === "Plazo fijo" ? (
-          <Field label="Fin de contrato">
-            <input
-              type="date"
-              value={f.finContrato}
-              onChange={(e) => set({ finContrato: e.target.value })}
-              className={INPUT}
-            />
-          </Field>
-        ) : (
-          campo("Convenio", "convenio")
-        )}
-        <Field label={f.modalidad === "Monotributo" ? "Honorario mensual" : "Sueldo básico"}>
-          <input
-            type="number"
-            min={0}
-            value={f.basico}
-            onChange={(e) => set({ basico: e.target.value })}
-            className={INPUT}
-          />
-        </Field>
-        <Field label="Horas semanales">
-          <input
-            type="number"
-            min={1}
-            value={f.jornada}
-            onChange={(e) => set({ jornada: e.target.value })}
-            className={INPUT}
-          />
-        </Field>
+        {campo("Convenio", "convenio")}
       </div>
+      <ContratoCampos v={f} set={set} />
       {error && <p className="text-xs font-medium text-rose-600">{error}</p>}
       <Acciones etiqueta="Guardar legajo" onCancel={onCancel} />
     </form>
@@ -1333,5 +1303,142 @@ function BajaForm({
       </p>
       <Acciones etiqueta="Confirmar baja" onCancel={onCancel} icon={UserMinus} />
     </form>
+  );
+}
+
+/* ───────────── País, contrato y forma de pago ───────────── */
+
+type DatosContratoForm = {
+  pais: PaisId;
+  contratoId: string;
+  esquema: EsquemaPago;
+  basico: string;
+  valorHora: string;
+  comisionPct: string;
+  jornada: string;
+  finContrato: string;
+};
+
+function validarContrato(f: DatosContratoForm): string {
+  const k = contratoDe(f.contratoId, f.pais);
+  if (k.plazoFijo && !f.finContrato) return "Este contrato tiene plazo: indicá la fecha de fin.";
+  if (f.esquema === "Por hora" && !(Number(f.valorHora) > 0)) return "Indicá el valor de la hora.";
+  if ((f.esquema === "Por comisión" || f.esquema === "Mixto") && !(Number(f.comisionPct) > 0))
+    return "Indicá el porcentaje de comisión sobre la producción.";
+  return "";
+}
+
+function datosContrato(f: DatosContratoForm, basicoActual: number) {
+  const k = contratoDe(f.contratoId, f.pais);
+  return {
+    pais: f.pais,
+    contratoId: k.id,
+    modalidad: k.nombre,
+    esquema: f.esquema,
+    basico:
+      f.esquema === "Por hora" || f.esquema === "Por comisión"
+        ? 0
+        : Number(f.basico) || basicoActual,
+    valorHora: Number(f.valorHora) || 0,
+    comisionPct: Number(f.comisionPct) || 0,
+    jornada: Number(f.jornada) || 40,
+    finContrato: k.plazoFijo ? f.finContrato : "",
+  };
+}
+
+function ContratoCampos({
+  v,
+  set,
+}: {
+  v: DatosContratoForm;
+  set: (c: Partial<DatosContratoForm>) => void;
+}) {
+  const pais = paisDe(v.pais);
+  const k = contratoDe(v.contratoId, v.pais);
+  const num = (label: string, key: "basico" | "valorHora" | "comisionPct" | "jornada", ph = "") => (
+    <Field label={label}>
+      <input
+        type="number"
+        min={0}
+        step="any"
+        value={v[key]}
+        onChange={(e) => set({ [key]: e.target.value })}
+        className={INPUT}
+        placeholder={ph}
+        aria-label={label}
+      />
+    </Field>
+  );
+  return (
+    <div className="space-y-3 rounded-2xl bg-primary/[0.04] p-3 ring-1 ring-primary/10">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+        Contratación y pago
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Field label="País">
+          <Sel
+            value={v.pais}
+            etiqueta="País"
+            onChange={(p) => {
+              const np = paisDe(p);
+              set({ pais: np.id, contratoId: np.contratos[0]!.id });
+            }}
+            opciones={PAISES.map((p) => ({
+              value: p.id,
+              label: `${p.bandera} ${p.nombre} · ${p.moneda}`,
+            }))}
+          />
+        </Field>
+        <Field label="Tipo de contrato">
+          <Sel
+            value={k.id}
+            etiqueta="Tipo de contrato"
+            onChange={(c) => set({ contratoId: c })}
+            opciones={pais.contratos.map((c) => ({ value: c.id, label: c.nombre }))}
+          />
+        </Field>
+        <Field label="Forma de pago">
+          <Sel
+            value={v.esquema}
+            etiqueta="Forma de pago"
+            onChange={(e) => set({ esquema: e })}
+            opciones={ESQUEMAS}
+          />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {(v.esquema === "Mensual" || v.esquema === "Mixto") &&
+          num(
+            `${k.clase === "independiente" ? "Honorario" : "Sueldo"} mensual (${pais.moneda})`,
+            "basico",
+            "Monto",
+          )}
+        {v.esquema === "Por hora" && num(`Valor hora (${pais.moneda})`, "valorHora", "Por hora")}
+        {(v.esquema === "Por comisión" || v.esquema === "Mixto") &&
+          num("% sobre producción", "comisionPct", "Ej: 20")}
+        {num("Horas semanales", "jornada")}
+        {k.plazoFijo && (
+          <Field label="Fin de contrato *">
+            <input
+              type="date"
+              value={v.finContrato}
+              onChange={(e) => set({ finContrato: e.target.value })}
+              className={INPUT}
+              aria-label="Fin de contrato"
+            />
+          </Field>
+        )}
+      </div>
+      <p className="text-[11px] leading-5 text-muted-foreground">
+        <b className="text-foreground">
+          {k.clase === "dependencia" ? "Relación de dependencia" : "Independiente (factura)"}
+        </b>{" "}
+        · {k.detalle}
+        {k.requiereFactura
+          ? " Para pagarle hay que registrar su factura o cuenta de cobro."
+          : ""}{" "}
+        Cuenta para el pago: {pais.cuenta}.
+      </p>
+    </div>
   );
 }

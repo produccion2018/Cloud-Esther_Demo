@@ -22,9 +22,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { registrarEvento } from "@/components/cloud-esther/Finanzas";
 import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+
+/** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
+function registrarEvento(evento: {
+  modulo: string;
+  accion: string;
+  entidad: string;
+  antes?: string;
+  despues?: string;
+}) {
+  console.log("[Esther Trace]", { ...evento, fecha: new Date().toISOString() });
+}
 
 /* ───────────────────────── Tipos y datos demo ───────────────────────── */
 

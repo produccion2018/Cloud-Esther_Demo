@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { AppShell } from "@/components/cloud-esther/AppShell"
-import { Finanzas } from "@/components/cloud-esther/Finanzas"
-import { CloudEstherProvider } from "@/lib/cloud-esther/data"
+import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "@/components/cloud-esther/AppShell";
+import { Finanzas } from "@/components/cloud-esther/finanzas/Finanzas";
+import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/finanzas")({
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/demo_/finanzas")({
     meta: [{ title: "Finanzas | Cloud Esther" }],
   }),
   component: FinanzasPage,
-})
+});
 
 function FinanzasPage() {
   return (
@@ -18,5 +18,5 @@ function FinanzasPage() {
         <Finanzas />
       </AppShell>
     </CloudEstherProvider>
-  )
+  );
 }

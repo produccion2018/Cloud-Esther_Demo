@@ -17,8 +17,8 @@ export interface Conector {
   estado: EstadoConector;
 }
 
-/* Un solo conector conectado de ejemplo (n8n), el resto listo para
-   conectar de verdad más adelante. Nada de datos falsos de más. */
+/* De ejemplo quedan conectados n8n y WhatsApp Business (este último lo usa el módulo
+   Comunicación); el resto queda listo para conectar de verdad más adelante. */
 const DATOS_INICIALES: Conector[] = [
   {
     id: "whatsapp",
@@ -26,7 +26,7 @@ const DATOS_INICIALES: Conector[] = [
     descripcion: "Envío de mensajes y recordatorios automáticos al paciente.",
     categoria: "Comunicación",
     icon: "message",
-    estado: "Desconectado",
+    estado: "Conectado",
   },
   {
     id: "google-calendar",

@@ -140,6 +140,7 @@ const MATERIALES_LAB = [
 ];
 
 const ESTADOS_LABORATORIO = ["Enviado", "En proceso", "Listo para retirar", "Entregado"] as const;
+const COLORES_VITA = ["A1", "A2", "A3", "A3.5", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4", "D2", "D3", "D4", "BL1", "BL2"];
 
 /* ───────────── Tipos ───────────── */
 
@@ -365,6 +366,11 @@ export type TrabajoLaboratorio = {
   estado: EstadoLaboratorio;
   costo: number;
   notas: string;
+  /** Color del diente (escala VITA). */
+  color?: string;
+  profesional?: string;
+  /** Fecha de cada cambio de estado (para el seguimiento). */
+  historial?: { estado: EstadoLaboratorio; fecha: string }[];
 };
 
 /* Antecedentes y alertas médicas del paciente (alergias, enfermedades, medicación…). */
@@ -697,12 +703,38 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           tipo: "Corona",
           pieza: "21",
           material: "Disilicato de litio (e.max)",
-          proveedor: "",
+          proveedor: "ProDent Lab",
           fechaEnvio: "2026-08-21",
           fechaEntregaEstimada: "2026-08-29",
           estado: "En proceso",
-          costo: 0,
+          costo: 85000,
           notas: "Toma de color registrada. Pendiente de recibir del laboratorio.",
+          color: "A2",
+          profesional: "Laura Martínez",
+          historial: [
+            { estado: "Enviado", fecha: "2026-08-21" },
+            { estado: "En proceso", fecha: "2026-08-23" },
+          ],
+        },
+        {
+          id: 2,
+          tipo: "Placa de descarga",
+          pieza: "Arcada superior",
+          material: "Acrílico",
+          proveedor: "OrthoLab Argentina",
+          fechaEnvio: "2026-07-10",
+          fechaEntregaEstimada: "2026-07-20",
+          estado: "Entregado",
+          costo: 60000,
+          notas: "Por bruxismo. Paciente conforme.",
+          color: "",
+          profesional: "Laura Martínez",
+          historial: [
+            { estado: "Enviado", fecha: "2026-07-10" },
+            { estado: "En proceso", fecha: "2026-07-12" },
+            { estado: "Listo para retirar", fecha: "2026-07-19" },
+            { estado: "Entregado", fecha: "2026-07-21" },
+          ],
         },
       ],      auditoria: [
         { id: 1, usuario: "Dr. Carlos Rodríguez", accion: "Creó una nota clínica", fecha: "2026-08-21", hora: "15:35" },
@@ -4708,32 +4740,45 @@ function ProfesionalesSec({ datos, cambiar, onToast }: PropsSeccion) {
 /* ───────────── Laboratorio ───────────── */
 
 function LaboratorioForm({
+  inicial,
   onSubmit,
   onCancel,
 }: {
+  inicial?: TrabajoLaboratorio | undefined;
   onSubmit: (t: Omit<TrabajoLaboratorio, "id" | "estado">) => void;
   onCancel: () => void;
 }) {
-  const [tipo, setTipo] = useState(TIPOS_TRABAJO_LAB[0]);
-  const [pieza, setPieza] = useState("");
-  const [material, setMaterial] = useState(MATERIALES_LAB[0]);
-  const [proveedor, setProveedor] = useState("");
-  const [fechaEnvio, setFechaEnvio] = useState(hoyISO());
-  const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
-  const [costo, setCosto] = useState("");
-  const [notas, setNotas] = useState("");
+  const profesionales = useProfesionales();
+  const [tipo, setTipo] = useState(inicial?.tipo ?? TIPOS_TRABAJO_LAB[0] ?? "");
+  const [pieza, setPieza] = useState(inicial?.pieza ?? "");
+  const [material, setMaterial] = useState(inicial?.material ?? MATERIALES_LAB[0] ?? "");
+  const [color, setColor] = useState(inicial?.color ?? "");
+  const [proveedor, setProveedor] = useState(inicial?.proveedor ?? "");
+  const [profesional, setProfesional] = useState(inicial?.profesional ?? profesionales[0] ?? "");
+  const [fechaEnvio, setFechaEnvio] = useState(inicial?.fechaEnvio ?? hoyISO());
+  const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState(inicial?.fechaEntregaEstimada ?? "");
+  const [costo, setCosto] = useState(inicial?.costo ? String(inicial.costo) : "");
+  const [notas, setNotas] = useState(inicial?.notas ?? "");
+  const [error, setError] = useState("");
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
+    if (fechaEntregaEstimada && fechaEntregaEstimada < fechaEnvio) {
+      setError("La entrega estimada no puede ser anterior a la fecha de envío.");
+      return;
+    }
     onSubmit({
       tipo,
       pieza: pieza.trim(),
       material,
+      color,
       proveedor: proveedor.trim(),
+      profesional,
       fechaEnvio,
       fechaEntregaEstimada,
       costo: Number(costo) || 0,
       notas: notas.trim(),
+      historial: inicial?.historial ?? [],
     });
   };
 
@@ -4749,8 +4794,14 @@ function LaboratorioForm({
         <Field label="Material">
           <SelectField value={material} onChange={setMaterial} options={MATERIALES_LAB} />
         </Field>
+        <Field label="Color (escala VITA)">
+          <SelectField value={color} onChange={setColor} options={COLORES_VITA} placeholder="Sin especificar" />
+        </Field>
         <Field label="Laboratorio proveedor">
           <input list="dl-laboratorios" value={proveedor} onChange={(e) => setProveedor(e.target.value)} className={INPUT} placeholder="Nombre del laboratorio" />
+        </Field>
+        <Field label="Profesional">
+          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
         </Field>
         <Field label="Fecha de envío">
           <input type="date" value={fechaEnvio} onChange={(e) => setFechaEnvio(e.target.value)} className={INPUT} />
@@ -4758,31 +4809,119 @@ function LaboratorioForm({
         <Field label="Entrega estimada">
           <input type="date" value={fechaEntregaEstimada} onChange={(e) => setFechaEntregaEstimada(e.target.value)} className={INPUT} />
         </Field>
-        <Field label="Costo (ARS)">
+        <Field label="Costo del laboratorio (ARS)">
           <input type="number" min={0} value={costo} onChange={(e) => setCosto(e.target.value)} className={INPUT} placeholder="0" />
         </Field>
       </div>
-      <Field label="Notas">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Toma de color, especificaciones, observaciones…" />
+      <Field label="Notas / especificaciones">
+        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Forma, textura, oclusión, observaciones para el técnico…" />
       </Field>
-      <Acciones etiqueta="Enviar a laboratorio" onCancel={onCancel} />
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Acciones etiqueta={inicial ? "Guardar cambios" : "Enviar a laboratorio"} onCancel={onCancel} />
     </form>
   );
 }
 
-function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
+/** Días entre hoy y la entrega estimada (negativo = demorado). */
+function diasParaEntrega(t: TrabajoLaboratorio) {
+  if (!t.fechaEntregaEstimada) return null;
+  const hoy = new Date(`${hoyISO()}T12:00:00`).getTime();
+  const entrega = new Date(`${t.fechaEntregaEstimada}T12:00:00`).getTime();
+  return Math.round((entrega - hoy) / 86_400_000);
+}
+
+function avisoEntrega(t: TrabajoLaboratorio): { texto: string; tono: Tono } | null {
+  if (t.estado === "Entregado" || t.estado === "Listo para retirar") return null;
+  const dias = diasParaEntrega(t);
+  if (dias === null) return null;
+  if (dias < 0) return { texto: `Demorado ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "día" : "días"}`, tono: "rojo" };
+  if (dias === 0) return { texto: "Llega hoy", tono: "ambar" };
+  if (dias === 1) return { texto: "Llega mañana", tono: "ambar" };
+  return { texto: `Llega en ${dias} días`, tono: "gris" };
+}
+
+/* Línea de pasos del trabajo (Enviado → En proceso → Listo → Entregado). */
+function PasosLaboratorio({ trabajo }: { trabajo: TrabajoLaboratorio }) {
+  const actual = ESTADOS_LABORATORIO.indexOf(trabajo.estado);
+  return (
+    <ol className="mt-3 grid grid-cols-4 gap-1">
+      {ESTADOS_LABORATORIO.map((estado, i) => {
+        const hecho = i <= actual;
+        const fecha = trabajo.historial?.find((h) => h.estado === estado)?.fecha ?? (i === 0 ? trabajo.fechaEnvio : "");
+        return (
+          <li key={estado} className="min-w-0">
+            <div className="flex items-center">
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                  hecho ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
+                } ${i === actual ? "ring-4 ring-primary/15" : ""}`}
+              >
+                {hecho ? <Check className="size-3" /> : i + 1}
+              </span>
+              {i < ESTADOS_LABORATORIO.length - 1 && (
+                <span className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`} />
+              )}
+            </div>
+            <p className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}>{estado}</p>
+            <p className="text-[10px] text-muted-foreground">{hecho && fecha ? formatearFecha(fecha) : " "}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* Orden de trabajo lista para imprimir y enviar al laboratorio. */
+function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
+  const fila = (k: string, v: string) => (v ? `<tr><th>${k}</th><td>${escapar(v)}</td></tr>` : "");
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Orden de laboratorio · ${escapar(paciente)}</title>
+  <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:13px}h1{font-size:20px;margin:0 0 4px}
+  .meta{color:#6b6480;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee8fb}
+  th{width:34%;color:#6d28d9;font-weight:600}.firma{margin-top:48px;border-top:1px solid #999;width:240px;padding-top:6px;font-size:11px;color:#6b6480}</style></head><body>
+  <h1>Orden de trabajo de laboratorio</h1><p class="meta">Emitida el ${escapar(formatearFecha(hoyISO()))}</p>
+  <table>${fila("Paciente", paciente)}${fila("Trabajo", t.tipo)}${fila("Pieza / zona", t.pieza)}${fila("Material", t.material)}${fila("Color (VITA)", t.color ?? "")}
+  ${fila("Laboratorio", t.proveedor)}${fila("Profesional", t.profesional ?? "")}${fila("Fecha de envío", formatearFecha(t.fechaEnvio))}
+  ${fila("Entrega estimada", t.fechaEntregaEstimada ? formatearFecha(t.fechaEntregaEstimada) : "")}${fila("Especificaciones", t.notas)}</table>
+  <p class="firma">Firma y sello del profesional</p><script>window.onload=()=>{window.print()}</script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  w.document.write(html);
+  w.document.close();
+  return true;
+}
+
+function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
-  const lista = [...datos.laboratorio].sort((a, b) => `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`));
+  const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
+  const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
+  const todos = [...datos.laboratorio].sort((a, b) => `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`));
+  const lista = todos.filter((t) =>
+    !filtro ? true : filtro === "activos" ? t.estado === "Enviado" || t.estado === "En proceso" : t.estado === filtro,
+  );
 
   const enProceso = datos.laboratorio.filter((t) => t.estado === "Enviado" || t.estado === "En proceso").length;
   const listos = datos.laboratorio.filter((t) => t.estado === "Listo para retirar").length;
-  const entregados = datos.laboratorio.filter((t) => t.estado === "Entregado").length;
+  const demorados = datos.laboratorio.filter((t) => avisoEntrega(t)?.tono === "rojo").length;
+  const costoTotal = datos.laboratorio.reduce((acc, t) => acc + (t.costo || 0), 0);
 
   const cambiarEstado = (t: TrabajoLaboratorio, estado: EstadoLaboratorio) => {
     // TODO backend: PATCH /pacientes/:id/laboratorio/:trabajoId { estado }
-    cambiar("laboratorio", (prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
+    cambiar("laboratorio", (prev) =>
+      prev.map((x) =>
+        x.id === t.id
+          ? { ...x, estado, historial: [...(x.historial ?? []).filter((h) => h.estado !== estado), { estado, fecha: hoyISO() }] }
+          : x,
+      ),
+    );
     onToast(`${t.tipo}: ${estado.toLowerCase()}`);
   };
+
+  const FILTROS: { id: typeof filtro; label: string }[] = [
+    { id: "", label: `Todos (${todos.length})` },
+    { id: "activos", label: `En curso (${enProceso})` },
+    { id: "Listo para retirar", label: `Listos (${listos})` },
+    { id: "Entregado", label: "Entregados" },
+  ];
 
   return (
     <div className="space-y-3">
@@ -4794,68 +4933,135 @@ function LaboratorioSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <ResumenCuenta etiqueta="En proceso" valor={String(enProceso)} icon={Truck} tono="text-primary" />
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <ResumenCuenta etiqueta="En curso" valor={String(enProceso)} icon={Truck} tono="text-primary" />
         <ResumenCuenta etiqueta="Listos para retirar" valor={String(listos)} icon={PackageCheck} tono="text-emerald-600" />
-        <ResumenCuenta etiqueta="Entregados" valor={String(entregados)} icon={Check} />
+        <ResumenCuenta etiqueta="Demorados" valor={String(demorados)} icon={Clock3} tono={demorados ? "text-destructive" : ""} />
+        <ResumenCuenta etiqueta="Costo total" valor={formatearMonto(costoTotal)} icon={CircleDollarSign} />
       </div>
 
-      {lista.length === 0 ? (
+      {todos.length > 0 && (
+        <div className="card-grad flex flex-wrap gap-1.5 p-2">
+          {FILTROS.map((f) => (
+            <button
+              key={f.label}
+              type="button"
+              onClick={() => setFiltro(f.id)}
+              aria-pressed={filtro === f.id}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                filtro === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {todos.length === 0 ? (
         <EstadoVacio
           icon={FlaskConical}
           titulo="Sin trabajos de laboratorio"
           texto="Cada trabajo pasa por estos estados:"
           chips={ESTADOS_LABORATORIO}
         />
+      ) : lista.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-primary/20 px-3 py-4 text-center text-xs text-muted-foreground">
+          No hay trabajos con ese estado.
+        </p>
       ) : (
-        <ul className="space-y-2.5">
-          {lista.map((t) => (
-            <li key={t.id} className={`${ITEM} flex flex-wrap items-center gap-3`}>
-              <span className={`${CIRCULO_ICONO} size-10`}>
-                <FlaskConical className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold">{t.tipo}</p>
-                  {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
-                  <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
+        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+          {lista.map((t) => {
+            const aviso = avisoEntrega(t);
+            return (
+              <li key={t.id} className="card-grad p-4">
+                <div className="flex items-start gap-3">
+                  <span className={`${CIRCULO_ICONO} size-10`}>
+                    <FlaskConical className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold">{t.tipo}</p>
+                      {t.pieza && <Badge tono="primary">{/^\d/.test(t.pieza) ? `Pieza ${t.pieza}` : t.pieza}</Badge>}
+                      <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
+                      {aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                    </div>
+                    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {t.material && <span>{t.material}</span>}
+                      {t.color && <span>Color {t.color}</span>}
+                      {t.proveedor && <span>{t.proveedor}</span>}
+                      {t.profesional && <span>{t.profesional}</span>}
+                      {t.fechaEntregaEstimada && <span>Entrega: {formatearFecha(t.fechaEntregaEstimada)}</span>}
+                    </p>
+                  </div>
+                  {t.costo > 0 && <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>}
                 </div>
-                <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
-                  {t.material && <span>{t.material}</span>}
-                  {t.proveedor && <span>{t.proveedor}</span>}
-                  <span>Enviado: {formatearFecha(t.fechaEnvio)}</span>
-                  {t.fechaEntregaEstimada && <span>Entrega estimada: {formatearFecha(t.fechaEntregaEstimada)}</span>}
-                </p>
-                {t.notas && <p className="mt-0.5 text-xs italic text-muted-foreground">{t.notas}</p>}
-              </div>
-              {t.costo > 0 && <span className="text-sm font-bold">{formatearMonto(t.costo)}</span>}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {t.estado === "Enviado" && <BotonMini icon={Truck} label="En proceso" onClick={() => cambiarEstado(t, "En proceso")} />}
-                {t.estado === "En proceso" && <BotonMini icon={PackageCheck} label="Listo para retirar" onClick={() => cambiarEstado(t, "Listo para retirar")} />}
-                {t.estado === "Listo para retirar" && <BotonMini icon={Check} label="Entregado" onClick={() => cambiarEstado(t, "Entregado")} />}
-                <BotonBorrar
-                  etiqueta="Eliminar trabajo de laboratorio"
-                  onClick={() => {
-                    // TODO backend: DELETE /pacientes/:id/laboratorio/:trabajoId
-                    cambiar("laboratorio", (prev) => prev.filter((x) => x.id !== t.id));
-                    onToast("Trabajo de laboratorio eliminado");
-                  }}
-                />
-              </div>
-            </li>
-          ))}
+
+                <PasosLaboratorio trabajo={t} />
+
+                {t.notas && <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">{t.notas}</p>}
+
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-2.5">
+                  {t.estado === "Enviado" && <BotonMini icon={Truck} label="Pasar a en proceso" onClick={() => cambiarEstado(t, "En proceso")} />}
+                  {t.estado === "En proceso" && <BotonMini icon={PackageCheck} label="Listo para retirar" onClick={() => cambiarEstado(t, "Listo para retirar")} />}
+                  {t.estado === "Listo para retirar" && <BotonMini icon={Check} label="Marcar entregado" onClick={() => cambiarEstado(t, "Entregado")} />}
+                  <BotonMini
+                    icon={Printer}
+                    label="Orden"
+                    onClick={() => {
+                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente")) onToast("Permití las ventanas emergentes para imprimir");
+                    }}
+                  />
+                  <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
+                  <BotonBorrar
+                    etiqueta="Eliminar trabajo de laboratorio"
+                    onClick={() => {
+                      // TODO backend: DELETE /pacientes/:id/laboratorio/:trabajoId
+                      cambiar("laboratorio", (prev) => prev.filter((x) => x.id !== t.id));
+                      onToast("Trabajo de laboratorio eliminado");
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {abierto && (
-        <Modal title="Enviar a laboratorio" onClose={() => setAbierto(false)}>
+      {(abierto || editar) && (
+        <Modal
+          title={editar ? "Editar trabajo de laboratorio" : "Enviar a laboratorio"}
+          onClose={() => {
+            setAbierto(false);
+            setEditar(null);
+          }}
+        >
           <LaboratorioForm
-            onCancel={() => setAbierto(false)}
-            onSubmit={(nuevo) => {
-              // TODO backend: POST /pacientes/:id/laboratorio
-              cambiar("laboratorio", (prev) => [...prev, { ...nuevo, id: Date.now(), estado: "Enviado" as const }]);
+            inicial={editar ?? undefined}
+            onCancel={() => {
               setAbierto(false);
-              onToast("Trabajo enviado a laboratorio");
+              setEditar(null);
+            }}
+            onSubmit={(datosTrabajo) => {
+              if (editar) {
+                // TODO backend: PUT /pacientes/:id/laboratorio/:trabajoId
+                cambiar("laboratorio", (prev) => prev.map((x) => (x.id === editar.id ? { ...x, ...datosTrabajo } : x)));
+                onToast("Trabajo actualizado");
+              } else {
+                // TODO backend: POST /pacientes/:id/laboratorio
+                cambiar("laboratorio", (prev) => [
+                  ...prev,
+                  {
+                    ...datosTrabajo,
+                    id: Date.now(),
+                    estado: "Enviado" as const,
+                    historial: [{ estado: "Enviado" as const, fecha: datosTrabajo.fechaEnvio || hoyISO() }],
+                  },
+                ]);
+                onToast("Trabajo enviado a laboratorio");
+              }
+              setAbierto(false);
+              setEditar(null);
             }}
           />
         </Modal>

@@ -15,17 +15,14 @@ import {
   Wallet,
 } from "lucide-react";
 import { PlanCard } from "@/components/site/PlanCards";
-import { plans as PLANES_SITIO } from "@/lib/site-data";
-import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import { plans as PLANES_SITIO, type Plan } from "@/lib/site-data";
+import { PLANS, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import {
-  DESCUENTO_ANUAL,
   IVA_SUSCRIPCION,
-  precioPlan,
   setFacturacion,
   storeFacturacion,
   suscripcionEjemplo,
   totalSuscripcion,
-  type CicloPlan,
   type FacturaSuscripcion,
   type MedioSuscripcion,
   type Suscripcion,
@@ -34,7 +31,6 @@ import {
   Acciones,
   BTN_PRIMARIO,
   BTN_SECUNDARIO,
-  CHIP,
   Encabezado,
   Field,
   INPUT,
@@ -48,7 +44,7 @@ import {
 /* Ubicación: src/components/cloud-esther/facturacion/MiPlan.tsx
    La suscripción de la clínica a Cloud Esther: plan actual con el mismo diseño de la página de
    planes, facturas de Cloud Esther y pago (tarjeta, Mercado Pago o transferencia).
-   En el demo se pueden probar todos los planes; con plan contratado el cambio se solicita.
+   Muestra solo el plan de la empresa; los precios e importes los informa el backend.
    TODO backend: pasarela de pago y facturación de la suscripción. */
 
 const ORDEN: PlanId[] = ["inicial", "profesional", "avanzada", "grupo"];
@@ -58,6 +54,17 @@ const NOMBRE_SITIO: Record<string, string> = {
   Pro: PLANS.profesional.name,
   Plus: PLANS.avanzada.name,
 };
+function planDelSitio(id: PlanId): Plan {
+  const base = PLANES_SITIO[ORDEN.indexOf(id)] ?? PLANES_SITIO[0]!;
+  return {
+    ...base,
+    name: PLANS[id].name,
+    tagline: PLANS[id].audience,
+    features: base.features.map((f) =>
+      f.replace(/plan (Start|Pro|Plus)$/, (_, n: string) => `plan ${NOMBRE_SITIO[n] ?? n}`),
+    ),
+  };
+}
 
 function M(props: Parameters<typeof ModalBase>[0]) {
   return <ModalBase {...props} modulo="Mi plan" />;
@@ -82,7 +89,7 @@ function setSuscripcion(fn: (s: Suscripcion) => Suscripcion) {
 /** Factura pendiente de la suscripción con el precio del plan activo. */
 export function facturaPendiente(s: Suscripcion, plan: PlanId): FacturaSuscripcion | undefined {
   const f = s.facturas.find((x) => x.estado === "Pendiente");
-  return f && { ...f, planId: plan, ciclo: s.ciclo, neto: precioPlan(plan, s.ciclo) };
+  return f && { ...f, planId: plan };
 }
 
 function imprimirFactura(
@@ -112,28 +119,16 @@ export function MiPlan({
   razonSocial: string;
   idFiscal: string;
 }) {
-  const { plan, setPlan, planContratado } = useCloudEsther();
+  const { plan, planContratado } = useCloudEsther();
   const sus = useSuscripcion();
   const [pagar, setPagar] = useState<FacturaSuscripcion | null>(null);
   const [medio, setMedio] = useState(false);
-  const [cambio, setCambio] = useState<PlanId | null>(null);
   const pendiente = facturaPendiente(sus, plan);
   const pagadas = sus.facturas.filter((f) => f.estado === "Pagada");
   const info = PLANS[plan];
-  const total = totalSuscripcion(precioPlan(plan, sus.ciclo)).total;
   const vencida = pendiente && pendiente.vence < new Date().toISOString().slice(0, 10);
   const proximo = new Date();
   proximo.setMonth(proximo.getMonth() + (sus.ciclo === "Anual" ? 12 : 1), 10);
-
-  const elegir = (id: PlanId) => {
-    if (id === plan) return;
-    if (planContratado) {
-      setCambio(id);
-      return;
-    }
-    setPlan(id);
-    onToast(`Estás probando el plan ${PLANS[id].name}`);
-  };
 
   return (
     <div className="space-y-4">
@@ -141,33 +136,7 @@ export function MiPlan({
         icon={Crown}
         titulo="Mi plan"
         descripcion="Tu suscripción a Cloud Esther: plan, facturas y pagos."
-      >
-        <div className="flex rounded-full bg-primary/[0.06] p-1" role="group" aria-label="Ciclo">
-          {(["Mensual", "Anual"] as CicloPlan[]).map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={CHIP(sus.ciclo === c)}
-              aria-pressed={sus.ciclo === c}
-              onClick={() => {
-                setSuscripcion((s) => ({ ...s, ciclo: c }));
-                onToast(
-                  c === "Anual"
-                    ? `Facturación anual: ahorrás ${DESCUENTO_ANUAL} %`
-                    : "Facturación mensual",
-                );
-              }}
-            >
-              {c}
-              {c === "Anual" && (
-                <span className="rounded-full bg-emerald-100 px-1.5 text-[10px] text-emerald-700">
-                  −{DESCUENTO_ANUAL} %
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </Encabezado>
+      />
 
       {/* Tarjeta de la suscripción */}
       <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-[#4c1d95] via-[#7c3aed] to-[#9333ea] p-5 text-white shadow-[0_25px_60px_-30px_rgba(88,28,135,0.7)] md:p-6">
@@ -191,15 +160,14 @@ export function MiPlan({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="size-3" /> Demo: probá todos los planes
+                    <Sparkles className="size-3" /> Demo: el plan se cambia desde el menú
                   </>
                 )}
               </span>
             </div>
             <h3 className="mt-4 text-3xl font-bold tracking-tight">{info.name}</h3>
             <p className="mt-1 text-sm text-white/80">
-              {info.audience} · {ars(total)} {sus.ciclo === "Anual" ? "por año" : "por mes"}{" "}
-              <span className="text-white/60">(IVA incluido)</span>
+              {info.audience} · facturación {sus.ciclo.toLowerCase()}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[12px]">
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/12 px-3 py-2">
@@ -271,150 +239,122 @@ export function MiPlan({
         </div>
       </div>
 
-      {/* Planes con el mismo diseño de la página de planes */}
-      <div className="grid gap-6 pt-3 md:grid-cols-2 xl:grid-cols-4">
-        {ORDEN.map((id, i) => {
-          const base = PLANES_SITIO[i];
-          if (!base) return null;
-          const neto = precioPlan(id, sus.ciclo);
-          return (
-            <PlanCard
-              key={id}
-              plan={{
-                ...base,
-                name: PLANS[id].name,
-                tagline: PLANS[id].audience,
-                features: base.features.map((f) =>
-                  f.replace(
-                    /plan (Start|Pro|Plus)$/,
-                    (_, n: string) => `plan ${NOMBRE_SITIO[n] ?? n}`,
-                  ),
-                ),
-              }}
-              index={i}
-              actual={id === plan}
-              precio={ars(neto)}
-              notaPrecio={`${sus.ciclo === "Anual" ? "/ año" : "/ mes"} + IVA`}
-              cta={
-                id === plan
-                  ? "Plan actual"
-                  : planContratado
-                    ? planLevel(id) > planLevel(plan)
-                      ? "Solicitar mejora"
-                      : "Solicitar cambio"
-                    : "Probar este plan"
-              }
-              onSelect={() => elegir(id)}
-            />
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.6fr_1fr]">
-        <div className="card-grad p-4">
-          <p className="text-sm font-semibold">Facturas de Cloud Esther</p>
-          <ul className="scroll-sutil mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-1">
-            {[...(pendiente ? [pendiente] : []), ...[...pagadas].reverse()].map((f) => (
-              <li
-                key={f.id}
-                className="flex flex-wrap items-center gap-3 rounded-xl bg-white/85 px-3 py-2 ring-1 ring-primary/10"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                  <Receipt className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {nombrePeriodo(f.periodo)}{" "}
-                    <span className="font-normal text-muted-foreground">
-                      · {PLANS[f.planId].name}
-                    </span>
-                  </p>
-                  <p className="truncate text-[11px] text-muted-foreground">
-                    Factura A {f.numero} ·{" "}
-                    {f.estado === "Pagada"
-                      ? `pagada ${fecha(f.pagada ?? "")} · ${f.medio ?? ""}`
-                      : `vence ${fecha(f.vence)}`}
-                  </p>
-                </div>
-                <b className="text-primary">{ars(totalSuscripcion(f.neto).total)}</b>
-                <Pill
-                  clase={
-                    f.estado === "Pagada"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
-                  }
-                >
-                  {f.estado}
-                </Pill>
-                {f.estado === "Pendiente" ? (
-                  <button type="button" className={BTN_PRIMARIO} onClick={() => setPagar(f)}>
-                    <Wallet className="size-4" /> Pagar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={BTN_SECUNDARIO}
-                    onClick={() => imprimirFactura(f, { razonSocial, idFiscal })}
-                  >
-                    <Download className="size-4" /> PDF
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+      {/* El plan de la empresa, con el mismo diseño de la página de planes */}
+      <div className="grid grid-cols-1 gap-4 pt-3 lg:grid-cols-[minmax(0,360px)_1fr]">
+        <div className="grid grid-rows-[auto_auto_1fr_auto]">
+          <PlanCard
+            plan={planDelSitio(plan)}
+            index={ORDEN.indexOf(plan)}
+            actual
+            cta={planContratado ? "Plan contratado" : "Plan del demo"}
+          />
         </div>
         <div className="space-y-3">
           <div className="card-grad p-4">
-            <p className="text-sm font-semibold">Medio de pago</p>
-            <div className="mt-3 flex items-center gap-3 rounded-xl bg-white/85 px-3 py-2.5 ring-1 ring-primary/10">
-              <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                {sus.medio?.tipo === "Transferencia" ? (
-                  <Landmark className="size-4" />
-                ) : (
-                  <CreditCard className="size-4" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">
-                  {sus.medio?.detalle ?? "Sin medio de pago"}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {sus.medio?.tipo ?? "Agregá uno para pagar más rápido"}
-                </p>
-              </div>
-              <button type="button" className={BTN_SECUNDARIO} onClick={() => setMedio(true)}>
-                Cambiar
-              </button>
-            </div>
-            <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-white/85 px-3 py-2.5 text-sm ring-1 ring-primary/10">
-              <span>
-                <b className="block text-[13px]">Débito automático</b>
-                <span className="text-[11px] text-muted-foreground">
-                  Se cobra solo el día de vencimiento
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                className="size-4 accent-[var(--primary)]"
-                checked={sus.debitoAutomatico}
-                disabled={sus.medio?.tipo !== "Tarjeta"}
-                onChange={(e) => {
-                  const v = e.target.checked;
-                  setSuscripcion((s) => ({ ...s, debitoAutomatico: v }));
-                  onToast(v ? "Débito automático activado" : "Débito automático desactivado");
-                }}
-              />
-            </label>
+            <p className="text-sm font-semibold">Facturas de Cloud Esther</p>
+            <ul className="scroll-sutil mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-1">
+              {[...(pendiente ? [pendiente] : []), ...[...pagadas].reverse()].map((f) => (
+                <li
+                  key={f.id}
+                  className="flex flex-wrap items-center gap-3 rounded-xl bg-white/85 px-3 py-2 ring-1 ring-primary/10"
+                >
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <Receipt className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {nombrePeriodo(f.periodo)}{" "}
+                      <span className="font-normal text-muted-foreground">
+                        · {PLANS[f.planId].name}
+                      </span>
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      Factura A {f.numero} ·{" "}
+                      {f.estado === "Pagada"
+                        ? `pagada ${fecha(f.pagada ?? "")} · ${f.medio ?? ""}`
+                        : `vence ${fecha(f.vence)}`}
+                    </p>
+                  </div>
+                  <b className="text-primary">{ars(totalSuscripcion(f.neto).total)}</b>
+                  <Pill
+                    clase={
+                      f.estado === "Pagada"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                    }
+                  >
+                    {f.estado}
+                  </Pill>
+                  {f.estado === "Pendiente" ? (
+                    <button type="button" className={BTN_PRIMARIO} onClick={() => setPagar(f)}>
+                      <Wallet className="size-4" /> Pagar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={BTN_SECUNDARIO}
+                      onClick={() => imprimirFactura(f, { razonSocial, idFiscal })}
+                    >
+                      <Download className="size-4" /> PDF
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="card-grad p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <Building2 className="size-4 text-primary" /> Datos de facturación
-            </p>
-            <p className="mt-2 text-sm">{razonSocial}</p>
-            <p className="text-[12px] text-muted-foreground">{idFiscal}</p>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Cloud Esther te factura a los datos fiscales de la clínica (pestaña Datos fiscales).
-            </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="card-grad p-4">
+              <p className="text-sm font-semibold">Medio de pago</p>
+              <div className="mt-3 flex items-center gap-3 rounded-xl bg-white/85 px-3 py-2.5 ring-1 ring-primary/10">
+                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  {sus.medio?.tipo === "Transferencia" ? (
+                    <Landmark className="size-4" />
+                  ) : (
+                    <CreditCard className="size-4" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {sus.medio?.detalle ?? "Sin medio de pago"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {sus.medio?.tipo ?? "Agregá uno para pagar más rápido"}
+                  </p>
+                </div>
+                <button type="button" className={BTN_SECUNDARIO} onClick={() => setMedio(true)}>
+                  Cambiar
+                </button>
+              </div>
+              <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-white/85 px-3 py-2.5 text-sm ring-1 ring-primary/10">
+                <span>
+                  <b className="block text-[13px]">Débito automático</b>
+                  <span className="text-[11px] text-muted-foreground">
+                    Se cobra solo el día de vencimiento
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--primary)]"
+                  checked={sus.debitoAutomatico}
+                  disabled={sus.medio?.tipo !== "Tarjeta"}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setSuscripcion((s) => ({ ...s, debitoAutomatico: v }));
+                    onToast(v ? "Débito automático activado" : "Débito automático desactivado");
+                  }}
+                />
+              </label>
+            </div>
+            <div className="card-grad p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <Building2 className="size-4 text-primary" /> Datos de facturación
+              </p>
+              <p className="mt-2 text-sm">{razonSocial}</p>
+              <p className="text-[12px] text-muted-foreground">{idFiscal}</p>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Cloud Esther te factura a los datos fiscales de la clínica (pestaña Datos fiscales).
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -469,29 +409,6 @@ export function MiPlan({
               onToast("Medio de pago actualizado");
             }}
           />
-        </M>
-      )}
-      {cambio && (
-        <M titulo="Solicitar cambio de plan" onClose={() => setCambio(null)}>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setCambio(null);
-              onToast(
-                `Solicitud enviada: tu ejecutivo de cuenta te contacta para pasar a ${PLANS[cambio].name}`,
-              );
-            }}
-          >
-            <p className="text-sm text-muted-foreground">
-              Tu plan contratado es <b className="text-foreground">{info.name}</b>. El cambio a{" "}
-              <b className="text-foreground">{PLANS[cambio].name}</b> (
-              {ars(precioPlan(cambio, sus.ciclo))} + IVA{" "}
-              {sus.ciclo === "Anual" ? "por año" : "por mes"}) lo confirma tu ejecutivo de cuenta y
-              se aplica desde el próximo período.
-            </p>
-            <Acciones etiqueta="Enviar solicitud" onCancel={() => setCambio(null)} />
-          </form>
         </M>
       )}
     </div>

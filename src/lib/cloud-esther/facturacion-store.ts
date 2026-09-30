@@ -1,6 +1,6 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
-import { PLANS, type PlanId } from "@/lib/cloud-esther/data";
+import type { PlanId } from "@/lib/cloud-esther/data";
 
 /* Ubicación: src/lib/cloud-esther/facturacion-store.ts
 
@@ -279,13 +279,9 @@ export type Suscripcion = {
 };
 
 export const IVA_SUSCRIPCION = 21;
-export const DESCUENTO_ANUAL = 15;
+/** Importe de ejemplo para practicar: el real de cada factura lo informa el backend. */
+const NETO_EJEMPLO = 99000;
 
-/** Precio sin impuestos del plan para el ciclo elegido (el anual tiene 15 % de descuento). */
-export function precioPlan(id: PlanId, ciclo: CicloPlan) {
-  const mensual = Number(PLANS[id].price.replace(/[^\d]/g, "")) || 0;
-  return ciclo === "Anual" ? Math.round(mensual * 12 * (1 - DESCUENTO_ANUAL / 100)) : mensual;
-}
 export function totalSuscripcion(neto: number) {
   const iva = Math.round((neto * IVA_SUSCRIPCION) / 100);
   return { neto, iva, total: neto + iva };
@@ -307,7 +303,7 @@ export function suscripcionEjemplo(): Suscripcion {
       vence: dia(vence),
       planId: "avanzada",
       ciclo: "Mensual",
-      neto: precioPlan("avanzada", "Mensual"),
+      neto: NETO_EJEMPLO,
       estado: "Pagada",
       pagada: dia(new Date(vence.getTime() - 3 * 86_400_000)),
       medio: "Visa •••• 4242",
@@ -323,7 +319,7 @@ export function suscripcionEjemplo(): Suscripcion {
     vence: dia(new Date(hoy.getTime() + 5 * 86_400_000)),
     planId: "avanzada",
     ciclo: "Mensual",
-    neto: precioPlan("avanzada", "Mensual"),
+    neto: NETO_EJEMPLO,
     estado: "Pendiente",
   });
   return {

@@ -591,6 +591,12 @@ export const storeFinanzas = crearStorePorEmpresa<EstadoFinanzas>(
     ordenesRegistradas: [],
     laboratorioRegistrado: [],
     historico: [
+      { mes: mesISO(11), ingresos: 21_600_000, egresos: 19_700_000 },
+      { mes: mesISO(10), ingresos: 22_400_000, egresos: 19_900_000 },
+      { mes: mesISO(9), ingresos: 21_900_000, egresos: 20_300_000 },
+      { mes: mesISO(8), ingresos: 15_300_000, egresos: 18_600_000 },
+      { mes: mesISO(7), ingresos: 19_800_000, egresos: 19_400_000 },
+      { mes: mesISO(6), ingresos: 23_100_000, egresos: 20_500_000 },
       { mes: mesISO(5), ingresos: 24_300_000, egresos: 20_950_000 },
       { mes: mesISO(4), ingresos: 25_100_000, egresos: 21_400_000 },
       { mes: mesISO(3), ingresos: 23_800_000, egresos: 21_900_000 },

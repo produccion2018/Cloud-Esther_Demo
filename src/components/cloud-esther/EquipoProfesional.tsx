@@ -24,6 +24,7 @@ import {
   TrendingUp,
   CalendarOff,
   UserPlus,
+  Smartphone,
 } from "lucide-react"
 
 import {
@@ -36,15 +37,16 @@ import {
 import { useEquipo } from "@/lib/cloud-esther/equipo-store"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
-import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
+import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
 
-type VistaEquipo = "integrantes" | "desempeno" | "ausencias" | "invitaciones"
+type VistaEquipo = "integrantes" | "desempeno" | "ausencias" | "invitaciones" | "portal"
 
 const VISTAS: { id: VistaEquipo; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { id: "integrantes", label: "Integrantes", icon: Users },
   { id: "desempeno", label: "Desempeño", icon: TrendingUp },
   { id: "ausencias", label: "Ausencias y licencias", icon: CalendarOff },
   { id: "invitaciones", label: "Invitaciones", icon: UserPlus },
+  { id: "portal", label: "Portal del equipo", icon: Smartphone },
 ]
 
 const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const
@@ -615,6 +617,7 @@ export function EquipoProfesional() {
         {vista === "desempeno" && <DesempenoEquipo />}
         {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
         {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}
+        {vista === "portal" && <PortalEquipoMonitor onToast={showToast} />}
         {vista === "integrantes" && (
           <div className="space-y-3">
             <div className="card-grad flex flex-col gap-2.5 p-2.5 lg:flex-row lg:items-center">

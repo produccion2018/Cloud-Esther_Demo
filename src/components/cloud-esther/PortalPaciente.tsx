@@ -400,10 +400,11 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_520px]">
-      <div className="relative hidden overflow-hidden lg:block">
-        <HeroParallax />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/70 via-primary/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-10 text-white">
+      <div className="relative hidden flex-col justify-center gap-6 overflow-hidden bg-gradient-to-br from-violet-100 via-white to-primary/15 p-8 lg:flex">
+        <div className="relative aspect-[1536/868] w-full overflow-hidden rounded-3xl shadow-[0_24px_50px_-30px_rgba(76,29,149,0.6)] ring-1 ring-primary/10">
+          <HeroParallax completo />
+        </div>
+        <div className="relative rounded-3xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_20px_45px_-25px_rgba(124,58,237,0.8)]">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
             Portal del paciente
           </p>
@@ -841,8 +842,8 @@ function Inicio({ ctx }: { ctx: Ctx }) {
   return (
     <div className="space-y-4">
       {/* Imagen del consultorio (la misma del Dashboard) */}
-      <div className="relative h-52 w-full overflow-hidden rounded-2xl md:h-60">
-        <HeroParallax />
+      <div className="relative aspect-[1536/868] w-full overflow-hidden rounded-2xl md:aspect-auto md:h-72">
+        <HeroParallax foco={40} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm">

@@ -28,7 +28,9 @@ const CAPAS_HERO: {
   },
 ];
 
-export function HeroParallax() {
+/** completo: muestra la ilustración entera (sin recortar); si no, cubre todo el contenedor.
+    foco: posición vertical del recorte al cubrir (0 = arriba, 50 = centro, 100 = abajo). */
+export function HeroParallax({ completo = false, foco = 50 }: { completo?: boolean; foco?: number } = {}) {
   const contRef = useRef<HTMLDivElement>(null);
   const capasRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -93,7 +95,7 @@ export function HeroParallax() {
       ref={contRef}
       role="img"
       aria-label="Consultorio odontológico"
-      className="absolute inset-0 overflow-hidden opacity-80"
+      className={`absolute inset-0 overflow-hidden ${completo ? "" : "opacity-80"}`}
       style={{ containerType: "size" } as React.CSSProperties}
     >
       <style>{`
@@ -117,13 +119,14 @@ export function HeroParallax() {
         className="absolute left-1/2 top-1/2"
         style={
           {
-            width: "max(106cqw, calc(106cqh * 1536 / 868))",
+            width: completo ? "min(100cqw, calc(100cqh * 1536 / 868))" : "max(106cqw, calc(106cqh * 1536 / 868))",
             aspectRatio: "1536 / 868",
-            transform: "translate(-50%, -50%)",
+            top: completo ? "50%" : `${foco}%`,
+            transform: `translate(-50%, -${completo ? 50 : foco}%)`,
           } as React.CSSProperties
         }
       >
-        <div className="hero-zoom-ce absolute inset-0">
+        <div className={`absolute inset-0 ${completo ? "" : "hero-zoom-ce"}`}>
           {CAPAS_HERO.map((capa, i) => (
             <div
               key={capa.src}

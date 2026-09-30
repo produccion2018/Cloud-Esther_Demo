@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemostracionRouteImport } from './routes/demostracion'
+import { Route as EquipoRouteImport } from './routes/equipo'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
 import { Route as PlanesRouteImport } from './routes/planes'
@@ -67,6 +68,11 @@ const DemoRoute = DemoRouteImport.update({
 const DemostracionRoute = DemostracionRouteImport.update({
   id: '/demostracion',
   path: '/demostracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipoRoute = EquipoRouteImport.update({
+  id: '/equipo',
+  path: '/equipo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/equipo': typeof EquipoRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -294,6 +301,7 @@ export interface FileRoutesByTo {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/equipo': typeof EquipoRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/equipo': typeof EquipoRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -379,6 +388,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/equipo'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/equipo'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/equipo'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   CaracteristicasRoute: typeof CaracteristicasRoute
   DemoRoute: typeof DemoRoute
   DemostracionRoute: typeof DemostracionRoute
+  EquipoRoute: typeof EquipoRoute
   LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
   PlanesRoute: typeof PlanesRoute
@@ -568,6 +581,13 @@ declare module '@tanstack/react-router' {
       path: '/demostracion'
       fullPath: '/demostracion'
       preLoaderRoute: typeof DemostracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipo': {
+      id: '/equipo'
+      path: '/equipo'
+      fullPath: '/equipo'
+      preLoaderRoute: typeof EquipoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -823,6 +843,7 @@ const rootRouteChildren: RootRouteChildren = {
   CaracteristicasRoute: CaracteristicasRoute,
   DemoRoute: DemoRoute,
   DemostracionRoute: DemostracionRoute,
+  EquipoRoute: EquipoRoute,
   LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
   PlanesRoute: PlanesRoute,

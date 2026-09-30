@@ -229,10 +229,10 @@ function Interruptor({
       aria-checked={activo}
       aria-label={etiqueta}
       onClick={() => onChange(!activo)}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${activo ? "bg-primary" : "bg-muted-foreground/30"}`}
+      className={`relative h-4 w-7 shrink-0 rounded-full transition-colors ${activo ? "bg-primary" : "bg-muted-foreground/30"}`}
     >
       <span
-        className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${activo ? "left-[18px]" : "left-0.5"}`}
+        className={`absolute top-0.5 size-3 rounded-full bg-white shadow transition-all ${activo ? "left-[14px]" : "left-0.5"}`}
       />
     </button>
   );
@@ -1482,7 +1482,7 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
                 const fueraDelPlan = !!modulo && !tiene(modulo);
                 return (
                   <tr key={c} className={fueraDelPlan ? "opacity-50" : ""}>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2">
                       <div className="flex items-center gap-2.5">
                         <span
                           className={`grid size-8 place-items-center rounded-full bg-gradient-to-br ${CATEGORIA_ESTILO[c].color}`}
@@ -1498,7 +1498,7 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
                       </div>
                     </td>
                     {(["activa", "app", "email", "whatsapp"] as const).map((k) => (
-                      <td key={k} className="px-3 py-3 text-center">
+                      <td key={k} className="px-3 py-2 text-center">
                         <span className="inline-flex">
                           <Interruptor
                             etiqueta={`${c}: ${k}`}

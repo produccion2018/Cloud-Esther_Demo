@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,16 +49,18 @@ const SUBMENUS: Record<string, { children: SubItem[] }> = {
 };
 
 export function BrandMark({ className }: { className?: string }) {
+  // Id único: si hay dos logos en pantalla (uno oculto), el degradé no se pierde.
+  const gradId = `ceBrand${useId().replace(/:/g, "")}`;
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <defs>
-        <linearGradient id="cloudEstherBrandGradient" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gradId} x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#B463F0" />
           <stop offset="55%" stopColor="#8B3DE0" />
           <stop offset="100%" stopColor="#4C1D95" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#cloudEstherBrandGradient)" />
+      <circle cx="32" cy="32" r="32" fill={`url(#${gradId})`} />
       <path
         d="M24.5 16.5c-6 0-10 4-10 10 0 4.4 1.8 6.8 2.8 11.2.7 3.6 1 8.6 3.6 9.8 2.2 1 3.4-2.4 4.3-6.2.6-2.6 1.8-3.8 4.8-3.8s4.2 1.2 4.8 3.8c.9 3.8 2.1 7.2 4.3 6.2 2.6-1.2 2.9-6.2 3.6-9.8 1-4.4 2.8-6.8 2.8-11.2 0-6-4-10-10-10-3 0-5.1 1.8-7.5 1.8s-4.5-1.8-7.5-1.8Z"
         fill="#FFFFFF"

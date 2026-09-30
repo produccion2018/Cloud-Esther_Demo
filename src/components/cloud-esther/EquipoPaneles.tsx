@@ -31,6 +31,11 @@ import {
   type TeamRole,
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { capitalizarNombre } from "@/lib/utils";
+import {
+  asegurarAcceso,
+  setEquipoPortal,
+  storeEquipoPortal,
+} from "@/lib/cloud-esther/portal-equipo-store";
 
 /* Ubicación: src/components/cloud-esther/EquipoPaneles.tsx
 
@@ -737,6 +742,190 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Portal del equipo (monitoreo del dueño) ───────────── */
+
+export function PortalEquipoMonitor({ onToast }: { onToast: (m: string) => void }) {
+  const { miembros } = useEquipo();
+  const { accesos, fichajes, eventos } = storeEquipoPortal.usar();
+  const [verCodigo, setVerCodigo] = useState<string | null>(null);
+  const hoy = hoyISO();
+  const activos = miembros.filter((m) => m.status === "activo");
+  const hace = (iso?: string) => {
+    if (!iso) return "Nunca";
+    const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+    if (min < 60) return `hace ${Math.max(1, min)} min`;
+    const h = Math.round(min / 60);
+    return h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
+  };
+  const minutos = (h: string) => {
+    const [a = 0, b = 0] = h.split(":").map(Number);
+    return a * 60 + b;
+  };
+  const ahora = new Date().toTimeString().slice(0, 5);
+
+  return (
+    <div className="space-y-3">
+      <div className="card-grad flex flex-wrap items-center gap-3 p-4">
+        <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-violet-500 text-white">
+          <UserPlus className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Portal del equipo</p>
+          <p className="text-xs text-muted-foreground">
+            Cada integrante entra desde el celular o la PC en{" "}
+            <b className="text-foreground">/equipo</b> con su correo y un código. Ve su agenda,
+            fichas, avisos y ficha su horario.
+          </p>
+        </div>
+        <button
+          className={BTN_SECUNDARIO}
+          onClick={() => {
+            navigator.clipboard?.writeText(`${window.location.origin}/equipo`).catch(() => {});
+            onToast("Enlace del portal del equipo copiado");
+          }}
+        >
+          Copiar enlace
+        </button>
+        <a href="/equipo" target="_blank" rel="noreferrer" className={BTN_PRIMARIO}>
+          Abrir portal
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="card-grad overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="bg-primary/[0.04] text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2.5 font-semibold">Integrante</th>
+                  <th className="px-3 py-2.5 font-semibold">Hoy</th>
+                  <th className="px-3 py-2.5 font-semibold">Último ingreso</th>
+                  <th className="px-3 py-2.5 font-semibold">Código</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-primary/[0.07]">
+                {activos.map((m) => {
+                  const a = accesos[m.id];
+                  const f = fichajes.filter((x) => x.miembroId === m.id && x.fecha === hoy);
+                  const abierto = f.find((x) => !x.salida);
+                  const trabajados = f.reduce(
+                    (acc, x) => acc + minutos(x.salida ?? ahora) - minutos(x.entrada),
+                    0,
+                  );
+                  const revocado = a?.estado === "Revocado";
+                  return (
+                    <tr key={m.id} className="hover:bg-primary/[0.025]">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar m={m} size="size-9" />
+                          <div>
+                            <p className="font-semibold">{nombreDe(m)}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {ROLES.find((r) => r.value === m.role)?.label}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs">
+                        {abierto ? (
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600">
+                            <span className="size-2 animate-pulse rounded-full bg-emerald-500" />{" "}
+                            Trabajando desde {abierto.entrada}
+                          </span>
+                        ) : f.length ? (
+                          <span className="text-muted-foreground">
+                            {f[0]?.entrada} – {f.at(-1)?.salida} · {Math.floor(trabajados / 60)} h{" "}
+                            {trabajados % 60} min
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Sin fichar</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {hace(a?.ultimoIngreso)}
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-xs">
+                        {revocado ? (
+                          <span className="rounded-full bg-destructive/10 px-2 py-0.5 font-sans text-[10.5px] font-semibold text-destructive">
+                            Suspendido
+                          </span>
+                        ) : (
+                          <button
+                            className="hover:text-primary"
+                            onClick={() => setVerCodigo(verCodigo === m.id ? null : m.id)}
+                          >
+                            {verCodigo === m.id
+                              ? (a?.codigo ?? asegurarAcceso(m.id).codigo)
+                              : "•••••• ver"}
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            className={BTN_SECUNDARIO}
+                            onClick={() => {
+                              const actual = a ?? asegurarAcceso(m.id);
+                              setEquipoPortal("accesos", (prev) => ({
+                                ...prev,
+                                [m.id]: { ...actual, estado: revocado ? "Activo" : "Revocado" },
+                              }));
+                              onToast(
+                                revocado
+                                  ? `${nombreDe(m)} vuelve a tener acceso`
+                                  : `Acceso de ${nombreDe(m)} suspendido`,
+                              );
+                            }}
+                          >
+                            {revocado ? "Reactivar" : "Suspender"}
+                          </button>
+                          <a
+                            href={`/equipo?vista=${m.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={BTN_SECUNDARIO}
+                          >
+                            Ver como
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="card-grad h-fit p-4">
+          <p className="text-sm font-semibold">Actividad del equipo</p>
+          {eventos.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Cuando el equipo use el portal, acá vas a ver fichajes, evoluciones, cobros y citas.
+            </p>
+          ) : (
+            <ol className="mt-2 space-y-2 border-l-2 border-primary/15 pl-3">
+              {eventos.slice(0, 12).map((e) => {
+                const m = miembros.find((x) => x.id === e.miembroId);
+                return (
+                  <li key={e.id} className="text-xs">
+                    <p>
+                      <b>{m ? nombreDe(m) : "Integrante"}</b> · {e.accion}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {e.detalle} · {hace(e.fecha)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -802,6 +802,11 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
    copia y nunca ve los datos de otra. Al conectar el backend se reemplaza por la API. */
 const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES);
 
+/** Registros de todos los pacientes de la empresa activa (lo usan las alertas de Notificaciones). */
+export function useTodosLosRegistros(): Record<number, Registros> {
+  return storeRegistros.usar();
+}
+
 export function useRegistrosPacientes() {
   const porPaciente = storeRegistros.usar();
 

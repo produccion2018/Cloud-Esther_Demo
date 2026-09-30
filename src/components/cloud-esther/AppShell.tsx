@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 
 const GROUPS = [
   "Clínico",
@@ -155,6 +156,10 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const toggle = (key: string, current: boolean) => setOpenMap((prev) => ({ ...prev, [key]: !current }));
+  // Contador de avisos sin leer (solo en el cliente, para no generar diferencias de hidratación).
+  const { sinLeer } = useNotificaciones();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
 
   return (
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6 [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:color-mix(in_oklab,var(--color-sidebar-foreground,currentColor)_18%,transparent)_transparent]">
@@ -247,6 +252,14 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                       <ModuleIcon name={m.icon} className={cn("size-4 shrink-0", active && "text-sidebar-primary")} />
                       <span className="truncate">{m.label}</span>
                       {off && <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>}
+                      {!off && m.id === "notificaciones" && montado && sinLeer > 0 && (
+                        <span
+                          className="ml-auto grid min-w-5 place-items-center rounded-full bg-sidebar-primary px-1.5 text-[10px] font-bold text-sidebar-primary-foreground"
+                          aria-label={`${sinLeer} sin leer`}
+                        >
+                          {sinLeer > 99 ? "99+" : sinLeer}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );

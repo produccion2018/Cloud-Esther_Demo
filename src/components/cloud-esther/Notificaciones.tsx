@@ -1,143 +1,399 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import {
-  AlertTriangle,
+  AlarmClock,
   Bell,
+  BellOff,
   BellRing,
+  Building2,
+  CalendarDays,
   Check,
-  CheckCircle2,
-  ClipboardList,
+  CheckCheck,
+  ChevronDown,
+  CircleAlert,
   Clock3,
-  Eye,
-  Filter,
+  Download,
+  EyeOff,
+  FlaskConical,
   History,
-  Loader2,
+  Mail,
+  MessageCircle,
+  MessagesSquare,
+  Moon,
   Package,
-  Search,
+  Pencil,
   Plus,
+  Search,
+  Settings2,
+  Sparkles,
   Trash2,
   UserRound,
+  Users,
+  Volume2,
   X,
 } from "lucide-react";
-
+import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import {
+  CATEGORIAS_NOTIF,
+  PRIORIDADES_NOTIF,
+  cambiarEstadoNotif,
+  setNotificaciones,
+  storeNotificaciones,
+  type CategoriaNotif,
+  type NotifManual,
+  type PreferenciaCategoria,
+  type PrioridadNotif,
+} from "@/lib/cloud-esther/notificaciones-store";
+import { useNotificaciones, type Notif } from "@/components/cloud-esther/useNotificaciones";
+import { normalizarBusqueda } from "@/lib/utils";
 
-type Estado = "Pendiente" | "Leída" | "Completada";
+/* Ubicación: src/components/cloud-esther/Notificaciones.tsx
 
-type Categoria =
-  | "Insumos y stock"
-  | "Pacientes"
-  | "Administrativo"
-  | "Equipo";
+   Centro de notificaciones: alertas automáticas de los módulos del plan + avisos y tareas
+   para el equipo, con prioridades, vencimientos, posponer, preferencias por área e historial.
+   Separado por empresa. TODO backend: API de notificaciones + push/correo/WhatsApp. */
 
-type Notificacion = {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  categoria: Categoria;
-  estado: Estado;
-  fecha: string;
-  hora: string;
-  destinatario: string;
-  prioridad: "Normal" | "Alta";
+type Seccion = "bandeja" | "pospuestas" | "preferencias" | "historial";
+type FiltroEstado = "pendientes" | "sinLeer" | "completadas" | "todas";
+
+const CATEGORIA_ESTILO: Record<CategoriaNotif, { icon: LucideIcon; color: string }> = {
+  Agenda: { icon: CalendarDays, color: "from-primary/20 to-primary/5 text-primary" },
+  Pacientes: { icon: UserRound, color: "from-pink-200/70 to-pink-50 text-pink-600" },
+  Comunicación: {
+    icon: MessagesSquare,
+    color: "from-emerald-200/70 to-emerald-50 text-emerald-600",
+  },
+  Laboratorio: { icon: FlaskConical, color: "from-sky-200/70 to-sky-50 text-sky-600" },
+  Insumos: { icon: Package, color: "from-amber-200/70 to-amber-50 text-amber-600" },
+  Administración: { icon: Building2, color: "from-violet-200/70 to-violet-50 text-violet-600" },
+  Equipo: { icon: Users, color: "from-slate-200/80 to-slate-50 text-slate-600" },
 };
 
-const INITIAL_NOTIFICACIONES: Notificacion[] = [
-  {
-    id: 1,
-    titulo: "Confirmar turno de mañana",
-    descripcion: "María González tiene un turno mañana a las 15:30 hs.",
-    categoria: "Pacientes",
-    estado: "Pendiente",
-    fecha: "23/09/2026",
-    hora: "10:30",
-    destinatario: "Recepción",
-    prioridad: "Alta",
-  },
-  {
-    id: 2,
-    titulo: "Avisar resultado de laboratorio",
-    descripcion: "El estudio de Carlos Rodríguez ya está disponible.",
-    categoria: "Pacientes",
-    estado: "Leída",
-    fecha: "23/09/2026",
-    hora: "09:45",
-    destinatario: "Dra. Lucía Ferrer",
-    prioridad: "Normal",
-  },
-  {
-    id: 3,
-    titulo: "Comprar guantes de látex",
-    descripcion: "El stock de guantes está por debajo del mínimo configurado.",
-    categoria: "Insumos y stock",
-    estado: "Pendiente",
-    fecha: "23/09/2026",
-    hora: "08:20",
-    destinatario: "Administración",
-    prioridad: "Alta",
-  },
-  {
-    id: 4,
-    titulo: "Revisar pagos pendientes",
-    descripcion: "Hay pagos de pacientes pendientes de conciliación.",
-    categoria: "Administrativo",
-    estado: "Pendiente",
-    fecha: "22/09/2026",
-    hora: "17:15",
-    destinatario: "Administración",
-    prioridad: "Normal",
-  },
-  {
-    id: 5,
-    titulo: "Actualizar planilla de turnos",
-    descripcion: "La agenda requiere una revisión de horarios.",
-    categoria: "Administrativo",
-    estado: "Completada",
-    fecha: "22/09/2026",
-    hora: "15:10",
-    destinatario: "Recepción",
-    prioridad: "Normal",
-  },
+const PRIORIDAD_ESTILO: Record<PrioridadNotif, { franja: string; chip: string }> = {
+  Urgente: { franja: "bg-destructive", chip: "bg-destructive/10 text-destructive" },
+  Alta: { franja: "bg-amber-500", chip: "bg-amber-100 text-amber-700" },
+  Normal: { franja: "bg-primary/60", chip: "bg-primary/10 text-primary" },
+  Baja: { franja: "bg-slate-300", chip: "bg-muted text-muted-foreground" },
+};
+
+const ORDEN_PRIORIDAD: Record<PrioridadNotif, number> = { Urgente: 0, Alta: 1, Normal: 2, Baja: 3 };
+
+const PLANTILLAS_RAPIDAS: {
+  categoria: CategoriaNotif;
+  titulo: string;
+  prioridad: PrioridadNotif;
+}[] = [
+  { categoria: "Insumos", titulo: "Reponer guantes y barbijos", prioridad: "Alta" },
+  { categoria: "Pacientes", titulo: "Llamar a paciente para control", prioridad: "Normal" },
+  { categoria: "Administración", titulo: "Revisar pagos pendientes", prioridad: "Normal" },
+  { categoria: "Equipo", titulo: "Reunión de equipo", prioridad: "Baja" },
+  { categoria: "Laboratorio", titulo: "Reclamar trabajo al laboratorio", prioridad: "Alta" },
 ];
 
-const ESTHER_CARD =
-  "relative overflow-hidden rounded-2xl border border-violet-300/70 bg-[radial-gradient(circle_at_100%_0%,rgba(124,58,237,0.11)_0%,rgba(124,58,237,0.075)_18%,rgba(124,58,237,0)_34%),linear-gradient(135deg,#ffffff_0%,#fdfaff_48%,#f7f1ff_100%)] shadow-[0_2px_10px_rgba(124,58,237,0.08)]";
+const ROLES_FIJOS = ["Recepción", "Administración", "Dirección"];
 
-const ESTHER_CARD_HOVER =
-  "transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/80 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]";
+/* ───────────── Utilidades ───────────── */
 
-const QUICK_TEMPLATES = [
-  {
-    id: 1,
-    category: "Insumos y stock" as Categoria,
-    icon: Package,
-    items: [
-      "Comprar guantes de látex",
-      "Reponer anestesia local",
-      "Pedir material de ortodoncia",
-    ],
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatearFecha(iso: string) {
+  return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
+}
+
+function hace(iso: string) {
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (min < 0) {
+    const d = formatearFecha(iso.slice(0, 10));
+    return iso.slice(0, 10) === hoyISO() ? `hoy ${iso.slice(11, 16)}` : `${d} ${iso.slice(11, 16)}`;
+  }
+  if (min < 1) return "recién";
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "ayer" : `hace ${d} días`;
+}
+
+function grupoDe(n: Notif): string {
+  const hoy = hoyISO();
+  if (n.estado.completada) return "Completadas";
+  if (n.vence && n.vence < hoy) return "Vencidas";
+  const dia = n.fecha.slice(0, 10);
+  if (dia > hoy) return "Próximos días";
+  if (dia === hoy) return "Hoy";
+  return "Anteriores";
+}
+const ORDEN_GRUPOS = ["Vencidas", "Hoy", "Próximos días", "Anteriores", "Completadas"];
+
+function pitido() {
+  try {
+    const ctx = new AudioContext();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.35);
+  } catch {
+    /* sin audio disponible */
+  }
+}
+
+/* ───────────── Estilos y piezas chicas ───────────── */
+
+const INPUT =
+  "h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
+const BTN_PRIMARIO =
+  "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const BTN_SECUNDARIO =
+  "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const BTN_ICONO =
+  "grid size-8 shrink-0 place-items-center rounded-full border border-primary/12 bg-white text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary";
+
+function Pill({ children, clase }: { children: ReactNode; clase: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${clase}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function Select<T extends string>({
+  value,
+  onChange,
+  opciones,
+  className = "",
+  etiqueta,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  opciones: readonly { value: T; label: string }[];
+  className?: string;
+  etiqueta?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      <select
+        aria-label={etiqueta}
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className={`${INPUT} appearance-none pr-8`}
+      >
+        {opciones.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+    </div>
+  );
+}
+
+function Interruptor({
+  activo,
+  onChange,
+  etiqueta,
+}: {
+  activo: boolean;
+  onChange: (v: boolean) => void;
+  etiqueta: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={activo}
+      aria-label={etiqueta}
+      onClick={() => onChange(!activo)}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${activo ? "bg-primary" : "bg-muted-foreground/30"}`}
+    >
+      <span
+        className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${activo ? "left-[18px]" : "left-0.5"}`}
+      />
+    </button>
+  );
+}
+
+function Modal({
+  titulo,
+  onClose,
+  children,
+}: {
+  titulo: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onMouseDown={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Notificaciones
+            </p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">{titulo}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type TonoStat = "primary" | "rojo" | "ambar" | "verde";
+const TONOS: Record<TonoStat, { label: string; value: string; circle: string }> = {
+  primary: {
+    label: "text-primary/75",
+    value: "text-primary",
+    circle: "bg-primary/[0.08] text-primary",
   },
-  {
-    id: 2,
-    category: "Pacientes" as Categoria,
-    icon: UserRound,
-    items: [
-      "Confirmar turno de mañana",
-      "Avisar resultado de laboratorio",
-      "Recordar indicaciones post-tratamiento",
-    ],
+  rojo: {
+    label: "text-destructive/80",
+    value: "text-destructive",
+    circle: "bg-destructive/10 text-destructive",
   },
-  {
-    id: 3,
-    category: "Administrativo" as Categoria,
-    icon: ClipboardList,
-    items: [
-      "Revisar pagos pendientes",
-      "Enviar factura a paciente",
-      "Actualizar planilla de turnos",
-    ],
+  ambar: {
+    label: "text-amber-600/85",
+    value: "text-amber-600",
+    circle: "bg-amber-400/[0.12] text-amber-600",
   },
-];
+  verde: {
+    label: "text-emerald-600/85",
+    value: "text-emerald-600",
+    circle: "bg-emerald-400/[0.1] text-emerald-600",
+  },
+};
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tono,
+  trend,
+  detail,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tono: TonoStat;
+  trend: string;
+  detail: string;
+  onClick?: () => void;
+}) {
+  const t = TONOS[tono];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative min-h-[112px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 text-left shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45"
+    >
+      <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035] transition-transform duration-300 group-hover:scale-110" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className={`text-[10px] font-bold uppercase leading-[1.25] tracking-[0.09em] ${t.label}`}
+          >
+            {label}
+          </p>
+          <p className={`mt-2 text-[27px] font-bold leading-none tracking-tight ${t.value}`}>
+            {value}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-4">
+            <span className={`font-semibold ${t.value}`}>{trend}</span>
+            <span className="text-muted-foreground">{detail}</span>
+          </div>
+        </div>
+        <div className={`grid size-9 shrink-0 place-items-center rounded-full ${t.circle}`}>
+          <Icon className="size-4" strokeWidth={1.7} />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function EncabezadoSeccion({
+  icon: Icon,
+  titulo,
+  descripcion,
+  children,
+}: {
+  icon: LucideIcon;
+  titulo: string;
+  descripcion: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15">
+          <Icon className="size-5" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{titulo}</h2>
+          <p className="text-sm text-muted-foreground">{descripcion}</p>
+        </div>
+      </div>
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+    </div>
+  );
+}
+
+function Vacio({ icon: Icon, titulo, texto }: { icon: LucideIcon; titulo: string; texto: string }) {
+  return (
+    <div className="card-grad grid min-h-44 place-items-center p-6 text-center">
+      <div>
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+          <Icon className="size-5" />
+        </span>
+        <p className="mt-2 text-sm font-semibold">{titulo}</p>
+        <p className="text-sm text-muted-foreground">{texto}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Página ───────────── */
 
 export default function Notificaciones() {
   return (
@@ -148,784 +404,1347 @@ export default function Notificaciones() {
 }
 
 function NotificacionesInner() {
-  const [notificaciones, setNotificaciones] = useState(
-    INITIAL_NOTIFICACIONES,
-  );
+  const { usuario: usuarioSesion } = useSesion();
+  const usuario = usuarioSesion?.nombre ?? "Recepción";
+  const { notificaciones, pospuestas, sinLeer } = useNotificaciones();
+  const { historial } = storeNotificaciones.usar();
+  const [montado, setMontado] = useState(false);
+  const [seccion, setSeccion] = useState<Seccion>("bandeja");
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("pendientes");
+  const [filtroCategoria, setFiltroCategoria] = useState<"" | CategoriaNotif>("");
+  const [filtroPrioridad, setFiltroPrioridad] = useState<"" | "altas">("");
+  const [formulario, setFormulario] = useState<{ inicial: NotifManual | null } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
 
-  const [filtro, setFiltro] = useState<"Todas" | Estado>("Todas");
+  useEffect(() => setMontado(true), []);
 
-  const [busqueda, setBusqueda] = useState("");
-
-  const [showModal, setShowModal] = useState(false);
-
-  const [showAudit, setShowAudit] = useState(false);
-
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  const [savingTemplate, setSavingTemplate] = useState<string | null>(null);
-
-  const [form, setForm] = useState({
-    titulo: "",
-    descripcion: "",
-    categoria: "Pacientes" as Categoria,
-    destinatario: "Recepción",
-    prioridad: "Normal" as "Normal" | "Alta",
-    fecha: "23/09/2026",
-    hora: "12:00",
-  });
-
-  const showFeedback = (message: string) => {
-    setFeedback(message);
-
-    window.setTimeout(() => {
-      setFeedback(null);
-    }, 2500);
+  const onToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   };
 
-  const filteredNotifications = useMemo(() => {
-    const query = busqueda.trim().toLowerCase();
-
-    return notificaciones.filter((item) => {
-      const matchesFilter = filtro === "Todas" || item.estado === filtro;
-
-      const matchesSearch =
-        !query ||
-        item.titulo.toLowerCase().includes(query) ||
-        item.descripcion.toLowerCase().includes(query) ||
-        item.destinatario.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [notificaciones, filtro, busqueda]);
-
-  const pendientes = notificaciones.filter(
-    (item) => item.estado === "Pendiente",
+  const hoy = hoyISO();
+  const pendientes = notificaciones.filter((n) => !n.estado.completada);
+  const altas = pendientes.filter((n) => n.prioridad === "Urgente" || n.prioridad === "Alta");
+  const vencenHoy = pendientes.filter((n) => n.vence === hoy).length;
+  const vencidas = pendientes.filter((n) => n.vence && n.vence < hoy).length;
+  const completadasHoy = notificaciones.filter(
+    (n) => n.estado.completada?.slice(0, 10) === hoy,
   ).length;
 
-  const leidas = notificaciones.filter(
-    (item) => item.estado === "Leída",
-  ).length;
+  const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; contador?: number }[] = [
+    { id: "bandeja", label: "Bandeja", icon: Bell, contador: sinLeer },
+    { id: "pospuestas", label: "Pospuestas", icon: AlarmClock, contador: pospuestas.length },
+    { id: "preferencias", label: "Preferencias", icon: Settings2 },
+    { id: "historial", label: "Historial", icon: History },
+  ];
 
-  const completadas = notificaciones.filter(
-    (item) => item.estado === "Completada",
-  ).length;
-
-  const createNotification = () => {
-    if (!form.titulo.trim()) {
-      showFeedback("Completá el título de la notificación");
-      return;
-    }
-
-    const nueva: Notificacion = {
-      id: Date.now(),
-      titulo: form.titulo.trim(),
-      descripcion:
-        form.descripcion.trim() || "Notificación creada manualmente.",
-      categoria: form.categoria,
-      estado: "Pendiente",
-      fecha: form.fecha,
-      hora: form.hora,
-      destinatario: form.destinatario,
-      prioridad: form.prioridad,
-    };
-
-    setNotificaciones((prev) => [nueva, ...prev]);
-
-    setForm({
-      titulo: "",
-      descripcion: "",
-      categoria: "Pacientes",
-      destinatario: "Recepción",
-      prioridad: "Normal",
-      fecha: "23/09/2026",
-      hora: "12:00",
-    });
-
-    setShowModal(false);
-
-    showFeedback("Notificación guardada correctamente");
-  };
-
-  const createFromTemplate = (category: Categoria, title: string) => {
-    // Evita doble click mientras "guarda"
-    if (savingTemplate) return;
-
-    setSavingTemplate(title);
-
-    // TODO: acá va el guardado real contra el backend (fetch/mutate).
-    // Por ahora se simula la espera de una llamada al servidor.
-    window.setTimeout(() => {
-      const nueva: Notificacion = {
-        id: Date.now(),
-        titulo: title,
-        descripcion:
-          category === "Pacientes"
-            ? "Acción pendiente relacionada con un paciente."
-            : category === "Insumos y stock"
-              ? "Revisar stock y realizar la acción correspondiente."
-              : "Tarea administrativa pendiente de revisión.",
-        categoria: category,
-        estado: "Pendiente",
-        fecha: "23/09/2026",
-        hora: new Date().toLocaleTimeString("es-AR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        destinatario:
-          category === "Pacientes" ? "Recepción" : "Administración",
-        prioridad: category === "Insumos y stock" ? "Alta" : "Normal",
-      };
-
-      setNotificaciones((prev) => [nueva, ...prev]);
-
-      setSavingTemplate(null);
-
-      showFeedback("Notificación guardada");
-    }, 700);
-  };
-
-  const updateStatus = (id: number, estado: Estado) => {
-    setNotificaciones((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, estado } : item)),
-    );
-
-    if (estado === "Completada") {
-      showFeedback("Notificación completada");
-    } else if (estado === "Leída") {
-      showFeedback("Notificación marcada como leída");
-    }
-  };
-
-  const deleteNotification = (id: number) => {
-    setNotificaciones((prev) => prev.filter((item) => item.id !== id));
-
-    showFeedback("Notificación eliminada");
-  };
+  const nueva = () => setFormulario({ inicial: null });
 
   return (
     <AppShell>
-      <div className="relative min-h-full overflow-hidden bg-[#fbfbfd] text-slate-900 antialiased">
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -right-24 top-0 h-72 w-72 rounded-full bg-violet-200/20 blur-3xl" />
-          <div className="absolute left-1/3 top-56 h-56 w-56 rounded-full bg-purple-100/30 blur-3xl" />
-        </div>
+      <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(251,191,36,0.10),transparent_27%),radial-gradient(circle_at_78%_88%,rgba(167,139,250,0.12),transparent_30%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+        />
 
-        <div className="relative mx-auto w-full max-w-[1500px] px-4 py-5 md:px-6 lg:px-8">
-          {/* HEADER */}
-          <header className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/80">
-                <BellRing size={14} />
-                Centro de operaciones
-              </div>
-
-              <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950 md:text-[2.1rem]">
-                Notificaciones
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Recordatorios para tu equipo y alertas automáticas para tus
-                pacientes.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAudit(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/40 hover:shadow-md"
-              >
-                <History size={15} />
-                Auditoría
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lg"
-              >
-                <Plus size={15} />
-                Nueva notificación
-              </button>
-            </div>
-          </header>
-
-          {/* QUICK TEMPLATES */}
-          <section className={`mb-6 ${ESTHER_CARD} p-5`}>
-            <div className="mb-4">
-              <h2 className="text-sm font-bold text-slate-900">
-                Plantillas rápidas
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Creá una notificación con un solo clic.
-              </p>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-3">
-              {QUICK_TEMPLATES.map((group) => {
-                const Icon = group.icon;
-
-                return (
-                  <div key={group.category}>
-                    <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary/80">
-                      <Icon size={14} />
-                      {group.category}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {group.items.map((item) => {
-                        const isSaving = savingTemplate === item;
-
-                        return (
-                          <button
-                            key={item}
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() =>
-                              createFromTemplate(group.category, item)
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:text-violet-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
-                          >
-                            {isSaving && (
-                              <Loader2
-                                size={11}
-                                className="animate-spin text-violet-500"
-                              />
-                            )}
-                            {isSaving ? "Guardando..." : item}
-                          </button>
-                        );
-                      })}
-                    </div>
+        <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
+          <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-amber-400/60" />
+            <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+            <div className="relative p-5 md:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                      <BellRing className="size-3.5" />
+                      Centro de avisos
+                    </span>
+                    {montado && sinLeer > 0 && (
+                      <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-3 py-1.5 text-[11px] font-bold text-amber-700">
+                        {sinLeer} sin leer
+                      </span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* STATS */}
-          <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <StatCard icon={<Bell size={17} />} label="Total" value={notificaciones.length} />
-
-            <StatCard
-              icon={<Clock3 size={17} />}
-              label="Pendientes"
-              value={pendientes}
-              accent="warning"
-            />
-
-            <StatCard
-              icon={<Eye size={17} />}
-              label="Leídas"
-              value={leidas}
-              accent="info"
-            />
-
-            <StatCard
-              icon={<CheckCircle2 size={17} />}
-              label="Completadas"
-              value={completadas}
-              accent="success"
-            />
-          </div>
-
-          {/* MAIN CARD */}
-          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_6px_24px_rgba(51,36,84,0.05)]">
-            {/* TOOLBAR */}
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">
-                  Centro de notificaciones
-                </h2>
-
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Gestioná los avisos y tareas pendientes.
-                </p>
+                  <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">
+                    Notificaciones
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+                    Todo lo que necesita tu atención en un solo lugar: alertas automáticas de la
+                    agenda, los pacientes y los demás módulos de tu plan, y avisos o tareas para el
+                    equipo.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <button className={BTN_SECUNDARIO} onClick={() => setSeccion("preferencias")}>
+                    <Settings2 className="size-4" />
+                    Preferencias
+                  </button>
+                  <button className={BTN_PRIMARIO} onClick={nueva}>
+                    <Plus className="size-4" />
+                    Nuevo aviso
+                  </button>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="relative">
-                  <Search
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              {montado && (
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <StatCard
+                    label="Sin leer"
+                    value={String(sinLeer)}
+                    icon={Bell}
+                    tono="primary"
+                    trend={`${pendientes.length} pendientes`}
+                    detail="en total"
+                    onClick={() => {
+                      setSeccion("bandeja");
+                      setFiltroEstado("sinLeer");
+                    }}
                   />
-
-                  <input
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder="Buscar notificación..."
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-xs outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 sm:w-64"
+                  <StatCard
+                    label="Urgentes y alta prioridad"
+                    value={String(altas.length)}
+                    icon={CircleAlert}
+                    tono="rojo"
+                    trend={`${altas.filter((n) => n.prioridad === "Urgente").length} urgentes`}
+                    detail="para resolver primero"
+                    onClick={() => {
+                      setSeccion("bandeja");
+                      setFiltroEstado("pendientes");
+                      setFiltroPrioridad("altas");
+                    }}
+                  />
+                  <StatCard
+                    label="Vencen hoy"
+                    value={String(vencenHoy)}
+                    icon={Clock3}
+                    tono="ambar"
+                    trend={vencidas ? `${vencidas} vencidas` : "Nada vencido"}
+                    detail="avisos con fecha"
+                  />
+                  <StatCard
+                    label="Completadas hoy"
+                    value={String(completadasHoy)}
+                    icon={CheckCheck}
+                    tono="verde"
+                    trend={`${historial.filter((h) => h.fecha.slice(0, 10) === hoy).length} acciones`}
+                    detail="registradas hoy"
+                    onClick={() => {
+                      setSeccion("bandeja");
+                      setFiltroEstado("completadas");
+                    }}
                   />
                 </div>
+              )}
 
-                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-                  <Filter size={14} className="ml-2 text-slate-400" />
-
-                  {(["Todas", "Pendiente", "Leída", "Completada"] as const).map(
-                    (estado) => (
-                      <button
-                        key={estado}
-                        type="button"
-                        onClick={() => setFiltro(estado)}
-                        className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
-                          filtro === estado
-                            ? "bg-violet-600 text-white shadow-sm"
-                            : "text-slate-500 hover:bg-white hover:text-slate-700"
+              <nav
+                className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
+                aria-label="Secciones de notificaciones"
+              >
+                {SECCIONES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSeccion(s.id)}
+                    aria-pressed={seccion === s.id}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                      seccion === s.id
+                        ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
+                        : "text-muted-foreground hover:bg-white hover:text-foreground"
+                    }`}
+                  >
+                    <s.icon className="size-3.5" />
+                    {s.label}
+                    {montado && !!s.contador && (
+                      <span
+                        className={`grid min-w-4 place-items-center rounded-full px-1 text-[10px] ${
+                          seccion === s.id ? "bg-white/25" : "bg-primary text-primary-foreground"
                         }`}
                       >
-                        {estado}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* LIST */}
-            <div>
-              {filteredNotifications.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 text-violet-500">
-                    <Bell size={20} />
-                  </div>
-
-                  <p className="mt-3 text-sm font-semibold text-slate-700">
-                    No hay notificaciones
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    Probá cambiar el filtro o crear una nueva.
-                  </p>
-                </div>
-              ) : (
-                filteredNotifications.map((notification) => (
-                  <NotificationRow
-                    key={notification.id}
-                    notification={notification}
-                    onRead={() => updateStatus(notification.id, "Leída")}
-                    onComplete={() =>
-                      updateStatus(notification.id, "Completada")
-                    }
-                    onDelete={() => deleteNotification(notification.id)}
-                  />
-                ))
-              )}
+                        {s.contador}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
             </div>
           </section>
 
-          {/* FOOTER INFO */}
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3 text-xs text-violet-700">
-            <Bell size={15} />
-            Las notificaciones se mantienen durante la sesión en esta versión
-            demo.
+          <div className="mt-5">
+            {!montado ? (
+              <div className="card-grad h-[520px] animate-pulse" />
+            ) : seccion === "bandeja" ? (
+              <Bandeja
+                notificaciones={notificaciones}
+                usuario={usuario}
+                onToast={onToast}
+                onNueva={nueva}
+                onEditar={(m) => setFormulario({ inicial: m })}
+                filtroEstado={filtroEstado}
+                setFiltroEstado={setFiltroEstado}
+                filtroCategoria={filtroCategoria}
+                setFiltroCategoria={setFiltroCategoria}
+                filtroPrioridad={filtroPrioridad}
+                setFiltroPrioridad={setFiltroPrioridad}
+              />
+            ) : seccion === "pospuestas" ? (
+              <Pospuestas pospuestas={pospuestas} usuario={usuario} onToast={onToast} />
+            ) : seccion === "preferencias" ? (
+              <PreferenciasSec onToast={onToast} />
+            ) : (
+              <Historial onToast={onToast} />
+            )}
           </div>
         </div>
 
-        {/* MODAL NUEVA NOTIFICACIÓN */}
-        {showModal && (
-          <Modal title="Nueva notificación" onClose={() => setShowModal(false)}>
-            <div className="space-y-4">
-              <Field label="Título">
-                <input
-                  value={form.titulo}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, titulo: e.target.value }))
-                  }
-                  placeholder="Ej. Confirmar turno de mañana"
-                  className={INPUT}
-                  autoFocus
-                />
-              </Field>
-
-              <Field label="Descripción">
-                <textarea
-                  value={form.descripcion}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      descripcion: e.target.value,
-                    }))
-                  }
-                  placeholder="Escribí qué debe hacerse..."
-                  rows={3}
-                  className={`${INPUT} resize-none py-2.5`}
-                />
-              </Field>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Categoría">
-                  <select
-                    value={form.categoria}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        categoria: e.target.value as Categoria,
-                      }))
-                    }
-                    className={INPUT}
-                  >
-                    <option>Pacientes</option>
-                    <option>Insumos y stock</option>
-                    <option>Administrativo</option>
-                    <option>Equipo</option>
-                  </select>
-                </Field>
-
-                <Field label="Destinatario">
-                  <select
-                    value={form.destinatario}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        destinatario: e.target.value,
-                      }))
-                    }
-                    className={INPUT}
-                  >
-                    <option>Recepción</option>
-                    <option>Administración</option>
-                    <option>Dra. Lucía Ferrer</option>
-                    <option>Todo el equipo</option>
-                  </select>
-                </Field>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Fecha">
-                  <input
-                    type="date"
-                    value={toInputDate(form.fecha)}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        fecha: formatDate(e.target.value),
-                      }))
-                    }
-                    className={INPUT}
-                  />
-                </Field>
-
-                <Field label="Hora">
-                  <input
-                    type="time"
-                    value={form.hora}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, hora: e.target.value }))
-                    }
-                    className={INPUT}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Prioridad">
-                <div className="flex gap-2">
-                  {(["Normal", "Alta"] as const).map((priority) => (
-                    <button
-                      key={priority}
-                      type="button"
-                      onClick={() =>
-                        setForm((prev) => ({ ...prev, prioridad: priority }))
-                      }
-                      className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-all ${
-                        form.prioridad === priority
-                          ? priority === "Alta"
-                            ? "border-red-200 bg-red-50 text-red-600"
-                            : "border-violet-200 bg-violet-50 text-violet-600"
-                          : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                      }`}
-                    >
-                      {priority}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-
-              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={createNotification}
-                  className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-violet-700"
-                >
-                  <Check size={14} />
-                  Guardar notificación
-                </button>
-              </div>
-            </div>
+        {formulario && (
+          <Modal
+            titulo={formulario.inicial ? "Editar aviso" : "Nuevo aviso"}
+            onClose={() => setFormulario(null)}
+          >
+            <AvisoForm
+              inicial={formulario.inicial}
+              onCancel={() => setFormulario(null)}
+              onSubmit={(datos, canales) => {
+                const inicial = formulario.inicial;
+                if (inicial) {
+                  setNotificaciones("manuales", (prev) =>
+                    prev.map((m) => (m.id === inicial.id ? { ...m, ...datos } : m)),
+                  );
+                  cambiarEstadoNotif(
+                    [{ id: inicial.id, titulo: datos.titulo }],
+                    {},
+                    "Editó",
+                    usuario,
+                  );
+                  onToast("Aviso actualizado");
+                } else {
+                  const id = `m-${Date.now()}`;
+                  setNotificaciones("manuales", (prev) => [
+                    { ...datos, id, creada: new Date().toISOString(), creadaPor: usuario },
+                    ...prev,
+                  ]);
+                  cambiarEstadoNotif([{ id, titulo: datos.titulo }], {}, "Creó", usuario);
+                  onToast(
+                    canales.length
+                      ? `Aviso creado y enviado por ${canales.join(" y ")}${datos.asignado ? ` a ${datos.asignado}` : ""}`
+                      : `Aviso creado${datos.asignado ? ` para ${datos.asignado}` : ""}`,
+                  );
+                }
+                setFormulario(null);
+              }}
+            />
           </Modal>
         )}
 
-        {/* MODAL AUDITORÍA */}
-        {showAudit && (
-          <Modal title="Auditoría" onClose={() => setShowAudit(false)}>
-            <div className="space-y-2">
-              {notificaciones.slice(0, 8).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-                    <History size={14} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-slate-700">
-                      {item.titulo}
-                    </p>
-
-                    <p className="mt-0.5 text-[10px] text-slate-400">
-                      {item.fecha} · {item.hora} · {item.destinatario}
-                    </p>
-                  </div>
-
-                  <StatusBadge estado={item.estado} />
-                </div>
-              ))}
-            </div>
-          </Modal>
+        {toast && (
+          <div
+            className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
+            role="status"
+          >
+            {toast}
+          </div>
         )}
       </div>
-
-      {/* FEEDBACK */}
-      {feedback && (
-        <div className="fixed right-5 top-5 z-[200] flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xl">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-            <Check size={15} />
-          </div>
-
-          {feedback}
-        </div>
-      )}
     </AppShell>
   );
 }
 
-function NotificationRow({
-  notification,
-  onRead,
-  onComplete,
-  onDelete,
+/* ───────────── Bandeja ───────────── */
+
+function Bandeja({
+  notificaciones,
+  usuario,
+  onToast,
+  onNueva,
+  onEditar,
+  filtroEstado,
+  setFiltroEstado,
+  filtroCategoria,
+  setFiltroCategoria,
+  filtroPrioridad,
+  setFiltroPrioridad,
 }: {
-  notification: Notificacion;
-  onRead: () => void;
-  onComplete: () => void;
-  onDelete: () => void;
+  notificaciones: Notif[];
+  usuario: string;
+  onToast: (m: string) => void;
+  onNueva: () => void;
+  onEditar: (m: NotifManual) => void;
+  filtroEstado: FiltroEstado;
+  setFiltroEstado: (v: FiltroEstado) => void;
+  filtroCategoria: "" | CategoriaNotif;
+  setFiltroCategoria: (v: "" | CategoriaNotif) => void;
+  filtroPrioridad: "" | "altas";
+  setFiltroPrioridad: (v: "" | "altas") => void;
 }) {
+  const { miembros } = useEquipo();
+  const { manuales, preferencias } = storeNotificaciones.usar();
+  const [busqueda, setBusqueda] = useState("");
+  const [asignado, setAsignado] = useState("");
+  const texto = normalizarBusqueda(busqueda);
+  const equipo = [
+    ...ROLES_FIJOS,
+    ...miembros
+      .filter((m) => m.status !== "inactivo")
+      .map((m) => `${m.firstName} ${m.lastName}`.trim()),
+  ];
+
+  const lista = notificaciones
+    .filter((n) => {
+      if (filtroEstado === "pendientes" && n.estado.completada) return false;
+      if (filtroEstado === "sinLeer" && (n.estado.leida || n.estado.completada)) return false;
+      if (filtroEstado === "completadas" && !n.estado.completada) return false;
+      if (filtroCategoria && n.categoria !== filtroCategoria) return false;
+      if (filtroPrioridad === "altas" && n.prioridad !== "Urgente" && n.prioridad !== "Alta")
+        return false;
+      if (asignado === "__mias" && n.asignado !== usuario) return false;
+      if (asignado === "__sin" && n.asignado) return false;
+      if (asignado && !asignado.startsWith("__") && n.asignado !== asignado) return false;
+      if (texto && !normalizarBusqueda(`${n.titulo} ${n.detalle} ${n.asignado}`).includes(texto))
+        return false;
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        Number(!!a.estado.leida) - Number(!!b.estado.leida) ||
+        ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad] ||
+        b.fecha.localeCompare(a.fecha),
+    );
+
+  const grupos = ORDEN_GRUPOS.map((g) => ({
+    g,
+    items: lista.filter((n) => grupoDe(n) === g),
+  })).filter((x) => x.items.length);
+  const pendientes = notificaciones.filter((n) => !n.estado.completada);
+  const sinLeerVisibles = lista.filter((n) => !n.estado.leida && !n.estado.completada);
+
+  const crearRapida = (p: (typeof PLANTILLAS_RAPIDAS)[number]) => {
+    const id = `m-${Date.now()}`;
+    setNotificaciones("manuales", (prev) => [
+      {
+        id,
+        titulo: p.titulo,
+        detalle: "Aviso rápido creado desde Notificaciones.",
+        categoria: p.categoria,
+        prioridad: p.prioridad,
+        asignado: "",
+        vence: hoyISO(),
+        horaVence: "",
+        creada: new Date().toISOString(),
+        creadaPor: usuario,
+      },
+      ...prev,
+    ]);
+    cambiarEstadoNotif([{ id, titulo: p.titulo }], {}, "Creó", usuario);
+    onToast(`Aviso "${p.titulo}" creado para hoy`);
+  };
+
+  const hayFiltros = !!(filtroCategoria || filtroPrioridad || asignado || texto);
+
   return (
-    <div className={`${ESTHER_CARD} ${ESTHER_CARD_HOVER} group p-4`}>
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-          notification.prioridad === "Alta"
-            ? "bg-red-50 text-red-500"
-            : "bg-violet-100 text-violet-600"
-        }`}
-      >
-        {notification.prioridad === "Alta" ? (
-          <AlertTriangle size={18} />
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="space-y-3">
+        {/* Filtros */}
+        <div className="card-grad space-y-2 p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full bg-primary/[0.06] p-0.5">
+              {(
+                [
+                  ["pendientes", "Pendientes"],
+                  ["sinLeer", "Sin leer"],
+                  ["completadas", "Completadas"],
+                  ["todas", "Todas"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setFiltroEstado(id)}
+                  aria-pressed={filtroEstado === id}
+                  className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                    filtroEstado === id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="relative min-w-48 flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+              <input
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar aviso, paciente o responsable"
+                className={`${INPUT} h-8 pl-8`}
+              />
+            </div>
+            <Select
+              etiqueta="Responsable"
+              className="w-44"
+              value={asignado}
+              onChange={setAsignado}
+              opciones={[
+                { value: "", label: "Todos los responsables" },
+                { value: "__mias", label: `Asignadas a mí` },
+                { value: "__sin", label: "Sin asignar" },
+                ...equipo.map((n) => ({ value: n, label: n })),
+              ]}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setFiltroPrioridad(filtroPrioridad ? "" : "altas")}
+              aria-pressed={!!filtroPrioridad}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                filtroPrioridad
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-border bg-white text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CircleAlert className="size-3" />
+              Solo urgentes y altas
+            </button>
+            {CATEGORIAS_NOTIF.map((c) => {
+              const Icon = CATEGORIA_ESTILO[c].icon;
+              const activa = filtroCategoria === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setFiltroCategoria(activa ? "" : c)}
+                  aria-pressed={activa}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    activa
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-border bg-white text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="size-3" />
+                  {c}
+                </button>
+              );
+            })}
+            {hayFiltros && (
+              <button
+                onClick={() => {
+                  setFiltroCategoria("");
+                  setFiltroPrioridad("");
+                  setAsignado("");
+                  setBusqueda("");
+                }}
+                className="ml-auto text-[11px] font-semibold text-primary hover:underline"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        </div>
+
+        {sinLeerVisibles.length > 1 && (
+          <div className="flex justify-end">
+            <button
+              className={BTN_SECUNDARIO}
+              onClick={() => {
+                cambiarEstadoNotif(sinLeerVisibles, { leida: true }, null, usuario);
+                onToast(`${sinLeerVisibles.length} avisos marcados como leídos`);
+              }}
+            >
+              <CheckCheck className="size-3.5" />
+              Marcar todas como leídas ({sinLeerVisibles.length})
+            </button>
+          </div>
+        )}
+
+        {grupos.length === 0 ? (
+          <Vacio
+            icon={filtroEstado === "completadas" ? CheckCheck : Sparkles}
+            titulo={
+              filtroEstado === "completadas" ? "Todavía no completaste avisos" : "¡Todo al día!"
+            }
+            texto={
+              hayFiltros ? "No hay avisos con esos filtros." : "No hay avisos pendientes por ahora."
+            }
+          />
         ) : (
-          <Bell size={18} />
+          grupos.map(({ g, items }) => (
+            <section key={g}>
+              <p className="mb-2 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                {g === "Vencidas" && <CircleAlert className="size-3.5 text-destructive" />}
+                {g}
+                <span className="rounded-full bg-primary/10 px-1.5 text-primary">
+                  {items.length}
+                </span>
+              </p>
+              <ul className="space-y-2">
+                {items.map((n) => (
+                  <TarjetaNotif
+                    key={n.id}
+                    n={n}
+                    usuario={usuario}
+                    onToast={onToast}
+                    onEditar={() => {
+                      const m = manuales.find((x) => x.id === n.id);
+                      if (m) onEditar(m);
+                    }}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))
         )}
       </div>
 
+      {/* Columna lateral */}
+      <aside className="space-y-3">
+        <div className="card-grad p-4">
+          <p className="text-sm font-semibold">Pendientes por área</p>
+          <ul className="mt-2 space-y-1">
+            {CATEGORIAS_NOTIF.map((c) => {
+              const cant = pendientes.filter((n) => n.categoria === c).length;
+              const Icon = CATEGORIA_ESTILO[c].icon;
+              const apagada = !preferencias.categorias[c].activa;
+              return (
+                <li key={c}>
+                  <button
+                    onClick={() => setFiltroCategoria(filtroCategoria === c ? "" : c)}
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-xs transition-colors ${
+                      filtroCategoria === c ? "bg-primary/10" : "hover:bg-primary/[0.05]"
+                    }`}
+                  >
+                    <span
+                      className={`grid size-7 place-items-center rounded-full bg-gradient-to-br ${CATEGORIA_ESTILO[c].color}`}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="flex-1 font-medium">{c}</span>
+                    {apagada ? (
+                      <BellOff
+                        className="size-3.5 text-muted-foreground"
+                        aria-label="Alertas apagadas"
+                      />
+                    ) : (
+                      <span
+                        className={`min-w-6 rounded-full px-1.5 text-center text-[11px] font-bold ${cant ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {cant}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="card-grad p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="size-4 text-primary" /> Aviso rápido
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Un clic y queda creado para hoy.</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {PLANTILLAS_RAPIDAS.map((p) => (
+              <button
+                key={p.titulo}
+                onClick={() => crearRapida(p)}
+                className="rounded-full border border-primary/15 bg-white px-2.5 py-1 text-left text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/35 hover:text-primary"
+              >
+                + {p.titulo}
+              </button>
+            ))}
+          </div>
+          <button className={`${BTN_PRIMARIO} mt-3 w-full`} onClick={onNueva}>
+            <Plus className="size-3.5" />
+            Aviso personalizado
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.09] via-primary/[0.04] to-transparent p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Mail className="size-4 text-primary" /> Resumen diario
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {preferencias.resumenDiario.activo
+              ? `Todos los días a las ${preferencias.resumenDiario.hora} hs llega por correo un resumen con los ${pendientes.length} avisos pendientes.`
+              : "Apagado. Activalo en Preferencias para recibir un resumen por correo cada mañana."}
+          </p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function TarjetaNotif({
+  n,
+  usuario,
+  onToast,
+  onEditar,
+  pospuesta = false,
+}: {
+  n: Notif;
+  usuario: string;
+  onToast: (m: string) => void;
+  onEditar: () => void;
+  pospuesta?: boolean;
+}) {
+  const [menu, setMenu] = useState(false);
+  const Icon = CATEGORIA_ESTILO[n.categoria].icon;
+  const leida = !!n.estado.leida;
+  const completada = !!n.estado.completada;
+  const hoy = hoyISO();
+  const vencida = !!n.vence && n.vence < hoy && !completada;
+  const item = [{ id: n.id, titulo: n.titulo }];
+
+  const posponer = (horas: number, etiqueta: string) => {
+    let hasta: Date;
+    if (horas === -1) {
+      hasta = new Date();
+      hasta.setDate(hasta.getDate() + 1);
+      hasta.setHours(8, 0, 0, 0);
+    } else {
+      hasta = new Date(Date.now() + horas * 3_600_000);
+    }
+    cambiarEstadoNotif(
+      item,
+      { pospuestaHasta: hasta.toISOString(), leida: true },
+      `Pospuso (${etiqueta})`,
+      usuario,
+    );
+    setMenu(false);
+    onToast(`Pospuesta ${etiqueta}`);
+  };
+
+  return (
+    <li
+      className={`card-grad group relative flex gap-3 overflow-visible p-3.5 pl-4 transition-all hover:-translate-y-0.5 ${
+        completada ? "opacity-70" : ""
+      }`}
+      onClick={() => {
+        if (!leida && !completada) cambiarEstadoNotif(item, { leida: true }, null, usuario);
+      }}
+    >
+      <span
+        className={`absolute inset-y-3 left-0 w-1 rounded-r-full ${PRIORIDAD_ESTILO[n.prioridad].franja}`}
+      />
+      <span
+        className={`relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br ${CATEGORIA_ESTILO[n.categoria].color}`}
+      >
+        <Icon className="size-4.5" />
+        {!leida && !completada && (
+          <span
+            className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-primary"
+            aria-label="Sin leer"
+          />
+        )}
+      </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-bold text-slate-800">
-            {notification.titulo}
-          </h3>
-
-          <StatusBadge estado={notification.estado} />
-
-          {notification.prioridad === "Alta" && (
-            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold text-red-600">
-              Alta prioridad
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p
+            className={`text-sm ${!leida && !completada ? "font-bold" : "font-semibold"} ${completada ? "line-through decoration-muted-foreground/50" : ""}`}
+          >
+            {n.titulo}
+          </p>
+          <Pill clase={PRIORIDAD_ESTILO[n.prioridad].chip}>{n.prioridad}</Pill>
+          {n.origen === "auto" && (
+            <Pill clase="bg-gradient-to-r from-primary/10 to-fuchsia-100 text-primary">
+              <Sparkles className="size-3" />
+              Automática
+            </Pill>
+          )}
+          {vencida && <Pill clase="bg-destructive/10 text-destructive">Vencida</Pill>}
+        </div>
+        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{n.detalle}</p>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground/70">{n.categoria}</span>
+          {n.asignado ? (
+            <span className="inline-flex items-center gap-1">
+              <UserRound className="size-3" />
+              {n.asignado}
+            </span>
+          ) : (
+            <span className="italic">Sin asignar</span>
+          )}
+          {n.vence && (
+            <span
+              className={`inline-flex items-center gap-1 ${vencida ? "font-semibold text-destructive" : ""}`}
+            >
+              <Clock3 className="size-3" />
+              Vence {n.vence === hoy ? "hoy" : formatearFecha(n.vence)}
+              {n.horaVence ? ` ${n.horaVence}` : ""}
             </span>
           )}
-        </div>
-
-        <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          {notification.descripcion}
+          {pospuesta && n.estado.pospuestaHasta && (
+            <span className="inline-flex items-center gap-1 text-amber-700">
+              <AlarmClock className="size-3" />
+              Vuelve {hace(n.estado.pospuestaHasta)}
+            </span>
+          )}
+          {completada && n.estado.completada && (
+            <span className="text-emerald-600">Completada {hace(n.estado.completada)}</span>
+          )}
+          {!completada && !pospuesta && n.origen === "manual" && (
+            <span>Creada por {n.creadaPor}</span>
+          )}
         </p>
-
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
-          <span>{notification.categoria}</span>
-          <span>•</span>
-          <span>
-            {notification.fecha} · {notification.hora}
-          </span>
-          <span>•</span>
-          <span>{notification.destinatario}</span>
-        </div>
       </div>
 
-      <div className="flex items-center gap-1">
-        {notification.estado === "Pendiente" && (
-          <>
+      <div
+        className="flex shrink-0 flex-col items-end justify-between gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-1">
+          {pospuesta ? (
             <button
-              type="button"
-              onClick={onRead}
-              title="Marcar como leída"
-              className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
+              className={BTN_SECUNDARIO}
+              onClick={() => {
+                cambiarEstadoNotif(item, { pospuestaHasta: "", leida: false }, "Reactivó", usuario);
+                onToast("Aviso reactivado");
+              }}
             >
-              <Eye size={15} />
+              <Bell className="size-3.5" />
+              Reactivar
             </button>
-
+          ) : completada ? (
             <button
-              type="button"
-              onClick={onComplete}
-              title="Completar"
-              className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+              className={BTN_SECUNDARIO}
+              onClick={() => {
+                cambiarEstadoNotif(item, { completada: "", leida: true }, "Reabrió", usuario);
+                onToast("Aviso reabierto");
+              }}
             >
-              <Check size={15} />
+              <Bell className="size-3.5" />
+              Reabrir
             </button>
-          </>
-        )}
-
-        {notification.estado === "Leída" && (
+          ) : (
+            <>
+              {n.accion && (
+                <Link
+                  to={n.accion.to as never}
+                  className={BTN_PRIMARIO}
+                  onClick={() => cambiarEstadoNotif(item, { leida: true }, null, usuario)}
+                >
+                  {n.accion.label}
+                </Link>
+              )}
+              <button
+                className={BTN_ICONO}
+                title="Completar"
+                aria-label="Completar"
+                onClick={() => {
+                  cambiarEstadoNotif(
+                    item,
+                    { completada: new Date().toISOString(), leida: true },
+                    "Completó",
+                    usuario,
+                  );
+                  onToast("¡Listo! Aviso completado");
+                }}
+              >
+                <Check className="size-4" />
+              </button>
+              <div className="relative">
+                <button
+                  className={BTN_ICONO}
+                  title="Posponer"
+                  aria-label="Posponer"
+                  onClick={() => setMenu((v) => !v)}
+                >
+                  <AlarmClock className="size-3.5" />
+                </button>
+                {menu && (
+                  <div className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-border bg-card p-1 shadow-xl">
+                    {(
+                      [
+                        [1, "1 hora"],
+                        [3, "3 horas"],
+                        [-1, "hasta mañana 8:00"],
+                        [72, "3 días"],
+                      ] as const
+                    ).map(([h, l]) => (
+                      <button
+                        key={l}
+                        onClick={() => posponer(h, l)}
+                        className="w-full rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-primary/5"
+                      >
+                        Posponer {l}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {n.origen === "manual" && !pospuesta && (
+            <button className={BTN_ICONO} title="Editar" aria-label="Editar" onClick={onEditar}>
+              <Pencil className="size-3.5" />
+            </button>
+          )}
           <button
-            type="button"
-            onClick={onComplete}
-            title="Completar"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-emerald-100 hover:text-emerald-600"
+            className={`${BTN_ICONO} hover:!border-destructive/30 hover:!bg-destructive/10 hover:!text-destructive`}
+            title={n.origen === "auto" ? "Descartar" : "Eliminar"}
+            aria-label={n.origen === "auto" ? "Descartar" : "Eliminar"}
+            onClick={() => {
+              if (n.origen === "manual") {
+                setNotificaciones("manuales", (prev) => prev.filter((m) => m.id !== n.id));
+                cambiarEstadoNotif(item, {}, "Eliminó", usuario);
+                onToast("Aviso eliminado");
+              } else {
+                cambiarEstadoNotif(item, { oculta: true }, "Descartó", usuario);
+                onToast("Alerta descartada");
+              }
+            }}
           >
-            <Check size={15} />
+            {n.origen === "auto" ? (
+              <EyeOff className="size-3.5" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
           </button>
-        )}
+        </div>
+        <span className="text-[10.5px] text-muted-foreground">
+          {n.origen === "manual" && n.vence ? "" : hace(n.fecha)}
+        </span>
+      </div>
+    </li>
+  );
+}
 
-        <button
-          type="button"
-          onClick={onDelete}
-          title="Eliminar"
-          className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
-        >
-          <Trash2 size={14} />
+function AvisoForm({
+  inicial,
+  onSubmit,
+  onCancel,
+}: {
+  inicial: NotifManual | null;
+  onSubmit: (d: Omit<NotifManual, "id" | "creada" | "creadaPor">, canales: string[]) => void;
+  onCancel: () => void;
+}) {
+  const { miembros } = useEquipo();
+  const equipo = [
+    ...ROLES_FIJOS,
+    ...miembros
+      .filter((m) => m.status !== "inactivo")
+      .map((m) => `${m.firstName} ${m.lastName}`.trim()),
+  ];
+  const [titulo, setTitulo] = useState(inicial?.titulo ?? "");
+  const [detalle, setDetalle] = useState(inicial?.detalle ?? "");
+  const [categoria, setCategoria] = useState<CategoriaNotif>(
+    inicial?.categoria ?? "Administración",
+  );
+  const [prioridad, setPrioridad] = useState<PrioridadNotif>(inicial?.prioridad ?? "Normal");
+  const [asignado, setAsignado] = useState(inicial?.asignado ?? "");
+  const [vence, setVence] = useState(inicial?.vence ?? hoyISO());
+  const [horaVence, setHoraVence] = useState(inicial?.horaVence ?? "");
+  const [email, setEmail] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const [error, setError] = useState("");
+
+  return (
+    <form
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        if (!titulo.trim()) return setError("Escribí un título.");
+        if (!inicial && vence && vence < hoyISO())
+          return setError("La fecha de vencimiento no puede ser pasada.");
+        onSubmit(
+          {
+            titulo: titulo.trim(),
+            detalle: detalle.trim(),
+            categoria,
+            prioridad,
+            asignado,
+            vence,
+            horaVence,
+          },
+          [email ? "correo" : "", whatsapp ? "WhatsApp" : ""].filter(Boolean),
+        );
+      }}
+      className="space-y-3"
+    >
+      <Field label="Título *">
+        <input
+          autoFocus
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className={INPUT}
+          placeholder="Ej: Llamar al proveedor de resinas"
+        />
+      </Field>
+      <Field label="Detalle">
+        <textarea
+          rows={3}
+          value={detalle}
+          onChange={(e) => setDetalle(e.target.value)}
+          className="w-full resize-y rounded-xl border border-primary/12 bg-white px-3 py-2 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+          placeholder="Qué hay que hacer y cualquier dato útil…"
+        />
+      </Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Área">
+          <Select
+            value={categoria}
+            onChange={setCategoria}
+            opciones={CATEGORIAS_NOTIF.map((c) => ({ value: c, label: c }))}
+          />
+        </Field>
+        <Field label="Asignar a">
+          <Select
+            value={asignado}
+            onChange={setAsignado}
+            opciones={[
+              { value: "", label: "Sin asignar" },
+              ...equipo.map((n) => ({ value: n, label: n })),
+            ]}
+          />
+        </Field>
+        <Field label="Vence el">
+          <input
+            type="date"
+            value={vence}
+            onChange={(e) => setVence(e.target.value)}
+            className={INPUT}
+          />
+        </Field>
+        <Field label="Hora">
+          <input
+            type="time"
+            value={horaVence}
+            onChange={(e) => setHoraVence(e.target.value)}
+            className={INPUT}
+          />
+        </Field>
+      </div>
+      <Field label="Prioridad">
+        <div className="grid grid-cols-4 gap-1.5">
+          {PRIORIDADES_NOTIF.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPrioridad(p)}
+              aria-pressed={prioridad === p}
+              className={`rounded-xl border py-1.5 text-xs font-semibold transition-colors ${
+                prioridad === p
+                  ? `${PRIORIDAD_ESTILO[p].chip} border-current`
+                  : "border-border bg-white text-muted-foreground"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </Field>
+      {!inicial && (
+        <div className="flex flex-wrap gap-4 rounded-xl bg-primary/[0.04] px-3 py-2 text-xs">
+          <span className="font-semibold text-muted-foreground">Avisar también por:</span>
+          <label className="inline-flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={email}
+              onChange={(e) => setEmail(e.target.checked)}
+              className="accent-[var(--color-primary)]"
+            />
+            <Mail className="size-3.5" /> Correo
+          </label>
+          <label className="inline-flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.checked)}
+              className="accent-[var(--color-primary)]"
+            />
+            <MessageCircle className="size-3.5" /> WhatsApp
+          </label>
+        </div>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onCancel} className={BTN_SECUNDARIO}>
+          Cancelar
+        </button>
+        <button type="submit" className={BTN_PRIMARIO}>
+          <Check className="size-4" />
+          {inicial ? "Guardar cambios" : "Crear aviso"}
         </button>
       </div>
+    </form>
+  );
+}
+
+/* ───────────── Pospuestas ───────────── */
+
+function Pospuestas({
+  pospuestas,
+  usuario,
+  onToast,
+}: {
+  pospuestas: Notif[];
+  usuario: string;
+  onToast: (m: string) => void;
+}) {
+  const lista = [...pospuestas].sort((a, b) =>
+    (a.estado.pospuestaHasta ?? "").localeCompare(b.estado.pospuestaHasta ?? ""),
+  );
+  return (
+    <div className="space-y-3">
+      <EncabezadoSeccion
+        icon={AlarmClock}
+        titulo="Pospuestas"
+        descripcion="Avisos que dejaste para más tarde. Vuelven solos a la bandeja a la hora elegida."
+      />
+      {lista.length === 0 ? (
+        <Vacio
+          icon={AlarmClock}
+          titulo="No hay avisos pospuestos"
+          texto="Usá el reloj de cada aviso para dejarlo para más tarde."
+        />
+      ) : (
+        <ul className="space-y-2">
+          {lista.map((n) => (
+            <TarjetaNotif
+              key={n.id}
+              n={n}
+              usuario={usuario}
+              onToast={onToast}
+              onEditar={() => {}}
+              pospuesta
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-function StatusBadge({ estado }: { estado: Estado }) {
-  const styles =
-    estado === "Pendiente"
-      ? "bg-amber-50 text-amber-600 border-amber-200"
-      : estado === "Leída"
-        ? "bg-blue-50 text-blue-600 border-blue-200"
-        : "bg-emerald-50 text-emerald-600 border-emerald-200";
+/* ───────────── Preferencias ───────────── */
+
+function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
+  const { preferencias } = storeNotificaciones.usar();
+  const { tiene } = useNotificaciones();
+  const setPref = (fn: (p: typeof preferencias) => typeof preferencias) =>
+    setNotificaciones("preferencias", fn);
+  const setCat = (c: CategoriaNotif, cambio: Partial<PreferenciaCategoria>) =>
+    setPref((p) => ({
+      ...p,
+      categorias: { ...p.categorias, [c]: { ...p.categorias[c], ...cambio } },
+    }));
+
+  const DESCRIPCION: Record<CategoriaNotif, string> = {
+    Agenda: "Turnos sin confirmar, ausencias, lista de espera y tareas.",
+    Pacientes: "Cumpleaños y seguimientos.",
+    Comunicación: "Mensajes de pacientes sin leer.",
+    Laboratorio: "Trabajos demorados o listos para retirar.",
+    Insumos: "Stock por debajo del mínimo.",
+    Administración: "Presupuestos sin respuesta, pagos y trámites.",
+    Equipo: "Invitaciones pendientes y avisos internos.",
+  };
+  const MODULO: Partial<Record<CategoriaNotif, string>> = {
+    Comunicación: "comunicaciones",
+    Laboratorio: "laboratorio",
+    Insumos: "inventario",
+  };
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${styles}`}>
-      {estado}
-    </span>
-  );
-}
+    <div className="space-y-3">
+      <EncabezadoSeccion
+        icon={Settings2}
+        titulo="Preferencias de aviso"
+        descripcion="Elegí qué alertas querés recibir y por dónde."
+      >
+        <button
+          className={BTN_SECUNDARIO}
+          onClick={() => {
+            if (preferencias.sonido) pitido();
+            onToast("🔔 Así se ve (y suena) una notificación de prueba");
+          }}
+        >
+          <BellRing className="size-4" />
+          Probar notificación
+        </button>
+      </EncabezadoSeccion>
 
-function StatCard({
-  icon,
-  label,
-  value,
-  accent = "default",
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  accent?: "default" | "warning" | "info" | "success";
-}) {
-  const iconStyle =
-    accent === "warning"
-      ? "bg-amber-100 text-amber-600"
-      : accent === "info"
-        ? "bg-blue-100 text-blue-600"
-        : accent === "success"
-          ? "bg-emerald-100 text-emerald-600"
-          : "bg-violet-100 text-violet-600";
-
-  return (
-    <div className={`${ESTHER_CARD} ${ESTHER_CARD_HOVER} p-4`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-            {label}
-          </div>
-          <div className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-            {value}
-          </div>
-        </div>
-
-        <div className={`grid size-9 shrink-0 place-items-center rounded-xl ${iconStyle} ring-1 ring-black/[0.03]`}>
-          {icon}
+      <div className="card-grad overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="bg-primary/[0.04] text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2.5 font-semibold">Área</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Activa</th>
+                <th className="px-3 py-2.5 text-center font-semibold">En la app</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Correo</th>
+                <th className="px-3 py-2.5 text-center font-semibold">WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-primary/[0.07]">
+              {CATEGORIAS_NOTIF.map((c) => {
+                const pref = preferencias.categorias[c];
+                const Icon = CATEGORIA_ESTILO[c].icon;
+                const modulo = MODULO[c];
+                const fueraDelPlan = !!modulo && !tiene(modulo);
+                return (
+                  <tr key={c} className={fueraDelPlan ? "opacity-50" : ""}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`grid size-8 place-items-center rounded-full bg-gradient-to-br ${CATEGORIA_ESTILO[c].color}`}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        <div>
+                          <p className="font-semibold">{c}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {fueraDelPlan ? "No incluido en tu plan" : DESCRIPCION[c]}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    {(["activa", "app", "email", "whatsapp"] as const).map((k) => (
+                      <td key={k} className="px-3 py-3 text-center">
+                        <span className="inline-flex">
+                          <Interruptor
+                            etiqueta={`${c}: ${k}`}
+                            activo={pref[k] && (k === "activa" || pref.activa)}
+                            onChange={(v) => {
+                              if (fueraDelPlan)
+                                return onToast("Esta área no está incluida en tu plan");
+                              if (k !== "activa" && !pref.activa)
+                                return onToast(`Primero activá las alertas de ${c}`);
+                              setCat(c, { [k]: v });
+                            }}
+                          />
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
-  );
-}
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-slate-600">
-        {label}
-      </span>
-
-      {children}
-    </label>
-  );
-}
-
-function Modal({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[2px]">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-sm font-bold text-slate-900">{title}</h2>
-
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="card-grad space-y-3 p-4">
+          <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+            <span className="flex items-center gap-2">
+              <Mail className="size-4 text-primary" /> Resumen diario por correo
+            </span>
+            <Interruptor
+              etiqueta="Resumen diario"
+              activo={preferencias.resumenDiario.activo}
+              onChange={(v) =>
+                setPref((p) => ({ ...p, resumenDiario: { ...p.resumenDiario, activo: v } }))
+              }
+            />
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Una vez por día, con todo lo pendiente ordenado por prioridad.
+          </p>
+          <Field label="Hora de envío">
+            <input
+              type="time"
+              value={preferencias.resumenDiario.hora}
+              disabled={!preferencias.resumenDiario.activo}
+              onChange={(e) =>
+                setPref((p) => ({
+                  ...p,
+                  resumenDiario: { ...p.resumenDiario, hora: e.target.value },
+                }))
+              }
+              className={INPUT}
+            />
+          </Field>
+        </div>
+        <div className="card-grad space-y-3 p-4">
+          <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+            <span className="flex items-center gap-2">
+              <Moon className="size-4 text-primary" /> No molestar
+            </span>
+            <Interruptor
+              etiqueta="No molestar"
+              activo={preferencias.noMolestar.activo}
+              onChange={(v) =>
+                setPref((p) => ({ ...p, noMolestar: { ...p.noMolestar, activo: v } }))
+              }
+            />
+          </p>
+          <p className="text-xs text-muted-foreground">
+            En este horario no llegan avisos por correo ni WhatsApp (salvo urgentes).
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Desde">
+              <input
+                type="time"
+                value={preferencias.noMolestar.desde}
+                disabled={!preferencias.noMolestar.activo}
+                onChange={(e) =>
+                  setPref((p) => ({ ...p, noMolestar: { ...p.noMolestar, desde: e.target.value } }))
+                }
+                className={INPUT}
+              />
+            </Field>
+            <Field label="Hasta">
+              <input
+                type="time"
+                value={preferencias.noMolestar.hasta}
+                disabled={!preferencias.noMolestar.activo}
+                onChange={(e) =>
+                  setPref((p) => ({ ...p, noMolestar: { ...p.noMolestar, hasta: e.target.value } }))
+                }
+                className={INPUT}
+              />
+            </Field>
+          </div>
+        </div>
+        <div className="card-grad space-y-3 p-4">
+          <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+            <span className="flex items-center gap-2">
+              <Volume2 className="size-4 text-primary" /> Sonido
+            </span>
+            <Interruptor
+              etiqueta="Sonido"
+              activo={preferencias.sonido}
+              onChange={(v) => setPref((p) => ({ ...p, sonido: v }))}
+            />
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Un aviso sonoro corto cuando llega una notificación urgente.
+          </p>
           <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className={`${BTN_SECUNDARIO} w-full`}
+            onClick={() => {
+              pitido();
+              onToast("Sonido de prueba");
+            }}
+            disabled={!preferencias.sonido}
           >
-            <X size={17} />
+            <Volume2 className="size-3.5" />
+            Escuchar
           </button>
         </div>
-
-        <div className="p-5">{children}</div>
       </div>
     </div>
   );
 }
 
-const INPUT =
-  "h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100";
+/* ───────────── Historial ───────────── */
 
-function toInputDate(value: string) {
-  const [day, month, year] = value.split("/");
+function Historial({ onToast }: { onToast: (m: string) => void }) {
+  const { historial } = storeNotificaciones.usar();
+  const [busqueda, setBusqueda] = useState("");
+  const [accion, setAccion] = useState("");
+  const [limite, setLimite] = useState(20);
+  const texto = normalizarBusqueda(busqueda);
+  const acciones = [...new Set(historial.map((h) => h.accion.split(" (")[0] ?? h.accion))];
+  const lista = historial.filter(
+    (h) =>
+      (!accion || h.accion.startsWith(accion)) &&
+      (!texto || normalizarBusqueda(`${h.titulo} ${h.usuario}`).includes(texto)),
+  );
 
-  if (!day || !month || !year) {
-    return "2026-09-23";
-  }
+  const exportar = () => {
+    const filas = [
+      ["Fecha", "Hora", "Usuario", "Acción", "Aviso"],
+      ...lista.map((h) => [
+        formatearFecha(h.fecha.slice(0, 10)),
+        new Date(h.fecha).toTimeString().slice(0, 5),
+        h.usuario,
+        h.accion,
+        h.titulo,
+      ]),
+    ];
+    const csv = filas.map((f) => f.map((c) => `"${c.replace(/"/g, '""')}"`).join(";")).join("\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `historial-notificaciones-${hoyISO()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onToast(`${lista.length} movimientos exportados`);
+  };
 
-  return `${year}-${month}-${day}`;
-}
+  const ICONO: Record<string, LucideIcon> = {
+    Creó: Plus,
+    Completó: Check,
+    Pospuso: AlarmClock,
+    Eliminó: Trash2,
+    Descartó: EyeOff,
+    Editó: Pencil,
+    Reabrió: Bell,
+    Reactivó: Bell,
+  };
 
-function formatDate(value: string) {
-  if (!value) return "";
-
-  const [year, month, day] = value.split("-");
-
-  return `${day}/${month}/${year}`;
+  return (
+    <div className="space-y-3">
+      <EncabezadoSeccion
+        icon={History}
+        titulo="Historial"
+        descripcion="Quién creó, completó, pospuso o descartó cada aviso, y cuándo."
+      >
+        <button className={BTN_SECUNDARIO} onClick={exportar}>
+          <Download className="size-4" />
+          Exportar
+        </button>
+      </EncabezadoSeccion>
+      <div className="card-grad flex flex-wrap items-center gap-2 p-2">
+        <div className="relative min-w-52 flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar aviso o usuario"
+            className={`${INPUT} h-8 pl-8`}
+          />
+        </div>
+        <Select
+          etiqueta="Acción"
+          className="w-48"
+          value={accion}
+          onChange={setAccion}
+          opciones={[
+            { value: "", label: "Todas las acciones" },
+            ...acciones.map((a) => ({ value: a, label: a })),
+          ]}
+        />
+      </div>
+      {lista.length === 0 ? (
+        <Vacio
+          icon={History}
+          titulo="Sin movimientos"
+          texto="Acá vas a ver cada acción sobre los avisos."
+        />
+      ) : (
+        <div className="card-grad p-4">
+          <ol className="relative space-y-3 border-l-2 border-primary/15 pl-5">
+            {lista.slice(0, limite).map((h) => {
+              const Icon = ICONO[h.accion.split(" (")[0] ?? ""] ?? Bell;
+              return (
+                <li key={h.id} className="relative">
+                  <span className="absolute -left-[31px] top-0 grid size-6 place-items-center rounded-full bg-white text-primary ring-2 ring-primary/20">
+                    <Icon className="size-3" />
+                  </span>
+                  <p className="text-sm">
+                    <b className="font-semibold">{h.usuario}</b>{" "}
+                    <span className="text-muted-foreground">{h.accion.toLowerCase()}</span>{" "}
+                    <span className="font-medium">“{h.titulo}”</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {formatearFecha(h.fecha.slice(0, 10))} ·{" "}
+                    {new Date(h.fecha).toTimeString().slice(0, 5)} · {hace(h.fecha)}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+          {lista.length > limite && (
+            <button
+              className="mt-3 text-xs font-semibold text-primary hover:underline"
+              onClick={() => setLimite((l) => l + 20)}
+            >
+              Ver más ({lista.length - limite})
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

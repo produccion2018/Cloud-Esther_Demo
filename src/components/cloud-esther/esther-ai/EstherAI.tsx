@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
+import { ROL_IA_LABEL } from "@/lib/cloud-esther/esther-motor";
+import type { RolIA } from "@/lib/cloud-esther/ia-store";
+import { Modal } from "@/components/cloud-esther/rrhh/ui";
+import { EstherImagen } from "./EstherImagen";
+import { EstherSonrisa } from "./EstherSonrisa";
 import type { EstherContext, EstherQuickAction } from "@/lib/cloud-esther/esther-ai";
 import { EstherCharacter } from "./EstherCharacter";
 import { EstherConversation } from "./EstherConversation";
@@ -26,7 +36,25 @@ export function EstherAI({
   onAction,
   variant = "panel",
 }: EstherAIProps) {
-  const esther = useEstherAI(context ? { context } : {});
+  // Quién pregunta y sobre qué: la IA responde solo lo que ese usuario puede ver.
+  const { plan } = useCloudEsther();
+  const { pacientes } = usePacientes();
+  const { usuario } = useSesion();
+  const [pacienteId, setPacienteId] = useState<number | undefined>(undefined);
+  const [rol, setRol] = useState<RolIA>("admin");
+  const [sede, setSede] = useState("Todas");
+  const [herramienta, setHerramienta] = useState<"imagen" | "sonrisa" | null>(null);
+  const [aviso, setAviso] = useState("");
+  const sedes = sucursalesDelPlan(plan === "grupo");
+  const nombreUsuario = usuario?.nombre ?? "Jesús Méndez";
+  const esther = useEstherAI({
+    context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId },
+  });
+  useEffect(() => {
+    if (!aviso) return;
+    const t = window.setTimeout(() => setAviso(""), 3000);
+    return () => window.clearTimeout(t);
+  }, [aviso]);
   const state = controlledState ?? esther.state;
   const message = controlledMessage ?? esther.message;
   const config = estherStates[state];
@@ -43,15 +71,26 @@ export function EstherAI({
 
   const handleAction = (action: EstherQuickAction) => {
     onAction?.(action);
-    void esther.send(action.label, action.section);
+    if (action.herramienta) {
+      setHerramienta(action.herramienta);
+      return;
+    }
+    void esther.send(action.prompt ?? action.label, action.section);
   };
+  const SEL =
+    "glass-panel h-8 rounded-full border-0 bg-transparent px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40";
 
   if (compact) {
     return (
       <div className="esther-ai glass-panel relative flex items-center gap-4 overflow-hidden rounded-2xl p-4">
         <div className="relative h-[220px] w-[140px] shrink-0">
           <EstherGlow intensity={config.glow} pulseKey={state} />
-          <EstherParticles count={config.particles} drift={config.drift} dataFlow={config.dataFlow} compact />
+          <EstherParticles
+            count={config.particles}
+            drift={config.drift}
+            dataFlow={config.dataFlow}
+            compact
+          />
           <EstherCharacter state={state} compact />
         </div>
         <div className="min-w-0">
@@ -85,9 +124,49 @@ export function EstherAI({
               </p>
             </div>
           </div>
-          <p className="glass-panel rounded-full px-3 py-1.5 text-xs text-muted-foreground">
-            Contexto: {esther.section}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Paciente en contexto"
+              value={pacienteId ?? ""}
+              onChange={(e) => setPacienteId(e.target.value ? Number(e.target.value) : undefined)}
+              className={SEL}
+            >
+              <option value="">Sin paciente seleccionado</option>
+              {pacientes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  Paciente: {p.nombre} {p.apellido}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Consultar como"
+              value={rol}
+              onChange={(e) => setRol(e.target.value as RolIA)}
+              className={SEL}
+              title="Esther respeta los permisos del rol"
+            >
+              {(Object.keys(ROL_IA_LABEL) as RolIA[]).map((r2) => (
+                <option key={r2} value={r2}>
+                  Como: {ROL_IA_LABEL[r2]}
+                </option>
+              ))}
+            </select>
+            {sedes.length > 1 && (
+              <select
+                aria-label="Sede"
+                value={sede}
+                onChange={(e) => setSede(e.target.value)}
+                className={SEL}
+              >
+                <option value="Todas">Todas las sedes</option>
+                {sedes.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </header>
 
         <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1.05fr_1fr]">
@@ -124,6 +203,7 @@ export function EstherAI({
                 isBusy={esther.isBusy}
                 onSend={(text) => void esther.send(text)}
                 onTyping={esther.notifyTyping}
+                voz
               />
             </div>
 
@@ -133,13 +213,48 @@ export function EstherAI({
               </h2>
               <EstherQuickActionsBlock disabled={esther.isBusy} onAction={handleAction} />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Esther ya responde con los datos reales de Recursos humanos (asistencia, licencias,
-                vencimientos, nómina y vacaciones). Para datos clínicos todavía es una demostración.
+                Esther responde con los datos reales de la clínica (pacientes, historia,
+                odontograma, agenda, presupuestos, facturación, inventario, equipo y RRHH), solo de
+                esta empresa y según el rol y la sede elegidos. Cada consulta queda registrada en
+                auditoría. Asiste al profesional: no reemplaza el diagnóstico.
               </p>
             </div>
           </motion.div>
         </div>
       </div>
+      {herramienta &&
+        // Fuera del tema oscuro de Esther: la ventana usa los colores normales de la app.
+        createPortal(
+          <Modal
+            modulo="Cloud Esther IA"
+            titulo={herramienta === "imagen" ? "Analizar imagen" : "Simulador de sonrisa"}
+            onClose={() => setHerramienta(null)}
+            ancho="max-w-5xl"
+          >
+            {herramienta === "imagen" ? (
+              <EstherImagen
+                pacienteInicial={pacienteId}
+                usuario={nombreUsuario}
+                onToast={setAviso}
+              />
+            ) : (
+              <EstherSonrisa
+                pacienteInicial={pacienteId}
+                usuario={nombreUsuario}
+                onToast={setAviso}
+              />
+            )}
+          </Modal>,
+          document.body,
+        )}
+      {aviso && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
+        >
+          {aviso}
+        </div>
+      )}
     </section>
   );
 }

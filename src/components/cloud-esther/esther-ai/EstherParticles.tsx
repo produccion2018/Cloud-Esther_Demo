@@ -64,7 +64,11 @@ export function EstherParticles({ count, drift, dataFlow, compact }: Props) {
       ))}
 
       {dataFlow && (
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
           <defs>
             <linearGradient id="esther-line" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stopColor="var(--violet-soft)" stopOpacity="0" />

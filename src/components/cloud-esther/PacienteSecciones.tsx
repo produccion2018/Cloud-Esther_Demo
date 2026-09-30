@@ -1177,6 +1177,20 @@ const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REG
   persistir: "registros",
 });
 
+/** Lectura y escritura sin hooks (la usan Esther IA y las automatizaciones). */
+export function leerRegistros(): Record<number, Registros> {
+  return storeRegistros.leer();
+}
+export function cambiarRegistro<K extends keyof Registros>(
+  id: number,
+  clave: K,
+  fn: (prev: Registros[K]) => Registros[K],
+) {
+  const todos = storeRegistros.leer();
+  const actual = todos[id] ?? VACIO;
+  storeRegistros.poner({ ...todos, [id]: { ...actual, [clave]: fn(actual[clave]) } as Registros });
+}
+
 /** Registros de todos los pacientes de la empresa activa (lo usan las alertas de Notificaciones). */
 export function useTodosLosRegistros(): Record<number, Registros> {
   return storeRegistros.usar();

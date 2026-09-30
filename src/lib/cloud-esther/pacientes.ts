@@ -93,6 +93,11 @@ type Estado = {
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes. */
 const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), { persistir: "pacientes" });
 
+/** Lectura sin hooks (Esther IA). */
+export function leerPacientes(): Paciente[] {
+  return store.leer().pacientes;
+}
+
 export function usePacientes() {
   const actual = store.usar();
 

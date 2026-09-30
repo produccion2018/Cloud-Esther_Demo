@@ -5,13 +5,7 @@ import walkingUrl from "@/assets/esther-pose-walking.png";
 import bendingUrl from "@/assets/esther-pose-bending.png";
 
 export type EstherState =
-  | "idle"
-  | "listening"
-  | "thinking"
-  | "processing"
-  | "action"
-  | "success"
-  | "error";
+  "idle" | "listening" | "thinking" | "processing" | "action" | "success" | "error";
 
 export type EstherPose = "resting" | "waving" | "walking" | "bending";
 

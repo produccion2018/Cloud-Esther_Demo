@@ -5,12 +5,14 @@ import {
   type EstherContext,
   type EstherSection,
 } from "@/lib/cloud-esther/esther-ai";
+import type { Bloque } from "@/lib/cloud-esther/esther-motor";
 import { estherSequence, estherStates, type EstherState } from "./esther-states";
 
 export type ChatMessage = {
   id: string;
   author: "user" | "esther";
   text: string;
+  bloques?: Bloque[];
 };
 
 type Options = {
@@ -30,6 +32,9 @@ export function useEstherAI({ initialState = "idle", context = {} }: Options = {
   ]);
   const [isBusy, setIsBusy] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // El contexto (paciente, rol, sede) cambia desde la pantalla: se lee siempre el último.
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -66,10 +71,18 @@ export function useEstherAI({ initialState = "idle", context = {} }: Options = {
           await wait(estherStates[step].duration);
         }
 
-        const reply = await askEsther(prompt, { ...context, section: target });
+        const reply = await askEsther(prompt, { ...contextRef.current, section: target });
         setState("success");
         setMessage(estherStates.success.message);
-        setMessages((prev) => [...prev, { id: nextId(), author: "esther", text: reply.text }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            author: "esther",
+            text: reply.text,
+            ...(reply.bloques ? { bloques: reply.bloques } : {}),
+          },
+        ]);
         await wait(estherStates.success.duration);
         setState("idle");
         setMessage(estherStates.idle.message);
@@ -87,7 +100,7 @@ export function useEstherAI({ initialState = "idle", context = {} }: Options = {
         setIsBusy(false);
       }
     },
-    [context, isBusy, section, wait],
+    [isBusy, section, wait],
   );
 
   const notifyTyping = useCallback(() => {

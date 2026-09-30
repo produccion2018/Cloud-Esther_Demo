@@ -53,7 +53,8 @@
     color-mix(in oklab, var(--cyan-core) 22%, transparent) 42%,
     transparent 72%
   );
-  --gradient-canvas: radial-gradient(
+  --gradient-canvas:
+    radial-gradient(
       120% 80% at 50% 0%,
       color-mix(in oklab, var(--violet-core) 26%, transparent),
       transparent 70%

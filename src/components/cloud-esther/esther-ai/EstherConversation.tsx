@@ -1,17 +1,94 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Mic, MicOff } from "lucide-react";
 import type { ChatMessage } from "./useEstherAI";
+import { EstherBloques } from "./EstherBloques";
 
 type Props = {
   messages: ChatMessage[];
   isBusy: boolean;
   onSend: (text: string) => void;
   onTyping: () => void;
+  /** Entrada por voz (desde Plus). */
+  voz?: boolean;
 };
 
-export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props) {
+/* Dictado del navegador (Web Speech API). TODO backend: transcripción del servidor para
+   navegadores sin soporte y para audios largos. */
+type Reconocedor = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult:
+    | ((e: {
+        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+      }) => void)
+    | null;
+  onend: (() => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+function crearReconocedor(): Reconocedor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: new () => Reconocedor;
+    webkitSpeechRecognition?: new () => Reconocedor;
+  };
+  const C = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+  return C ? new C() : null;
+}
+
+export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = false }: Props) {
   const [draft, setDraft] = useState("");
+  const [escuchando, setEscuchando] = useState(false);
+  const [avisoVoz, setAvisoVoz] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const rec = useRef<Reconocedor | null>(null);
+  const texto = useRef("");
+
+  const microfono = () => {
+    if (escuchando) {
+      rec.current?.stop();
+      return;
+    }
+    const r = crearReconocedor();
+    if (!r) {
+      setAvisoVoz(
+        "Tu navegador no permite dictar. Probá con Chrome o Edge, o escribí la consulta.",
+      );
+      return;
+    }
+    setAvisoVoz("");
+    texto.current = "";
+    r.lang = "es-AR";
+    r.interimResults = true;
+    r.continuous = false;
+    r.onresult = (e) => {
+      const partes = Array.from(e.results).map((x) => x[0]?.transcript ?? "");
+      texto.current = partes.join(" ").trim();
+      setDraft(texto.current);
+    };
+    r.onerror = (e) => {
+      setAvisoVoz(
+        e.error === "not-allowed"
+          ? "Habilitá el micrófono en el navegador para hablarle a Esther."
+          : "No te escuché bien, probá de nuevo.",
+      );
+    };
+    r.onend = () => {
+      setEscuchando(false);
+      const final = texto.current.replace(/^\s*esther[,:]?\s*/i, "").trim();
+      if (final) {
+        onSend(final);
+        setDraft("");
+      }
+    };
+    rec.current = r;
+    setEscuchando(true);
+    onTyping();
+    r.start();
+  };
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -38,7 +115,7 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
                 className={
                   m.author === "user"
                     ? "max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2.5 text-sm text-primary-foreground shadow-[var(--shadow-glow)]"
-                    : "glass-panel max-w-[90%] whitespace-pre-line rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground"
+                    : `glass-panel whitespace-pre-line rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground ${m.bloques?.length ? "w-full max-w-full" : "max-w-[90%]"}`
                 }
               >
                 {m.author === "esther" && (
@@ -47,6 +124,9 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
                   </span>
                 )}
                 {m.text}
+                {m.bloques && m.bloques.length > 0 && (
+                  <EstherBloques bloques={m.bloques} onPregunta={onSend} />
+                )}
               </div>
             </motion.div>
           ))}
@@ -81,7 +161,13 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
           id="esther-input"
           rows={1}
           value={draft}
-          placeholder="Escribile a Esther..."
+          placeholder={
+            escuchando
+              ? "Te escucho…"
+              : voz
+                ? "Escribile o hablale a Esther..."
+                : "Escribile a Esther..."
+          }
           onChange={(event) => {
             setDraft(event.target.value);
             onTyping();
@@ -95,6 +181,27 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
           }}
           className="max-h-28 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
+        {voz && (
+          <motion.button
+            type="button"
+            onClick={microfono}
+            disabled={isBusy}
+            whileTap={{ scale: 0.94 }}
+            aria-label={escuchando ? "Dejar de escuchar" : "Hablarle a Esther"}
+            title={escuchando ? "Dejar de escuchar" : "Hablarle a Esther"}
+            className={`grid size-9 shrink-0 place-items-center rounded-xl border transition-colors disabled:opacity-40 ${escuchando ? "border-transparent text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+            style={
+              escuchando
+                ? {
+                    background: "var(--gradient-esther)",
+                    animation: "esther-wave 1.4s ease-out infinite",
+                  }
+                : {}
+            }
+          >
+            {escuchando ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+          </motion.button>
+        )}
         <motion.button
           type="submit"
           disabled={isBusy || draft.trim().length === 0}
@@ -106,6 +213,7 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
           Enviar
         </motion.button>
       </form>
+      {avisoVoz && <p className="px-1 text-[11px] text-muted-foreground">{avisoVoz}</p>}
     </div>
   );
 }

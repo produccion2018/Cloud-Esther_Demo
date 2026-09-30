@@ -1,8 +1,17 @@
 import { responderRRHH } from "@/lib/cloud-esther/rrhh-store";
+import { responder, type Bloque } from "@/lib/cloud-esther/esther-motor";
+import { auditarConsulta, type RolIA } from "@/lib/cloud-esther/ia-store";
+import type { PlanId } from "@/lib/cloud-esther/data";
 
 export type EstherContext = {
   section?: EstherSection;
   recordId?: string;
+  /** Plan, rol y sede de quien pregunta: la IA solo responde lo que ese usuario puede ver. */
+  plan?: PlanId;
+  rol?: RolIA;
+  sede?: string;
+  usuario?: string;
+  pacienteId?: number | undefined;
 };
 
 export type EstherSection =
@@ -11,6 +20,7 @@ export type EstherSection =
 export type EstherReply = {
   text: string;
   needsRealData: boolean;
+  bloques?: Bloque[];
 };
 
 export const contextProgress: Record<EstherSection, string> = {
@@ -27,15 +37,86 @@ export type EstherQuickAction = {
   id: string;
   label: string;
   section: EstherSection;
+  /** Pregunta que se envía (si no, se usa el label). */
+  prompt?: string;
+  /** Abre una herramienta en lugar de preguntar. */
+  herramienta?: "imagen" | "sonrisa";
 };
 
 export const estherQuickActions: EstherQuickAction[] = [
-  { id: "analizar-paciente", label: "Analizar paciente", section: "paciente" },
-  { id: "resumir-historia", label: "Resumir historia clínica", section: "historia" },
-  { id: "revisar-odontograma", label: "Revisar odontograma", section: "odontograma" },
-  { id: "preparar-informe", label: "Preparar informe", section: "informe" },
-  { id: "buscar-informacion", label: "Buscar información", section: "general" },
-  { id: "analizar-registros", label: "Analizar registros", section: "turnos" },
+  {
+    id: "analizar-paciente",
+    label: "Analizar paciente",
+    section: "paciente",
+    prompt: "Analizá este paciente antes de la consulta",
+  },
+  {
+    id: "resumir-historia",
+    label: "Resumir historia clínica",
+    section: "historia",
+    prompt: "Resumí la historia clínica del paciente",
+  },
+  {
+    id: "revisar-odontograma",
+    label: "Revisar odontograma",
+    section: "odontograma",
+    prompt: "Revisá el odontograma del paciente",
+  },
+  {
+    id: "preparar-informe",
+    label: "Preparar informe",
+    section: "informe",
+    prompt: "Preparar informe del paciente",
+  },
+  {
+    id: "buscar-informacion",
+    label: "Buscar información",
+    section: "general",
+    prompt: "¿Qué puedo consultarte?",
+  },
+  {
+    id: "analizar-registros",
+    label: "Analizar registros",
+    section: "turnos",
+    prompt: "Revisar pendientes",
+  },
+  {
+    id: "analizar-radiografia",
+    label: "Analizar radiografía",
+    section: "paciente",
+    herramienta: "imagen",
+  },
+  { id: "simular-sonrisa", label: "Simular sonrisa", section: "paciente", herramienta: "sonrisa" },
+  {
+    id: "analizar-tratamientos",
+    label: "Analizar tratamientos",
+    section: "general",
+    prompt: "¿Qué tratamientos están pendientes?",
+  },
+  {
+    id: "revisar-presupuestos",
+    label: "Revisar presupuestos",
+    section: "general",
+    prompt: "¿Cuántos presupuestos pendientes hay?",
+  },
+  {
+    id: "analizar-agenda",
+    label: "Analizar agenda",
+    section: "turnos",
+    prompt: "¿Cuántas citas tenemos esta semana?",
+  },
+  {
+    id: "pacientes-inactivos",
+    label: "Pacientes inactivos",
+    section: "general",
+    prompt: "Pacientes que no regresaron",
+  },
+  {
+    id: "consultar-datos",
+    label: "Consultar datos",
+    section: "general",
+    prompt: "¿Cuánto facturamos este mes?",
+  },
   { id: "equipo-hoy", label: "¿Quién falta hoy?", section: "rrhh" },
   { id: "resolver-rrhh", label: "Pendientes de RRHH", section: "rrhh" },
   { id: "costo-equipo", label: "Costo laboral del mes", section: "rrhh" },
@@ -43,38 +124,41 @@ export const estherQuickActions: EstherQuickAction[] = [
 
 /** Preguntas de Recursos humanos: se responden con los datos reales del equipo. */
 const TEMAS_RRHH =
-  /rrhh|recursos humanos|equipo|emplead|personal|legajo|vacacion|licencia|ausen|falta hoy|fich|asistencia|llega(da)? tarde|sueldo|nomina|nómina|costo laboral|contrato|capacitaci|cumplea|pendientes de rrhh/i;
+  /rrhh|recursos humanos|emplead.*(falta|ausen|licencia)|legajo|vacacion|licencia|ausen.* equipo|falta hoy|fich|asistencia|llega(da)? tarde|sueldo|nomina|nómina|costo laboral|contrato|capacitaci|cumplea|pendientes de rrhh/i;
 
 export async function askEsther(
   message: string,
   context: EstherContext = {},
 ): Promise<EstherReply> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 300));
 
   const section = context.section ?? "general";
+  const rol = context.rol ?? "admin";
+  const base = {
+    usuario: context.usuario ?? "Usuario",
+    rol,
+    sede: context.sede ?? "Todas",
+  };
   if (section === "rrhh" || TEMAS_RRHH.test(message)) {
+    if (rol !== "admin") {
+      auditarConsulta({ ...base, pregunta: message, modulo: "rrhh", resultado: "Sin permiso" });
+      return {
+        text: "La información de Recursos humanos solo la puede consultar un administrador.",
+        needsRealData: false,
+      };
+    }
     const pregunta = /pendientes de rrhh/i.test(message) ? "¿Qué tengo que resolver?" : message;
+    auditarConsulta({ ...base, pregunta: message, modulo: "rrhh", resultado: "Respondida" });
     return { text: responderRRHH(pregunta), needsRealData: false };
   }
-  return {
-    text:
-      `Recibí tu solicitud sobre ${sectionName(section)}: "${message}". ` +
-      "Todavía no estoy conectada a los datos reales de Cloud Esther, " +
-      "así que no voy a inventar información clínica. " +
-      "Cuando se conecte la inteligencia artificial, voy a responder con datos reales.",
-    needsRealData: true,
-  };
-}
-
-function sectionName(section: EstherSection): string {
-  const names: Record<EstherSection, string> = {
-    general: "información general",
-    paciente: "un paciente",
-    odontograma: "el odontograma",
-    historia: "la historia clínica",
-    turnos: "los turnos",
-    informe: "un informe",
-    rrhh: "recursos humanos",
-  };
-  return names[section];
+  const r = responder(message, {
+    plan: context.plan ?? "avanzada",
+    rol,
+    sede: base.sede,
+    usuario: base.usuario,
+    pacienteId: context.pacienteId,
+    seccion: section,
+  });
+  auditarConsulta({ ...base, pregunta: message, modulo: r.modulo, resultado: r.resultado });
+  return { text: r.texto, needsRealData: false, ...(r.bloques ? { bloques: r.bloques } : {}) };
 }

@@ -167,11 +167,13 @@ export function Modal({
   onClose,
   children,
   ancho = "max-w-xl",
+  modulo = "Recursos humanos",
 }: {
   titulo: string;
   onClose: () => void;
   children: ReactNode;
   ancho?: string;
+  modulo?: string;
 }) {
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -193,7 +195,7 @@ export function Modal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Recursos humanos
+              {modulo}
             </p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">{t}</h2>
           </div>

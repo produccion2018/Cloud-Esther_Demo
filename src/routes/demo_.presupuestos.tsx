@@ -1,19 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ReceiptText } from "lucide-react";
-import { PaginaSeccionPaciente, headSeccion } from "@/components/cloud-esther/SeccionDirecta";
+import { AppShell } from "@/components/cloud-esther/AppShell";
+import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { Presupuestos } from "@/components/cloud-esther/presupuestos/Presupuestos";
 
 export const Route = createFileRoute("/demo_/presupuestos")({
-  head: headSeccion("Presupuestos"),
-  component: Pagina,
+  head: () => ({ meta: [{ title: "Presupuestos | Cloud Esther" }] }),
+  component: () => (
+    <CloudEstherProvider>
+      <AppShell>
+        <Presupuestos />
+      </AppShell>
+    </CloudEstherProvider>
+  ),
 });
-
-function Pagina() {
-  return (
-    <PaginaSeccionPaciente
-      seccion="presupuestos"
-      titulo="Presupuestos"
-      descripcion="Buscá al paciente y accedé a sus presupuestos con prácticas y estado de aprobación."
-      icon={ReceiptText}
-    />
-  );
-}

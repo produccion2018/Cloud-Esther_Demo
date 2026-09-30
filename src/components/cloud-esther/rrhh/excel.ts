@@ -94,11 +94,17 @@ export async function leerPlanilla(archivo: File): Promise<Record<string, string
   await libro.xlsx.load(await archivo.arrayBuffer());
   const hoja = libro.worksheets[0];
   if (!hoja) return [];
-  // La cabecera es la primera fila que tenga "Legajo" (las planillas propias traen una nota arriba).
-  let filaCab = 1;
+  // La cabecera es la primera fila con 3 o más celdas completas (las planillas propias traen una nota arriba).
+  let filaCab = 0;
   hoja.eachRow((fila, n) => {
-    if (filaCab === 1 && fila.values && JSON.stringify(fila.values).includes("Legajo")) filaCab = n;
+    if (filaCab) return;
+    let llenas = 0;
+    fila.eachCell((c) => {
+      if (String(c.value ?? "").trim()) llenas++;
+    });
+    if (llenas >= 3) filaCab = n;
   });
+  if (!filaCab) return [];
   const cab: string[] = [];
   hoja.getRow(filaCab).eachCell((c, col) => (cab[col] = String(c.value ?? "").trim()));
   const filas: Record<string, string | number>[] = [];

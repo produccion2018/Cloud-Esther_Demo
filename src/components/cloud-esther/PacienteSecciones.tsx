@@ -12,11 +12,54 @@ import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import type { FormEvent, ReactNode } from "react";
 import {
-  Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
-  CalendarDays, Wallet, HeartPulse, Check, Paperclip, ExternalLink, Upload, Pill, Printer,
-  Images, GitCompare, Ruler, Link2, Activity, Download, Mail, ZoomIn, ZoomOut, Eye, FlaskConical,
-  Truck, PackageCheck, Mic, Square, Clock3, Camera, Sparkles, RotateCw, SunMedium, Contrast, ScanLine, Maximize2, RefreshCcw, Bell, ClipboardList, CircleDollarSign, UserRound,
-  ShieldAlert, PencilLine,
+  Plus,
+  X,
+  Trash2,
+  ChevronDown,
+  History,
+  Stethoscope,
+  FolderOpen,
+  FileText,
+  ReceiptText,
+  CalendarDays,
+  Wallet,
+  HeartPulse,
+  Check,
+  Paperclip,
+  ExternalLink,
+  Upload,
+  Pill,
+  Printer,
+  Images,
+  GitCompare,
+  Ruler,
+  Link2,
+  Activity,
+  Download,
+  Mail,
+  ZoomIn,
+  ZoomOut,
+  Eye,
+  FlaskConical,
+  Truck,
+  PackageCheck,
+  Mic,
+  Square,
+  Clock3,
+  Camera,
+  Sparkles,
+  RotateCw,
+  SunMedium,
+  Contrast,
+  ScanLine,
+  Maximize2,
+  RefreshCcw,
+  Bell,
+  ClipboardList,
+  CircleDollarSign,
+  UserRound,
+  ShieldAlert,
+  PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -39,7 +82,12 @@ const MEDICAMENTOS = [
   "Dexametasona 4 mg",
   "Clorhexidina 0,12 % (colutorio)",
 ];
-const LABORATORIOS_PROVEEDORES = ["Laboratorio Dental Sur", "ProDent Lab", "OrthoLab Argentina", "Cerámica Dental Norte"];
+const LABORATORIOS_PROVEEDORES = [
+  "Laboratorio Dental Sur",
+  "ProDent Lab",
+  "OrthoLab Argentina",
+  "Cerámica Dental Norte",
+];
 
 /* ───────────── Opciones fijas del producto ───────────── */
 
@@ -89,32 +137,33 @@ const TIPOS_SIMULACION = [
   "Alineación estética",
 ];
 
-const VIAS_ADMINISTRACION = [
-  "Oral",
-  "Tópica",
-  "Inyectable",
-  "Enjuague bucal",
-  "Otra",
-];
+const VIAS_ADMINISTRACION = ["Oral", "Tópica", "Inyectable", "Enjuague bucal", "Otra"];
 
 const ESTADOS_INFORME = ["Sin informar", "Informado"] as const;
 
-const TIPOS_MEDICION = [
-  "Medición lineal",
-  "Medición angular",
-  "Área",
-  "Densidad ósea",
-  "Otro",
-];
+const TIPOS_MEDICION = ["Medición lineal", "Medición angular", "Área", "Densidad ósea", "Otro"];
 
 const ESTADOS_DIAGNOSTICO = ["Activo", "Resuelto"] as const;
 
-const ESTADOS_TRATAMIENTO = ["Pendiente", "Planificado", "En tratamiento", "Completado", "Finalizado", "Cancelado"] as const;
-const ESTADOS_PRESUPUESTO = ["Borrador", "Enviado", "Aprobado", "Rechazado"] as const;
+const ESTADOS_TRATAMIENTO = [
+  "Pendiente",
+  "Planificado",
+  "En tratamiento",
+  "Completado",
+  "Finalizado",
+  "Cancelado",
+] as const;
+export const ESTADOS_PRESUPUESTO = ["Borrador", "Enviado", "Aprobado", "Rechazado"] as const;
 const ESTADOS_TURNO = ["Pendiente", "Confirmado", "Atendido", "Cancelado"] as const;
 const ESTADOS_RECETA = ["Borrador", "Emitida", "Dispensada", "Anulada"] as const;
 const TIPOS_MOVIMIENTO = ["Cargo", "Pago", "Nota de crédito"] as const;
-const MEDIOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta de débito", "Tarjeta de crédito", "Obra social"];
+const MEDIOS_PAGO = [
+  "Efectivo",
+  "Transferencia",
+  "Tarjeta de débito",
+  "Tarjeta de crédito",
+  "Obra social",
+];
 const ROLES_PROFESIONAL = ["Principal", "Interconsulta", "Derivación"] as const;
 
 const TIPOS_TRABAJO_LAB = [
@@ -141,12 +190,31 @@ const MATERIALES_LAB = [
 ];
 
 const ESTADOS_LABORATORIO = ["Enviado", "En proceso", "Listo para retirar", "Entregado"] as const;
-const COLORES_VITA = ["A1", "A2", "A3", "A3.5", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4", "D2", "D3", "D4", "BL1", "BL2"];
+const COLORES_VITA = [
+  "A1",
+  "A2",
+  "A3",
+  "A3.5",
+  "A4",
+  "B1",
+  "B2",
+  "B3",
+  "B4",
+  "C1",
+  "C2",
+  "C3",
+  "C4",
+  "D2",
+  "D3",
+  "D4",
+  "BL1",
+  "BL2",
+];
 
 /* ───────────── Tipos ───────────── */
 
 type EstadoTratamiento = (typeof ESTADOS_TRATAMIENTO)[number];
-type EstadoPresupuesto = (typeof ESTADOS_PRESUPUESTO)[number];
+export type EstadoPresupuesto = (typeof ESTADOS_PRESUPUESTO)[number];
 type EstadoTurnoPaciente = (typeof ESTADOS_TURNO)[number];
 type EstadoReceta = (typeof ESTADOS_RECETA)[number];
 type EstadoInforme = (typeof ESTADOS_INFORME)[number];
@@ -156,7 +224,14 @@ type RolProfesional = (typeof ROLES_PROFESIONAL)[number];
 type EstadoLaboratorio = (typeof ESTADOS_LABORATORIO)[number];
 type EstadoSimulacion = "Preparada" | "En revisión" | "Guardada";
 
-type Evolucion = { id: number; fecha: string; profesional: string; motivo: string; pieza: string; detalle: string };
+type Evolucion = {
+  id: number;
+  fecha: string;
+  profesional: string;
+  motivo: string;
+  pieza: string;
+  detalle: string;
+};
 
 type TratamientoPaciente = {
   id: number;
@@ -329,9 +404,16 @@ type RecetaPaciente = {
   vencimiento: string;
 };
 
-type LineaPresupuesto = { descripcion: string; pieza: string; cantidad: number; precio: number };
+export type LineaPresupuesto = {
+  descripcion: string;
+  pieza: string;
+  cantidad: number;
+  precio: number;
+  arancelId?: string;
+};
 
-type PresupuestoPaciente = {
+export type SeguimientoPresupuesto = { fecha: string; texto: string; autor: string };
+export type PresupuestoPaciente = {
   id: number;
   numero: string;
   fecha: string;
@@ -341,6 +423,13 @@ type PresupuestoPaciente = {
   diagnosticoId?: number | null;
   tratamientoId?: number | null;
   profesional?: string;
+  descuentoPct?: number;
+  planId?: string;
+  validez?: string;
+  enviado?: string;
+  respondido?: string;
+  motivoRechazo?: string;
+  seguimientos?: SeguimientoPresupuesto[];
 };
 
 type TurnoPaciente = {
@@ -353,7 +442,7 @@ type TurnoPaciente = {
   estado: EstadoTurnoPaciente;
 };
 
-type Movimiento = {
+export type Movimiento = {
   id: number;
   fecha: string;
   tipo: TipoMovimiento;
@@ -363,7 +452,13 @@ type Movimiento = {
   notas: string;
 };
 
-type ProfesionalPaciente = { id: number; nombre: string; especialidad: string; rol: RolProfesional; desde: string };
+type ProfesionalPaciente = {
+  id: number;
+  nombre: string;
+  especialidad: string;
+  rol: RolProfesional;
+  desde: string;
+};
 
 export type TrabajoLaboratorio = {
   id: number;
@@ -417,8 +512,21 @@ const ENFERMEDADES_COMUNES = [
   "Embarazo",
   "Osteoporosis / bifosfonatos",
 ];
-const HABITOS_COMUNES = ["Fumador/a", "Bruxismo", "Onicofagia (se come las uñas)", "Respiración bucal", "Consumo de alcohol"];
-const ALERGIAS_SUGERIDAS = ["Penicilina", "AINES (ibuprofeno, diclofenac)", "Látex", "Anestesia local", "Yodo", "Sulfas"];
+const HABITOS_COMUNES = [
+  "Fumador/a",
+  "Bruxismo",
+  "Onicofagia (se come las uñas)",
+  "Respiración bucal",
+  "Consumo de alcohol",
+];
+const ALERGIAS_SUGERIDAS = [
+  "Penicilina",
+  "AINES (ibuprofeno, diclofenac)",
+  "Látex",
+  "Anestesia local",
+  "Yodo",
+  "Sulfas",
+];
 const GRUPOS_SANGUINEOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
 
 export type Registros = {
@@ -443,10 +551,22 @@ export type Registros = {
   auditoria: AuditoriaPaciente[];
 };
 
-export type Cambiar = <K extends keyof Registros>(clave: K, fn: (prev: Registros[K]) => Registros[K]) => void;
+export type Cambiar = <K extends keyof Registros>(
+  clave: K,
+  fn: (prev: Registros[K]) => Registros[K],
+) => void;
 
 export type SeccionRegistros =
-  | "historia" | "tratamientos" | "documentos" | "recetas" | "estudios" | "presupuestos" | "turnos" | "cuenta" | "profesionales" | "laboratorio";
+  | "historia"
+  | "tratamientos"
+  | "documentos"
+  | "recetas"
+  | "estudios"
+  | "presupuestos"
+  | "turnos"
+  | "cuenta"
+  | "profesionales"
+  | "laboratorio";
 
 /* Datos opcionales del contexto (paciente / clínica) para la receta digital y el resumen de estudios.
    TODO backend: completarlos desde la ficha del paciente y la configuración de la clínica. */
@@ -478,351 +598,561 @@ const VACIO: Registros = {
    TODO backend: reemplazar este hook por las consultas a la API
    (GET /pacientes/:id/historia, /tratamientos, /documentos, /recetas, etc.). */
 
+/** Fecha relativa a hoy (para que los ejemplos siempre queden al día). */
+function haceDias(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Presupuestos de ejemplo de otros pacientes (para practicar el módulo de Presupuestos). */
+function presupuestosDeEjemplo(): Record<number, Registros> {
+  const l = (
+    descripcion: string,
+    precio: number,
+    pieza = "",
+    cantidad = 1,
+    arancelId?: string,
+  ): LineaPresupuesto => ({
+    descripcion,
+    pieza,
+    cantidad,
+    precio,
+    ...(arancelId ? { arancelId } : {}),
+  });
+  const pr = (
+    id: number,
+    numero: string,
+    dias: number,
+    estado: EstadoPresupuesto,
+    lineas: LineaPresupuesto[],
+    extra: Partial<PresupuestoPaciente> = {},
+  ): PresupuestoPaciente => ({
+    id,
+    numero,
+    fecha: haceDias(dias),
+    estado,
+    lineas,
+    notas: "",
+    validez: haceDias(dias - 30),
+    ...(estado !== "Borrador" ? { enviado: haceDias(Math.max(0, dias - 1)) } : {}),
+    ...extra,
+  });
+  const con = (presupuestos: PresupuestoPaciente[]): Registros => ({ ...VACIO, presupuestos });
+  return {
+    2: con([
+      pr(
+        1,
+        "PR-0003",
+        12,
+        "Aprobado",
+        [
+          l("Implante de titanio", 650000, "46", 1, "a14"),
+          l("Pilar protésico", 180000, "46", 1, "a15"),
+          l("Corona de disilicato", 280000, "46", 1, "a16"),
+        ],
+        { profesional: "Martín González", planId: "f3", respondido: haceDias(8) },
+      ),
+    ]),
+    3: con([
+      pr(
+        1,
+        "PR-0004",
+        6,
+        "Enviado",
+        [
+          l("Ortodoncia con brackets (tratamiento)", 480000, "", 1, "a19"),
+          l("Control de ortodoncia", 35000, "", 12, "a21"),
+        ],
+        { profesional: "Laura Martínez", planId: "f4" },
+      ),
+    ]),
+    4: con([
+      pr(
+        1,
+        "PR-0005",
+        2,
+        "Enviado",
+        [
+          l("Blanqueamiento en consultorio", 90000, "", 1, "a22"),
+          l("Carilla de resina", 95000, "11", 1, "a23"),
+          l("Carilla de resina", 95000, "21", 1, "a23"),
+        ],
+        { profesional: "Jesús Méndez", planId: "f2", descuentoPct: 5 },
+      ),
+    ]),
+    5: con([
+      pr(
+        1,
+        "PR-0006",
+        20,
+        "Rechazado",
+        [l("Alineadores invisibles (tratamiento)", 1200000, "", 1, "a20")],
+        { profesional: "Laura Martínez", motivoRechazo: "Precio", respondido: haceDias(14) },
+      ),
+    ]),
+    6: con([
+      pr(
+        1,
+        "PR-0007",
+        1,
+        "Borrador",
+        [
+          l("Limpieza y profilaxis", 45000, "", 1, "a4"),
+          l("Restauración de resina compuesta", 72000, "36", 1, "a8"),
+        ],
+        { profesional: "Jesús Méndez" },
+      ),
+    ]),
+    7: con([
+      pr(
+        1,
+        "PR-0008",
+        38,
+        "Enviado",
+        [
+          l("Extracción de tercer molar", 140000, "38", 1, "a13"),
+          l("Extracción de tercer molar", 140000, "48", 1, "a13"),
+        ],
+        { profesional: "Martín González", planId: "f1" },
+      ),
+    ]),
+    8: con([
+      pr(
+        1,
+        "PR-0009",
+        25,
+        "Aprobado",
+        [
+          l("Endodoncia multirradicular", 180000, "26", 1, "a10"),
+          l("Corona metal-porcelana", 210000, "26", 1, "a17"),
+        ],
+        { profesional: "Jesús Méndez", planId: "f2", respondido: haceDias(22) },
+      ),
+    ]),
+    9: con([
+      pr(
+        1,
+        "PR-0010",
+        45,
+        "Aprobado",
+        [l("Raspaje y alisado por cuadrante", 60000, "", 4, "a11")],
+        { profesional: "Jesús Méndez", planId: "f2", respondido: haceDias(40) },
+      ),
+    ]),
+  };
+}
+
 const REGISTROS_INICIALES: Record<number, Registros> = {
-    1: {
-      antecedentes: {
-        alergias: ["Penicilina"],
-        enfermedades: ["Hipertensión"],
-        medicacion: "Losartán 50 mg por la mañana",
-        habitos: ["Bruxismo"],
-        grupoSanguineo: "0+",
-        observaciones: "Usa placa de descanso nocturna.",
-        actualizado: "2026-08-21",
-      },
-      historia: [
-        {
-          id: 1,
-          fecha: "2026-08-20",
-          profesional: "Dr. Carlos Rodríguez",
-          motivo: "Restauración estética",
-          pieza: "21",
-          detalle: "Evaluación y preparación para restauración estética de pieza 21. Paciente en tratamiento.",
-        },
-      ],
-      notasClinicas: [
-        {
-          id: 1, fecha: "2026-08-21", hora: "15:35", profesional: "Dr. Carlos Rodríguez",
-          motivoConsulta: "Control de restauración estética",
-          anamnesis: "Sin dolor espontáneo. Refiere sensibilidad leve al frío.",
-          diagnostico: "Evolución favorable de pieza 21.",
-          procedimiento: "Control clínico, ajuste oclusal y registro fotográfico.",
-          evolucion: "Buena adaptación. Continuar indicaciones.",
-          indicaciones: "Higiene habitual y evitar alimentos muy duros durante 48 h.",
-          proximoControl: "2026-09-04",
-          observaciones: "Revisar sensibilidad en próximo control.",
-          piezas: "21", tratamientoId: 1, fotografiaIds: [1], estudioIds: [2], recetaId: 1,
-          odontogramaRef: "Pieza 21", odontograma3DRef: "Pieza 21",
-        },
-      ],
-      notasVoz: [],
-      notasRapidas: [
-        { id: 1, fecha: "2026-08-22", hora: "09:20", profesional: "Dra. Laura Gómez", tipo: "Seguimiento", texto: "Confirmar control de pieza 21 antes de la próxima cita." },
-      ],
-      tratamientos: [
-        {
-          id: 1,
-          nombre: "Restauración estética",
-          pieza: "21",
-          estado: "En tratamiento",
-          profesional: "Dr. Carlos Rodríguez",
-          inicio: "2026-08-20",
-          notas: "Continuar tratamiento y realizar control.",
-          diagnostico: "Restauración estética de pieza 21.",
-          evolucion: "Adaptación favorable; pendiente control.",
-          presupuestoId: 1,
-          estudioIds: [2],
-          fotografiaIds: [1],
-          prioridad: "Alta",
-          sesionesPlan: 2,
-          costo: 60000,
-          sesiones: [{ id: 1, fecha: "2026-08-20", profesional: "Dr. Carlos Rodríguez", detalle: "Remoción de caries y restauración con resina A2." }],
-          historial: [
-            { estado: "Planificado", fecha: "2026-08-18" },
-            { estado: "En tratamiento", fecha: "2026-08-20" },
-          ],
-        },
-        {
-          id: 2,
-          nombre: "Endodoncia",
-          pieza: "36",
-          estado: "Planificado",
-          profesional: "Dr. Carlos Rodríguez",
-          inicio: "2026-10-06",
-          notas: "Paciente con bruxismo: evaluar corona posterior.",
-          diagnostico: "Pulpitis irreversible en pieza 36.",
-          prioridad: "Media",
-          sesionesPlan: 3,
-          costo: 120000,
-          sesiones: [],
-          historial: [{ estado: "Planificado", fecha: "2026-09-25" }],
-        },
-        {
-          id: 3,
-          nombre: "Limpieza dental",
-          pieza: "",
-          estado: "Completado",
-          profesional: "Dra. Laura Gómez",
-          inicio: "2026-07-10",
-          fin: "2026-07-10",
-          notas: "",
-          prioridad: "Baja",
-          sesionesPlan: 1,
-          costo: 25000,
-          sesiones: [{ id: 1, fecha: "2026-07-10", profesional: "Dra. Laura Gómez", detalle: "Tartrectomía y pulido. Indicaciones de higiene." }],
-          historial: [
-            { estado: "Planificado", fecha: "2026-07-01" },
-            { estado: "En tratamiento", fecha: "2026-07-10" },
-            { estado: "Completado", fecha: "2026-07-10" },
-          ],
-        },
-      ],
-      documentos: [
-        {
-          id: 1,
-          tipo: "Documento de identidad",
-          categoria: "Identificación",
-          estado: "Verificado",
-          titulo: "DNI / Documento de identidad",
-          fecha: "2026-08-02",
-          archivoNombre: "",
-          archivoTamano: 0,
-          url: "",
-          notas: "",
-        },
-        {
-          id: 2,
-          tipo: "Consentimiento informado",
-          categoria: "Consentimiento",
-          estado: "Firmado",
-          titulo: "Consentimiento informado",
-          fecha: "2026-08-02",
-          archivoNombre: "",
-          archivoTamano: 0,
-          url: "",
-          notas: "",
-        },
-        {
-          id: 3,
-          tipo: "Informe",
-          categoria: "Estudio diagnóstico",
-          estado: "Disponible",
-          titulo: "Radiografía panorámica",
-          fecha: "2026-08-15",
-          archivoNombre: "",
-          archivoTamano: 0,
-          url: "",
-          notas: "",
-        },
-        {
-          id: 4,
-          tipo: "Otro",
-          categoria: "Presupuesto",
-          estado: "Vigente",
-          titulo: "Presupuesto tratamiento integral",
-          fecha: "2026-08-12",
-          archivoNombre: "",
-          archivoTamano: 0,
-          url: "",
-          notas: "",
-        },
-      ],
-      recetas: [
-        {
-          id: 1,
-          numero: "RC-0001",
-          fecha: "2026-08-20",
-          estado: "Emitida",
-          profesional: "Dr. Carlos Rodríguez",
-          matricula: "",
-          diagnostico: "Restauración estética pieza 21.",
-          medicamentos: [
-            {
-              nombre: "Ibuprofeno",
-              presentacion: "400 mg comprimidos",
-              via: "Oral",
-              cantidad: 1,
-              posologia: "1 comprimido cada 8 horas por 3 días",
-            },
-          ],
-          indicaciones: "Indicaciones a completar por el profesional.",
-          vencimiento: "",
-        },
-      ],
-      estudios: [
-        {
-          id: 1,
-          tipo: "Radiografía periapical",
-          fecha: "2026-08-15",
-          zona: "",
-          solicitante: "Dr. Martín Gómez",
-          profesional: "Dr. Martín Gómez",
-          diagnostico: "Evaluación de pieza 36.",
-          observaciones: "Solicitada como control diagnóstico.",
-          pieza: "36",
-          archivoNombre: "",
-          url: "",
-          estadoInforme: "Sin informar",
-          tratamientoId: null,
-        },
-        {
-          id: 2,
-          tipo: "Radiografía panorámica",
-          fecha: "2026-08-15",
-          zona: "",
-          solicitante: "Dr. Martín Gómez",
-          profesional: "Dr. Martín Gómez",
-          diagnostico: "Sin hallazgos críticos. Se recomienda seguimiento de piezas posteriores.",
-          observaciones: "Control panorámico de evolución.",
-          pieza: "21, 36",
-          archivoNombre: "",
-          url: "",
-          estadoInforme: "Informado",
-          tratamientoId: null,
-        },
-      ],
-      fotografias: [
-        {
-          id: 1, fecha: "2026-08-21", profesional: "Dr. Carlos Rodríguez", tipo: "Sonrisa",
-          observacion: "Registro previo al control estético.", tratamientoId: 1, pieza: "21",
-          archivoNombre: "foto-sonrisa-demo.jpg", url: "",
-        },
-      ],
-      simulaciones: [],
-      anotaciones: [
-        {
-          id: 1,
-          estudioId: 2,
-          estudioNombre: "Radiografía panorámica",
-          tipoMedicion: "Medición lineal",
-          valor: "12.4 mm",
-          observacion: "Se observa zona compatible con el diagnóstico registrado. Requiere seguimiento.",
-          fecha: "2026-08-21",
-          profesional: "Dra. Laura Gómez",
-        },
-      ],
-      diagnosticos: [
-        {
-          id: 1,
-          titulo: "Diagnóstico odontológico",
-          descripcion: "Lesión cariosa profunda en pieza 36 con indicación de tratamiento.",
-          pieza: "36",
-          profesional: "Dra. Laura Gómez",
-          observacion: "Se recomienda tratamiento y control radiográfico posterior.",
-          estado: "Activo",
-          fecha: "2026-08-21",
-        },
-      ],
-      presupuestos: [
-        {
-          id: 1,
-          numero: "PR-0001",
-          fecha: "2026-08-20",
-          estado: "Aprobado",
-          lineas: [
-            { descripcion: "Restauración estética", pieza: "21", cantidad: 1, precio: 60000 },
-            { descripcion: "Control", pieza: "21", cantidad: 1, precio: 0 },
-          ],
-          notas: "Presupuesto asociado al tratamiento actual.",
-          diagnosticoId: 1,
-          tratamientoId: 1,
-          profesional: "Dr. Carlos Rodríguez",
-        },
-        {
-          id: 2,
-          numero: "PR-0002",
-          fecha: "2026-09-25",
-          estado: "Enviado",
-          lineas: [
-            { descripcion: "Endodoncia", pieza: "36", cantidad: 1, precio: 120000 },
-            { descripcion: "Corona de disilicato", pieza: "36", cantidad: 1, precio: 280000 },
-          ],
-          notas: "Se puede abonar en 3 cuotas sin interés.",
-          tratamientoId: 2,
-          profesional: "Dr. Carlos Rodríguez",
-        },
-      ],
-      turnos: [], // Los turnos de Mauro Pinto están en la Agenda (agenda-store).
-      cuenta: [
-        {
-          id: 1,
-          fecha: "2026-08-20",
-          tipo: "Cargo",
-          concepto: "Restauración estética",
-          medio: "",
-          monto: 60000,
-          notas: "",
-        },
-        {
-          id: 2,
-          fecha: "2026-08-20",
-          tipo: "Pago",
-          concepto: "Seña restauración estética",
-          medio: "Transferencia",
-          monto: 25000,
-          notas: "",
-        },
-      ],
-      profesionales: [
-        {
-          id: 1,
-          nombre: "Dr. Carlos Rodríguez",
-          especialidad: "Odontología general",
-          rol: "Principal",
-          desde: "2026-08-20",
-        },
-      ],
-      laboratorio: [
-        {
-          id: 1,
-          tipo: "Corona",
-          pieza: "21",
-          material: "Disilicato de litio (e.max)",
-          proveedor: "ProDent Lab",
-          fechaEnvio: "2026-08-21",
-          fechaEntregaEstimada: "2026-08-29",
-          estado: "En proceso",
-          costo: 85000,
-          notas: "Toma de color registrada. Pendiente de recibir del laboratorio.",
-          color: "A2",
-          profesional: "Laura Martínez",
-          historial: [
-            { estado: "Enviado", fecha: "2026-08-21" },
-            { estado: "En proceso", fecha: "2026-08-23" },
-          ],
-        },
-        {
-          id: 2,
-          tipo: "Placa de descarga",
-          pieza: "Arcada superior",
-          material: "Acrílico",
-          proveedor: "OrthoLab Argentina",
-          fechaEnvio: "2026-07-10",
-          fechaEntregaEstimada: "2026-07-20",
-          estado: "Entregado",
-          costo: 60000,
-          notas: "Por bruxismo. Paciente conforme.",
-          color: "",
-          profesional: "Laura Martínez",
-          historial: [
-            { estado: "Enviado", fecha: "2026-07-10" },
-            { estado: "En proceso", fecha: "2026-07-12" },
-            { estado: "Listo para retirar", fecha: "2026-07-19" },
-            { estado: "Entregado", fecha: "2026-07-21" },
-          ],
-        },
-      ],      auditoria: [
-        { id: 1, usuario: "Dr. Carlos Rodríguez", accion: "Creó una nota clínica", fecha: "2026-08-21", hora: "15:35" },
-        { id: 2, usuario: "Dr. Carlos Rodríguez", accion: "Agregó una fotografía clínica", fecha: "2026-08-21", hora: "15:36" },
-        { id: 3, usuario: "Dr. Martín Gómez", accion: "Cargó una radiografía panorámica", fecha: "2026-08-15", hora: "11:10" },
-        { id: 4, usuario: "Dr. Carlos Rodríguez", accion: "Creó el presupuesto PR-0001", fecha: "2026-08-20", hora: "16:10" },
-      ],
+  1: {
+    antecedentes: {
+      alergias: ["Penicilina"],
+      enfermedades: ["Hipertensión"],
+      medicacion: "Losartán 50 mg por la mañana",
+      habitos: ["Bruxismo"],
+      grupoSanguineo: "0+",
+      observaciones: "Usa placa de descanso nocturna.",
+      actualizado: "2026-08-21",
     },
+    historia: [
+      {
+        id: 1,
+        fecha: "2026-08-20",
+        profesional: "Dr. Carlos Rodríguez",
+        motivo: "Restauración estética",
+        pieza: "21",
+        detalle:
+          "Evaluación y preparación para restauración estética de pieza 21. Paciente en tratamiento.",
+      },
+    ],
+    notasClinicas: [
+      {
+        id: 1,
+        fecha: "2026-08-21",
+        hora: "15:35",
+        profesional: "Dr. Carlos Rodríguez",
+        motivoConsulta: "Control de restauración estética",
+        anamnesis: "Sin dolor espontáneo. Refiere sensibilidad leve al frío.",
+        diagnostico: "Evolución favorable de pieza 21.",
+        procedimiento: "Control clínico, ajuste oclusal y registro fotográfico.",
+        evolucion: "Buena adaptación. Continuar indicaciones.",
+        indicaciones: "Higiene habitual y evitar alimentos muy duros durante 48 h.",
+        proximoControl: "2026-09-04",
+        observaciones: "Revisar sensibilidad en próximo control.",
+        piezas: "21",
+        tratamientoId: 1,
+        fotografiaIds: [1],
+        estudioIds: [2],
+        recetaId: 1,
+        odontogramaRef: "Pieza 21",
+        odontograma3DRef: "Pieza 21",
+      },
+    ],
+    notasVoz: [],
+    notasRapidas: [
+      {
+        id: 1,
+        fecha: "2026-08-22",
+        hora: "09:20",
+        profesional: "Dra. Laura Gómez",
+        tipo: "Seguimiento",
+        texto: "Confirmar control de pieza 21 antes de la próxima cita.",
+      },
+    ],
+    tratamientos: [
+      {
+        id: 1,
+        nombre: "Restauración estética",
+        pieza: "21",
+        estado: "En tratamiento",
+        profesional: "Dr. Carlos Rodríguez",
+        inicio: "2026-08-20",
+        notas: "Continuar tratamiento y realizar control.",
+        diagnostico: "Restauración estética de pieza 21.",
+        evolucion: "Adaptación favorable; pendiente control.",
+        presupuestoId: 1,
+        estudioIds: [2],
+        fotografiaIds: [1],
+        prioridad: "Alta",
+        sesionesPlan: 2,
+        costo: 60000,
+        sesiones: [
+          {
+            id: 1,
+            fecha: "2026-08-20",
+            profesional: "Dr. Carlos Rodríguez",
+            detalle: "Remoción de caries y restauración con resina A2.",
+          },
+        ],
+        historial: [
+          { estado: "Planificado", fecha: "2026-08-18" },
+          { estado: "En tratamiento", fecha: "2026-08-20" },
+        ],
+      },
+      {
+        id: 2,
+        nombre: "Endodoncia",
+        pieza: "36",
+        estado: "Planificado",
+        profesional: "Dr. Carlos Rodríguez",
+        inicio: "2026-10-06",
+        notas: "Paciente con bruxismo: evaluar corona posterior.",
+        diagnostico: "Pulpitis irreversible en pieza 36.",
+        prioridad: "Media",
+        sesionesPlan: 3,
+        costo: 120000,
+        sesiones: [],
+        historial: [{ estado: "Planificado", fecha: "2026-09-25" }],
+      },
+      {
+        id: 3,
+        nombre: "Limpieza dental",
+        pieza: "",
+        estado: "Completado",
+        profesional: "Dra. Laura Gómez",
+        inicio: "2026-07-10",
+        fin: "2026-07-10",
+        notas: "",
+        prioridad: "Baja",
+        sesionesPlan: 1,
+        costo: 25000,
+        sesiones: [
+          {
+            id: 1,
+            fecha: "2026-07-10",
+            profesional: "Dra. Laura Gómez",
+            detalle: "Tartrectomía y pulido. Indicaciones de higiene.",
+          },
+        ],
+        historial: [
+          { estado: "Planificado", fecha: "2026-07-01" },
+          { estado: "En tratamiento", fecha: "2026-07-10" },
+          { estado: "Completado", fecha: "2026-07-10" },
+        ],
+      },
+    ],
+    documentos: [
+      {
+        id: 1,
+        tipo: "Documento de identidad",
+        categoria: "Identificación",
+        estado: "Verificado",
+        titulo: "DNI / Documento de identidad",
+        fecha: "2026-08-02",
+        archivoNombre: "",
+        archivoTamano: 0,
+        url: "",
+        notas: "",
+      },
+      {
+        id: 2,
+        tipo: "Consentimiento informado",
+        categoria: "Consentimiento",
+        estado: "Firmado",
+        titulo: "Consentimiento informado",
+        fecha: "2026-08-02",
+        archivoNombre: "",
+        archivoTamano: 0,
+        url: "",
+        notas: "",
+      },
+      {
+        id: 3,
+        tipo: "Informe",
+        categoria: "Estudio diagnóstico",
+        estado: "Disponible",
+        titulo: "Radiografía panorámica",
+        fecha: "2026-08-15",
+        archivoNombre: "",
+        archivoTamano: 0,
+        url: "",
+        notas: "",
+      },
+      {
+        id: 4,
+        tipo: "Otro",
+        categoria: "Presupuesto",
+        estado: "Vigente",
+        titulo: "Presupuesto tratamiento integral",
+        fecha: "2026-08-12",
+        archivoNombre: "",
+        archivoTamano: 0,
+        url: "",
+        notas: "",
+      },
+    ],
+    recetas: [
+      {
+        id: 1,
+        numero: "RC-0001",
+        fecha: "2026-08-20",
+        estado: "Emitida",
+        profesional: "Dr. Carlos Rodríguez",
+        matricula: "",
+        diagnostico: "Restauración estética pieza 21.",
+        medicamentos: [
+          {
+            nombre: "Ibuprofeno",
+            presentacion: "400 mg comprimidos",
+            via: "Oral",
+            cantidad: 1,
+            posologia: "1 comprimido cada 8 horas por 3 días",
+          },
+        ],
+        indicaciones: "Indicaciones a completar por el profesional.",
+        vencimiento: "",
+      },
+    ],
+    estudios: [
+      {
+        id: 1,
+        tipo: "Radiografía periapical",
+        fecha: "2026-08-15",
+        zona: "",
+        solicitante: "Dr. Martín Gómez",
+        profesional: "Dr. Martín Gómez",
+        diagnostico: "Evaluación de pieza 36.",
+        observaciones: "Solicitada como control diagnóstico.",
+        pieza: "36",
+        archivoNombre: "",
+        url: "",
+        estadoInforme: "Sin informar",
+        tratamientoId: null,
+      },
+      {
+        id: 2,
+        tipo: "Radiografía panorámica",
+        fecha: "2026-08-15",
+        zona: "",
+        solicitante: "Dr. Martín Gómez",
+        profesional: "Dr. Martín Gómez",
+        diagnostico: "Sin hallazgos críticos. Se recomienda seguimiento de piezas posteriores.",
+        observaciones: "Control panorámico de evolución.",
+        pieza: "21, 36",
+        archivoNombre: "",
+        url: "",
+        estadoInforme: "Informado",
+        tratamientoId: null,
+      },
+    ],
+    fotografias: [
+      {
+        id: 1,
+        fecha: "2026-08-21",
+        profesional: "Dr. Carlos Rodríguez",
+        tipo: "Sonrisa",
+        observacion: "Registro previo al control estético.",
+        tratamientoId: 1,
+        pieza: "21",
+        archivoNombre: "foto-sonrisa-demo.jpg",
+        url: "",
+      },
+    ],
+    simulaciones: [],
+    anotaciones: [
+      {
+        id: 1,
+        estudioId: 2,
+        estudioNombre: "Radiografía panorámica",
+        tipoMedicion: "Medición lineal",
+        valor: "12.4 mm",
+        observacion:
+          "Se observa zona compatible con el diagnóstico registrado. Requiere seguimiento.",
+        fecha: "2026-08-21",
+        profesional: "Dra. Laura Gómez",
+      },
+    ],
+    diagnosticos: [
+      {
+        id: 1,
+        titulo: "Diagnóstico odontológico",
+        descripcion: "Lesión cariosa profunda en pieza 36 con indicación de tratamiento.",
+        pieza: "36",
+        profesional: "Dra. Laura Gómez",
+        observacion: "Se recomienda tratamiento y control radiográfico posterior.",
+        estado: "Activo",
+        fecha: "2026-08-21",
+      },
+    ],
+    presupuestos: [
+      {
+        id: 1,
+        numero: "PR-0001",
+        fecha: "2026-08-20",
+        estado: "Aprobado",
+        lineas: [
+          { descripcion: "Restauración estética", pieza: "21", cantidad: 1, precio: 60000 },
+          { descripcion: "Control", pieza: "21", cantidad: 1, precio: 0 },
+        ],
+        notas: "Presupuesto asociado al tratamiento actual.",
+        diagnosticoId: 1,
+        tratamientoId: 1,
+        profesional: "Dr. Carlos Rodríguez",
+      },
+      {
+        id: 2,
+        numero: "PR-0002",
+        fecha: "2026-09-25",
+        estado: "Enviado",
+        lineas: [
+          { descripcion: "Endodoncia", pieza: "36", cantidad: 1, precio: 120000 },
+          { descripcion: "Corona de disilicato", pieza: "36", cantidad: 1, precio: 280000 },
+        ],
+        notas: "Se puede abonar en 3 cuotas sin interés.",
+        tratamientoId: 2,
+        profesional: "Dr. Carlos Rodríguez",
+      },
+    ],
+    turnos: [], // Los turnos de Mauro Pinto están en la Agenda (agenda-store).
+    cuenta: [
+      {
+        id: 1,
+        fecha: "2026-08-20",
+        tipo: "Cargo",
+        concepto: "Restauración estética",
+        medio: "",
+        monto: 60000,
+        notas: "",
+      },
+      {
+        id: 2,
+        fecha: "2026-08-20",
+        tipo: "Pago",
+        concepto: "Seña restauración estética",
+        medio: "Transferencia",
+        monto: 25000,
+        notas: "",
+      },
+    ],
+    profesionales: [
+      {
+        id: 1,
+        nombre: "Dr. Carlos Rodríguez",
+        especialidad: "Odontología general",
+        rol: "Principal",
+        desde: "2026-08-20",
+      },
+    ],
+    laboratorio: [
+      {
+        id: 1,
+        tipo: "Corona",
+        pieza: "21",
+        material: "Disilicato de litio (e.max)",
+        proveedor: "ProDent Lab",
+        fechaEnvio: "2026-08-21",
+        fechaEntregaEstimada: "2026-08-29",
+        estado: "En proceso",
+        costo: 85000,
+        notas: "Toma de color registrada. Pendiente de recibir del laboratorio.",
+        color: "A2",
+        profesional: "Laura Martínez",
+        historial: [
+          { estado: "Enviado", fecha: "2026-08-21" },
+          { estado: "En proceso", fecha: "2026-08-23" },
+        ],
+      },
+      {
+        id: 2,
+        tipo: "Placa de descarga",
+        pieza: "Arcada superior",
+        material: "Acrílico",
+        proveedor: "OrthoLab Argentina",
+        fechaEnvio: "2026-07-10",
+        fechaEntregaEstimada: "2026-07-20",
+        estado: "Entregado",
+        costo: 60000,
+        notas: "Por bruxismo. Paciente conforme.",
+        color: "",
+        profesional: "Laura Martínez",
+        historial: [
+          { estado: "Enviado", fecha: "2026-07-10" },
+          { estado: "En proceso", fecha: "2026-07-12" },
+          { estado: "Listo para retirar", fecha: "2026-07-19" },
+          { estado: "Entregado", fecha: "2026-07-21" },
+        ],
+      },
+    ],
+    auditoria: [
+      {
+        id: 1,
+        usuario: "Dr. Carlos Rodríguez",
+        accion: "Creó una nota clínica",
+        fecha: "2026-08-21",
+        hora: "15:35",
+      },
+      {
+        id: 2,
+        usuario: "Dr. Carlos Rodríguez",
+        accion: "Agregó una fotografía clínica",
+        fecha: "2026-08-21",
+        hora: "15:36",
+      },
+      {
+        id: 3,
+        usuario: "Dr. Martín Gómez",
+        accion: "Cargó una radiografía panorámica",
+        fecha: "2026-08-15",
+        hora: "11:10",
+      },
+      {
+        id: 4,
+        usuario: "Dr. Carlos Rodríguez",
+        accion: "Creó el presupuesto PR-0001",
+        fecha: "2026-08-20",
+        hora: "16:10",
+      },
+    ],
+  },
+  ...presupuestosDeEjemplo(),
 };
 
 /* Los registros se comparten entre la página de Pacientes y las páginas de acceso directo del
    sidebar (Historia, Recetas, Estudios…), separados por empresa: cada clínica tiene su propia
    copia y nunca ve los datos de otra. Al conectar el backend se reemplaza por la API. */
-const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES, { persistir: "registros" });
+const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES, {
+  persistir: "registros",
+});
 
 /** Registros de todos los pacientes de la empresa activa (lo usan las alertas de Notificaciones). */
 export function useTodosLosRegistros(): Record<number, Registros> {
@@ -834,7 +1164,11 @@ export function useRegistrosPacientes() {
 
   const de = (id: number): Registros => porPaciente[id] ?? VACIO;
 
-  function cambiar<K extends keyof Registros>(id: number, clave: K, fn: (prev: Registros[K]) => Registros[K]) {
+  function cambiar<K extends keyof Registros>(
+    id: number,
+    clave: K,
+    fn: (prev: Registros[K]) => Registros[K],
+  ) {
     const todos = storeRegistros.leer();
     const actual = todos[id] ?? VACIO;
     const siguiente = { ...actual, [clave]: fn(actual[clave]) } as Registros;
@@ -886,7 +1220,11 @@ function esImagen(nombre: string) {
 }
 
 function escapar(t: string) {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return t
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /* ───────────── Estilos ───────────── */
@@ -971,7 +1309,11 @@ const TONO_LABORATORIO: Record<EstadoLaboratorio, Tono> = {
 /* ───────────── Piezas comunes ───────────── */
 
 function Badge({ tono = "gris", children }: { tono?: Tono; children: ReactNode }) {
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONOS[tono]}`}>{children}</span>;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONOS[tono]}`}>
+      {children}
+    </span>
+  );
 }
 
 function Encabezado({
@@ -1002,10 +1344,7 @@ function Encabezado({
           <p className="text-sm text-muted-foreground">{descripcion}</p>
         </div>
       </div>
-      <button
-        onClick={onAgregar}
-        className={`${BTN_PRIMARIO} ${botonClassName ?? ""}`}
-      >
+      <button onClick={onAgregar} className={`${BTN_PRIMARIO} ${botonClassName ?? ""}`}>
         <Plus className="size-4" />
         {etiquetaBoton}
       </button>
@@ -1213,7 +1552,8 @@ function SelectId({
 }
 
 function ControlesZoom({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void }) {
-  const paso = (d: number) => setZoom(Math.min(2.5, Math.max(0.5, Math.round((zoom + d) * 100) / 100)));
+  const paso = (d: number) =>
+    setZoom(Math.min(2.5, Math.max(0.5, Math.round((zoom + d) * 100) / 100)));
   const claseBoton =
     "grid size-7 place-items-center rounded-full border border-border bg-card shadow-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
   return (
@@ -1221,7 +1561,9 @@ function ControlesZoom({ zoom, setZoom }: { zoom: number; setZoom: (z: number) =
       <button type="button" onClick={() => paso(-0.25)} aria-label="Alejar" className={claseBoton}>
         <ZoomOut className="size-3.5" />
       </button>
-      <span className="w-11 text-center text-xs font-medium tabular-nums">{Math.round(zoom * 100)}%</span>
+      <span className="w-11 text-center text-xs font-medium tabular-nums">
+        {Math.round(zoom * 100)}%
+      </span>
       <button type="button" onClick={() => paso(0.25)} aria-label="Acercar" className={claseBoton}>
         <ZoomIn className="size-3.5" />
       </button>
@@ -1233,17 +1575,10 @@ function ControlesZoom({ zoom, setZoom }: { zoom: number; setZoom: (z: number) =
 function Acciones({ etiqueta, onCancel }: { etiqueta: string; onCancel: () => void }) {
   return (
     <div className="flex justify-end gap-3 pt-1">
-      <button
-        type="button"
-        onClick={onCancel}
-        className={BTN_SECUNDARIO}
-      >
+      <button type="button" onClick={onCancel} className={BTN_SECUNDARIO}>
         Cancelar
       </button>
-      <button
-        type="submit"
-        className={BTN_PRIMARIO}
-      >
+      <button type="submit" className={BTN_PRIMARIO}>
         {etiqueta}
       </button>
     </div>
@@ -1296,7 +1631,13 @@ type PropsSeccion = {
 
 /* ───────────── Historia clínica ───────────── */
 
-function EvolucionForm({ onSubmit, onCancel }: { onSubmit: (e: Omit<Evolucion, "id">) => void; onCancel: () => void }) {
+function EvolucionForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (e: Omit<Evolucion, "id">) => void;
+  onCancel: () => void;
+}) {
   const [fecha, setFecha] = useState(hoyISO());
   const [profesional, setProfesional] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -1305,27 +1646,64 @@ function EvolucionForm({ onSubmit, onCancel }: { onSubmit: (e: Omit<Evolucion, "
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ fecha, profesional: profesional.trim(), motivo: motivo.trim(), pieza: pieza.trim(), detalle: detalle.trim() });
+    onSubmit({
+      fecha,
+      profesional: profesional.trim(),
+      motivo: motivo.trim(),
+      pieza: pieza.trim(),
+      detalle: detalle.trim(),
+    });
   };
 
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Fecha *">
-          <input required type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            required
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Nombre del profesional"
+          />
         </Field>
         <Field label="Motivo de consulta *">
-          <input autoFocus required value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT} placeholder="Ej: Control, dolor, urgencia" />
+          <input
+            autoFocus
+            required
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: Control, dolor, urgencia"
+          />
         </Field>
         <Field label="Pieza dental">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 26" />
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 26"
+          />
         </Field>
       </div>
       <Field label="Evolución / detalle *">
-        <textarea required rows={4} value={detalle} onChange={(e) => setDetalle(e.target.value)} className={TEXTAREA} placeholder="Qué se hizo, indicaciones, observaciones…" />
+        <textarea
+          required
+          rows={4}
+          value={detalle}
+          onChange={(e) => setDetalle(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Qué se hizo, indicaciones, observaciones…"
+        />
       </Field>
       <Acciones etiqueta="Guardar evolución" onCancel={onCancel} />
     </form>
@@ -1374,10 +1752,24 @@ function NotaClinicaForm({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     onSubmit({
-      fecha, hora, profesional: profesional.trim(), motivoConsulta: motivoConsulta.trim(), anamnesis: anamnesis.trim(),
-      diagnostico: diagnostico.trim(), procedimiento: procedimiento.trim(), evolucion: evolucion.trim(),
-      indicaciones: indicaciones.trim(), proximoControl, observaciones: observaciones.trim(), piezas: piezas.trim(),
-      tratamientoId, fotografiaIds, estudioIds, recetaId, odontogramaRef: odontogramaRef.trim(), odontograma3DRef: odontograma3DRef.trim(),
+      fecha,
+      hora,
+      profesional: profesional.trim(),
+      motivoConsulta: motivoConsulta.trim(),
+      anamnesis: anamnesis.trim(),
+      diagnostico: diagnostico.trim(),
+      procedimiento: procedimiento.trim(),
+      evolucion: evolucion.trim(),
+      indicaciones: indicaciones.trim(),
+      proximoControl,
+      observaciones: observaciones.trim(),
+      piezas: piezas.trim(),
+      tratamientoId,
+      fotografiaIds,
+      estudioIds,
+      recetaId,
+      odontogramaRef: odontogramaRef.trim(),
+      odontograma3DRef: odontograma3DRef.trim(),
     });
   };
 
@@ -1388,61 +1780,206 @@ function NotaClinicaForm({
           <ClipboardList className="size-4" /> Registro clínico
         </div>
         <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
-          <Field label="Fecha *"><input required type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} /></Field>
-          <Field label="Hora *"><input required type="time" value={hora} onChange={(e) => setHora(e.target.value)} className={INPUT} /></Field>
-          <Field label="Profesional *"><input required list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field>
+          <Field label="Fecha *">
+            <input
+              required
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className={INPUT}
+            />
+          </Field>
+          <Field label="Hora *">
+            <input
+              required
+              type="time"
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+              className={INPUT}
+            />
+          </Field>
+          <Field label="Profesional *">
+            <input
+              required
+              list="dl-profesionales"
+              value={profesional}
+              onChange={(e) => setProfesional(e.target.value)}
+              className={INPUT}
+              placeholder="Profesional"
+            />
+          </Field>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <Field label="Motivo de consulta *"><input required value={motivoConsulta} onChange={(e) => setMotivoConsulta(e.target.value)} className={INPUT} placeholder="Control, dolor, urgencia…" /></Field>
-        <Field label="Dientes / piezas"><input value={piezas} onChange={(e) => setPiezas(e.target.value)} className={INPUT} placeholder="Ej: 16, 21, 36" /></Field>
+        <Field label="Motivo de consulta *">
+          <input
+            required
+            value={motivoConsulta}
+            onChange={(e) => setMotivoConsulta(e.target.value)}
+            className={INPUT}
+            placeholder="Control, dolor, urgencia…"
+          />
+        </Field>
+        <Field label="Dientes / piezas">
+          <input
+            value={piezas}
+            onChange={(e) => setPiezas(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 16, 21, 36"
+          />
+        </Field>
       </div>
 
-      <Field label="Anamnesis"><textarea rows={2} value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} className={TEXTAREA} placeholder="Antecedentes y relato del paciente…" /></Field>
-      <Field label="Diagnóstico"><textarea rows={2} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Diagnóstico clínico…" /></Field>
-      <Field label="Procedimiento realizado"><textarea rows={2} value={procedimiento} onChange={(e) => setProcedimiento(e.target.value)} className={TEXTAREA} placeholder="Procedimientos realizados durante la consulta…" /></Field>
-      <Field label="Evolución"><textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Respuesta y evolución…" /></Field>
+      <Field label="Anamnesis">
+        <textarea
+          rows={2}
+          value={anamnesis}
+          onChange={(e) => setAnamnesis(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Antecedentes y relato del paciente…"
+        />
+      </Field>
+      <Field label="Diagnóstico">
+        <textarea
+          rows={2}
+          value={diagnostico}
+          onChange={(e) => setDiagnostico(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Diagnóstico clínico…"
+        />
+      </Field>
+      <Field label="Procedimiento realizado">
+        <textarea
+          rows={2}
+          value={procedimiento}
+          onChange={(e) => setProcedimiento(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Procedimientos realizados durante la consulta…"
+        />
+      </Field>
+      <Field label="Evolución">
+        <textarea
+          rows={2}
+          value={evolucion}
+          onChange={(e) => setEvolucion(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Respuesta y evolución…"
+        />
+      </Field>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <Field label="Indicaciones"><textarea rows={2} value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} className={TEXTAREA} placeholder="Indicaciones al paciente…" /></Field>
-        <Field label="Observaciones"><textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Observaciones internas…" /></Field>
+        <Field label="Indicaciones">
+          <textarea
+            rows={2}
+            value={indicaciones}
+            onChange={(e) => setIndicaciones(e.target.value)}
+            className={TEXTAREA}
+            placeholder="Indicaciones al paciente…"
+          />
+        </Field>
+        <Field label="Observaciones">
+          <textarea
+            rows={2}
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+            className={TEXTAREA}
+            placeholder="Observaciones internas…"
+          />
+        </Field>
       </div>
-      <Field label="Próximo control"><input type="date" value={proximoControl} onChange={(e) => setProximoControl(e.target.value)} className={INPUT} /></Field>
+      <Field label="Próximo control">
+        <input
+          type="date"
+          value={proximoControl}
+          onChange={(e) => setProximoControl(e.target.value)}
+          className={INPUT}
+        />
+      </Field>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Field label="Tratamiento relacionado">
-          <SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre }))} placeholder="Sin vincular" />
+          <SelectId
+            value={tratamientoId}
+            onChange={setTratamientoId}
+            opciones={tratamientos.map((t) => ({
+              id: t.id,
+              label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre,
+            }))}
+            placeholder="Sin vincular"
+          />
         </Field>
         <Field label="Receta relacionada">
-          <SelectId value={recetaId} onChange={setRecetaId} opciones={recetas.map((r) => ({ id: r.id, label: `${r.numero} · ${r.fecha}` }))} placeholder="Sin vincular" />
+          <SelectId
+            value={recetaId}
+            onChange={setRecetaId}
+            opciones={recetas.map((r) => ({ id: r.id, label: `${r.numero} · ${r.fecha}` }))}
+            placeholder="Sin vincular"
+          />
         </Field>
-        <Field label="Referencia odontograma"><input value={odontogramaRef} onChange={(e) => setOdontogramaRef(e.target.value)} className={INPUT} placeholder="Ej: pieza 16 / restauración" /></Field>
-        <Field label="Referencia odontograma 3D"><input value={odontograma3DRef} onChange={(e) => setOdontograma3DRef(e.target.value)} className={INPUT} placeholder="Ej: FDI 16" /></Field>
+        <Field label="Referencia odontograma">
+          <input
+            value={odontogramaRef}
+            onChange={(e) => setOdontogramaRef(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: pieza 16 / restauración"
+          />
+        </Field>
+        <Field label="Referencia odontograma 3D">
+          <input
+            value={odontograma3DRef}
+            onChange={(e) => setOdontograma3DRef(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: FDI 16"
+          />
+        </Field>
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Field label="Fotografías relacionadas">
           <div className="max-h-28 overflow-y-auto rounded-lg border border-border bg-background p-2 text-xs">
-            {fotografias.length === 0 ? <span className="text-muted-foreground">Sin fotografías clínicas.</span> : fotografias.map((f) => (
-              <label key={f.id} className="flex cursor-pointer items-center gap-2 py-1">
-                <input type="checkbox" checked={fotografiaIds.includes(f.id)} onChange={() => toggleId(fotografiaIds, f.id, setFotografiaIds)} />
-                <span>{f.tipo} · {formatearFecha(f.fecha)}</span>
-              </label>
-            ))}
+            {fotografias.length === 0 ? (
+              <span className="text-muted-foreground">Sin fotografías clínicas.</span>
+            ) : (
+              fotografias.map((f) => (
+                <label key={f.id} className="flex cursor-pointer items-center gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    checked={fotografiaIds.includes(f.id)}
+                    onChange={() => toggleId(fotografiaIds, f.id, setFotografiaIds)}
+                  />
+                  <span>
+                    {f.tipo} · {formatearFecha(f.fecha)}
+                  </span>
+                </label>
+              ))
+            )}
           </div>
         </Field>
         <Field label="Estudios relacionados">
           <div className="max-h-28 overflow-y-auto rounded-lg border border-border bg-background p-2 text-xs">
-            {estudios.length === 0 ? <span className="text-muted-foreground">Sin estudios.</span> : estudios.map((e) => (
-              <label key={e.id} className="flex cursor-pointer items-center gap-2 py-1">
-                <input type="checkbox" checked={estudioIds.includes(e.id)} onChange={() => toggleId(estudioIds, e.id, setEstudioIds)} />
-                <span>{e.tipo} · {formatearFecha(e.fecha)}</span>
-              </label>
-            ))}
+            {estudios.length === 0 ? (
+              <span className="text-muted-foreground">Sin estudios.</span>
+            ) : (
+              estudios.map((e) => (
+                <label key={e.id} className="flex cursor-pointer items-center gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    checked={estudioIds.includes(e.id)}
+                    onChange={() => toggleId(estudioIds, e.id, setEstudioIds)}
+                  />
+                  <span>
+                    {e.tipo} · {formatearFecha(e.fecha)}
+                  </span>
+                </label>
+              ))
+            )}
           </div>
         </Field>
       </div>
-      <Acciones etiqueta={initial ? "Guardar cambios" : "Guardar nota clínica"} onCancel={onCancel} />
+      <Acciones
+        etiqueta={initial ? "Guardar cambios" : "Guardar nota clínica"}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -1465,10 +2002,13 @@ function NotaVozRecorder({
   const [duracion, setDuracion] = useState(0);
   const intervaloRef = useRef<number | null>(null);
 
-  useEffect(() => () => {
-    if (intervaloRef.current) window.clearInterval(intervaloRef.current);
-    recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-  }, []);
+  useEffect(
+    () => () => {
+      if (intervaloRef.current) window.clearInterval(intervaloRef.current);
+      recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
 
   const iniciar = async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -1480,12 +2020,16 @@ function NotaVozRecorder({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
-      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         if (audioUrl) URL.revokeObjectURL(audioUrl);
         setAudioUrl(URL.createObjectURL(blob));
-        const seconds = startedAtRef.current ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)) : 1;
+        const seconds = startedAtRef.current
+          ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000))
+          : 1;
         setDuracion(seconds);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -1496,7 +2040,8 @@ function NotaVozRecorder({
       setGrabando(true);
       setPreparando(false);
       const id = window.setInterval(() => {
-        if (startedAtRef.current) setDuracion(Math.round((Date.now() - startedAtRef.current) / 1000));
+        if (startedAtRef.current)
+          setDuracion(Math.round((Date.now() - startedAtRef.current) / 1000));
       }, 500);
       intervaloRef.current = id;
     } catch {
@@ -1517,8 +2062,13 @@ function NotaVozRecorder({
   const guardar = () => {
     if (!audioUrl) return;
     onSave({
-      fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5), profesional: profesional || "Profesional actual",
-      duracionSegundos: duracion, audioUrl, transcripcion: "", estadoTranscripcion: "Pendiente de integración",
+      fecha: hoyISO(),
+      hora: new Date().toTimeString().slice(0, 5),
+      profesional: profesional || "Profesional actual",
+      duracionSegundos: duracion,
+      audioUrl,
+      transcripcion: "",
+      estadoTranscripcion: "Pendiente de integración",
     });
     setAudioUrl("");
     setDuracion(0);
@@ -1530,24 +2080,35 @@ function NotaVozRecorder({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold">Nota de voz clínica</p>
-            <p className="text-xs text-muted-foreground">Graba ahora; la transcripción automática quedará preparada para una futura integración.</p>
+            <p className="text-xs text-muted-foreground">
+              Graba ahora; la transcripción automática quedará preparada para una futura
+              integración.
+            </p>
           </div>
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${grabando ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${grabando ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}
+          >
             {grabando ? "Grabando" : "Listo"}
           </span>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {!grabando ? (
             <button type="button" disabled={preparando} onClick={iniciar} className={BTN_PRIMARIO}>
-              <Mic className="size-4" /> {preparando ? "Preparando micrófono…" : "Iniciar grabación"}
+              <Mic className="size-4" />{" "}
+              {preparando ? "Preparando micrófono…" : "Iniciar grabación"}
             </button>
           ) : (
-            <button type="button" onClick={detener} className={`${BTN_SECUNDARIO} text-destructive hover:border-destructive/40`}>
+            <button
+              type="button"
+              onClick={detener}
+              className={`${BTN_SECUNDARIO} text-destructive hover:border-destructive/40`}
+            >
               <Square className="size-3.5" /> Detener
             </button>
           )}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs tabular-nums">
-            <Clock3 className="size-3.5 text-primary" /> {Math.floor(duracion / 60)}:{String(duracion % 60).padStart(2, "0")}
+            <Clock3 className="size-3.5 text-primary" /> {Math.floor(duracion / 60)}:
+            {String(duracion % 60).padStart(2, "0")}
           </span>
         </div>
       </div>
@@ -1563,17 +2124,45 @@ function NotaVozRecorder({
   );
 }
 
-function NotaRapidaForm({ onSubmit, onCancel }: { onSubmit: (n: Omit<NotaRapida, "id">) => void; onCancel: () => void }) {
+function NotaRapidaForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (n: Omit<NotaRapida, "id">) => void;
+  onCancel: () => void;
+}) {
   const [tipo, setTipo] = useState<NotaRapida["tipo"]>("Observación");
   const [texto, setTexto] = useState("");
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5), profesional: "", tipo, texto: texto.trim() });
+    onSubmit({
+      fecha: hoyISO(),
+      hora: new Date().toTimeString().slice(0, 5),
+      profesional: "",
+      tipo,
+      texto: texto.trim(),
+    });
   };
   return (
     <form onSubmit={enviar} className="space-y-2.5">
-      <Field label="Tipo"><SelectField value={tipo} onChange={(v) => setTipo(v as NotaRapida["tipo"])} options={["Observación", "Indicación", "Seguimiento", "Recordatorio interno"]} /></Field>
-      <Field label="Nota *"><textarea autoFocus required rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} className={TEXTAREA} placeholder="Escribí una nota breve para el equipo…" /></Field>
+      <Field label="Tipo">
+        <SelectField
+          value={tipo}
+          onChange={(v) => setTipo(v as NotaRapida["tipo"])}
+          options={["Observación", "Indicación", "Seguimiento", "Recordatorio interno"]}
+        />
+      </Field>
+      <Field label="Nota *">
+        <textarea
+          autoFocus
+          required
+          rows={5}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Escribí una nota breve para el equipo…"
+        />
+      </Field>
       <Acciones etiqueta="Guardar nota rápida" onCancel={onCancel} />
     </form>
   );
@@ -1589,19 +2178,25 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
 
   const notas = [...datos.notasClinicas]
     .filter((n) => !filtroFecha || n.fecha === filtroFecha)
-    .filter((n) => !filtroProfesional || n.profesional.toLowerCase().includes(filtroProfesional.toLowerCase()))
+    .filter(
+      (n) =>
+        !filtroProfesional || n.profesional.toLowerCase().includes(filtroProfesional.toLowerCase()),
+    )
     .sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`));
   const editar = datos.notasClinicas.find((n) => n.id === editarId) ?? null;
 
   const guardar = (nota: Omit<NotaClinica, "id">) => {
     if (editar) {
-      cambiar("notasClinicas", (prev) => prev.map((n) => n.id === editar.id ? { ...nota, id: editar.id } : n));
+      cambiar("notasClinicas", (prev) =>
+        prev.map((n) => (n.id === editar.id ? { ...nota, id: editar.id } : n)),
+      );
       onToast("Nota clínica actualizada");
     } else {
       cambiar("notasClinicas", (prev) => [...prev, { ...nota, id: Date.now() }]);
       onToast("Nota clínica guardada");
     }
-    setAbierto(false); setEditarId(null);
+    setAbierto(false);
+    setEditarId(null);
   };
 
   return (
@@ -1609,58 +2204,254 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
       <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
         <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div><p className="text-sm font-semibold">Notas clínicas</p><p className="text-xs text-muted-foreground">Registro clínico completo, editable y vinculado al resto de la ficha.</p></div>
+            <div>
+              <p className="text-sm font-semibold">Notas clínicas</p>
+              <p className="text-xs text-muted-foreground">
+                Registro clínico completo, editable y vinculado al resto de la ficha.
+              </p>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
-              <BotonMini icon={Plus} label="Nota clínica" onClick={() => { setEditarId(null); setAbierto(true); }} />
+              <BotonMini
+                icon={Plus}
+                label="Nota clínica"
+                onClick={() => {
+                  setEditarId(null);
+                  setAbierto(true);
+                }}
+              />
             </div>
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Field label="Filtrar por fecha"><input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)} className={INPUT} /></Field>
-            <Field label="Filtrar por profesional"><input value={filtroProfesional} onChange={(e) => setFiltroProfesional(e.target.value)} className={INPUT} placeholder="Buscar profesional" /></Field>
+            <Field label="Filtrar por fecha">
+              <input
+                type="date"
+                value={filtroFecha}
+                onChange={(e) => setFiltroFecha(e.target.value)}
+                className={INPUT}
+              />
+            </Field>
+            <Field label="Filtrar por profesional">
+              <input
+                value={filtroProfesional}
+                onChange={(e) => setFiltroProfesional(e.target.value)}
+                className={INPUT}
+                placeholder="Buscar profesional"
+              />
+            </Field>
           </div>
         </div>
         <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Notas de voz</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+            Notas de voz
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-            <Badge tono="primary">Grabar</Badge><span>→</span><Badge tono="primary">Escuchar</Badge><span>→</span><Badge tono="verde">Guardar en la ficha</Badge>
+            <Badge tono="primary">Grabar</Badge>
+            <span>→</span>
+            <Badge tono="primary">Escuchar</Badge>
+            <span>→</span>
+            <Badge tono="verde">Guardar en la ficha</Badge>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.
+          </p>
         </div>
       </div>
 
-      {notas.length === 0 ? <EstadoVacio icon={ClipboardList} titulo="Sin notas clínicas" texto="Registrá la primera consulta clínica o ajustá los filtros." /> : (
+      {notas.length === 0 ? (
+        <EstadoVacio
+          icon={ClipboardList}
+          titulo="Sin notas clínicas"
+          texto="Registrá la primera consulta clínica o ajustá los filtros."
+        />
+      ) : (
         <ul className="space-y-2.5">
           {notas.map((n) => (
             <li key={n.id} className={ITEM}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{n.motivoConsulta}</p>{n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}<span className="text-[11px] text-muted-foreground">{formatearFecha(n.fecha)} · {n.hora}</span></div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">{n.profesional || "Profesional"}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">{n.motivoConsulta}</p>
+                    {n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatearFecha(n.fecha)} · {n.hora}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {n.profesional || "Profesional"}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1"><BotonMini icon={Eye} label="Consultar" onClick={() => { setEditarId(n.id); setAbierto(true); }} /><BotonBorrar etiqueta="Eliminar nota clínica" onClick={() => { if (!window.confirm("¿Eliminar esta nota clínica?")) return; cambiar("notasClinicas", (prev) => prev.filter((x) => x.id !== n.id)); onToast("Nota clínica eliminada"); }} /></div>
+                <div className="flex items-center gap-1">
+                  <BotonMini
+                    icon={Eye}
+                    label="Consultar"
+                    onClick={() => {
+                      setEditarId(n.id);
+                      setAbierto(true);
+                    }}
+                  />
+                  <BotonBorrar
+                    etiqueta="Eliminar nota clínica"
+                    onClick={() => {
+                      if (!window.confirm("¿Eliminar esta nota clínica?")) return;
+                      cambiar("notasClinicas", (prev) => prev.filter((x) => x.id !== n.id));
+                      onToast("Nota clínica eliminada");
+                    }}
+                  />
+                </div>
               </div>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {[['Anamnesis', n.anamnesis], ['Diagnóstico', n.diagnostico], ['Procedimiento', n.procedimiento], ['Evolución', n.evolucion], ['Indicaciones', n.indicaciones], ['Observaciones', n.observaciones]].filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-lg border border-border bg-background/70 p-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-0.5 whitespace-pre-line text-xs">{value}</p></div>)}
+                {[
+                  ["Anamnesis", n.anamnesis],
+                  ["Diagnóstico", n.diagnostico],
+                  ["Procedimiento", n.procedimiento],
+                  ["Evolución", n.evolucion],
+                  ["Indicaciones", n.indicaciones],
+                  ["Observaciones", n.observaciones],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-lg border border-border bg-background/70 p-2"
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {label}
+                      </p>
+                      <p className="mt-0.5 whitespace-pre-line text-xs">{value}</p>
+                    </div>
+                  ))}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
-                {n.tratamientoId && <Badge tono="primary">Tratamiento vinculado</Badge>}{n.estudioIds.length > 0 && <Badge tono="gris">{n.estudioIds.length} estudio(s)</Badge>}{n.fotografiaIds.length > 0 && <Badge tono="gris">{n.fotografiaIds.length} foto(s)</Badge>}{n.recetaId && <Badge tono="gris">Receta vinculada</Badge>}{n.proximoControl && <Badge tono="ambar">Control {formatearFecha(n.proximoControl)}</Badge>}
+                {n.tratamientoId && <Badge tono="primary">Tratamiento vinculado</Badge>}
+                {n.estudioIds.length > 0 && (
+                  <Badge tono="gris">{n.estudioIds.length} estudio(s)</Badge>
+                )}
+                {n.fotografiaIds.length > 0 && (
+                  <Badge tono="gris">{n.fotografiaIds.length} foto(s)</Badge>
+                )}
+                {n.recetaId && <Badge tono="gris">Receta vinculada</Badge>}
+                {n.proximoControl && (
+                  <Badge tono="ambar">Control {formatearFecha(n.proximoControl)}</Badge>
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
 
-      {datos.notasVoz.length > 0 && <div className="space-y-2"><p className="text-sm font-semibold">Notas de voz guardadas</p>{datos.notasVoz.map((v) => <div key={v.id} className={ITEM}><div className="flex flex-wrap items-center gap-2"><Mic className="size-4 text-primary" /><span className="text-sm font-semibold">{formatearFecha(v.fecha)} · {v.hora}</span><Badge tono="gris">{v.estadoTranscripcion}</Badge><span className="text-[11px] text-muted-foreground">{v.profesional} · {v.duracionSegundos}s</span></div><audio className="mt-2 w-full" controls src={v.audioUrl} /></div>)}</div>}
+      {datos.notasVoz.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Notas de voz guardadas</p>
+          {datos.notasVoz.map((v) => (
+            <div key={v.id} className={ITEM}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Mic className="size-4 text-primary" />
+                <span className="text-sm font-semibold">
+                  {formatearFecha(v.fecha)} · {v.hora}
+                </span>
+                <Badge tono="gris">{v.estadoTranscripcion}</Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  {v.profesional} · {v.duracionSegundos}s
+                </span>
+              </div>
+              <audio className="mt-2 w-full" controls src={v.audioUrl} />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card-grad p-3">
-        <div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Notas rápidas</p><p className="text-xs text-muted-foreground">Observaciones, indicaciones y recordatorios internos.</p></div><BotonMini icon={Plus} label="Nueva" onClick={() => setRapidaAbierta(true)} /></div>
-        {datos.notasRapidas.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p> : <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">{datos.notasRapidas.map((n) => <div key={n.id} className="rounded-xl border border-border bg-background p-2.5"><div className="flex items-center justify-between gap-2"><Badge tono="primary">{n.tipo}</Badge><span className="text-[10px] text-muted-foreground">{formatearFecha(n.fecha)} · {n.hora}</span></div><p className="mt-1 whitespace-pre-line text-xs">{n.texto}</p><div className="mt-1 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar nota rápida" onClick={() => { if (!window.confirm("¿Eliminar esta nota rápida?")) return; cambiar("notasRapidas", (prev) => prev.filter((x) => x.id !== n.id)); onToast("Nota rápida eliminada"); }} /></div></div>)}</div>}
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">Notas rápidas</p>
+            <p className="text-xs text-muted-foreground">
+              Observaciones, indicaciones y recordatorios internos.
+            </p>
+          </div>
+          <BotonMini icon={Plus} label="Nueva" onClick={() => setRapidaAbierta(true)} />
+        </div>
+        {datos.notasRapidas.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p>
+        ) : (
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+            {datos.notasRapidas.map((n) => (
+              <div key={n.id} className="rounded-xl border border-border bg-background p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge tono="primary">{n.tipo}</Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatearFecha(n.fecha)} · {n.hora}
+                  </span>
+                </div>
+                <p className="mt-1 whitespace-pre-line text-xs">{n.texto}</p>
+                <div className="mt-1 flex justify-end">
+                  <BotonBorrar
+                    compacto
+                    etiqueta="Eliminar nota rápida"
+                    onClick={() => {
+                      if (!window.confirm("¿Eliminar esta nota rápida?")) return;
+                      cambiar("notasRapidas", (prev) => prev.filter((x) => x.id !== n.id));
+                      onToast("Nota rápida eliminada");
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {abierto && <Modal title={editar ? "Consultar / editar nota clínica" : "Nueva nota clínica"} onClose={() => { setAbierto(false); setEditarId(null); }} ancho="max-w-3xl"><NotaClinicaForm initial={editar ?? undefined} tratamientos={datos.tratamientos} estudios={datos.estudios} fotografias={datos.fotografias} recetas={datos.recetas} onCancel={() => { setAbierto(false); setEditarId(null); }} onSubmit={guardar} /></Modal>}
-      {vozAbierta && <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}><NotaVozRecorder profesional={datos.profesionales[0]?.nombre ?? ""} onToast={onToast} onSave={(nota) => { cambiar("notasVoz", (prev) => [...prev, { ...nota, id: Date.now() }]); setVozAbierta(false); onToast("Nota de voz guardada"); }} /></Modal>}
-      {rapidaAbierta && <Modal title="Nueva nota rápida" onClose={() => setRapidaAbierta(false)}><NotaRapidaForm onCancel={() => setRapidaAbierta(false)} onSubmit={(nota) => { cambiar("notasRapidas", (prev) => [...prev, { ...nota, id: Date.now(), profesional: datos.profesionales[0]?.nombre ?? "" }]); setRapidaAbierta(false); onToast("Nota rápida guardada"); }} /></Modal>}
+      {abierto && (
+        <Modal
+          title={editar ? "Consultar / editar nota clínica" : "Nueva nota clínica"}
+          onClose={() => {
+            setAbierto(false);
+            setEditarId(null);
+          }}
+          ancho="max-w-3xl"
+        >
+          <NotaClinicaForm
+            initial={editar ?? undefined}
+            tratamientos={datos.tratamientos}
+            estudios={datos.estudios}
+            fotografias={datos.fotografias}
+            recetas={datos.recetas}
+            onCancel={() => {
+              setAbierto(false);
+              setEditarId(null);
+            }}
+            onSubmit={guardar}
+          />
+        </Modal>
+      )}
+      {vozAbierta && (
+        <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}>
+          <NotaVozRecorder
+            profesional={datos.profesionales[0]?.nombre ?? ""}
+            onToast={onToast}
+            onSave={(nota) => {
+              cambiar("notasVoz", (prev) => [...prev, { ...nota, id: Date.now() }]);
+              setVozAbierta(false);
+              onToast("Nota de voz guardada");
+            }}
+          />
+        </Modal>
+      )}
+      {rapidaAbierta && (
+        <Modal title="Nueva nota rápida" onClose={() => setRapidaAbierta(false)}>
+          <NotaRapidaForm
+            onCancel={() => setRapidaAbierta(false)}
+            onSubmit={(nota) => {
+              cambiar("notasRapidas", (prev) => [
+                ...prev,
+                { ...nota, id: Date.now(), profesional: datos.profesionales[0]?.nombre ?? "" },
+              ]);
+              setRapidaAbierta(false);
+              onToast("Nota rápida guardada");
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1695,7 +2486,9 @@ function ChipsSeleccion({
             aria-pressed={on}
             onClick={() => onCambiar(on ? seleccion.filter((x) => x !== o) : [...seleccion, o])}
             className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-              on ? activo : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              on
+                ? activo
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
             }`}
           >
             {on && <Check className="size-3" />}
@@ -1748,7 +2541,12 @@ function AntecedentesForm({
       className="space-y-3"
     >
       <Field label="Alergias">
-        <ChipsSeleccion opciones={opcionesAlergia} seleccion={alergias} onCambiar={setAlergias} tono="rojo" />
+        <ChipsSeleccion
+          opciones={opcionesAlergia}
+          seleccion={alergias}
+          onCambiar={setAlergias}
+          tono="rojo"
+        />
         <div className="mt-2 flex gap-2">
           <input
             value={otraAlergia}
@@ -1762,28 +2560,59 @@ function AntecedentesForm({
             className={INPUT}
             placeholder="Otra alergia (ej: Ibuprofeno)"
           />
-          <button type="button" onClick={agregarAlergia} className="btn-ce-outline shrink-0" disabled={!otraAlergia.trim()}>
+          <button
+            type="button"
+            onClick={agregarAlergia}
+            className="btn-ce-outline shrink-0"
+            disabled={!otraAlergia.trim()}
+          >
             <Plus />
             Agregar
           </button>
         </div>
       </Field>
       <Field label="Enfermedades y condiciones">
-        <ChipsSeleccion opciones={ENFERMEDADES_COMUNES} seleccion={enfermedades} onCambiar={setEnfermedades} tono="ambar" />
+        <ChipsSeleccion
+          opciones={ENFERMEDADES_COMUNES}
+          seleccion={enfermedades}
+          onCambiar={setEnfermedades}
+          tono="ambar"
+        />
       </Field>
       <Field label="Hábitos">
-        <ChipsSeleccion opciones={HABITOS_COMUNES} seleccion={habitos} onCambiar={setHabitos} tono="primary" />
+        <ChipsSeleccion
+          opciones={HABITOS_COMUNES}
+          seleccion={habitos}
+          onCambiar={setHabitos}
+          tono="primary"
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-[1fr_160px]">
         <Field label="Medicación habitual">
-          <input value={medicacion} onChange={(e) => setMedicacion(e.target.value)} className={INPUT} placeholder="Ej: Losartán 50 mg por la mañana" />
+          <input
+            value={medicacion}
+            onChange={(e) => setMedicacion(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: Losartán 50 mg por la mañana"
+          />
         </Field>
         <Field label="Grupo sanguíneo">
-          <SelectField value={grupoSanguineo} onChange={setGrupoSanguineo} options={GRUPOS_SANGUINEOS} placeholder="Sin dato" />
+          <SelectField
+            value={grupoSanguineo}
+            onChange={setGrupoSanguineo}
+            options={GRUPOS_SANGUINEOS}
+            placeholder="Sin dato"
+          />
         </Field>
       </div>
       <Field label="Observaciones">
-        <textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Cirugías previas, reacciones a tratamientos anteriores, etc." />
+        <textarea
+          rows={2}
+          value={observaciones}
+          onChange={(e) => setObservaciones(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Cirugías previas, reacciones a tratamientos anteriores, etc."
+        />
       </Field>
       <Acciones etiqueta="Guardar antecedentes" onCancel={onCancel} />
     </form>
@@ -1794,7 +2623,12 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const a = datos.antecedentes ?? ANTECEDENTES_VACIOS;
   const sinDatos =
-    !a.alergias.length && !a.enfermedades.length && !a.habitos.length && !a.medicacion && !a.grupoSanguineo && !a.observaciones;
+    !a.alergias.length &&
+    !a.enfermedades.length &&
+    !a.habitos.length &&
+    !a.medicacion &&
+    !a.grupoSanguineo &&
+    !a.observaciones;
 
   return (
     <div className="card-grad p-4">
@@ -1806,7 +2640,9 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
           <div>
             <p className="text-sm font-semibold">Antecedentes y alertas médicas</p>
             <p className="text-xs text-muted-foreground">
-              {a.actualizado ? `Actualizado el ${formatearFecha(a.actualizado)}` : "Revisalos antes de indicar medicación o anestesia."}
+              {a.actualizado
+                ? `Actualizado el ${formatearFecha(a.actualizado)}`
+                : "Revisalos antes de indicar medicación o anestesia."}
             </p>
           </div>
         </div>
@@ -1826,7 +2662,10 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
             <DatoAntecedente titulo="Alergias">
               {a.alergias.length ? (
                 a.alergias.map((x) => (
-                  <span key={x} className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive">
+                  <span
+                    key={x}
+                    className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive"
+                  >
                     {x}
                   </span>
                 ))
@@ -1837,7 +2676,10 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
             <DatoAntecedente titulo="Enfermedades y condiciones">
               {a.enfermedades.length ? (
                 a.enfermedades.map((x) => (
-                  <span key={x} className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                  <span
+                    key={x}
+                    className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
+                  >
                     {x}
                   </span>
                 ))
@@ -1848,7 +2690,10 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
             <DatoAntecedente titulo="Hábitos">
               {a.habitos.length ? (
                 a.habitos.map((x) => (
-                  <span key={x} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  <span
+                    key={x}
+                    className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                  >
                     {x}
                   </span>
                 ))
@@ -1892,7 +2737,9 @@ function AntecedentesCard({ datos, cambiar, onToast }: PropsSeccion) {
 function DatoAntecedente({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{titulo}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {titulo}
+      </p>
       <div className="mt-1 flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
@@ -1905,7 +2752,9 @@ function imprimirHistoria(datos: Registros, paciente: string) {
   const notas = [...datos.notasClinicas]
     .sort((x, y) => `${y.fecha}${y.hora}`.localeCompare(`${x.fecha}${x.hora}`))
     .map(
-      (n) => `<div class="item"><h3>${escapar(formatearFecha(n.fecha))} ${escapar(n.hora)} · ${escapar(n.motivoConsulta)}</h3>
+      (
+        n,
+      ) => `<div class="item"><h3>${escapar(formatearFecha(n.fecha))} ${escapar(n.hora)} · ${escapar(n.motivoConsulta)}</h3>
       <p class="meta">${escapar(n.profesional)}${n.piezas ? ` · Pieza(s) ${escapar(n.piezas)}` : ""}</p>
       ${[
         ["Anamnesis", n.anamnesis],
@@ -1923,7 +2772,9 @@ function imprimirHistoria(datos: Registros, paciente: string) {
   const evoluciones = [...datos.historia]
     .sort((x, y) => y.fecha.localeCompare(x.fecha))
     .map(
-      (e) => `<div class="item"><h3>${escapar(formatearFecha(e.fecha))} · ${escapar(e.motivo)}${e.pieza ? ` · Pieza ${escapar(e.pieza)}` : ""}</h3>
+      (
+        e,
+      ) => `<div class="item"><h3>${escapar(formatearFecha(e.fecha))} · ${escapar(e.motivo)}${e.pieza ? ` · Pieza ${escapar(e.pieza)}` : ""}</h3>
       <p>${escapar(e.detalle)}</p><p class="meta">${escapar(e.profesional)}</p></div>`,
     )
     .join("");
@@ -1950,20 +2801,25 @@ function imprimirHistoria(datos: Registros, paciente: string) {
 
 function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
-  const lista = [...datos.historia].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.historia].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-lg font-semibold">Historia clínica</h4>
-          <p className="text-sm text-muted-foreground">Antecedentes, notas clínicas y evolución de cada consulta.</p>
+          <p className="text-sm text-muted-foreground">
+            Antecedentes, notas clínicas y evolución de cada consulta.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => {
-              if (!imprimirHistoria(datos, contexto?.paciente ?? "Paciente")) onToast("Permití las ventanas emergentes para imprimir");
+              if (!imprimirHistoria(datos, contexto?.paciente ?? "Paciente"))
+                onToast("Permití las ventanas emergentes para imprimir");
             }}
             className={BTN_SECUNDARIO}
           >
@@ -1979,49 +2835,62 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       <AntecedentesCard datos={datos} cambiar={cambiar} onToast={onToast} />
       <NotasClinicasPanel datos={datos} cambiar={cambiar} onToast={onToast} contexto={undefined} />
       <div className="border-t border-border pt-3">
-        <div className="mb-2"><p className="text-sm font-semibold">Evoluciones históricas</p><p className="text-xs text-muted-foreground">Evoluciones rápidas registradas en consultas anteriores.</p></div>
-      {lista.length === 0 ? (
-        <EstadoVacio icon={History} titulo="Sin evoluciones" texto="Agregá la primera evolución del paciente." />
-      ) : (
-        <ul className="space-y-2.5">
-          {lista.map((e) => (
-            <li key={e.id} className={`${ITEM} flex items-start gap-3`}>
-              <div className="w-20 shrink-0">
-                <p className="text-sm font-bold">{formatearFecha(e.fecha)}</p>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold">{e.motivo}</p>
-                  {e.pieza && <Badge tono="primary">Pieza {e.pieza}</Badge>}
-                </div>
-                <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">{e.detalle}</p>
-                {e.profesional && <p className="mt-1 text-[11px] text-muted-foreground">{e.profesional}</p>}
-              </div>
-              <BotonBorrar
-                etiqueta="Eliminar evolución"
-                onClick={() => {
-                  // TODO backend: DELETE /pacientes/:id/historia/:evolucionId
-                  cambiar("historia", (prev) => prev.filter((x) => x.id !== e.id));
-                  onToast("Evolución eliminada");
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-      {abierto && (
-        <Modal title="Agregar evolución" onClose={() => setAbierto(false)}>
-          <EvolucionForm
-            onCancel={() => setAbierto(false)}
-            onSubmit={(nueva) => {
-              // TODO backend: POST /pacientes/:id/historia
-              cambiar("historia", (prev) => [...prev, { ...nueva, id: Date.now() }]);
-              setAbierto(false);
-              onToast("Evolución guardada");
-            }}
+        <div className="mb-2">
+          <p className="text-sm font-semibold">Evoluciones históricas</p>
+          <p className="text-xs text-muted-foreground">
+            Evoluciones rápidas registradas en consultas anteriores.
+          </p>
+        </div>
+        {lista.length === 0 ? (
+          <EstadoVacio
+            icon={History}
+            titulo="Sin evoluciones"
+            texto="Agregá la primera evolución del paciente."
           />
-        </Modal>
-      )}
+        ) : (
+          <ul className="space-y-2.5">
+            {lista.map((e) => (
+              <li key={e.id} className={`${ITEM} flex items-start gap-3`}>
+                <div className="w-20 shrink-0">
+                  <p className="text-sm font-bold">{formatearFecha(e.fecha)}</p>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">{e.motivo}</p>
+                    {e.pieza && <Badge tono="primary">Pieza {e.pieza}</Badge>}
+                  </div>
+                  <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">
+                    {e.detalle}
+                  </p>
+                  {e.profesional && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">{e.profesional}</p>
+                  )}
+                </div>
+                <BotonBorrar
+                  etiqueta="Eliminar evolución"
+                  onClick={() => {
+                    // TODO backend: DELETE /pacientes/:id/historia/:evolucionId
+                    cambiar("historia", (prev) => prev.filter((x) => x.id !== e.id));
+                    onToast("Evolución eliminada");
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        {abierto && (
+          <Modal title="Agregar evolución" onClose={() => setAbierto(false)}>
+            <EvolucionForm
+              onCancel={() => setAbierto(false)}
+              onSubmit={(nueva) => {
+                // TODO backend: POST /pacientes/:id/historia
+                cambiar("historia", (prev) => [...prev, { ...nueva, id: Date.now() }]);
+                setAbierto(false);
+                onToast("Evolución guardada");
+              }}
+            />
+          </Modal>
+        )}
       </div>
     </div>
   );
@@ -2047,7 +2916,11 @@ const CATALOGO_TRATAMIENTOS: Record<string, { sesiones: number; precio: number }
 };
 
 const PRIORIDADES_TRATAMIENTO = ["Alta", "Media", "Baja"] as const;
-const TONO_PRIORIDAD: Record<PrioridadTratamiento, Tono> = { Alta: "rojo", Media: "ambar", Baja: "gris" };
+const TONO_PRIORIDAD: Record<PrioridadTratamiento, Tono> = {
+  Alta: "rojo",
+  Media: "ambar",
+  Baja: "gris",
+};
 const PASOS_TRATAMIENTO = ["Pendiente", "Planificado", "En tratamiento", "Completado"] as const;
 
 /** Piezas válidas en notación FDI (permanentes 11–48 y temporales 51–85). */
@@ -2097,7 +2970,9 @@ function TratamientoForm({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     if (pieza.trim() && !piezaValida(pieza.trim())) {
-      setError("Revisá la pieza: usá la numeración FDI (11 a 48, o 51 a 85 en temporales). Podés separar varias con coma.");
+      setError(
+        "Revisá la pieza: usá la numeración FDI (11 a 48, o 51 a 85 en temporales). Podés separar varias con coma.",
+      );
       return;
     }
     onSubmit({
@@ -2124,7 +2999,15 @@ function TratamientoForm({
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Tratamiento *">
-        <input autoFocus required list="dl-tratamientos" value={nombre} onChange={(e) => elegirNombre(e.target.value)} className={INPUT} placeholder="Ej: Endodoncia, restauración estética" />
+        <input
+          autoFocus
+          required
+          list="dl-tratamientos"
+          value={nombre}
+          onChange={(e) => elegirNombre(e.target.value)}
+          className={INPUT}
+          placeholder="Ej: Endodoncia, restauración estética"
+        />
         <datalist id="dl-tratamientos">
           {Object.keys(CATALOGO_TRATAMIENTOS).map((n) => (
             <option key={n} value={n} />
@@ -2133,45 +3016,108 @@ function TratamientoForm({
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
         <Field label="Pieza dental">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21 o 36, 37" />
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 21 o 36, 37"
+          />
         </Field>
         <Field label="Estado">
-          <SelectField value={estado} onChange={(v) => setEstado(v as EstadoTratamiento)} options={ESTADOS_TRATAMIENTO} />
+          <SelectField
+            value={estado}
+            onChange={(v) => setEstado(v as EstadoTratamiento)}
+            options={ESTADOS_TRATAMIENTO}
+          />
         </Field>
         <Field label="Prioridad">
-          <SelectField value={prioridad} onChange={(v) => setPrioridad(v as PrioridadTratamiento)} options={PRIORIDADES_TRATAMIENTO} />
+          <SelectField
+            value={prioridad}
+            onChange={(v) => setPrioridad(v as PrioridadTratamiento)}
+            options={PRIORIDADES_TRATAMIENTO}
+          />
         </Field>
         <Field label="Profesional">
-          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+          <SelectField
+            value={profesional}
+            onChange={setProfesional}
+            options={profesionales}
+            placeholder="Seleccionar"
+          />
         </Field>
         <Field label="Fecha de inicio">
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={inicio}
+            onChange={(e) => setInicio(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Sesiones estimadas">
-          <input type="number" min={1} max={60} value={sesionesPlan} onChange={(e) => setSesionesPlan(e.target.value)} className={INPUT} />
+          <input
+            type="number"
+            min={1}
+            max={60}
+            value={sesionesPlan}
+            onChange={(e) => setSesionesPlan(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Valor (ARS)">
-          <input type="number" min={0} value={costo} onChange={(e) => setCosto(e.target.value)} className={INPUT} placeholder="0" />
+          <input
+            type="number"
+            min={0}
+            value={costo}
+            onChange={(e) => setCosto(e.target.value)}
+            className={INPUT}
+            placeholder="0"
+          />
         </Field>
         <div className="sm:col-span-2">
           <Field label="Presupuesto relacionado">
-            <SelectId value={presupuestoId} onChange={setPresupuestoId} opciones={presupuestos.map((p) => ({ id: p.id, label: `${p.numero} · ${p.estado}` }))} placeholder="Sin vincular" />
+            <SelectId
+              value={presupuestoId}
+              onChange={setPresupuestoId}
+              opciones={presupuestos.map((p) => ({ id: p.id, label: `${p.numero} · ${p.estado}` }))}
+              placeholder="Sin vincular"
+            />
           </Field>
         </div>
       </div>
       <Field label="Diagnóstico">
-        <textarea rows={2} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Diagnóstico que origina el tratamiento…" />
+        <textarea
+          rows={2}
+          value={diagnostico}
+          onChange={(e) => setDiagnostico(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Diagnóstico que origina el tratamiento…"
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Evolución">
-          <textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Cómo viene evolucionando…" />
+          <textarea
+            rows={2}
+            value={evolucion}
+            onChange={(e) => setEvolucion(e.target.value)}
+            className={TEXTAREA}
+            placeholder="Cómo viene evolucionando…"
+          />
         </Field>
         <Field label="Notas">
-          <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones del tratamiento…" />
+          <textarea
+            rows={2}
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            className={TEXTAREA}
+            placeholder="Observaciones del tratamiento…"
+          />
         </Field>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Acciones etiqueta={inicial ? "Guardar cambios" : "Guardar tratamiento"} onCancel={onCancel} />
+      <Acciones
+        etiqueta={inicial ? "Guardar cambios" : "Guardar tratamiento"}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -2200,19 +3146,40 @@ function SesionForm({
       className="space-y-2.5"
     >
       <p className="rounded-lg bg-primary/[0.05] px-3 py-2 text-xs text-muted-foreground">
-        Sesión <b className="text-foreground">{numero}</b> de {tratamiento.sesionesPlan ?? 1} · {tratamiento.nombre}
-        {tratamiento.pieza ? ` · pieza ${tratamiento.pieza}` : ""}. También se agrega a la historia clínica.
+        Sesión <b className="text-foreground">{numero}</b> de {tratamiento.sesionesPlan ?? 1} ·{" "}
+        {tratamiento.nombre}
+        {tratamiento.pieza ? ` · pieza ${tratamiento.pieza}` : ""}. También se agrega a la historia
+        clínica.
       </p>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Fecha">
-          <input type="date" value={fecha} max={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fecha}
+            max={hoyISO()}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Profesional">
-          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+          <SelectField
+            value={profesional}
+            onChange={setProfesional}
+            options={profesionales}
+            placeholder="Seleccionar"
+          />
         </Field>
       </div>
       <Field label="Qué se hizo *">
-        <textarea autoFocus required rows={3} value={detalle} onChange={(e) => setDetalle(e.target.value)} className={TEXTAREA} placeholder="Ej: Apertura cameral y conductometría. Medicación intraconducto." />
+        <textarea
+          autoFocus
+          required
+          rows={3}
+          value={detalle}
+          onChange={(e) => setDetalle(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Ej: Apertura cameral y conductometría. Medicación intraconducto."
+        />
       </Field>
       <Acciones etiqueta="Registrar sesión" onCancel={onCancel} />
     </form>
@@ -2224,7 +3191,11 @@ function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente })
   if (tratamiento.estado === "Cancelado") {
     return (
       <p className="mt-3 rounded-lg bg-destructive/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-destructive">
-        Tratamiento cancelado{tratamiento.historial?.find((h) => h.estado === "Cancelado")?.fecha ? ` el ${formatearFecha(tratamiento.historial.find((h) => h.estado === "Cancelado")?.fecha ?? "")}` : ""}.
+        Tratamiento cancelado
+        {tratamiento.historial?.find((h) => h.estado === "Cancelado")?.fecha
+          ? ` el ${formatearFecha(tratamiento.historial.find((h) => h.estado === "Cancelado")?.fecha ?? "")}`
+          : ""}
+        .
       </p>
     );
   }
@@ -2240,15 +3211,27 @@ function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente })
             <div className="flex items-center">
               <span
                 className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                  hecho ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
+                  hecho
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-card text-muted-foreground"
                 } ${i === actual ? "ring-4 ring-primary/15" : ""}`}
               >
                 {hecho ? <Check className="size-3" /> : i + 1}
               </span>
-              {i < PASOS_TRATAMIENTO.length - 1 && <span className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`} />}
+              {i < PASOS_TRATAMIENTO.length - 1 && (
+                <span
+                  className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`}
+                />
+              )}
             </div>
-            <p className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}>{paso}</p>
-            <p className="text-[10px] text-muted-foreground">{hecho && fecha ? formatearFecha(fecha) : " "}</p>
+            <p
+              className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              {paso}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {hecho && fecha ? formatearFecha(fecha) : " "}
+            </p>
           </li>
         );
       })}
@@ -2288,22 +3271,33 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
   const [sesionDe, setSesionDe] = useState<TratamientoPaciente | null>(null);
   const [verSesiones, setVerSesiones] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState<"" | "activos" | "Pendiente" | "completados" | "Cancelado">("");
+  const [filtro, setFiltro] = useState<"" | "activos" | "Pendiente" | "completados" | "Cancelado">(
+    "",
+  );
 
-  const esActivo = (t: TratamientoPaciente) => t.estado === "Planificado" || t.estado === "En tratamiento";
-  const esCompletado = (t: TratamientoPaciente) => t.estado === "Completado" || t.estado === "Finalizado";
+  const esActivo = (t: TratamientoPaciente) =>
+    t.estado === "Planificado" || t.estado === "En tratamiento";
+  const esCompletado = (t: TratamientoPaciente) =>
+    t.estado === "Completado" || t.estado === "Finalizado";
   const ORDEN_PRIORIDAD: Record<PrioridadTratamiento, number> = { Alta: 0, Media: 1, Baja: 2 };
   const todos = [...datos.tratamientos].sort(
     (a, b) =>
-      Number(esCompletado(a) || a.estado === "Cancelado") - Number(esCompletado(b) || b.estado === "Cancelado") ||
+      Number(esCompletado(a) || a.estado === "Cancelado") -
+        Number(esCompletado(b) || b.estado === "Cancelado") ||
       ORDEN_PRIORIDAD[a.prioridad ?? "Media"] - ORDEN_PRIORIDAD[b.prioridad ?? "Media"] ||
       (b.inicio || "").localeCompare(a.inicio || ""),
   );
   const texto = normalizarBusqueda(busqueda);
   const lista = todos.filter((t) => {
-    const okFiltro =
-      !filtro ? true : filtro === "activos" ? esActivo(t) : filtro === "completados" ? esCompletado(t) : t.estado === filtro;
-    const okTexto = !texto || normalizarBusqueda(`${t.nombre} ${t.pieza} ${t.profesional}`).includes(texto);
+    const okFiltro = !filtro
+      ? true
+      : filtro === "activos"
+        ? esActivo(t)
+        : filtro === "completados"
+          ? esCompletado(t)
+          : t.estado === filtro;
+    const okTexto =
+      !texto || normalizarBusqueda(`${t.nombre} ${t.pieza} ${t.profesional}`).includes(texto);
     return okFiltro && okTexto;
   });
 
@@ -2318,7 +3312,13 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
   const agregarAuditoria = (accion: string) =>
     cambiar("auditoria", (prev) => [
       ...prev,
-      { id: Date.now() + Math.random(), usuario: "Profesional", accion, fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5) },
+      {
+        id: Date.now() + Math.random(),
+        usuario: "Profesional",
+        accion,
+        fecha: hoyISO(),
+        hora: new Date().toTimeString().slice(0, 5),
+      },
     ]);
 
   const cambiarEstado = (t: TratamientoPaciente, estado: EstadoTratamiento) => {
@@ -2329,7 +3329,10 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
           ? {
               ...x,
               estado,
-              historial: [...(x.historial ?? []).filter((h) => h.estado !== estado), { estado, fecha: hoyISO() }],
+              historial: [
+                ...(x.historial ?? []).filter((h) => h.estado !== estado),
+                { estado, fecha: hoyISO() },
+              ],
               ...(estado === "Completado" ? { fin: hoyISO() } : {}),
             }
           : x,
@@ -2351,7 +3354,13 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
               sesiones,
               evolucion: s.detalle,
               ...(iniciar
-                ? { estado: "En tratamiento" as const, historial: [...(x.historial ?? []), { estado: "En tratamiento" as const, fecha: s.fecha }] }
+                ? {
+                    estado: "En tratamiento" as const,
+                    historial: [
+                      ...(x.historial ?? []),
+                      { estado: "En tratamiento" as const, fecha: s.fecha },
+                    ],
+                  }
                 : {}),
             }
           : x,
@@ -2359,7 +3368,14 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
     );
     cambiar("historia", (prev) => [
       ...prev,
-      { id: Date.now() + 1, fecha: s.fecha, profesional: s.profesional, motivo: `${t.nombre} · sesión ${sesiones.length}`, pieza: t.pieza, detalle: s.detalle },
+      {
+        id: Date.now() + 1,
+        fecha: s.fecha,
+        profesional: s.profesional,
+        motivo: `${t.nombre} · sesión ${sesiones.length}`,
+        pieza: t.pieza,
+        detalle: s.detalle,
+      },
     ]);
     agregarAuditoria(`Registró la sesión ${sesiones.length} de ${t.nombre}`);
     onToast(
@@ -2386,7 +3402,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
         profesional: t.profesional,
       },
     ]);
-    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, presupuestoId: id } : x)));
+    cambiar("tratamientos", (prev) =>
+      prev.map((x) => (x.id === t.id ? { ...x, presupuestoId: id } : x)),
+    );
     onToast(`Presupuesto ${numero} creado en borrador`);
   };
 
@@ -2409,10 +3427,29 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
       />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        <ResumenCuenta etiqueta="En curso" valor={String(activos)} icon={Activity} tono="text-primary" />
-        <ResumenCuenta etiqueta="Pendientes" valor={String(pendientes)} icon={Clock3} tono={pendientes ? "text-amber-600" : ""} />
-        <ResumenCuenta etiqueta="Sesiones realizadas" valor={`${sesionesHechas} / ${sesionesTotales}`} icon={Check} tono="text-emerald-600" />
-        <ResumenCuenta etiqueta="Valor del plan" valor={formatearMonto(valorPlan)} icon={CircleDollarSign} />
+        <ResumenCuenta
+          etiqueta="En curso"
+          valor={String(activos)}
+          icon={Activity}
+          tono="text-primary"
+        />
+        <ResumenCuenta
+          etiqueta="Pendientes"
+          valor={String(pendientes)}
+          icon={Clock3}
+          tono={pendientes ? "text-amber-600" : ""}
+        />
+        <ResumenCuenta
+          etiqueta="Sesiones realizadas"
+          valor={`${sesionesHechas} / ${sesionesTotales}`}
+          icon={Check}
+          tono="text-emerald-600"
+        />
+        <ResumenCuenta
+          etiqueta="Valor del plan"
+          valor={formatearMonto(valorPlan)}
+          icon={CircleDollarSign}
+        />
       </div>
 
       {todos.length > 0 && (
@@ -2424,7 +3461,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
               onClick={() => setFiltro(f.id)}
               aria-pressed={filtro === f.id}
               className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                filtro === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                filtro === f.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
               }`}
             >
               {f.label}
@@ -2440,8 +3479,15 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             type="button"
             className={BTN_SECUNDARIO}
             onClick={() => {
-              const ok = imprimirPlanTratamiento(todos.filter((t) => t.estado !== "Cancelado"), contexto?.paciente ?? "Paciente");
-              onToast(ok ? "Plan de tratamiento listo para imprimir" : "Permití las ventanas emergentes para imprimir");
+              const ok = imprimirPlanTratamiento(
+                todos.filter((t) => t.estado !== "Cancelado"),
+                contexto?.paciente ?? "Paciente",
+              );
+              onToast(
+                ok
+                  ? "Plan de tratamiento listo para imprimir"
+                  : "Permití las ventanas emergentes para imprimir",
+              );
             }}
           >
             <Printer className="size-4" />
@@ -2451,7 +3497,12 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
       )}
 
       {todos.length === 0 ? (
-        <EstadoVacio icon={Stethoscope} titulo="Sin tratamientos" texto="Cada tratamiento pasa por estos estados:" chips={PASOS_TRATAMIENTO} />
+        <EstadoVacio
+          icon={Stethoscope}
+          titulo="Sin tratamientos"
+          texto="Cada tratamiento pasa por estos estados:"
+          chips={PASOS_TRATAMIENTO}
+        />
       ) : lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-primary/20 px-3 py-4 text-center text-xs text-muted-foreground">
           No hay tratamientos que coincidan.
@@ -2475,34 +3526,61 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       <p className="text-sm font-semibold">{t.nombre}</p>
                       {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
                       <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
-                      {!cerrado && <Badge tono={TONO_PRIORIDAD[t.prioridad ?? "Media"]}>Prioridad {(t.prioridad ?? "Media").toLowerCase()}</Badge>}
+                      {!cerrado && (
+                        <Badge tono={TONO_PRIORIDAD[t.prioridad ?? "Media"]}>
+                          Prioridad {(t.prioridad ?? "Media").toLowerCase()}
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       {t.profesional && <span>{t.profesional}</span>}
                       {t.inicio && <span>Inicio: {formatearFecha(t.inicio)}</span>}
                       {t.fin && <span>Fin: {formatearFecha(t.fin)}</span>}
-                      {presupuesto && <span>Presupuesto {presupuesto.numero} · {presupuesto.estado}</span>}
+                      {presupuesto && (
+                        <span>
+                          Presupuesto {presupuesto.numero} · {presupuesto.estado}
+                        </span>
+                      )}
                     </p>
                   </div>
-                  {(t.costo ?? 0) > 0 && <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo ?? 0)}</span>}
+                  {(t.costo ?? 0) > 0 && (
+                    <span className="shrink-0 text-sm font-bold">
+                      {formatearMonto(t.costo ?? 0)}
+                    </span>
+                  )}
                 </div>
 
                 <PasosTratamiento tratamiento={t} />
 
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-semibold">Sesiones {hechas} de {plan}</span>
+                    <span className="font-semibold">
+                      Sesiones {hechas} de {plan}
+                    </span>
                     <span className="text-muted-foreground">{avance}%</span>
                   </div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
-                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500 transition-all" style={{ width: `${avance}%` }} />
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500 transition-all"
+                      style={{ width: `${avance}%` }}
+                    />
                   </div>
                 </div>
 
                 {(t.diagnostico || t.evolucion || t.notas) && (
                   <div className="mt-2 space-y-0.5 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
-                    {t.diagnostico && <p><b className="font-semibold text-foreground">Diagnóstico:</b> {t.diagnostico}</p>}
-                    {t.evolucion && <p><b className="font-semibold text-foreground">Última evolución:</b> {t.evolucion}</p>}
+                    {t.diagnostico && (
+                      <p>
+                        <b className="font-semibold text-foreground">Diagnóstico:</b>{" "}
+                        {t.diagnostico}
+                      </p>
+                    )}
+                    {t.evolucion && (
+                      <p>
+                        <b className="font-semibold text-foreground">Última evolución:</b>{" "}
+                        {t.evolucion}
+                      </p>
+                    )}
                     {t.notas && <p className="italic">{t.notas}</p>}
                   </div>
                 )}
@@ -2514,7 +3592,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       onClick={() => setVerSesiones(verSesiones === t.id ? null : t.id)}
                       className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
                     >
-                      <ChevronDown className={`size-3.5 transition-transform ${verSesiones === t.id ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        className={`size-3.5 transition-transform ${verSesiones === t.id ? "rotate-180" : ""}`}
+                      />
                       {verSesiones === t.id ? "Ocultar sesiones" : `Ver sesiones (${hechas})`}
                     </button>
                     {verSesiones === t.id && (
@@ -2523,7 +3603,12 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                           <li key={s.id} className="text-xs">
                             <p className="font-semibold">
                               Sesión {i + 1} · {formatearFecha(s.fecha)}
-                              {s.profesional && <span className="font-normal text-muted-foreground"> · {s.profesional}</span>}
+                              {s.profesional && (
+                                <span className="font-normal text-muted-foreground">
+                                  {" "}
+                                  · {s.profesional}
+                                </span>
+                              )}
                             </p>
                             <p className="text-muted-foreground">{s.detalle}</p>
                           </li>
@@ -2535,18 +3620,64 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
 
                 <div className="min-h-3 flex-1" />
                 <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-2.5">
-                  {t.estado === "Pendiente" && <BotonMini icon={Check} label="Planificar" onClick={() => cambiarEstado(t, "Planificado")} />}
-                  {!cerrado && <BotonMini icon={Plus} label="Registrar sesión" onClick={() => setSesionDe(t)} />}
-                  {t.estado === "En tratamiento" && <BotonMini icon={PackageCheck} label="Completar" onClick={() => cambiarEstado(t, "Completado")} />}
-                  {!cerrado && onSeccion && <BotonMini icon={CalendarDays} label="Turno" onClick={() => onSeccion("turnos")} />}
+                  {t.estado === "Pendiente" && (
+                    <BotonMini
+                      icon={Check}
+                      label="Planificar"
+                      onClick={() => cambiarEstado(t, "Planificado")}
+                    />
+                  )}
+                  {!cerrado && (
+                    <BotonMini
+                      icon={Plus}
+                      label="Registrar sesión"
+                      onClick={() => setSesionDe(t)}
+                    />
+                  )}
+                  {t.estado === "En tratamiento" && (
+                    <BotonMini
+                      icon={PackageCheck}
+                      label="Completar"
+                      onClick={() => cambiarEstado(t, "Completado")}
+                    />
+                  )}
+                  {!cerrado && onSeccion && (
+                    <BotonMini
+                      icon={CalendarDays}
+                      label="Turno"
+                      onClick={() => onSeccion("turnos")}
+                    />
+                  )}
                   {presupuesto && onSeccion ? (
-                    <BotonMini icon={ReceiptText} label="Presupuesto" onClick={() => onSeccion("presupuestos")} />
+                    <BotonMini
+                      icon={ReceiptText}
+                      label="Presupuesto"
+                      onClick={() => onSeccion("presupuestos")}
+                    />
                   ) : (
-                    !cerrado && <BotonMini icon={ReceiptText} label="Crear presupuesto" onClick={() => crearPresupuesto(t)} />
+                    !cerrado && (
+                      <BotonMini
+                        icon={ReceiptText}
+                        label="Crear presupuesto"
+                        onClick={() => crearPresupuesto(t)}
+                      />
+                    )
                   )}
                   <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
-                  {!cerrado && <BotonMini icon={X} label="Cancelar" onClick={() => cambiarEstado(t, "Cancelado")} />}
-                  {t.estado === "Cancelado" && <BotonMini icon={RotateCw} label="Reactivar" onClick={() => cambiarEstado(t, "Planificado")} />}
+                  {!cerrado && (
+                    <BotonMini
+                      icon={X}
+                      label="Cancelar"
+                      onClick={() => cambiarEstado(t, "Cancelado")}
+                    />
+                  )}
+                  {t.estado === "Cancelado" && (
+                    <BotonMini
+                      icon={RotateCw}
+                      label="Reactivar"
+                      onClick={() => cambiarEstado(t, "Planificado")}
+                    />
+                  )}
                   <BotonBorrar
                     etiqueta="Eliminar tratamiento"
                     onClick={() => {
@@ -2563,11 +3694,20 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
       )}
 
       {(abierto || editar) && (
-        <Modal title={editar ? "Editar tratamiento" : "Agregar tratamiento"} onClose={() => { setAbierto(false); setEditar(null); }}>
+        <Modal
+          title={editar ? "Editar tratamiento" : "Agregar tratamiento"}
+          onClose={() => {
+            setAbierto(false);
+            setEditar(null);
+          }}
+        >
           <TratamientoForm
             inicial={editar ?? undefined}
             presupuestos={datos.presupuestos}
-            onCancel={() => { setAbierto(false); setEditar(null); }}
+            onCancel={() => {
+              setAbierto(false);
+              setEditar(null);
+            }}
             onSubmit={(t) => {
               if (editar) {
                 // TODO backend: PUT /pacientes/:id/tratamientos/:tratamientoId
@@ -2579,8 +3719,11 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                           ...t,
                           historial:
                             t.estado !== editar.estado
-                              ? [...(x.historial ?? []).filter((h) => h.estado !== t.estado), { estado: t.estado, fecha: hoyISO() }]
-                              : x.historial ?? [],
+                              ? [
+                                  ...(x.historial ?? []).filter((h) => h.estado !== t.estado),
+                                  { estado: t.estado, fecha: hoyISO() },
+                                ]
+                              : (x.historial ?? []),
                         }
                       : x,
                   ),
@@ -2659,11 +3802,21 @@ function DocumentoForm({
           <SelectField value={tipo} onChange={setTipo} options={TIPOS_DOCUMENTO} />
         </Field>
         <Field label="Fecha">
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
       </div>
       <Field label="Título">
-        <input value={titulo} onChange={(e) => setTitulo(e.target.value)} className={INPUT} placeholder="Si lo dejás vacío se usa el nombre del archivo" />
+        <input
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className={INPUT}
+          placeholder="Si lo dejás vacío se usa el nombre del archivo"
+        />
       </Field>
       <div>
         <span className="mb-1 block text-xs font-medium">Archivo *</span>
@@ -2683,13 +3836,21 @@ function DocumentoForm({
         >
           <Paperclip className="size-4 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 truncate">
-            {archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Seleccionar archivo (PDF, imagen u otro)"}
+            {archivo
+              ? `${archivo.name} · ${formatearTamano(archivo.size)}`
+              : "Seleccionar archivo (PDF, imagen u otro)"}
           </span>
         </button>
         {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
       </div>
       <Field label="Notas">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones del documento…" />
+        <textarea
+          rows={2}
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Observaciones del documento…"
+        />
       </Field>
       <Acciones etiqueta="Cargar documento" onCancel={onCancel} />
     </form>
@@ -2734,11 +3895,19 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
-                {d.notas && <p className="mt-0.5 text-xs italic text-muted-foreground">{d.notas}</p>}
+                {d.notas && (
+                  <p className="mt-0.5 text-xs italic text-muted-foreground">{d.notas}</p>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 <Badge tono="primary">{d.estado}</Badge>
-                {d.url && <BotonMini icon={ExternalLink} label="Ver" onClick={() => window.open(d.url, "_blank")} />}
+                {d.url && (
+                  <BotonMini
+                    icon={ExternalLink}
+                    label="Ver"
+                    onClick={() => window.open(d.url, "_blank")}
+                  />
+                )}
                 <BotonBorrar
                   etiqueta="Eliminar documento"
                   onClick={() => {
@@ -2758,9 +3927,9 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
         <div className="min-w-0">
           <p className="text-sm font-semibold">Documentación del paciente</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Podés cargar DNI, comprobantes, consentimientos, presupuestos, estudios y otros archivos. En esta versión el
-            archivo se mantiene en memoria del frontend; posteriormente se conectará con el almacenamiento permanente
-            del sistema.
+            Podés cargar DNI, comprobantes, consentimientos, presupuestos, estudios y otros
+            archivos. En esta versión el archivo se mantiene en memoria del frontend; posteriormente
+            se conectará con el almacenamiento permanente del sistema.
           </p>
         </div>
       </div>
@@ -2783,27 +3952,49 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
 
 /* ───────────── Recetas digitales ───────────── */
 
-type MedicamentoForm = { nombre: string; presentacion: string; via: string; cantidad: string; posologia: string };
+type MedicamentoForm = {
+  nombre: string;
+  presentacion: string;
+  via: string;
+  cantidad: string;
+  posologia: string;
+};
 
 /* Choques entre alergias del paciente y medicamentos (por familia de droga). */
 const FAMILIAS_ALERGIA: { alergia: RegExp; droga: RegExp; familia: string }[] = [
-  { alergia: /penicil|betalact/i, droga: /amoxic|ampicil|penicil|clavul|cefal|cefa/i, familia: "penicilinas / betalactámicos" },
-  { alergia: /aine|ibuprof|diclof|ketorol|aspirin|antiinflam/i, droga: /ibuprof|diclof|ketorol|naprox|aspirin|meloxic|aine/i, familia: "antiinflamatorios (AINES)" },
+  {
+    alergia: /penicil|betalact/i,
+    droga: /amoxic|ampicil|penicil|clavul|cefal|cefa/i,
+    familia: "penicilinas / betalactámicos",
+  },
+  {
+    alergia: /aine|ibuprof|diclof|ketorol|aspirin|antiinflam/i,
+    droga: /ibuprof|diclof|ketorol|naprox|aspirin|meloxic|aine/i,
+    familia: "antiinflamatorios (AINES)",
+  },
   { alergia: /sulfa/i, droga: /sulfa|trimetoprim|cotrimox/i, familia: "sulfas" },
-  { alergia: /anestesia|lidoca|articai|mepivac/i, droga: /lidoca|articai|mepivac|prilocai|anest/i, familia: "anestésicos locales" },
+  {
+    alergia: /anestesia|lidoca|articai|mepivac/i,
+    droga: /lidoca|articai|mepivac|prilocai|anest/i,
+    familia: "anestésicos locales",
+  },
   { alergia: /metronid/i, droga: /metronid/i, familia: "metronidazol" },
   { alergia: /clindam/i, droga: /clindam/i, familia: "clindamicina" },
 ];
 
 /** Devuelve la alergia con la que choca el medicamento (o null). */
-function choqueAlergia(medicamento: string, alergias: string[]): { alergia: string; familia: string } | null {
+function choqueAlergia(
+  medicamento: string,
+  alergias: string[],
+): { alergia: string; familia: string } | null {
   const med = medicamento.trim();
   if (!med) return null;
   for (const alergia of alergias) {
     const familia = FAMILIAS_ALERGIA.find((f) => f.alergia.test(alergia) && f.droga.test(med));
     if (familia) return { alergia, familia: familia.familia };
     const clave = alergia.split(/[\s(]/)[0]?.toLowerCase() ?? "";
-    if (clave.length >= 4 && med.toLowerCase().includes(clave)) return { alergia, familia: alergia };
+    if (clave.length >= 4 && med.toLowerCase().includes(clave))
+      return { alergia, familia: alergia };
   }
   return null;
 }
@@ -2852,7 +4043,9 @@ function RecetaForm({
     }
     const conChoque = validos.filter((m) => choqueAlergia(m.nombre, alergias));
     if (conChoque.length && !aceptaRiesgo) {
-      setError(`Atención: ${conChoque.map((m) => m.nombre.trim()).join(", ")} puede causar una reacción alérgica. Revisalo o confirmá que querés emitir la receta igual.`);
+      setError(
+        `Atención: ${conChoque.map((m) => m.nombre.trim()).join(", ")} puede causar una reacción alérgica. Revisalo o confirmá que querés emitir la receta igual.`,
+      );
       return;
     }
     onSubmit({
@@ -2876,16 +4069,37 @@ function RecetaForm({
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Fecha *">
-          <input required type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            required
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Válida hasta">
-          <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={vencimiento}
+            onChange={(e) => setVencimiento(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Profesional *">
-          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+          <SelectField
+            value={profesional}
+            onChange={setProfesional}
+            options={profesionales}
+            placeholder="Seleccionar"
+          />
         </Field>
         <Field label="Matrícula">
-          <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className={INPUT} placeholder="Ej: MN 00000" />
+          <input
+            value={matricula}
+            onChange={(e) => setMatricula(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: MN 00000"
+          />
         </Field>
       </div>
 
@@ -2901,7 +4115,12 @@ function RecetaForm({
       )}
 
       <Field label="Diagnóstico">
-        <input value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={INPUT} placeholder="Ej: Pericoronaritis pieza 38" />
+        <input
+          value={diagnostico}
+          onChange={(e) => setDiagnostico(e.target.value)}
+          className={INPUT}
+          placeholder="Ej: Pericoronaritis pieza 38"
+        />
       </Field>
 
       <div>
@@ -2919,7 +4138,11 @@ function RecetaForm({
                 />
                 <button
                   type="button"
-                  onClick={() => setMedicamentos((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
+                  onClick={() =>
+                    setMedicamentos((prev) =>
+                      prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev,
+                    )
+                  }
                   aria-label="Quitar medicamento"
                   disabled={medicamentos.length === 1}
                   className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
@@ -2934,7 +4157,11 @@ function RecetaForm({
                   className={INPUT}
                   placeholder="Presentación (ej: 500 mg comp.)"
                 />
-                <SelectField value={m.via} onChange={(v) => cambiarMedicamento(i, "via", v)} options={VIAS_ADMINISTRACION} />
+                <SelectField
+                  value={m.via}
+                  onChange={(v) => cambiarMedicamento(i, "via", v)}
+                  options={VIAS_ADMINISTRACION}
+                />
                 <input
                   type="number"
                   min={1}
@@ -2966,7 +4193,13 @@ function RecetaForm({
           onClick={() =>
             setMedicamentos((prev) => [
               ...prev,
-              { nombre: "", presentacion: "", via: VIAS_ADMINISTRACION[0], cantidad: "1", posologia: "" },
+              {
+                nombre: "",
+                presentacion: "",
+                via: VIAS_ADMINISTRACION[0],
+                cantidad: "1",
+                posologia: "",
+              },
             ])
           }
           className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary"
@@ -2992,7 +4225,13 @@ function RecetaForm({
       </div>
 
       <Field label="Indicaciones generales">
-        <textarea rows={2} value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} className={TEXTAREA} placeholder="Indicaciones al paciente, advertencias, control…" />
+        <textarea
+          rows={2}
+          value={indicaciones}
+          onChange={(e) => setIndicaciones(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Indicaciones al paciente, advertencias, control…"
+        />
       </Field>
 
       <Acciones etiqueta="Crear receta" onCancel={onCancel} />
@@ -3001,12 +4240,20 @@ function RecetaForm({
 }
 
 /* Documento de la receta (vista en pantalla) */
-function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; contexto?: ContextoPaciente }) {
+function RecetaDocumento({
+  receta: r,
+  contexto,
+}: {
+  receta: RecetaPaciente;
+  contexto?: ContextoPaciente;
+}) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-border bg-white p-6 text-[13px] text-neutral-900 shadow-sm">
       {r.estado === "Anulada" && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <span className="-rotate-25 text-6xl font-extrabold tracking-widest text-red-500/15">ANULADA</span>
+          <span className="-rotate-25 text-6xl font-extrabold tracking-widest text-red-500/15">
+            ANULADA
+          </span>
         </div>
       )}
 
@@ -3016,7 +4263,9 @@ function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; cont
             <Pill className="size-4.5" />
           </span>
           <div>
-            <p className="text-base font-bold leading-tight">{contexto?.clinica || "Receta digital"}</p>
+            <p className="text-base font-bold leading-tight">
+              {contexto?.clinica || "Receta digital"}
+            </p>
             <p className="text-[11px] uppercase tracking-wide text-neutral-500">
               {contexto?.clinica ? "Receta digital" : "Prescripción médica"}
             </p>
@@ -3025,17 +4274,25 @@ function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; cont
         <div className="text-right">
           <p className="text-sm font-bold">{r.numero}</p>
           <p className="text-[11px] text-neutral-500">Fecha: {formatearFecha(r.fecha)}</p>
-          {r.vencimiento && <p className="text-[11px] text-neutral-500">Válida hasta: {formatearFecha(r.vencimiento)}</p>}
+          {r.vencimiento && (
+            <p className="text-[11px] text-neutral-500">
+              Válida hasta: {formatearFecha(r.vencimiento)}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-neutral-50 p-3 text-xs">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Paciente</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Paciente
+          </p>
           <p className="mt-0.5 font-semibold">{contexto?.paciente || "—"}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Profesional</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Profesional
+          </p>
           <p className="mt-0.5 font-semibold">{r.profesional || "—"}</p>
           {r.matricula && <p className="text-neutral-500">Mat. {r.matricula}</p>}
         </div>
@@ -3043,7 +4300,9 @@ function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; cont
 
       {r.diagnostico && (
         <div className="mt-3 text-xs">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Diagnóstico</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Diagnóstico
+          </p>
           <p className="mt-0.5">{r.diagnostico}</p>
         </div>
       )}
@@ -3059,7 +4318,9 @@ function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; cont
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">
                   {m.nombre}
-                  {m.presentacion && <span className="font-normal text-neutral-500"> · {m.presentacion}</span>}
+                  {m.presentacion && (
+                    <span className="font-normal text-neutral-500"> · {m.presentacion}</span>
+                  )}
                 </p>
                 <p className="text-xs text-neutral-500">
                   {[m.via, `Cantidad: ${m.cantidad}`].filter(Boolean).join(" · ")}
@@ -3073,7 +4334,9 @@ function RecetaDocumento({ receta: r, contexto }: { receta: RecetaPaciente; cont
 
       {r.indicaciones && (
         <div className="mt-3 rounded-lg border border-dashed border-neutral-300 p-2.5 text-xs">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Indicaciones</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Indicaciones
+          </p>
           <p className="mt-0.5 whitespace-pre-line">{r.indicaciones}</p>
         </div>
       )}
@@ -3267,13 +4530,27 @@ function EnviarRecetaForm({
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Correo del paciente *">
-        <input autoFocus required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="paciente@correo.com" />
+        <input
+          autoFocus
+          required
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={INPUT}
+          placeholder="paciente@correo.com"
+        />
       </Field>
       <Field label="Asunto">
         <input value={asunto} onChange={(e) => setAsunto(e.target.value)} className={INPUT} />
       </Field>
       <Field label="Mensaje">
-        <textarea rows={3} value={mensaje} onChange={(e) => setMensaje(e.target.value)} className={TEXTAREA} placeholder="Mensaje opcional para el paciente…" />
+        <textarea
+          rows={3}
+          value={mensaje}
+          onChange={(e) => setMensaje(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Mensaje opcional para el paciente…"
+        />
       </Field>
       <div className="flex items-center gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
         <Paperclip className="size-3.5 shrink-0 text-primary" />
@@ -3288,7 +4565,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [verId, setVerId] = useState<number | null>(null);
   const [enviarId, setEnviarId] = useState<number | null>(null);
-  const lista = [...datos.recetas].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.recetas].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
 
   const recetaVista = datos.recetas.find((r) => r.id === verId) ?? null;
   const recetaEnvio = datos.recetas.find((r) => r.id === enviarId) ?? null;
@@ -3327,7 +4606,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold">{r.numero}</p>
-                  <span className="text-[11px] text-muted-foreground">{formatearFecha(r.fecha)}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatearFecha(r.fecha)}
+                  </span>
                   <Badge tono={TONO_RECETA[r.estado]}>{r.estado}</Badge>
                 </div>
                 <BotonBorrar
@@ -3345,14 +4626,18 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 {r.matricula && <span>Mat. {r.matricula}</span>}
                 {r.vencimiento && <span>Válida hasta {formatearFecha(r.vencimiento)}</span>}
               </p>
-              {r.diagnostico && <p className="mt-0.5 text-xs text-muted-foreground">Diagnóstico: {r.diagnostico}</p>}
+              {r.diagnostico && (
+                <p className="mt-0.5 text-xs text-muted-foreground">Diagnóstico: {r.diagnostico}</p>
+              )}
 
               <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-background/70 text-xs">
                 {r.medicamentos.map((m, i) => (
                   <li key={i} className="flex items-start justify-between gap-3 px-2.5 py-1.5">
                     <span className="min-w-0">
                       <span className="font-semibold">{m.nombre}</span>
-                      {m.presentacion && <span className="text-muted-foreground"> · {m.presentacion}</span>}
+                      {m.presentacion && (
+                        <span className="text-muted-foreground"> · {m.presentacion}</span>
+                      )}
                       {m.via && <span className="text-muted-foreground"> · {m.via}</span>}
                       <span className="mt-0.5 block text-muted-foreground">{m.posologia}</span>
                     </span>
@@ -3361,18 +4646,36 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 ))}
               </ul>
 
-              {r.indicaciones && <p className="mt-1.5 text-xs italic text-muted-foreground">{r.indicaciones}</p>}
+              {r.indicaciones && (
+                <p className="mt-1.5 text-xs italic text-muted-foreground">{r.indicaciones}</p>
+              )}
 
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <BotonMini icon={Eye} label="Ver receta" onClick={() => setVerId(r.id)} />
                 {r.estado !== "Anulada" && (
                   <>
                     <BotonMini icon={Download} label="Descargar PDF" onClick={() => descargar(r)} />
-                    <BotonMini icon={Mail} label="Enviar por correo" onClick={() => setEnviarId(r.id)} />
+                    <BotonMini
+                      icon={Mail}
+                      label="Enviar por correo"
+                      onClick={() => setEnviarId(r.id)}
+                    />
                   </>
                 )}
-                {r.estado === "Borrador" && <BotonMini icon={Check} label="Emitir" onClick={() => cambiarEstado(r, "Emitida")} />}
-                {r.estado === "Emitida" && <BotonMini icon={Check} label="Dispensada" onClick={() => cambiarEstado(r, "Dispensada")} />}
+                {r.estado === "Borrador" && (
+                  <BotonMini
+                    icon={Check}
+                    label="Emitir"
+                    onClick={() => cambiarEstado(r, "Emitida")}
+                  />
+                )}
+                {r.estado === "Emitida" && (
+                  <BotonMini
+                    icon={Check}
+                    label="Dispensada"
+                    onClick={() => cambiarEstado(r, "Dispensada")}
+                  />
+                )}
                 {(r.estado === "Borrador" || r.estado === "Emitida") && (
                   <BotonMini icon={X} label="Anular" onClick={() => cambiarEstado(r, "Anulada")} />
                 )}
@@ -3389,10 +4692,17 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             onCancel={() => setAbierto(false)}
             onSubmit={(nueva) => {
               // TODO backend: POST /pacientes/:id/recetas (el número y la firma digital los asigna el servidor)
-              const siguiente = datos.recetas.reduce((max, r) => Math.max(max, Number(r.numero.replace(/\D/g, "")) || 0), 0) + 1;
+              const siguiente =
+                datos.recetas.reduce(
+                  (max, r) => Math.max(max, Number(r.numero.replace(/\D/g, "")) || 0),
+                  0,
+                ) + 1;
               const numero = `RC-${String(siguiente).padStart(4, "0")}`;
               const id = Date.now();
-              cambiar("recetas", (prev) => [...prev, { ...nueva, id, numero, estado: "Borrador" as const }]);
+              cambiar("recetas", (prev) => [
+                ...prev,
+                { ...nueva, id, numero, estado: "Borrador" as const },
+              ]);
               setAbierto(false);
               setVerId(id);
               onToast(`Receta ${numero} creada`);
@@ -3437,7 +4747,8 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 function iconoEstudio(tipo: string): LucideIcon {
   if (tipo.startsWith("Fotografía")) return Camera;
   if (tipo.startsWith("Tomografía")) return Activity;
-  if (tipo.includes("Bitewing") || tipo.includes("Cefalométrica") || tipo.includes("Oclusal")) return ScanLine;
+  if (tipo.includes("Bitewing") || tipo.includes("Cefalométrica") || tipo.includes("Oclusal"))
+    return ScanLine;
   return FileText;
 }
 
@@ -3452,8 +4763,20 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
   if (tipo.includes("panorámica") || tipo.includes("Cefalométrica")) {
     contenido = (
       <g>
-        <path d="M18 34 Q60 6 102 34" fill="none" stroke={hueso} strokeOpacity="0.25" strokeWidth="10" />
-        <path d="M18 56 Q60 82 102 56" fill="none" stroke={hueso} strokeOpacity="0.25" strokeWidth="10" />
+        <path
+          d="M18 34 Q60 6 102 34"
+          fill="none"
+          stroke={hueso}
+          strokeOpacity="0.25"
+          strokeWidth="10"
+        />
+        <path
+          d="M18 56 Q60 82 102 56"
+          fill="none"
+          stroke={hueso}
+          strokeOpacity="0.25"
+          strokeWidth="10"
+        />
         {Array.from({ length: 10 }, (_, i) => {
           const x = 22 + i * 8.4;
           const yTop = 30 - Math.sin((i / 9) * Math.PI) * 12;
@@ -3472,7 +4795,11 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
       <g>
         {[36, 56, 76].map((x, i) => (
           <g key={x}>
-            <path d={`M${x} 20 q0 -8 8 -8 q8 0 8 8 v10 q0 4 -3 6 l-2 26 q-1 4 -3 0 l-1 -18 l-1 18 q-2 4 -3 0 l-2 -26 q-3 -2 -3 -6 z`} fill={diente} opacity={i === 1 ? 0.95 : 0.7} />
+            <path
+              d={`M${x} 20 q0 -8 8 -8 q8 0 8 8 v10 q0 4 -3 6 l-2 26 q-1 4 -3 0 l-1 -18 l-1 18 q-2 4 -3 0 l-2 -26 q-3 -2 -3 -6 z`}
+              fill={diente}
+              opacity={i === 1 ? 0.95 : 0.7}
+            />
             {i === 1 && <circle cx={x + 11} cy="22" r="3" fill="#0b1220" opacity="0.55" />}
           </g>
         ))}
@@ -3492,10 +4819,45 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
   } else if (tipo.startsWith("Tomografía")) {
     contenido = (
       <g>
-        <ellipse cx="60" cy="40" rx="34" ry="26" fill="none" stroke={hueso} strokeOpacity="0.5" strokeWidth="3" />
-        <ellipse cx="60" cy="40" rx="22" ry="16" fill="none" stroke={diente} strokeOpacity="0.8" strokeWidth="4" strokeDasharray="5 3" />
-        <line x1="20" y1="40" x2="100" y2="40" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
-        <line x1="60" y1="10" x2="60" y2="70" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
+        <ellipse
+          cx="60"
+          cy="40"
+          rx="34"
+          ry="26"
+          fill="none"
+          stroke={hueso}
+          strokeOpacity="0.5"
+          strokeWidth="3"
+        />
+        <ellipse
+          cx="60"
+          cy="40"
+          rx="22"
+          ry="16"
+          fill="none"
+          stroke={diente}
+          strokeOpacity="0.8"
+          strokeWidth="4"
+          strokeDasharray="5 3"
+        />
+        <line
+          x1="20"
+          y1="40"
+          x2="100"
+          y2="40"
+          stroke="#a78bfa"
+          strokeOpacity="0.6"
+          strokeWidth="1"
+        />
+        <line
+          x1="60"
+          y1="10"
+          x2="60"
+          y2="70"
+          stroke="#a78bfa"
+          strokeOpacity="0.6"
+          strokeWidth="1"
+        />
       </g>
     );
   } else if (esFoto) {
@@ -3503,7 +4865,15 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
       <g>
         <path d="M22 36 Q60 70 98 36 Q60 50 22 36 Z" fill="#f472b6" opacity="0.55" />
         {Array.from({ length: 8 }, (_, i) => (
-          <rect key={i} x={30 + i * 7.5} y={37 + Math.abs(i - 3.5) * -1} width="6.5" height="9" rx="2" fill="#ffffff" />
+          <rect
+            key={i}
+            x={30 + i * 7.5}
+            y={37 + Math.abs(i - 3.5) * -1}
+            width="6.5"
+            height="9"
+            rx="2"
+            fill="#ffffff"
+          />
         ))}
       </g>
     );
@@ -3511,7 +4881,12 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
     contenido = <path d="M46 16 h20 l12 12 v36 h-32 z" fill={diente} opacity="0.8" />;
   }
   return (
-    <svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 120 80"
+      preserveAspectRatio="xMidYMid slice"
+      className={className}
+      aria-hidden="true"
+    >
       <defs>
         <radialGradient id={id} cx="50%" cy="40%" r="75%">
           <stop offset="0%" stopColor={fondo[0]} />
@@ -3524,9 +4899,17 @@ function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?
   );
 }
 
-function VistaEstudio({ estudio, alto = "h-28" }: { estudio: EstudioPaciente | null; alto?: string }) {
+function VistaEstudio({
+  estudio,
+  alto = "h-28",
+}: {
+  estudio: EstudioPaciente | null;
+  alto?: string;
+}) {
   return (
-    <div className={`relative grid ${alto} place-items-center overflow-hidden rounded-lg border border-border bg-muted/40`}>
+    <div
+      className={`relative grid ${alto} place-items-center overflow-hidden rounded-lg border border-border bg-muted/40`}
+    >
       {estudio && estudio.url && esImagen(estudio.archivoNombre) ? (
         <img src={estudio.url} alt={estudio.tipo} className="h-full w-full object-contain" />
       ) : estudio ? (
@@ -3594,43 +4977,95 @@ function EstudioForm({
           <SelectField value={tipo} onChange={setTipo} options={TIPOS_ESTUDIO} />
         </Field>
         <Field label="Fecha">
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Zona">
-          <input value={zona} onChange={(e) => setZona(e.target.value)} className={INPUT} placeholder="Ej: maxilar superior" />
+          <input
+            value={zona}
+            onChange={(e) => setZona(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: maxilar superior"
+          />
         </Field>
         <Field label="Diente relacionado">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 16" />
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 16"
+          />
         </Field>
         <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Nombre del profesional"
+          />
         </Field>
         <Field label="Profesional solicitante">
-          <input list="dl-profesionales" value={solicitante} onChange={(e) => setSolicitante(e.target.value)} className={INPUT} placeholder="Nombre del solicitante" />
+          <input
+            list="dl-profesionales"
+            value={solicitante}
+            onChange={(e) => setSolicitante(e.target.value)}
+            className={INPUT}
+            placeholder="Nombre del solicitante"
+          />
         </Field>
         <Field label="Estado de informe">
-          <SelectField value={estadoInforme} onChange={(v) => setEstadoInforme(v as EstadoInforme)} options={ESTADOS_INFORME} />
+          <SelectField
+            value={estadoInforme}
+            onChange={(v) => setEstadoInforme(v as EstadoInforme)}
+            options={ESTADOS_INFORME}
+          />
         </Field>
         {tratamientos.length > 0 && (
           <Field label="Vincular a tratamiento">
             <SelectId
               value={tratamientoId}
               onChange={setTratamientoId}
-              opciones={tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre }))}
+              opciones={tratamientos.map((t) => ({
+                id: t.id,
+                label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre,
+              }))}
               placeholder="Sin vincular"
             />
           </Field>
         )}
       </div>
       <Field label="Diagnóstico / informe *">
-        <textarea required rows={3} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Hallazgos y diagnóstico…" />
+        <textarea
+          required
+          rows={3}
+          value={diagnostico}
+          onChange={(e) => setDiagnostico(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Hallazgos y diagnóstico…"
+        />
       </Field>
       <Field label="Observaciones">
-        <textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={TEXTAREA} placeholder="Observaciones clínicas…" />
+        <textarea
+          rows={2}
+          value={observaciones}
+          onChange={(e) => setObservaciones(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Observaciones clínicas…"
+        />
       </Field>
       <div>
         <span className="mb-1 block text-xs font-medium">Archivo adjunto</span>
-        <input ref={fileRef} type="file" className="hidden" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+        />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
@@ -3638,7 +5073,9 @@ function EstudioForm({
         >
           <Paperclip className="size-4 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 truncate">
-            {archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Adjuntar imagen o PDF (opcional)"}
+            {archivo
+              ? `${archivo.name} · ${formatearTamano(archivo.size)}`
+              : "Adjuntar imagen o PDF (opcional)"}
           </span>
         </button>
       </div>
@@ -3666,8 +5103,15 @@ function VisorEstudio({
   const [desplazamiento, setDesplazamiento] = useState({ x: 0, y: 0 });
   const [modoRecorte, setModoRecorte] = useState(false);
   // Recorte en % del área de la imagen (arriba, derecha, abajo, izquierda).
-  const [recorte, setRecorte] = useState<{ t: number; r: number; b: number; l: number } | null>(null);
-  const [seleccion, setSeleccion] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [recorte, setRecorte] = useState<{ t: number; r: number; b: number; l: number } | null>(
+    null,
+  );
+  const [seleccion, setSeleccion] = useState<{
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+  } | null>(null);
   const arrastre = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
   const marcoRef = useRef<HTMLDivElement>(null);
 
@@ -3708,13 +5152,17 @@ function VisorEstudio({
     transform: `translate(${desplazamiento.x}px, ${desplazamiento.y}px) rotate(${rotacion}deg) scale(${espejo ? -zoom : zoom}, ${zoom})`,
     filter: `brightness(${brillo}%) contrast(${contraste}%) ${invertido ? "invert(1)" : ""}`,
     transition: arrastre.current ? "none" : "transform 180ms ease, filter 180ms ease",
-    clipPath: recorte ? `inset(${recorte.t}% ${recorte.r}% ${recorte.b}% ${recorte.l}%)` : undefined,
+    clipPath: recorte
+      ? `inset(${recorte.t}% ${recorte.r}% ${recorte.b}% ${recorte.l}%)`
+      : undefined,
   };
   const esFoto = !!estudio.url && esImagen(estudio.archivoNombre);
 
   const herramienta = (activo: boolean) =>
     `flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors ${
-      activo ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+      activo
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
     }`;
 
   return (
@@ -3727,26 +5175,56 @@ function VisorEstudio({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{estudio.tipo}</p>
             <p className="text-[10px] text-muted-foreground">
-              {[formatearFecha(estudio.fecha), estudio.pieza || estudio.zona, estudio.profesional || estudio.solicitante].filter(Boolean).join(" · ")}
+              {[
+                formatearFecha(estudio.fecha),
+                estudio.pieza || estudio.zona,
+                estudio.profesional || estudio.solicitante,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5">
-              <button type="button" onClick={() => setZoom((z) => limitarZoom(z - 0.25))} aria-label="Alejar" className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => limitarZoom(z - 0.25))}
+                aria-label="Alejar"
+                className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary"
+              >
                 <ZoomOut className="size-3.5" />
               </button>
-              <span className="w-10 text-center text-[11px] font-semibold tabular-nums">{Math.round(zoom * 100)}%</span>
-              <button type="button" onClick={() => setZoom((z) => limitarZoom(z + 0.25))} aria-label="Acercar" className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary">
+              <span className="w-10 text-center text-[11px] font-semibold tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoom((z) => limitarZoom(z + 0.25))}
+                aria-label="Acercar"
+                className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary"
+              >
                 <ZoomIn className="size-3.5" />
               </button>
             </div>
-            <button type="button" className={herramienta(false)} onClick={() => setRotacion((r) => (r + 90) % 360)}>
+            <button
+              type="button"
+              className={herramienta(false)}
+              onClick={() => setRotacion((r) => (r + 90) % 360)}
+            >
               <RotateCw className="size-3.5" /> Rotar
             </button>
-            <button type="button" className={herramienta(espejo)} onClick={() => setEspejo((v) => !v)}>
+            <button
+              type="button"
+              className={herramienta(espejo)}
+              onClick={() => setEspejo((v) => !v)}
+            >
               <GitCompare className="size-3.5" /> Espejar
             </button>
-            <button type="button" className={herramienta(invertido)} onClick={() => setInvertido((v) => !v)}>
+            <button
+              type="button"
+              className={herramienta(invertido)}
+              onClick={() => setInvertido((v) => !v)}
+            >
               <ScanLine className="size-3.5" /> Invertir
             </button>
             <button
@@ -3761,15 +5239,25 @@ function VisorEstudio({
                 setSeleccion(null);
               }}
             >
-              <Square className="size-3.5" /> {recorte ? "Quitar recorte" : modoRecorte ? "Arrastrá sobre la imagen" : "Recortar"}
+              <Square className="size-3.5" />{" "}
+              {recorte ? "Quitar recorte" : modoRecorte ? "Arrastrá sobre la imagen" : "Recortar"}
             </button>
-            <button type="button" className={herramienta(pantallaCompleta)} onClick={() => setPantallaCompleta((v) => !v)}>
+            <button
+              type="button"
+              className={herramienta(pantallaCompleta)}
+              onClick={() => setPantallaCompleta((v) => !v)}
+            >
               <Maximize2 className="size-3.5" /> {pantallaCompleta ? "Salir" : "Pantalla completa"}
             </button>
             <button type="button" className={herramienta(false)} onClick={restablecer}>
               <RefreshCcw className="size-3.5" /> Restablecer
             </button>
-            <button type="button" onClick={onClose} aria-label="Cerrar visor" className="grid size-7 place-items-center rounded-full border border-border bg-card hover:bg-muted">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar visor"
+              className="grid size-7 place-items-center rounded-full border border-border bg-card hover:bg-muted"
+            >
               <X className="size-3.5" />
             </button>
           </div>
@@ -3778,15 +5266,31 @@ function VisorEstudio({
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-border bg-card px-3 py-1.5 text-[11px]">
           <label className="flex items-center gap-2">
             <SunMedium className="size-3.5 text-primary" /> Brillo
-            <input type="range" min={40} max={180} value={brillo} onChange={(e) => setBrillo(Number(e.target.value))} className="w-28 accent-[var(--color-primary)]" />
+            <input
+              type="range"
+              min={40}
+              max={180}
+              value={brillo}
+              onChange={(e) => setBrillo(Number(e.target.value))}
+              className="w-28 accent-[var(--color-primary)]"
+            />
             <span className="w-9 tabular-nums text-muted-foreground">{brillo}%</span>
           </label>
           <label className="flex items-center gap-2">
             <Contrast className="size-3.5 text-primary" /> Contraste
-            <input type="range" min={40} max={200} value={contraste} onChange={(e) => setContraste(Number(e.target.value))} className="w-28 accent-[var(--color-primary)]" />
+            <input
+              type="range"
+              min={40}
+              max={200}
+              value={contraste}
+              onChange={(e) => setContraste(Number(e.target.value))}
+              className="w-28 accent-[var(--color-primary)]"
+            />
             <span className="w-9 tabular-nums text-muted-foreground">{contraste}%</span>
           </label>
-          <span className="ml-auto hidden text-muted-foreground md:inline">Rueda del mouse: zoom · Arrastrar: mover · Teclas + − R</span>
+          <span className="ml-auto hidden text-muted-foreground md:inline">
+            Rueda del mouse: zoom · Arrastrar: mover · Teclas + − R
+          </span>
         </div>
 
         <div
@@ -3798,7 +5302,12 @@ function VisorEstudio({
               setSeleccion({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
               return;
             }
-            arrastre.current = { x: e.clientX, y: e.clientY, dx: desplazamiento.x, dy: desplazamiento.y };
+            arrastre.current = {
+              x: e.clientX,
+              y: e.clientY,
+              dx: desplazamiento.x,
+              dy: desplazamiento.y,
+            };
           }}
           onMouseMove={(e) => {
             if (modoRecorte && seleccion && e.buttons === 1) {
@@ -3807,7 +5316,8 @@ function VisorEstudio({
               return;
             }
             const a = arrastre.current;
-            if (a && e.buttons === 1) setDesplazamiento({ x: a.dx + e.clientX - a.x, y: a.dy + e.clientY - a.y });
+            if (a && e.buttons === 1)
+              setDesplazamiento({ x: a.dx + e.clientX - a.x, y: a.dy + e.clientY - a.y });
           }}
           onMouseUp={() => {
             arrastre.current = null;
@@ -3826,9 +5336,18 @@ function VisorEstudio({
           }}
         >
           <div className="absolute inset-0 grid place-items-center p-6">
-            <div ref={marcoRef} className="relative aspect-[4/3] w-[min(92%,calc((100vh-260px)*4/3))] select-none" style={estiloImagen}>
+            <div
+              ref={marcoRef}
+              className="relative aspect-[4/3] w-[min(92%,calc((100vh-260px)*4/3))] select-none"
+              style={estiloImagen}
+            >
               {esFoto ? (
-                <img src={estudio.url} alt={estudio.tipo} draggable={false} className="size-full rounded-xl object-contain" />
+                <img
+                  src={estudio.url}
+                  alt={estudio.tipo}
+                  draggable={false}
+                  className="size-full rounded-xl object-contain"
+                />
               ) : (
                 <IlustracionEstudio tipo={estudio.tipo} className="size-full rounded-xl" />
               )}
@@ -3845,7 +5364,11 @@ function VisorEstudio({
               />
             )}
           </div>
-          {!esFoto && <span className="absolute bottom-3 left-3 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white">Imagen de ejemplo</span>}
+          {!esFoto && (
+            <span className="absolute bottom-3 left-3 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white">
+              Imagen de ejemplo
+            </span>
+          )}
           {modoRecorte && (
             <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white shadow">
               Arrastrá para marcar el área a recortar
@@ -3857,10 +5380,14 @@ function VisorEstudio({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tono={TONO_INFORME[estudio.estadoInforme]}>{estudio.estadoInforme}</Badge>
-              {(estudio.pieza || estudio.zona) && <Badge tono="primary">Pieza / zona {estudio.pieza || estudio.zona}</Badge>}
+              {(estudio.pieza || estudio.zona) && (
+                <Badge tono="primary">Pieza / zona {estudio.pieza || estudio.zona}</Badge>
+              )}
             </div>
             <p className="whitespace-pre-line text-xs">{estudio.diagnostico}</p>
-            {estudio.observaciones && <p className="text-[11px] text-muted-foreground">{estudio.observaciones}</p>}
+            {estudio.observaciones && (
+              <p className="text-[11px] text-muted-foreground">{estudio.observaciones}</p>
+            )}
           </div>
           {anotaciones.length > 0 && (
             <div className="rounded-lg border border-primary/15 bg-primary/[0.04] p-2 text-xs">
@@ -3898,7 +5425,10 @@ function GaleriaTab({
     (s) =>
       (!filtroTipo || s.tipo === filtroTipo) &&
       (!filtroEstado || s.estadoInforme === filtroEstado) &&
-      (!q || `${s.tipo} ${s.zona} ${s.pieza ?? ""} ${s.diagnostico} ${s.solicitante}`.toLowerCase().includes(q)),
+      (!q ||
+        `${s.tipo} ${s.zona} ${s.pieza ?? ""} ${s.diagnostico} ${s.solicitante}`
+          .toLowerCase()
+          .includes(q)),
   );
 
   if (todos.length === 0) {
@@ -3917,7 +5447,9 @@ function GaleriaTab({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">Estudios del paciente</p>
-          <p className="text-xs text-muted-foreground">Ordenados del más reciente al más antiguo.</p>
+          <p className="text-xs text-muted-foreground">
+            Ordenados del más reciente al más antiguo.
+          </p>
         </div>
         <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
           {estudios.length} {estudios.length === 1 ? "estudio" : "estudios"}
@@ -3932,7 +5464,12 @@ function GaleriaTab({
           className={`${INPUT} min-w-48 flex-1`}
         />
         <div className="w-52">
-          <SelectField value={filtroTipo} onChange={setFiltroTipo} options={tipos} placeholder="Todos los tipos" />
+          <SelectField
+            value={filtroTipo}
+            onChange={setFiltroTipo}
+            options={tipos}
+            placeholder="Todos los tipos"
+          />
         </div>
         <div className="flex gap-1">
           {(["", ...ESTADOS_INFORME] as const).map((e) => (
@@ -3942,7 +5479,9 @@ function GaleriaTab({
               onClick={() => setFiltroEstado(e)}
               aria-pressed={filtroEstado === e}
               className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                filtroEstado === e ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:text-foreground"
+                filtroEstado === e
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
               {e || "Todos"}
@@ -3963,10 +5502,7 @@ function GaleriaTab({
           const tieneArchivo = Boolean(s.url && s.archivoNombre);
 
           return (
-            <li
-              key={s.id}
-              className={`${ESTUDIO_ITEM} hover:-translate-y-0.5`}
-            >
+            <li key={s.id} className={`${ESTUDIO_ITEM} hover:-translate-y-0.5`}>
               <div className="flex min-h-[108px] gap-2.5 p-2">
                 <button
                   type="button"
@@ -3986,11 +5522,16 @@ function GaleriaTab({
                         <span className="mx-auto grid size-8 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
                           <Icono className="size-3.5" />
                         </span>
-                        <p className="mt-1 text-[9px] font-medium text-muted-foreground">Archivo adjunto</p>
+                        <p className="mt-1 text-[9px] font-medium text-muted-foreground">
+                          Archivo adjunto
+                        </p>
                       </div>
                     </div>
                   ) : (
-                    <IlustracionEstudio tipo={s.tipo} className="h-full w-full transition-transform duration-300 group-hover:scale-[1.04]" />
+                    <IlustracionEstudio
+                      tipo={s.tipo}
+                      className="h-full w-full transition-transform duration-300 group-hover:scale-[1.04]"
+                    />
                   )}
                   <span className="absolute bottom-1 right-1 rounded-full border border-border/70 bg-background/90 px-1.5 py-0.5 text-[9px] font-semibold text-foreground shadow-sm backdrop-blur transition-colors group-hover:border-primary/30 group-hover:text-primary">
                     Ver
@@ -4000,7 +5541,9 @@ function GaleriaTab({
                 <div className="min-w-0 flex-1 py-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold leading-5 text-foreground">{s.tipo}</p>
+                      <p className="truncate text-[13px] font-semibold leading-5 text-foreground">
+                        {s.tipo}
+                      </p>
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                         {[formatearFecha(s.fecha), s.zona].filter(Boolean).join(" · ")}
                       </p>
@@ -4024,7 +5567,11 @@ function GaleriaTab({
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <BotonMini compacto icon={Eye} label="Abrir" onClick={() => onVer(s.id)} />
-                      <BotonBorrar compacto etiqueta="Eliminar estudio" onClick={() => onBorrar(s)} />
+                      <BotonBorrar
+                        compacto
+                        etiqueta="Eliminar estudio"
+                        onClick={() => onBorrar(s)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -4041,7 +5588,9 @@ function GaleriaTab({
 function CompararTab({ estudios }: { estudios: EstudioPaciente[] }) {
   const [inicialId, setInicialId] = useState<number | null>(null);
   const [actualId, setActualId] = useState<number | null>(null);
-  const ordenados = [...estudios].sort((a, b) => `${a.fecha}${a.id}`.localeCompare(`${b.fecha}${b.id}`));
+  const ordenados = [...estudios].sort((a, b) =>
+    `${a.fecha}${a.id}`.localeCompare(`${b.fecha}${b.id}`),
+  );
 
   if (ordenados.length < 2) {
     return (
@@ -4055,10 +5604,25 @@ function CompararTab({ estudios }: { estudios: EstudioPaciente[] }) {
 
   const inicial = ordenados.find((s) => s.id === inicialId) ?? ordenados[0];
   const actual = ordenados.find((s) => s.id === actualId) ?? ordenados[ordenados.length - 1];
-  const opciones = ordenados.map((s) => ({ id: s.id, label: `${s.tipo} · ${formatearFecha(s.fecha)}` }));
-  const dias = Math.round((new Date(actual.fecha).getTime() - new Date(inicial.fecha).getTime()) / 86400000);
+  const opciones = ordenados.map((s) => ({
+    id: s.id,
+    label: `${s.tipo} · ${formatearFecha(s.fecha)}`,
+  }));
+  const dias = Math.round(
+    (new Date(actual.fecha).getTime() - new Date(inicial.fecha).getTime()) / 86400000,
+  );
 
-  const Panel = ({ titulo, estudio, valor, onChange }: { titulo: string; estudio: EstudioPaciente; valor: number; onChange: (v: number | null) => void }) => (
+  const Panel = ({
+    titulo,
+    estudio,
+    valor,
+    onChange,
+  }: {
+    titulo: string;
+    estudio: EstudioPaciente;
+    valor: number;
+    onChange: (v: number | null) => void;
+  }) => (
     <div className={`${ITEM} space-y-2`}>
       <Field label={titulo}>
         <SelectId value={valor} onChange={onChange} opciones={opciones} />
@@ -4082,12 +5646,19 @@ function CompararTab({ estudios }: { estudios: EstudioPaciente[] }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">Comparación de evolución</p>
-          <p className="text-xs text-muted-foreground">Elegí dos estudios para comparar la evolución del paciente.</p>
+          <p className="text-xs text-muted-foreground">
+            Elegí dos estudios para comparar la evolución del paciente.
+          </p>
         </div>
         <Badge tono="primary">{Math.abs(dias)} días entre estudios</Badge>
       </div>
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-        <Panel titulo="Estudio inicial" estudio={inicial} valor={inicial.id} onChange={setInicialId} />
+        <Panel
+          titulo="Estudio inicial"
+          estudio={inicial}
+          valor={inicial.id}
+          onChange={setInicialId}
+        />
         <Panel titulo="Estudio actual" estudio={actual} valor={actual.id} onChange={setActualId} />
       </div>
     </div>
@@ -4123,7 +5694,9 @@ function AnotacionesTab({
   }
 
   const estudio = datos.estudios.find((s) => s.id === estudioId) ?? datos.estudios[0];
-  const lista = [...datos.anotaciones].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.anotaciones].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
 
   const guardar = (e: FormEvent) => {
     e.preventDefault();
@@ -4150,7 +5723,9 @@ function AnotacionesTab({
     <div className="space-y-3">
       <div>
         <p className="text-sm font-semibold">Anotaciones y mediciones clínicas</p>
-        <p className="text-xs text-muted-foreground">Registrá medidas, observaciones y hallazgos sobre cada estudio.</p>
+        <p className="text-xs text-muted-foreground">
+          Registrá medidas, observaciones y hallazgos sobre cada estudio.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_17rem]">
@@ -4158,7 +5733,9 @@ function AnotacionesTab({
           <VistaEstudio estudio={estudio} alto="h-52" />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] text-muted-foreground">
-              {[estudio.tipo, formatearFecha(estudio.fecha), estudio.zona].filter(Boolean).join(" · ")}
+              {[estudio.tipo, formatearFecha(estudio.fecha), estudio.zona]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
             <BotonMini icon={Eye} label="Abrir visor" onClick={() => onVer(estudio.id)} />
           </div>
@@ -4169,20 +5746,42 @@ function AnotacionesTab({
             <SelectId
               value={estudio.id}
               onChange={setEstudioId}
-              opciones={datos.estudios.map((s) => ({ id: s.id, label: `${s.tipo} · ${formatearFecha(s.fecha)}` }))}
+              opciones={datos.estudios.map((s) => ({
+                id: s.id,
+                label: `${s.tipo} · ${formatearFecha(s.fecha)}`,
+              }))}
             />
           </Field>
           <Field label="Tipo de medición">
             <SelectField value={tipoMedicion} onChange={setTipoMedicion} options={TIPOS_MEDICION} />
           </Field>
           <Field label="Medición *">
-            <input required value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT} placeholder="Ej: 12.4 mm" />
+            <input
+              required
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              className={INPUT}
+              placeholder="Ej: 12.4 mm"
+            />
           </Field>
           <Field label="Profesional">
-            <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+            <input
+              list="dl-profesionales"
+              value={profesional}
+              onChange={(e) => setProfesional(e.target.value)}
+              className={INPUT}
+              placeholder="Nombre del profesional"
+            />
           </Field>
           <Field label="Observación clínica *">
-            <textarea required rows={3} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Hallazgos, seguimiento…" />
+            <textarea
+              required
+              rows={3}
+              value={observacion}
+              onChange={(e) => setObservacion(e.target.value)}
+              className={TEXTAREA}
+              placeholder="Hallazgos, seguimiento…"
+            />
           </Field>
           <button type="submit" className={`${BTN_PRIMARIO} w-full`}>
             <Plus className="size-4" />
@@ -4259,7 +5858,9 @@ function VinculadosTab({
     <div className="space-y-3">
       <div>
         <p className="text-sm font-semibold">Estudios vinculados al tratamiento</p>
-        <p className="text-xs text-muted-foreground">Asociá cada estudio al tratamiento que lo requiere.</p>
+        <p className="text-xs text-muted-foreground">
+          Asociá cada estudio al tratamiento que lo requiere.
+        </p>
       </div>
 
       <ul className="space-y-2.5">
@@ -4271,7 +5872,9 @@ function VinculadosTab({
                 <p className="text-sm font-semibold">{t.nombre}</p>
                 {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
                 <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
-                {t.profesional && <span className="text-[11px] text-muted-foreground">{t.profesional}</span>}
+                {t.profesional && (
+                  <span className="text-[11px] text-muted-foreground">{t.profesional}</span>
+                )}
               </div>
               {vinculados.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
@@ -4280,7 +5883,10 @@ function VinculadosTab({
               ) : (
                 <ul className="divide-y divide-border rounded-lg border border-border bg-background/70 text-xs">
                   {vinculados.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                    <li
+                      key={s.id}
+                      className="flex items-center justify-between gap-3 px-2.5 py-1.5"
+                    >
                       <span className="min-w-0 truncate">
                         <span className="font-semibold">{s.tipo}</span>
                         <span className="text-muted-foreground"> · {formatearFecha(s.fecha)}</span>
@@ -4298,20 +5904,31 @@ function VinculadosTab({
 
       {sinVincular.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estudios sin vincular</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Estudios sin vincular
+          </p>
           <ul className="space-y-2">
             {sinVincular.map((s) => (
-              <li key={s.id} className={`${ITEM} grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_14rem]`}>
+              <li
+                key={s.id}
+                className={`${ITEM} grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_14rem]`}
+              >
                 <p className="min-w-0 truncate text-sm">
                   <span className="font-semibold">{s.tipo}</span>
-                  <span className="text-xs text-muted-foreground"> · {formatearFecha(s.fecha)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {" "}
+                    · {formatearFecha(s.fecha)}
+                  </span>
                 </p>
                 <SelectId
                   value={null}
                   onChange={(v) => {
                     if (v !== null) vincular(s, v);
                   }}
-                  opciones={datos.tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre }))}
+                  opciones={datos.tratamientos.map((t) => ({
+                    id: t.id,
+                    label: t.pieza ? `${t.nombre} · pieza ${t.pieza}` : t.nombre,
+                  }))}
                   placeholder="Vincular a tratamiento…"
                 />
               </li>
@@ -4328,7 +5945,12 @@ function DiagnosticoForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (d: Pick<DiagnosticoPaciente, "titulo" | "descripcion" | "pieza" | "profesional" | "observacion">) => void;
+  onSubmit: (
+    d: Pick<
+      DiagnosticoPaciente,
+      "titulo" | "descripcion" | "pieza" | "profesional" | "observacion"
+    >,
+  ) => void;
   onCancel: () => void;
 }) {
   const [titulo, setTitulo] = useState("");
@@ -4351,21 +5973,52 @@ function DiagnosticoForm({
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Diagnóstico *">
-        <input autoFocus required value={titulo} onChange={(e) => setTitulo(e.target.value)} className={INPUT} placeholder="Ej: Caries profunda, periodontitis" />
+        <input
+          autoFocus
+          required
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className={INPUT}
+          placeholder="Ej: Caries profunda, periodontitis"
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Pieza dental">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 36" />
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 36"
+          />
         </Field>
         <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Nombre del profesional"
+          />
         </Field>
       </div>
       <Field label="Descripción *">
-        <textarea required rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className={TEXTAREA} placeholder="Hallazgos y descripción del diagnóstico…" />
+        <textarea
+          required
+          rows={3}
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Hallazgos y descripción del diagnóstico…"
+        />
       </Field>
       <Field label="Observación">
-        <textarea rows={2} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Indicaciones y seguimiento…" />
+        <textarea
+          rows={2}
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Indicaciones y seguimiento…"
+        />
       </Field>
       <Acciones etiqueta="Guardar diagnóstico" onCancel={onCancel} />
     </form>
@@ -4383,7 +6036,9 @@ function DiagnosticoTab({
 }) {
   const [abierto, setAbierto] = useState(false);
   const [filtro, setFiltro] = useState<"todos" | EstadoDiagnostico>("todos");
-  const lista = [...datos.diagnosticos].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.diagnosticos].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
 
   const activos = datos.diagnosticos.filter((d) => d.estado === "Activo").length;
   const resueltos = datos.diagnosticos.filter((d) => d.estado === "Resuelto").length;
@@ -4411,7 +6066,9 @@ function DiagnosticoTab({
           </span>
           <div>
             <p className="text-sm font-semibold">Diagnóstico registrado</p>
-            <p className="text-xs text-muted-foreground">Diagnósticos del paciente con su estado y seguimiento.</p>
+            <p className="text-xs text-muted-foreground">
+              Diagnósticos del paciente con su estado y seguimiento.
+            </p>
           </div>
         </div>
         <button type="button" onClick={() => setAbierto(true)} className={BTN_PRIMARIO}>
@@ -4422,9 +6079,23 @@ function DiagnosticoTab({
 
       {/* Resumen */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <ResumenCuenta etiqueta="Total" valor={String(datos.diagnosticos.length)} icon={Stethoscope} />
-        <ResumenCuenta etiqueta="Activos" valor={String(activos)} icon={Activity} tono="text-primary" />
-        <ResumenCuenta etiqueta="Resueltos" valor={String(resueltos)} icon={Check} tono="text-emerald-600" />
+        <ResumenCuenta
+          etiqueta="Total"
+          valor={String(datos.diagnosticos.length)}
+          icon={Stethoscope}
+        />
+        <ResumenCuenta
+          etiqueta="Activos"
+          valor={String(activos)}
+          icon={Activity}
+          tono="text-primary"
+        />
+        <ResumenCuenta
+          etiqueta="Resueltos"
+          valor={String(resueltos)}
+          icon={Check}
+          tono="text-emerald-600"
+        />
       </div>
 
       {datos.diagnosticos.length === 0 ? (
@@ -4467,7 +6138,9 @@ function DiagnosticoTab({
           {visibles.length === 0 ? (
             <EstadoVacio
               icon={Activity}
-              titulo={filtro === "Activo" ? "Sin diagnósticos activos" : "Sin diagnósticos resueltos"}
+              titulo={
+                filtro === "Activo" ? "Sin diagnósticos activos" : "Sin diagnósticos resueltos"
+              }
               texto="Cambiá el filtro para ver los demás diagnósticos."
             />
           ) : (
@@ -4517,9 +6190,17 @@ function DiagnosticoTab({
                           {[d.profesional, formatearFecha(d.fecha)].filter(Boolean).join(" · ")}
                         </p>
                         {activo ? (
-                          <BotonMini icon={Check} label="Marcar como resuelto" onClick={() => cambiarEstado(d, "Resuelto")} />
+                          <BotonMini
+                            icon={Check}
+                            label="Marcar como resuelto"
+                            onClick={() => cambiarEstado(d, "Resuelto")}
+                          />
                         ) : (
-                          <BotonMini icon={Activity} label="Reactivar" onClick={() => cambiarEstado(d, "Activo")} />
+                          <BotonMini
+                            icon={Activity}
+                            label="Reactivar"
+                            onClick={() => cambiarEstado(d, "Activo")}
+                          />
                         )}
                       </div>
                     </div>
@@ -4572,21 +6253,95 @@ function FotografiaForm({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     if (!archivo) return;
-    onSubmit({ fecha, profesional: profesional.trim(), tipo, observacion: observacion.trim(), tratamientoId, pieza: pieza.trim(), archivoNombre: archivo.name, url: URL.createObjectURL(archivo) });
+    onSubmit({
+      fecha,
+      profesional: profesional.trim(),
+      tipo,
+      observacion: observacion.trim(),
+      tratamientoId,
+      pieza: pieza.trim(),
+      archivoNombre: archivo.name,
+      url: URL.createObjectURL(archivo),
+    });
   };
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <Field label="Tipo *"><SelectField value={tipo} onChange={setTipo} options={TIPOS_FOTOGRAFIA} /></Field>
-        <Field label="Fecha"><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} /></Field>
-        <Field label="Profesional"><input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field>
-        <Field label="Diente relacionado"><input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21" /></Field>
-        <Field label="Tratamiento relacionado"><SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.pieza ? `${t.nombre} · ${t.pieza}` : t.nombre }))} placeholder="Sin vincular" /></Field>
+        <Field label="Tipo *">
+          <SelectField value={tipo} onChange={setTipo} options={TIPOS_FOTOGRAFIA} />
+        </Field>
+        <Field label="Fecha">
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
+        </Field>
+        <Field label="Profesional">
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Profesional"
+          />
+        </Field>
+        <Field label="Diente relacionado">
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 21"
+          />
+        </Field>
+        <Field label="Tratamiento relacionado">
+          <SelectId
+            value={tratamientoId}
+            onChange={setTratamientoId}
+            opciones={tratamientos.map((t) => ({
+              id: t.id,
+              label: t.pieza ? `${t.nombre} · ${t.pieza}` : t.nombre,
+            }))}
+            placeholder="Sin vincular"
+          />
+        </Field>
       </div>
-      <Field label="Observación"><textarea rows={2} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Observación clínica de la fotografía…" /></Field>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
-      <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"><Camera className="size-4 text-primary" /><span className="min-w-0 flex-1 truncate">{archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Cargar fotografía clínica"}</span><Upload className="size-4 text-muted-foreground" /></button>
-      {!archivo && <p className="text-[11px] text-muted-foreground">La fotografía se guarda localmente en esta experiencia frontend hasta integrar almacenamiento.</p>}
+      <Field label="Observación">
+        <textarea
+          rows={2}
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Observación clínica de la fotografía…"
+        />
+      </Field>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"
+      >
+        <Camera className="size-4 text-primary" />
+        <span className="min-w-0 flex-1 truncate">
+          {archivo
+            ? `${archivo.name} · ${formatearTamano(archivo.size)}`
+            : "Cargar fotografía clínica"}
+        </span>
+        <Upload className="size-4 text-muted-foreground" />
+      </button>
+      {!archivo && (
+        <p className="text-[11px] text-muted-foreground">
+          La fotografía se guarda localmente en esta experiencia frontend hasta integrar
+          almacenamiento.
+        </p>
+      )}
       <Acciones etiqueta="Guardar fotografía" onCancel={onCancel} />
     </form>
   );
@@ -4598,15 +6353,83 @@ function CompararFotografias({ fotografias }: { fotografias: FotografiaClinica[]
   const [modo, setModo] = useState<"lado" | "slider">("lado");
   const [posicion, setPosicion] = useState(50);
   const antes = fotografias.find((f) => f.id === antesId) ?? fotografias[0];
-  const despues = fotografias.find((f) => f.id === despuesId) ?? fotografias[fotografias.length - 1];
-  if (fotografias.length < 2) return <EstadoVacio icon={GitCompare} titulo="Comparación de fotografías" texto="Cargá al menos dos fotografías clínicas para comparar antes y después." />;
-  const opciones = fotografias.map((f) => ({ id: f.id, label: `${f.tipo} · ${formatearFecha(f.fecha)}` }));
-  const imagen = (f: FotografiaClinica, className = "") => f?.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className={`h-full w-full object-contain ${className}`} /> : <IlustracionEstudio tipo="Fotografía clínica" className="h-full w-full" />;
+  const despues =
+    fotografias.find((f) => f.id === despuesId) ?? fotografias[fotografias.length - 1];
+  if (fotografias.length < 2)
+    return (
+      <EstadoVacio
+        icon={GitCompare}
+        titulo="Comparación de fotografías"
+        texto="Cargá al menos dos fotografías clínicas para comparar antes y después."
+      />
+    );
+  const opciones = fotografias.map((f) => ({
+    id: f.id,
+    label: `${f.tipo} · ${formatearFecha(f.fecha)}`,
+  }));
+  const imagen = (f: FotografiaClinica, className = "") =>
+    f?.url && esImagen(f.archivoNombre) ? (
+      <img src={f.url} alt={f.tipo} className={`h-full w-full object-contain ${className}`} />
+    ) : (
+      <IlustracionEstudio tipo="Fotografía clínica" className="h-full w-full" />
+    );
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2"><Field label="Antes"><SelectId value={antes.id} onChange={setAntesId} opciones={opciones} /></Field><Field label="Después"><SelectId value={despues.id} onChange={setDespuesId} opciones={opciones} /></Field></div>
-      <div className="flex flex-wrap gap-1.5"><BotonMini label="Lado a lado" onClick={() => setModo("lado")} /><BotonMini label="Slider antes / después" onClick={() => setModo("slider")} /></div>
-      {modo === "lado" ? <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2"><div className={ITEM}><p className="mb-1 text-xs font-semibold">Antes · {antes.tipo}</p><div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(antes)}</div></div><div className={ITEM}><p className="mb-1 text-xs font-semibold">Después · {despues.tipo}</p><div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(despues)}</div></div></div> : <div className={`${ITEM} space-y-2`}><div className="relative h-80 overflow-hidden rounded-xl border border-border bg-muted/30">{imagen(despues)}<div className="absolute inset-y-0 left-0 overflow-hidden border-r-2 border-white/80 bg-background/20" style={{ width: `${posicion}%` }}>{imagen(antes)}</div><span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">Antes</span><span className="absolute right-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">Después</span></div><input aria-label="Posición de comparación" type="range" min={0} max={100} value={posicion} onChange={(e) => setPosicion(Number(e.target.value))} className="w-full" /></div>}
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+        <Field label="Antes">
+          <SelectId value={antes.id} onChange={setAntesId} opciones={opciones} />
+        </Field>
+        <Field label="Después">
+          <SelectId value={despues.id} onChange={setDespuesId} opciones={opciones} />
+        </Field>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <BotonMini label="Lado a lado" onClick={() => setModo("lado")} />
+        <BotonMini label="Slider antes / después" onClick={() => setModo("slider")} />
+      </div>
+      {modo === "lado" ? (
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+          <div className={ITEM}>
+            <p className="mb-1 text-xs font-semibold">Antes · {antes.tipo}</p>
+            <div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">
+              {imagen(antes)}
+            </div>
+          </div>
+          <div className={ITEM}>
+            <p className="mb-1 text-xs font-semibold">Después · {despues.tipo}</p>
+            <div className="h-64 overflow-hidden rounded-xl border border-border bg-muted/30">
+              {imagen(despues)}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className={`${ITEM} space-y-2`}>
+          <div className="relative h-80 overflow-hidden rounded-xl border border-border bg-muted/30">
+            {imagen(despues)}
+            <div
+              className="absolute inset-y-0 left-0 overflow-hidden border-r-2 border-white/80 bg-background/20"
+              style={{ width: `${posicion}%` }}
+            >
+              {imagen(antes)}
+            </div>
+            <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">
+              Antes
+            </span>
+            <span className="absolute right-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[10px] font-semibold shadow">
+              Después
+            </span>
+          </div>
+          <input
+            aria-label="Posición de comparación"
+            type="range"
+            min={0}
+            max={100}
+            value={posicion}
+            onChange={(e) => setPosicion(Number(e.target.value))}
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -4632,44 +6455,341 @@ function SimulacionForm({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     if (!fotografiaId) return;
-    onSubmit({ fecha: hoyISO(), profesional: profesional.trim(), tipo, fotografiaId, tratamientoId, imagenSimuladaNombre: archivo?.name ?? "", imagenSimuladaUrl: archivo ? URL.createObjectURL(archivo) : "", estado: "Preparada", observacion: observacion.trim() });
+    onSubmit({
+      fecha: hoyISO(),
+      profesional: profesional.trim(),
+      tipo,
+      fotografiaId,
+      tratamientoId,
+      imagenSimuladaNombre: archivo?.name ?? "",
+      imagenSimuladaUrl: archivo ? URL.createObjectURL(archivo) : "",
+      estado: "Preparada",
+      observacion: observacion.trim(),
+    });
   };
-  return <form onSubmit={enviar} className="space-y-2.5">
-    <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800"><div className="flex items-center gap-2 font-semibold"><Sparkles className="size-4" /> Simulación orientativa</div><p className="mt-1">La simulación es una representación visual de referencia y no constituye una garantía de resultado clínico. La generación automática por IA queda preparada para una futura integración.</p></div>
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><Field label="Fotografía base *"><SelectId value={fotografiaId || null} onChange={(v) => setFotografiaId(v ?? 0)} opciones={fotografias.map((f) => ({ id: f.id, label: `${f.tipo} · ${formatearFecha(f.fecha)}` }))} placeholder="Seleccionar fotografía" /></Field><Field label="Tipo de simulación"><SelectField value={tipo} onChange={setTipo} options={TIPOS_SIMULACION} /></Field><Field label="Profesional"><input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" /></Field><Field label="Tratamiento relacionado"><SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))} placeholder="Sin vincular" /></Field></div>
-    <Field label="Observación"><textarea rows={2} value={observacion} onChange={(e) => setObservacion(e.target.value)} className={TEXTAREA} placeholder="Objetivo visual de la simulación…" /></Field>
-    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
-    <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"><Upload className="size-4 text-primary" /><span className="min-w-0 flex-1 truncate">{archivo ? `${archivo.name} · ${formatearTamano(archivo.size)}` : "Adjuntar simulación visual (opcional)"}</span></button>
-    <p className="text-[11px] text-muted-foreground">Si no adjuntás una imagen, se guarda la preparación y queda lista para una futura API de generación.</p>
-    <Acciones etiqueta="Guardar simulación" onCancel={onCancel} />
-  </form>;
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800">
+        <div className="flex items-center gap-2 font-semibold">
+          <Sparkles className="size-4" /> Simulación orientativa
+        </div>
+        <p className="mt-1">
+          La simulación es una representación visual de referencia y no constituye una garantía de
+          resultado clínico. La generación automática por IA queda preparada para una futura
+          integración.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Field label="Fotografía base *">
+          <SelectId
+            value={fotografiaId || null}
+            onChange={(v) => setFotografiaId(v ?? 0)}
+            opciones={fotografias.map((f) => ({
+              id: f.id,
+              label: `${f.tipo} · ${formatearFecha(f.fecha)}`,
+            }))}
+            placeholder="Seleccionar fotografía"
+          />
+        </Field>
+        <Field label="Tipo de simulación">
+          <SelectField value={tipo} onChange={setTipo} options={TIPOS_SIMULACION} />
+        </Field>
+        <Field label="Profesional">
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Profesional"
+          />
+        </Field>
+        <Field label="Tratamiento relacionado">
+          <SelectId
+            value={tratamientoId}
+            onChange={setTratamientoId}
+            opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))}
+            placeholder="Sin vincular"
+          />
+        </Field>
+      </div>
+      <Field label="Observación">
+        <textarea
+          rows={2}
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Objetivo visual de la simulación…"
+        />
+      </Field>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        className="flex w-full items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-left text-sm hover:bg-primary/10"
+      >
+        <Upload className="size-4 text-primary" />
+        <span className="min-w-0 flex-1 truncate">
+          {archivo
+            ? `${archivo.name} · ${formatearTamano(archivo.size)}`
+            : "Adjuntar simulación visual (opcional)"}
+        </span>
+      </button>
+      <p className="text-[11px] text-muted-foreground">
+        Si no adjuntás una imagen, se guarda la preparación y queda lista para una futura API de
+        generación.
+      </p>
+      <Acciones etiqueta="Guardar simulación" onCancel={onCancel} />
+    </form>
+  );
 }
 
 function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [simulacionAbierta, setSimulacionAbierta] = useState(false);
   const [tab, setTab] = useState<"galeria" | "comparar" | "simulacion">("galeria");
-  const lista = [...datos.fotografias].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
-  return <div className="space-y-3">
-    <Encabezado icon={Camera} titulo="Fotografías clínicas" descripcion="Registros fotográficos organizados por tipo, fecha, pieza y tratamiento." etiquetaBoton="Cargar fotografía" onAgregar={() => setAbierto(true)} />
-    <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm"><div className="grid grid-cols-1 gap-1 sm:grid-cols-3">{([['galeria','Galería'],['comparar','Antes / Después'],['simulacion','Simulación estética']] as const).map(([id,label]) => <button key={id} type="button" onClick={() => setTab(id)} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${tab === id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}>{label}</button>)}</div></div>
-    {tab === "galeria" && (lista.length === 0 ? <EstadoVacio icon={Camera} titulo="Sin fotografías clínicas" texto="Cargá registros de frente, sonrisa, perfiles e intraorales." chips={TIPOS_FOTOGRAFIA} /> : <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">{lista.map((f) => <div key={f.id} className={ITEM}><div className="aspect-square overflow-hidden rounded-xl border border-border bg-muted/30">{f.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-center text-muted-foreground"><Camera className="mx-auto size-7" /><span className="mt-1 text-[10px]">Sin vista previa</span></div>}</div><div className="mt-2 flex items-center justify-between gap-2"><p className="truncate text-xs font-semibold">{f.tipo}</p><Badge tono="primary">{f.pieza || "General"}</Badge></div><p className="mt-0.5 text-[10px] text-muted-foreground">{formatearFecha(f.fecha)} · {f.profesional || "Profesional"}</p>{f.observacion && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{f.observacion}</p>}<div className="mt-1 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar fotografía" onClick={() => { if (!window.confirm("¿Eliminar esta fotografía clínica?")) return; cambiar("fotografias", (prev) => prev.filter((x) => x.id !== f.id)); onToast("Fotografía eliminada"); }} /></div></div>)}</div>)}
-    {tab === "comparar" && <CompararFotografias fotografias={lista} />}
-    {tab === "simulacion" && <div className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Simulación estética</p><p className="text-xs text-muted-foreground">Imagen original → simulación → comparación. La generación automática aún no está conectada.</p></div>{datos.fotografias.length > 0 && <BotonMini icon={Sparkles} label="Nueva simulación" onClick={() => setSimulacionAbierta(true)} />}</div>{datos.fotografias.length === 0 ? <EstadoVacio icon={Camera} titulo="Primero cargá una fotografía" texto="La simulación estética necesita una fotografía clínica como imagen original." /> : datos.simulaciones.length === 0 ? <EstadoVacio icon={Sparkles} titulo="Sin simulaciones guardadas" texto="Prepará una simulación visual sobre una fotografía del paciente." /> : <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">{datos.simulaciones.map((s) => { const base = datos.fotografias.find((f) => f.id === s.fotografiaId); return <div key={s.id} className={ITEM}><div className="grid grid-cols-2 gap-2"><div className="overflow-hidden rounded-lg border border-border bg-muted/30"><div className="p-1.5 text-[9px] font-semibold text-muted-foreground">Original</div><div className="h-40">{base?.url ? <img src={base.url} alt="Original" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-xs text-muted-foreground">Sin imagen</div>}</div></div><div className="overflow-hidden rounded-lg border border-border bg-muted/30"><div className="p-1.5 text-[9px] font-semibold text-muted-foreground">Simulación</div><div className="h-40">{s.imagenSimuladaUrl ? <img src={s.imagenSimuladaUrl} alt="Simulación" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center px-3 text-center text-xs text-muted-foreground">Pendiente de generación visual</div>}</div></div></div><div className="mt-2 flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{s.tipo}</p><Badge tono="ambar">{s.estado}</Badge></div><p className="mt-1 text-[10px] text-muted-foreground">{formatearFecha(s.fecha)} · {s.profesional || "Profesional"}</p>{s.observacion && <p className="mt-1 text-xs text-muted-foreground">{s.observacion}</p>}<div className="mt-2 flex justify-end"><BotonBorrar compacto etiqueta="Eliminar simulación" onClick={() => { if (!window.confirm("¿Eliminar esta simulación?")) return; cambiar("simulaciones", (prev) => prev.filter((x) => x.id !== s.id)); onToast("Simulación eliminada"); }} /></div></div>; })}</div>}</div>}
-    {abierto && <Modal title="Nueva fotografía clínica" onClose={() => setAbierto(false)}><FotografiaForm tratamientos={datos.tratamientos} onCancel={() => setAbierto(false)} onSubmit={(foto) => { cambiar("fotografias", (prev) => [...prev, { ...foto, id: Date.now() }]); cambiar("auditoria", (prev) => [...prev, { id: Date.now()+1, usuario: foto.profesional || "Profesional", accion: "Agregó una fotografía clínica", fecha: foto.fecha, hora: new Date().toTimeString().slice(0,5) }]); setAbierto(false); onToast("Fotografía clínica guardada"); }} /></Modal>}
-    {simulacionAbierta && <Modal title="Nueva simulación estética" onClose={() => setSimulacionAbierta(false)}><SimulacionForm fotografias={lista} tratamientos={datos.tratamientos} onCancel={() => setSimulacionAbierta(false)} onSubmit={(sim) => { cambiar("simulaciones", (prev) => [...prev, { ...sim, id: Date.now() }]); setSimulacionAbierta(false); onToast("Simulación guardada como representación orientativa"); }} /></Modal>}
-  </div>;
+  const lista = [...datos.fotografias].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
+  return (
+    <div className="space-y-3">
+      <Encabezado
+        icon={Camera}
+        titulo="Fotografías clínicas"
+        descripcion="Registros fotográficos organizados por tipo, fecha, pieza y tratamiento."
+        etiquetaBoton="Cargar fotografía"
+        onAgregar={() => setAbierto(true)}
+      />
+      <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+          {(
+            [
+              ["galeria", "Galería"],
+              ["comparar", "Antes / Después"],
+              ["simulacion", "Simulación estética"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === "galeria" &&
+        (lista.length === 0 ? (
+          <EstadoVacio
+            icon={Camera}
+            titulo="Sin fotografías clínicas"
+            texto="Cargá registros de frente, sonrisa, perfiles e intraorales."
+            chips={TIPOS_FOTOGRAFIA}
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+            {lista.map((f) => (
+              <div key={f.id} className={ITEM}>
+                <div className="aspect-square overflow-hidden rounded-xl border border-border bg-muted/30">
+                  {f.url && esImagen(f.archivoNombre) ? (
+                    <img src={f.url} alt={f.tipo} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="grid h-full place-items-center text-center text-muted-foreground">
+                      <Camera className="mx-auto size-7" />
+                      <span className="mt-1 text-[10px]">Sin vista previa</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="truncate text-xs font-semibold">{f.tipo}</p>
+                  <Badge tono="primary">{f.pieza || "General"}</Badge>
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {formatearFecha(f.fecha)} · {f.profesional || "Profesional"}
+                </p>
+                {f.observacion && (
+                  <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">
+                    {f.observacion}
+                  </p>
+                )}
+                <div className="mt-1 flex justify-end">
+                  <BotonBorrar
+                    compacto
+                    etiqueta="Eliminar fotografía"
+                    onClick={() => {
+                      if (!window.confirm("¿Eliminar esta fotografía clínica?")) return;
+                      cambiar("fotografias", (prev) => prev.filter((x) => x.id !== f.id));
+                      onToast("Fotografía eliminada");
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      {tab === "comparar" && <CompararFotografias fotografias={lista} />}
+      {tab === "simulacion" && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold">Simulación estética</p>
+              <p className="text-xs text-muted-foreground">
+                Imagen original → simulación → comparación. La generación automática aún no está
+                conectada.
+              </p>
+            </div>
+            {datos.fotografias.length > 0 && (
+              <BotonMini
+                icon={Sparkles}
+                label="Nueva simulación"
+                onClick={() => setSimulacionAbierta(true)}
+              />
+            )}
+          </div>
+          {datos.fotografias.length === 0 ? (
+            <EstadoVacio
+              icon={Camera}
+              titulo="Primero cargá una fotografía"
+              texto="La simulación estética necesita una fotografía clínica como imagen original."
+            />
+          ) : datos.simulaciones.length === 0 ? (
+            <EstadoVacio
+              icon={Sparkles}
+              titulo="Sin simulaciones guardadas"
+              texto="Prepará una simulación visual sobre una fotografía del paciente."
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+              {datos.simulaciones.map((s) => {
+                const base = datos.fotografias.find((f) => f.id === s.fotografiaId);
+                return (
+                  <div key={s.id} className={ITEM}>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+                        <div className="p-1.5 text-[9px] font-semibold text-muted-foreground">
+                          Original
+                        </div>
+                        <div className="h-40">
+                          {base?.url ? (
+                            <img
+                              src={base.url}
+                              alt="Original"
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center text-xs text-muted-foreground">
+                              Sin imagen
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+                        <div className="p-1.5 text-[9px] font-semibold text-muted-foreground">
+                          Simulación
+                        </div>
+                        <div className="h-40">
+                          {s.imagenSimuladaUrl ? (
+                            <img
+                              src={s.imagenSimuladaUrl}
+                              alt="Simulación"
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center px-3 text-center text-xs text-muted-foreground">
+                              Pendiente de generación visual
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold">{s.tipo}</p>
+                      <Badge tono="ambar">{s.estado}</Badge>
+                    </div>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {formatearFecha(s.fecha)} · {s.profesional || "Profesional"}
+                    </p>
+                    {s.observacion && (
+                      <p className="mt-1 text-xs text-muted-foreground">{s.observacion}</p>
+                    )}
+                    <div className="mt-2 flex justify-end">
+                      <BotonBorrar
+                        compacto
+                        etiqueta="Eliminar simulación"
+                        onClick={() => {
+                          if (!window.confirm("¿Eliminar esta simulación?")) return;
+                          cambiar("simulaciones", (prev) => prev.filter((x) => x.id !== s.id));
+                          onToast("Simulación eliminada");
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {abierto && (
+        <Modal title="Nueva fotografía clínica" onClose={() => setAbierto(false)}>
+          <FotografiaForm
+            tratamientos={datos.tratamientos}
+            onCancel={() => setAbierto(false)}
+            onSubmit={(foto) => {
+              cambiar("fotografias", (prev) => [...prev, { ...foto, id: Date.now() }]);
+              cambiar("auditoria", (prev) => [
+                ...prev,
+                {
+                  id: Date.now() + 1,
+                  usuario: foto.profesional || "Profesional",
+                  accion: "Agregó una fotografía clínica",
+                  fecha: foto.fecha,
+                  hora: new Date().toTimeString().slice(0, 5),
+                },
+              ]);
+              setAbierto(false);
+              onToast("Fotografía clínica guardada");
+            }}
+          />
+        </Modal>
+      )}
+      {simulacionAbierta && (
+        <Modal title="Nueva simulación estética" onClose={() => setSimulacionAbierta(false)}>
+          <SimulacionForm
+            fotografias={lista}
+            tratamientos={datos.tratamientos}
+            onCancel={() => setSimulacionAbierta(false)}
+            onSubmit={(sim) => {
+              cambiar("simulaciones", (prev) => [...prev, { ...sim, id: Date.now() }]);
+              setSimulacionAbierta(false);
+              onToast("Simulación guardada como representación orientativa");
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
 }
 
 /* Sección principal de estudios */
-type TabEstudios = "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
+type TabEstudios =
+  "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [tab, setTab] = useState<TabEstudios>("galeria");
   const [visorId, setVisorId] = useState<number | null>(null);
 
-  const lista = [...datos.estudios].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.estudios].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
   const estudioVisor = datos.estudios.find((s) => s.id === visorId) ?? null;
   const informados = datos.estudios.filter((s) => s.estadoInforme === "Informado").length;
   const activos = datos.diagnosticos.filter((d) => d.estado === "Activo").length;
@@ -4695,15 +6815,29 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
         <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
-        <ResumenCuenta etiqueta="Informados" valor={String(informados)} icon={Check} tono="text-emerald-600" />
+        <ResumenCuenta
+          etiqueta="Informados"
+          valor={String(informados)}
+          icon={Check}
+          tono="text-emerald-600"
+        />
         <ResumenCuenta
           etiqueta="Sin informar"
           valor={String(datos.estudios.length - informados)}
           icon={Clock3}
           tono={datos.estudios.length - informados > 0 ? "text-amber-600" : ""}
         />
-        <ResumenCuenta etiqueta="Mediciones" valor={String(datos.anotaciones.length)} icon={Ruler} />
-        <ResumenCuenta etiqueta="Diagnósticos activos" valor={String(activos)} icon={Activity} tono="text-primary" />
+        <ResumenCuenta
+          etiqueta="Mediciones"
+          valor={String(datos.anotaciones.length)}
+          icon={Ruler}
+        />
+        <ResumenCuenta
+          etiqueta="Diagnósticos activos"
+          valor={String(activos)}
+          icon={Activity}
+          tono="text-primary"
+        />
       </div>
 
       <div className="card-grad p-1">
@@ -4742,11 +6876,17 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           }}
         />
       )}
-      {tab === "fotografias" && <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />}
+      {tab === "fotografias" && (
+        <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />
+      )}
       {tab === "comparar" && <CompararTab estudios={datos.estudios} />}
-      {tab === "anotaciones" && <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />}
+      {tab === "anotaciones" && (
+        <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />
+      )}
       {tab === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
-      {tab === "diagnostico" && <DiagnosticoTab datos={datos} cambiar={cambiar} onToast={onToast} />}
+      {tab === "diagnostico" && (
+        <DiagnosticoTab datos={datos} cambiar={cambiar} onToast={onToast} />
+      )}
 
       {estudioVisor && (
         <VisorEstudio
@@ -4787,18 +6927,30 @@ function PresupuestoForm({
 }: {
   diagnosticos: DiagnosticoPaciente[];
   tratamientos: TratamientoPaciente[];
-  onSubmit: (p: { fecha: string; lineas: LineaPresupuesto[]; notas: string; diagnosticoId: number | null; tratamientoId: number | null; profesional: string }) => void;
+  onSubmit: (p: {
+    fecha: string;
+    lineas: LineaPresupuesto[];
+    notas: string;
+    diagnosticoId: number | null;
+    tratamientoId: number | null;
+    profesional: string;
+  }) => void;
   onCancel: () => void;
 }) {
   const [fecha, setFecha] = useState(hoyISO());
-  const [lineas, setLineas] = useState<LineaForm[]>([{ descripcion: "", pieza: "", cantidad: "1", precio: "" }]);
+  const [lineas, setLineas] = useState<LineaForm[]>([
+    { descripcion: "", pieza: "", cantidad: "1", precio: "" },
+  ]);
   const [notas, setNotas] = useState("");
   const [diagnosticoId, setDiagnosticoId] = useState<number | null>(null);
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
   const [profesional, setProfesional] = useState("");
   const [error, setError] = useState("");
 
-  const total = lineas.reduce((acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
+  const total = lineas.reduce(
+    (acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio) || 0),
+    0,
+  );
 
   const cambiarLinea = (i: number, campo: keyof LineaForm, valor: string) => {
     setLineas((prev) => prev.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l)));
@@ -4807,7 +6959,9 @@ function PresupuestoForm({
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    const validas = lineas.filter((l) => l.descripcion.trim() && Number(l.cantidad) > 0 && Number(l.precio) > 0);
+    const validas = lineas.filter(
+      (l) => l.descripcion.trim() && Number(l.cantidad) > 0 && Number(l.precio) > 0,
+    );
     if (validas.length === 0) {
       setError("Agregá al menos una práctica con cantidad y precio.");
       return;
@@ -4831,16 +6985,40 @@ function PresupuestoForm({
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <Field label="Fecha">
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Diagnóstico relacionado">
-          <SelectId value={diagnosticoId} onChange={setDiagnosticoId} opciones={diagnosticos.map((d) => ({ id: d.id, label: d.pieza ? `${d.titulo} · pieza ${d.pieza}` : d.titulo }))} placeholder="Sin vincular" />
+          <SelectId
+            value={diagnosticoId}
+            onChange={setDiagnosticoId}
+            opciones={diagnosticos.map((d) => ({
+              id: d.id,
+              label: d.pieza ? `${d.titulo} · pieza ${d.pieza}` : d.titulo,
+            }))}
+            placeholder="Sin vincular"
+          />
         </Field>
         <Field label="Tratamiento relacionado">
-          <SelectId value={tratamientoId} onChange={setTratamientoId} opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))} placeholder="Sin vincular" />
+          <SelectId
+            value={tratamientoId}
+            onChange={setTratamientoId}
+            opciones={tratamientos.map((t) => ({ id: t.id, label: t.nombre }))}
+            placeholder="Sin vincular"
+          />
         </Field>
         <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional responsable" />
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => setProfesional(e.target.value)}
+            className={INPUT}
+            placeholder="Profesional responsable"
+          />
         </Field>
       </div>
 
@@ -4854,7 +7032,10 @@ function PresupuestoForm({
         </div>
         <div className="space-y-2">
           {lineas.map((l, i) => (
-            <div key={i} className="grid grid-cols-[minmax(0,1fr)_56px_60px_96px_28px] items-center gap-2">
+            <div
+              key={i}
+              className="grid grid-cols-[minmax(0,1fr)_56px_60px_96px_28px] items-center gap-2"
+            >
               <input
                 autoFocus={i === 0}
                 list="dl-practicas"
@@ -4863,12 +7044,32 @@ function PresupuestoForm({
                 className={INPUT}
                 placeholder="Ej: Limpieza"
               />
-              <input value={l.pieza} onChange={(e) => cambiarLinea(i, "pieza", e.target.value)} className={INPUT} placeholder="26" />
-              <input type="number" min={1} value={l.cantidad} onChange={(e) => cambiarLinea(i, "cantidad", e.target.value)} className={INPUT} />
-              <input type="number" min={0} value={l.precio} onChange={(e) => cambiarLinea(i, "precio", e.target.value)} className={INPUT} placeholder="0" />
+              <input
+                value={l.pieza}
+                onChange={(e) => cambiarLinea(i, "pieza", e.target.value)}
+                className={INPUT}
+                placeholder="26"
+              />
+              <input
+                type="number"
+                min={1}
+                value={l.cantidad}
+                onChange={(e) => cambiarLinea(i, "cantidad", e.target.value)}
+                className={INPUT}
+              />
+              <input
+                type="number"
+                min={0}
+                value={l.precio}
+                onChange={(e) => cambiarLinea(i, "precio", e.target.value)}
+                className={INPUT}
+                placeholder="0"
+              />
               <button
                 type="button"
-                onClick={() => setLineas((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
+                onClick={() =>
+                  setLineas((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))
+                }
                 aria-label="Quitar práctica"
                 disabled={lineas.length === 1}
                 className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
@@ -4880,7 +7081,12 @@ function PresupuestoForm({
         </div>
         <button
           type="button"
-          onClick={() => setLineas((prev) => [...prev, { descripcion: "", pieza: "", cantidad: "1", precio: "" }])}
+          onClick={() =>
+            setLineas((prev) => [
+              ...prev,
+              { descripcion: "", pieza: "", cantidad: "1", precio: "" },
+            ])
+          }
           className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary"
         >
           <Plus className="size-3.5" />
@@ -4890,7 +7096,13 @@ function PresupuestoForm({
       </div>
 
       <Field label="Notas">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Condiciones, validez, observaciones…" />
+        <textarea
+          rows={2}
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Condiciones, validez, observaciones…"
+        />
       </Field>
 
       <div className="flex items-center justify-between border-t border-border pt-2">
@@ -4912,7 +7124,8 @@ function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
     onToast(`${p.numero}: ${estado.toLowerCase()}`);
   };
 
-  const totalDe = (p: PresupuestoPaciente) => p.lineas.reduce((acc, l) => acc + l.cantidad * l.precio, 0);
+  const totalDe = (p: PresupuestoPaciente) =>
+    p.lineas.reduce((acc, l) => acc + l.cantidad * l.precio, 0);
 
   return (
     <div className="space-y-3">
@@ -4936,7 +7149,9 @@ function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold">{p.numero}</p>
-                  <span className="text-[11px] text-muted-foreground">{formatearFecha(p.fecha)}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatearFecha(p.fecha)}
+                  </span>
                   <Badge tono={TONO_PRESUPUESTO[p.estado]}>{p.estado}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
@@ -4964,20 +7179,54 @@ function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 flex flex-wrap gap-1.5">{p.diagnosticoId && <Badge tono="primary">Diagnóstico vinculado</Badge>}{p.tratamientoId && <Badge tono="verde">Tratamiento vinculado</Badge>}{p.profesional && <Badge tono="gris">{p.profesional}</Badge>}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {p.diagnosticoId && <Badge tono="primary">Diagnóstico vinculado</Badge>}
+                {p.tratamientoId && <Badge tono="verde">Tratamiento vinculado</Badge>}
+                {p.profesional && <Badge tono="gris">{p.profesional}</Badge>}
+              </div>
               {p.notas && <p className="mt-1.5 text-xs italic text-muted-foreground">{p.notas}</p>}
               {(p.estado === "Borrador" || p.estado === "Enviado") && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {p.estado === "Borrador" && <BotonMini label="Marcar como enviado" onClick={() => cambiarEstado(p, "Enviado")} />}
+                  {p.estado === "Borrador" && (
+                    <BotonMini
+                      label="Marcar como enviado"
+                      onClick={() => cambiarEstado(p, "Enviado")}
+                    />
+                  )}
                   {p.estado === "Enviado" && (
                     <>
-                      <BotonMini icon={Check} label="Aprobado" onClick={() => cambiarEstado(p, "Aprobado")} />
-                      <BotonMini icon={X} label="Rechazado" onClick={() => cambiarEstado(p, "Rechazado")} />
+                      <BotonMini
+                        icon={Check}
+                        label="Aprobado"
+                        onClick={() => cambiarEstado(p, "Aprobado")}
+                      />
+                      <BotonMini
+                        icon={X}
+                        label="Rechazado"
+                        onClick={() => cambiarEstado(p, "Rechazado")}
+                      />
                     </>
                   )}
                 </div>
               )}
-              {p.estado === "Aprobado" && <div className="mt-2 flex flex-wrap gap-1.5"><BotonMini icon={CircleDollarSign} label="Preparar facturación" onClick={() => onToast(`${p.numero}: facturación pendiente de integración fiscal`)} />{p.tratamientoId && onSeccion && <BotonMini icon={Stethoscope} label="Ver tratamiento" onClick={() => onSeccion("tratamientos")} />}</div>}
+              {p.estado === "Aprobado" && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <BotonMini
+                    icon={CircleDollarSign}
+                    label="Preparar facturación"
+                    onClick={() =>
+                      onToast(`${p.numero}: facturación pendiente de integración fiscal`)
+                    }
+                  />
+                  {p.tratamientoId && onSeccion && (
+                    <BotonMini
+                      icon={Stethoscope}
+                      label="Ver tratamiento"
+                      onClick={() => onSeccion("tratamientos")}
+                    />
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -4990,9 +7239,16 @@ function PresupuestosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
               // TODO backend: POST /pacientes/:id/presupuestos (el número lo asigna el servidor)
-              const siguiente = datos.presupuestos.reduce((max, r) => Math.max(max, Number(r.numero.replace(/\D/g, "")) || 0), 0) + 1;
+              const siguiente =
+                datos.presupuestos.reduce(
+                  (max, r) => Math.max(max, Number(r.numero.replace(/\D/g, "")) || 0),
+                  0,
+                ) + 1;
               const numero = `PR-${String(siguiente).padStart(4, "0")}`;
-              cambiar("presupuestos", (prev) => [...prev, { ...nuevo, id: Date.now(), numero, estado: "Borrador" as const }]);
+              cambiar("presupuestos", (prev) => [
+                ...prev,
+                { ...nuevo, id: Date.now(), numero, estado: "Borrador" as const },
+              ]);
               setAbierto(false);
               onToast(`Presupuesto ${numero} creado`);
             }}
@@ -5055,21 +7311,51 @@ function TurnoForm({
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Fecha *">
-          <input autoFocus required type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            autoFocus
+            required
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Hora *">
-          <input required type="time" value={hora} onChange={(e) => setHora(e.target.value)} className={INPUT} />
+          <input
+            required
+            type="time"
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            className={INPUT}
+          />
         </Field>
       </div>
       <Field label="Motivo *">
-        <input required list="dl-practicas" value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT} placeholder="Ej: Control, limpieza, urgencia" />
+        <input
+          required
+          list="dl-practicas"
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          className={INPUT}
+          placeholder="Ej: Control, limpieza, urgencia"
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Profesional *">
-          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+          <SelectField
+            value={profesional}
+            onChange={setProfesional}
+            options={profesionales}
+            placeholder="Seleccionar"
+          />
         </Field>
         <Field label="Sucursal">
-          <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} placeholder="Seleccionar" />
+          <SelectField
+            value={sucursal}
+            onChange={setSucursal}
+            options={SUCURSALES}
+            placeholder="Seleccionar"
+          />
         </Field>
       </div>
       <Acciones etiqueta="Agendar turno" onCancel={onCancel} />
@@ -5079,11 +7365,15 @@ function TurnoForm({
 
 function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
-  const lista = [...datos.turnos].sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
+  const lista = [...datos.turnos].sort((a, b) =>
+    `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`),
+  );
 
   // datos.turnos ya viene de la Agenda (ver SeccionPaciente); los cambios se guardan en la Agenda.
   const cambiarEstado = (t: TurnoPaciente, estado: EstadoTurnoPaciente) => {
-    setTurnosStore((prev) => prev.map((x) => (x.id === t.id ? { ...x, estado: ESTADO_HACIA_AGENDA[estado] } : x)));
+    setTurnosStore((prev) =>
+      prev.map((x) => (x.id === t.id ? { ...x, estado: ESTADO_HACIA_AGENDA[estado] } : x)),
+    );
     onToast(`Turno del ${formatearFecha(t.fecha)}: ${estado.toLowerCase()}`);
   };
 
@@ -5121,10 +7411,26 @@ function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                {t.estado === "Pendiente" && <BotonMini icon={Check} label="Confirmar" onClick={() => cambiarEstado(t, "Confirmado")} />}
-                {t.estado === "Confirmado" && <BotonMini icon={Check} label="Atendido" onClick={() => cambiarEstado(t, "Atendido")} />}
+                {t.estado === "Pendiente" && (
+                  <BotonMini
+                    icon={Check}
+                    label="Confirmar"
+                    onClick={() => cambiarEstado(t, "Confirmado")}
+                  />
+                )}
+                {t.estado === "Confirmado" && (
+                  <BotonMini
+                    icon={Check}
+                    label="Atendido"
+                    onClick={() => cambiarEstado(t, "Atendido")}
+                  />
+                )}
                 {(t.estado === "Pendiente" || t.estado === "Confirmado") && (
-                  <BotonMini icon={X} label="Cancelar" onClick={() => cambiarEstado(t, "Cancelado")} />
+                  <BotonMini
+                    icon={X}
+                    label="Cancelar"
+                    onClick={() => cambiarEstado(t, "Cancelado")}
+                  />
                 )}
                 <BotonBorrar
                   etiqueta="Eliminar turno"
@@ -5214,14 +7520,31 @@ function MovimientoForm({
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Tipo de movimiento *">
-          <SelectField value={tipo} onChange={(v) => setTipo(v as TipoMovimiento)} options={TIPOS_MOVIMIENTO} />
+          <SelectField
+            value={tipo}
+            onChange={(v) => setTipo(v as TipoMovimiento)}
+            options={TIPOS_MOVIMIENTO}
+          />
         </Field>
         <Field label="Fecha">
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={INPUT}
+          />
         </Field>
       </div>
       <Field label="Concepto *">
-        <input autoFocus required list="dl-practicas" value={concepto} onChange={(e) => setConcepto(e.target.value)} className={INPUT} placeholder={tipo === "Pago" ? "Ej: Pago de tratamiento" : "Ej: Endodoncia pieza 26"} />
+        <input
+          autoFocus
+          required
+          list="dl-practicas"
+          value={concepto}
+          onChange={(e) => setConcepto(e.target.value)}
+          className={INPUT}
+          placeholder={tipo === "Pago" ? "Ej: Pago de tratamiento" : "Ej: Endodoncia pieza 26"}
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         {tipo === "Pago" && (
@@ -5230,23 +7553,53 @@ function MovimientoForm({
           </Field>
         )}
         <Field label="Monto (ARS) *">
-          <input required type="number" min={1} value={monto} onChange={(e) => setMonto(e.target.value)} className={INPUT} placeholder="0" />
+          <input
+            required
+            type="number"
+            min={1}
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            className={INPUT}
+            placeholder="0"
+          />
         </Field>
       </div>
       <Field label="Notas">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones…" />
+        <textarea
+          rows={2}
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Observaciones…"
+        />
       </Field>
       <Acciones etiqueta="Guardar movimiento" onCancel={onCancel} />
     </form>
   );
 }
 
-function ResumenCuenta({ etiqueta, valor, icon: Icon, tono }: { etiqueta: string; valor: string; icon: LucideIcon; tono?: string }) {
+function ResumenCuenta({
+  etiqueta,
+  valor,
+  icon: Icon,
+  tono,
+}: {
+  etiqueta: string;
+  valor: string;
+  icon: LucideIcon;
+  tono?: string;
+}) {
   return (
     <div className="card-grad flex min-h-[80px] items-start justify-between gap-2 p-3.5">
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</p>
-        <p className={`mt-1.5 text-lg font-bold leading-tight tracking-tight ${tono ?? "text-foreground"}`}>{valor}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {etiqueta}
+        </p>
+        <p
+          className={`mt-1.5 text-lg font-bold leading-tight tracking-tight ${tono ?? "text-foreground"}`}
+        >
+          {valor}
+        </p>
       </div>
       <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
         <Icon className="size-4" />
@@ -5257,11 +7610,17 @@ function ResumenCuenta({ etiqueta, valor, icon: Icon, tono }: { etiqueta: string
 
 function CuentaSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
-  const lista = [...datos.cuenta].sort((a, b) => `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`));
+  const lista = [...datos.cuenta].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
 
-  const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
+  const cargos = datos.cuenta
+    .filter((m) => m.tipo === "Cargo")
+    .reduce((acc, m) => acc + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
-  const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);
+  const creditos = datos.cuenta
+    .filter((m) => m.tipo === "Nota de crédito")
+    .reduce((acc, m) => acc + m.monto, 0);
   const saldo = cargos - pagos - creditos;
 
   return (
@@ -5275,7 +7634,12 @@ function CuentaSec({ datos, cambiar, onToast }: PropsSeccion) {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <ResumenCuenta etiqueta="Cargos" valor={formatearMonto(cargos)} icon={ReceiptText} />
-        <ResumenCuenta etiqueta="Pagos y créditos" valor={formatearMonto(pagos + creditos)} icon={Check} tono="text-emerald-600" />
+        <ResumenCuenta
+          etiqueta="Pagos y créditos"
+          valor={formatearMonto(pagos + creditos)}
+          icon={Check}
+          tono="text-emerald-600"
+        />
         <ResumenCuenta
           etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"}
           valor={formatearMonto(Math.abs(saldo))}
@@ -5304,7 +7668,9 @@ function CuentaSec({ datos, cambiar, onToast }: PropsSeccion) {
                 <p className="text-[11px] text-muted-foreground">{m.medio || "—"}</p>
                 {m.notas && <p className="text-xs italic text-muted-foreground">{m.notas}</p>}
               </div>
-              <p className={`text-base font-bold ${m.tipo === "Cargo" ? "text-foreground" : "text-emerald-600"}`}>
+              <p
+                className={`text-base font-bold ${m.tipo === "Cargo" ? "text-foreground" : "text-emerald-600"}`}
+              >
                 {m.tipo === "Cargo" ? "" : "− "}
                 {formatearMonto(m.monto)}
               </p>
@@ -5359,18 +7725,40 @@ function ProfesionalForm({
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Profesional *">
-        <input autoFocus required list="dl-profesionales" value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Nombre y apellido" />
+        <input
+          autoFocus
+          required
+          list="dl-profesionales"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          className={INPUT}
+          placeholder="Nombre y apellido"
+        />
       </Field>
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Especialidad">
-          <input value={especialidad} onChange={(e) => setEspecialidad(e.target.value)} className={INPUT} placeholder="Ej: Odontología general" />
+          <input
+            value={especialidad}
+            onChange={(e) => setEspecialidad(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: Odontología general"
+          />
         </Field>
         <Field label="Rol">
-          <SelectField value={rol} onChange={(v) => setRol(v as RolProfesional)} options={ROLES_PROFESIONAL} />
+          <SelectField
+            value={rol}
+            onChange={(v) => setRol(v as RolProfesional)}
+            options={ROLES_PROFESIONAL}
+          />
         </Field>
       </div>
       <Field label="Atiende desde">
-        <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={INPUT} />
+        <input
+          type="date"
+          value={desde}
+          onChange={(e) => setDesde(e.target.value)}
+          className={INPUT}
+        />
       </Field>
       <Acciones etiqueta="Agregar profesional" onCancel={onCancel} />
     </form>
@@ -5407,7 +7795,11 @@ function ProfesionalesSec({ datos, cambiar, onToast }: PropsSeccion) {
                 <p className="truncate text-xs text-muted-foreground">{p.especialidad || "—"}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <Badge tono="primary">{p.rol}</Badge>
-                  {p.desde && <span className="text-[11px] text-muted-foreground">Desde {formatearFecha(p.desde)}</span>}
+                  {p.desde && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Desde {formatearFecha(p.desde)}
+                    </span>
+                  )}
                 </div>
               </div>
               <BotonBorrar
@@ -5458,7 +7850,9 @@ function LaboratorioForm({
   const [proveedor, setProveedor] = useState(inicial?.proveedor ?? "");
   const [profesional, setProfesional] = useState(inicial?.profesional ?? profesionales[0] ?? "");
   const [fechaEnvio, setFechaEnvio] = useState(inicial?.fechaEnvio ?? hoyISO());
-  const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState(inicial?.fechaEntregaEstimada ?? "");
+  const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState(
+    inicial?.fechaEntregaEstimada ?? "",
+  );
   const [costo, setCosto] = useState(inicial?.costo ? String(inicial.costo) : "");
   const [notas, setNotas] = useState(inicial?.notas ?? "");
   const [error, setError] = useState("");
@@ -5491,35 +7885,82 @@ function LaboratorioForm({
           <SelectField value={tipo} onChange={setTipo} options={TIPOS_TRABAJO_LAB} />
         </Field>
         <Field label="Pieza / zona">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21, arcada superior" />
+          <input
+            value={pieza}
+            onChange={(e) => setPieza(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: 21, arcada superior"
+          />
         </Field>
         <Field label="Material">
           <SelectField value={material} onChange={setMaterial} options={MATERIALES_LAB} />
         </Field>
         <Field label="Color (escala VITA)">
-          <SelectField value={color} onChange={setColor} options={COLORES_VITA} placeholder="Sin especificar" />
+          <SelectField
+            value={color}
+            onChange={setColor}
+            options={COLORES_VITA}
+            placeholder="Sin especificar"
+          />
         </Field>
         <Field label="Laboratorio proveedor">
-          <input list="dl-laboratorios" value={proveedor} onChange={(e) => setProveedor(e.target.value)} className={INPUT} placeholder="Nombre del laboratorio" />
+          <input
+            list="dl-laboratorios"
+            value={proveedor}
+            onChange={(e) => setProveedor(e.target.value)}
+            className={INPUT}
+            placeholder="Nombre del laboratorio"
+          />
         </Field>
         <Field label="Profesional">
-          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+          <SelectField
+            value={profesional}
+            onChange={setProfesional}
+            options={profesionales}
+            placeholder="Seleccionar"
+          />
         </Field>
         <Field label="Fecha de envío">
-          <input type="date" value={fechaEnvio} onChange={(e) => setFechaEnvio(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fechaEnvio}
+            onChange={(e) => setFechaEnvio(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Entrega estimada">
-          <input type="date" value={fechaEntregaEstimada} onChange={(e) => setFechaEntregaEstimada(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={fechaEntregaEstimada}
+            onChange={(e) => setFechaEntregaEstimada(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Costo del laboratorio (ARS)">
-          <input type="number" min={0} value={costo} onChange={(e) => setCosto(e.target.value)} className={INPUT} placeholder="0" />
+          <input
+            type="number"
+            min={0}
+            value={costo}
+            onChange={(e) => setCosto(e.target.value)}
+            className={INPUT}
+            placeholder="0"
+          />
         </Field>
       </div>
       <Field label="Notas / especificaciones">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Forma, textura, oclusión, observaciones para el técnico…" />
+        <textarea
+          rows={2}
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          className={TEXTAREA}
+          placeholder="Forma, textura, oclusión, observaciones para el técnico…"
+        />
       </Field>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Acciones etiqueta={inicial ? "Guardar cambios" : "Enviar a laboratorio"} onCancel={onCancel} />
+      <Acciones
+        etiqueta={inicial ? "Guardar cambios" : "Enviar a laboratorio"}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -5536,7 +7977,11 @@ function avisoEntrega(t: TrabajoLaboratorio): { texto: string; tono: Tono } | nu
   if (t.estado === "Entregado" || t.estado === "Listo para retirar") return null;
   const dias = diasParaEntrega(t);
   if (dias === null) return null;
-  if (dias < 0) return { texto: `Demorado ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "día" : "días"}`, tono: "rojo" };
+  if (dias < 0)
+    return {
+      texto: `Demorado ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "día" : "días"}`,
+      tono: "rojo",
+    };
   if (dias === 0) return { texto: "Llega hoy", tono: "ambar" };
   if (dias === 1) return { texto: "Llega mañana", tono: "ambar" };
   return { texto: `Llega en ${dias} días`, tono: "gris" };
@@ -5549,23 +7994,35 @@ function PasosLaboratorio({ trabajo }: { trabajo: TrabajoLaboratorio }) {
     <ol className="mt-3 grid grid-cols-4 gap-1">
       {ESTADOS_LABORATORIO.map((estado, i) => {
         const hecho = i <= actual;
-        const fecha = trabajo.historial?.find((h) => h.estado === estado)?.fecha ?? (i === 0 ? trabajo.fechaEnvio : "");
+        const fecha =
+          trabajo.historial?.find((h) => h.estado === estado)?.fecha ??
+          (i === 0 ? trabajo.fechaEnvio : "");
         return (
           <li key={estado} className="min-w-0">
             <div className="flex items-center">
               <span
                 className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                  hecho ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
+                  hecho
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-card text-muted-foreground"
                 } ${i === actual ? "ring-4 ring-primary/15" : ""}`}
               >
                 {hecho ? <Check className="size-3" /> : i + 1}
               </span>
               {i < ESTADOS_LABORATORIO.length - 1 && (
-                <span className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`} />
+                <span
+                  className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`}
+                />
               )}
             </div>
-            <p className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}>{estado}</p>
-            <p className="text-[10px] text-muted-foreground">{hecho && fecha ? formatearFecha(fecha) : " "}</p>
+            <p
+              className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              {estado}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {hecho && fecha ? formatearFecha(fecha) : " "}
+            </p>
           </li>
         );
       })}
@@ -5596,12 +8053,20 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
-  const todos = [...datos.laboratorio].sort((a, b) => `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`));
+  const todos = [...datos.laboratorio].sort((a, b) =>
+    `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`),
+  );
   const lista = todos.filter((t) =>
-    !filtro ? true : filtro === "activos" ? t.estado === "Enviado" || t.estado === "En proceso" : t.estado === filtro,
+    !filtro
+      ? true
+      : filtro === "activos"
+        ? t.estado === "Enviado" || t.estado === "En proceso"
+        : t.estado === filtro,
   );
 
-  const enProceso = datos.laboratorio.filter((t) => t.estado === "Enviado" || t.estado === "En proceso").length;
+  const enProceso = datos.laboratorio.filter(
+    (t) => t.estado === "Enviado" || t.estado === "En proceso",
+  ).length;
   const listos = datos.laboratorio.filter((t) => t.estado === "Listo para retirar").length;
   const demorados = datos.laboratorio.filter((t) => avisoEntrega(t)?.tono === "rojo").length;
   const costoTotal = datos.laboratorio.reduce((acc, t) => acc + (t.costo || 0), 0);
@@ -5611,7 +8076,14 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
     cambiar("laboratorio", (prev) =>
       prev.map((x) =>
         x.id === t.id
-          ? { ...x, estado, historial: [...(x.historial ?? []).filter((h) => h.estado !== estado), { estado, fecha: hoyISO() }] }
+          ? {
+              ...x,
+              estado,
+              historial: [
+                ...(x.historial ?? []).filter((h) => h.estado !== estado),
+                { estado, fecha: hoyISO() },
+              ],
+            }
           : x,
       ),
     );
@@ -5636,10 +8108,29 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        <ResumenCuenta etiqueta="En curso" valor={String(enProceso)} icon={Truck} tono="text-primary" />
-        <ResumenCuenta etiqueta="Listos para retirar" valor={String(listos)} icon={PackageCheck} tono="text-emerald-600" />
-        <ResumenCuenta etiqueta="Demorados" valor={String(demorados)} icon={Clock3} tono={demorados ? "text-destructive" : ""} />
-        <ResumenCuenta etiqueta="Costo total" valor={formatearMonto(costoTotal)} icon={CircleDollarSign} />
+        <ResumenCuenta
+          etiqueta="En curso"
+          valor={String(enProceso)}
+          icon={Truck}
+          tono="text-primary"
+        />
+        <ResumenCuenta
+          etiqueta="Listos para retirar"
+          valor={String(listos)}
+          icon={PackageCheck}
+          tono="text-emerald-600"
+        />
+        <ResumenCuenta
+          etiqueta="Demorados"
+          valor={String(demorados)}
+          icon={Clock3}
+          tono={demorados ? "text-destructive" : ""}
+        />
+        <ResumenCuenta
+          etiqueta="Costo total"
+          valor={formatearMonto(costoTotal)}
+          icon={CircleDollarSign}
+        />
       </div>
 
       {todos.length > 0 && (
@@ -5651,7 +8142,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
               onClick={() => setFiltro(f.id)}
               aria-pressed={filtro === f.id}
               className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                filtro === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                filtro === f.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
               }`}
             >
               {f.label}
@@ -5684,7 +8177,11 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="text-sm font-semibold">{t.tipo}</p>
-                      {t.pieza && <Badge tono="primary">{/^\d/.test(t.pieza) ? `Pieza ${t.pieza}` : t.pieza}</Badge>}
+                      {t.pieza && (
+                        <Badge tono="primary">
+                          {/^\d/.test(t.pieza) ? `Pieza ${t.pieza}` : t.pieza}
+                        </Badge>
+                      )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
                       {aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
                     </div>
@@ -5693,25 +8190,52 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       {t.color && <span>Color {t.color}</span>}
                       {t.proveedor && <span>{t.proveedor}</span>}
                       {t.profesional && <span>{t.profesional}</span>}
-                      {t.fechaEntregaEstimada && <span>Entrega: {formatearFecha(t.fechaEntregaEstimada)}</span>}
+                      {t.fechaEntregaEstimada && (
+                        <span>Entrega: {formatearFecha(t.fechaEntregaEstimada)}</span>
+                      )}
                     </p>
                   </div>
-                  {t.costo > 0 && <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>}
+                  {t.costo > 0 && (
+                    <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>
+                  )}
                 </div>
 
                 <PasosLaboratorio trabajo={t} />
 
-                {t.notas && <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">{t.notas}</p>}
+                {t.notas && (
+                  <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
+                    {t.notas}
+                  </p>
+                )}
 
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-2.5">
-                  {t.estado === "Enviado" && <BotonMini icon={Truck} label="Pasar a en proceso" onClick={() => cambiarEstado(t, "En proceso")} />}
-                  {t.estado === "En proceso" && <BotonMini icon={PackageCheck} label="Listo para retirar" onClick={() => cambiarEstado(t, "Listo para retirar")} />}
-                  {t.estado === "Listo para retirar" && <BotonMini icon={Check} label="Marcar entregado" onClick={() => cambiarEstado(t, "Entregado")} />}
+                  {t.estado === "Enviado" && (
+                    <BotonMini
+                      icon={Truck}
+                      label="Pasar a en proceso"
+                      onClick={() => cambiarEstado(t, "En proceso")}
+                    />
+                  )}
+                  {t.estado === "En proceso" && (
+                    <BotonMini
+                      icon={PackageCheck}
+                      label="Listo para retirar"
+                      onClick={() => cambiarEstado(t, "Listo para retirar")}
+                    />
+                  )}
+                  {t.estado === "Listo para retirar" && (
+                    <BotonMini
+                      icon={Check}
+                      label="Marcar entregado"
+                      onClick={() => cambiarEstado(t, "Entregado")}
+                    />
+                  )}
                   <BotonMini
                     icon={Printer}
                     label="Orden"
                     onClick={() => {
-                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente")) onToast("Permití las ventanas emergentes para imprimir");
+                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
+                        onToast("Permití las ventanas emergentes para imprimir");
                     }}
                   />
                   <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
@@ -5747,7 +8271,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             onSubmit={(datosTrabajo) => {
               if (editar) {
                 // TODO backend: PUT /pacientes/:id/laboratorio/:trabajoId
-                cambiar("laboratorio", (prev) => prev.map((x) => (x.id === editar.id ? { ...x, ...datosTrabajo } : x)));
+                cambiar("laboratorio", (prev) =>
+                  prev.map((x) => (x.id === editar.id ? { ...x, ...datosTrabajo } : x)),
+                );
                 onToast("Trabajo actualizado");
               } else {
                 // TODO backend: POST /pacientes/:id/laboratorio
@@ -5757,7 +8283,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                     ...datosTrabajo,
                     id: Date.now(),
                     estado: "Enviado" as const,
-                    historial: [{ estado: "Enviado" as const, fecha: datosTrabajo.fechaEnvio || hoyISO() }],
+                    historial: [
+                      { estado: "Enviado" as const, fecha: datosTrabajo.fechaEnvio || hoyISO() },
+                    ],
                   },
                 ]);
                 onToast("Trabajo enviado a laboratorio");
@@ -5776,31 +8304,205 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
 const TIMELINE_VISIBLES = 5;
 
-function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+function TimelinePaciente({
+  datos,
+  onSeccion,
+}: {
+  datos: Registros;
+  onSeccion: (s: SeccionRegistros) => void;
+}) {
   // Se muestran los más recientes; el resto se despliega con "Ver todos" para no dejar la ficha tan larga.
   const [verTodos, setVerTodos] = useState(false);
-  type Evento = { id: string; fecha: string; hora?: string; titulo: string; detalle: string; icon: LucideIcon; seccion: SeccionRegistros; tono: Tono };
-  const eventos: Evento[] = ([
-    ...datos.turnos.map((t) => ({ id: `turno-${t.id}`, fecha: t.fecha, hora: t.hora, titulo: "Turno", detalle: `${t.motivo}${t.profesional ? ` · ${t.profesional}` : ""}`, icon: CalendarDays, seccion: "turnos" as SeccionRegistros, tono: TONO_TURNO[t.estado] })),
-    ...datos.historia.map((e) => ({ id: `hist-${e.id}`, fecha: e.fecha, titulo: "Consulta / evolución", detalle: `${e.motivo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`, icon: History, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
-    ...datos.notasClinicas.map((n) => ({ id: `nota-${n.id}`, fecha: n.fecha, hora: n.hora, titulo: "Nota clínica", detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""}`, icon: ClipboardList, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
-    ...datos.notasVoz.map((n) => ({ id: `voz-${n.id}`, fecha: n.fecha, hora: n.hora, titulo: "Nota de voz", detalle: `${n.profesional} · ${n.duracionSegundos}s`, icon: Mic, seccion: "historia" as SeccionRegistros, tono: "primary" as Tono })),
-    ...datos.diagnosticos.map((d) => ({ id: `diag-${d.id}`, fecha: d.fecha, titulo: "Diagnóstico", detalle: `${d.titulo}${d.pieza ? ` · pieza ${d.pieza}` : ""}`, icon: Activity, seccion: "estudios" as SeccionRegistros, tono: TONO_DIAGNOSTICO[d.estado] })),
-    ...datos.tratamientos.map((t) => ({ id: `trat-${t.id}`, fecha: t.inicio || hoyISO(), titulo: "Tratamiento", detalle: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`, icon: Stethoscope, seccion: "tratamientos" as SeccionRegistros, tono: TONO_TRATAMIENTO[t.estado] })),
-    ...datos.fotografias.map((f) => ({ id: `foto-${f.id}`, fecha: f.fecha, titulo: "Fotografía clínica", detalle: `${f.tipo}${f.pieza ? ` · pieza ${f.pieza}` : ""}`, icon: Camera, seccion: "estudios" as SeccionRegistros, tono: "primary" as Tono })),
-    ...datos.estudios.map((e) => ({ id: `est-${e.id}`, fecha: e.fecha, titulo: e.tipo, detalle: `${e.pieza || e.zona || "Estudio"}${e.profesional ? ` · ${e.profesional}` : ""}`, icon: Images, seccion: "estudios" as SeccionRegistros, tono: TONO_INFORME[e.estadoInforme] })),
-    ...datos.recetas.map((r) => ({ id: `rec-${r.id}`, fecha: r.fecha, titulo: "Receta digital", detalle: `${r.numero}${r.profesional ? ` · ${r.profesional}` : ""}`, icon: Pill, seccion: "recetas" as SeccionRegistros, tono: TONO_RECETA[r.estado] })),
-    ...datos.presupuestos.map((p) => ({ id: `pre-${p.id}`, fecha: p.fecha, titulo: "Presupuesto", detalle: p.numero, icon: ReceiptText, seccion: "presupuestos" as SeccionRegistros, tono: TONO_PRESUPUESTO[p.estado] })),
-    ...datos.cuenta.map((m) => ({ id: `mov-${m.id}`, fecha: m.fecha, titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo, detalle: m.concepto, icon: Wallet, seccion: "cuenta" as SeccionRegistros, tono: TONO_MOVIMIENTO[m.tipo] })),
-  ] as Evento[]).sort((a, b) => `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`)).slice(0, 16);
+  type Evento = {
+    id: string;
+    fecha: string;
+    hora?: string;
+    titulo: string;
+    detalle: string;
+    icon: LucideIcon;
+    seccion: SeccionRegistros;
+    tono: Tono;
+  };
+  const eventos: Evento[] = (
+    [
+      ...datos.turnos.map((t) => ({
+        id: `turno-${t.id}`,
+        fecha: t.fecha,
+        hora: t.hora,
+        titulo: "Turno",
+        detalle: `${t.motivo}${t.profesional ? ` · ${t.profesional}` : ""}`,
+        icon: CalendarDays,
+        seccion: "turnos" as SeccionRegistros,
+        tono: TONO_TURNO[t.estado],
+      })),
+      ...datos.historia.map((e) => ({
+        id: `hist-${e.id}`,
+        fecha: e.fecha,
+        titulo: "Consulta / evolución",
+        detalle: `${e.motivo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`,
+        icon: History,
+        seccion: "historia" as SeccionRegistros,
+        tono: "primary" as Tono,
+      })),
+      ...datos.notasClinicas.map((n) => ({
+        id: `nota-${n.id}`,
+        fecha: n.fecha,
+        hora: n.hora,
+        titulo: "Nota clínica",
+        detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""}`,
+        icon: ClipboardList,
+        seccion: "historia" as SeccionRegistros,
+        tono: "primary" as Tono,
+      })),
+      ...datos.notasVoz.map((n) => ({
+        id: `voz-${n.id}`,
+        fecha: n.fecha,
+        hora: n.hora,
+        titulo: "Nota de voz",
+        detalle: `${n.profesional} · ${n.duracionSegundos}s`,
+        icon: Mic,
+        seccion: "historia" as SeccionRegistros,
+        tono: "primary" as Tono,
+      })),
+      ...datos.diagnosticos.map((d) => ({
+        id: `diag-${d.id}`,
+        fecha: d.fecha,
+        titulo: "Diagnóstico",
+        detalle: `${d.titulo}${d.pieza ? ` · pieza ${d.pieza}` : ""}`,
+        icon: Activity,
+        seccion: "estudios" as SeccionRegistros,
+        tono: TONO_DIAGNOSTICO[d.estado],
+      })),
+      ...datos.tratamientos.map((t) => ({
+        id: `trat-${t.id}`,
+        fecha: t.inicio || hoyISO(),
+        titulo: "Tratamiento",
+        detalle: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`,
+        icon: Stethoscope,
+        seccion: "tratamientos" as SeccionRegistros,
+        tono: TONO_TRATAMIENTO[t.estado],
+      })),
+      ...datos.fotografias.map((f) => ({
+        id: `foto-${f.id}`,
+        fecha: f.fecha,
+        titulo: "Fotografía clínica",
+        detalle: `${f.tipo}${f.pieza ? ` · pieza ${f.pieza}` : ""}`,
+        icon: Camera,
+        seccion: "estudios" as SeccionRegistros,
+        tono: "primary" as Tono,
+      })),
+      ...datos.estudios.map((e) => ({
+        id: `est-${e.id}`,
+        fecha: e.fecha,
+        titulo: e.tipo,
+        detalle: `${e.pieza || e.zona || "Estudio"}${e.profesional ? ` · ${e.profesional}` : ""}`,
+        icon: Images,
+        seccion: "estudios" as SeccionRegistros,
+        tono: TONO_INFORME[e.estadoInforme],
+      })),
+      ...datos.recetas.map((r) => ({
+        id: `rec-${r.id}`,
+        fecha: r.fecha,
+        titulo: "Receta digital",
+        detalle: `${r.numero}${r.profesional ? ` · ${r.profesional}` : ""}`,
+        icon: Pill,
+        seccion: "recetas" as SeccionRegistros,
+        tono: TONO_RECETA[r.estado],
+      })),
+      ...datos.presupuestos.map((p) => ({
+        id: `pre-${p.id}`,
+        fecha: p.fecha,
+        titulo: "Presupuesto",
+        detalle: p.numero,
+        icon: ReceiptText,
+        seccion: "presupuestos" as SeccionRegistros,
+        tono: TONO_PRESUPUESTO[p.estado],
+      })),
+      ...datos.cuenta.map((m) => ({
+        id: `mov-${m.id}`,
+        fecha: m.fecha,
+        titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo,
+        detalle: m.concepto,
+        icon: Wallet,
+        seccion: "cuenta" as SeccionRegistros,
+        tono: TONO_MOVIMIENTO[m.tipo],
+      })),
+    ] as Evento[]
+  )
+    .sort((a, b) =>
+      `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`),
+    )
+    .slice(0, 16);
 
-  return <div className="card-grad p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{formatearFecha(e.fecha)}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
+  return (
+    <div className="card-grad p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">Timeline clínico</p>
+          <p className="text-xs text-muted-foreground">
+            Historial central del paciente, ordenado cronológicamente.
+          </p>
+        </div>
+        <Badge tono="primary">{eventos.length} eventos</Badge>
+      </div>
+      {eventos.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => onSeccion(e.seccion)}
+              className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"
+            >
+              <span className={`${CIRCULO_ICONO} mt-0.5 size-8`}>
+                <e.icon className="size-3.5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold">{e.titulo}</span>
+                  <Badge tono={e.tono}>
+                    {formatearFecha(e.fecha)}
+                    {e.hora ? ` · ${e.hora}` : ""}
+                  </Badge>
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  {e.detalle}
+                </span>
+              </span>
+              <ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" />
+            </button>
+          ))}
+          {eventos.length > TIMELINE_VISIBLES && (
+            <button
+              type="button"
+              onClick={() => setVerTodos((v) => !v)}
+              aria-expanded={verTodos}
+              className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline"
+            >
+              {verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}
+              <ChevronDown
+                className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* Lleva a una sección de la ficha y baja hasta ella (antes cambiaba abajo y no se notaba). */
 function irASeccion(onSeccion: (s: SeccionRegistros) => void, seccion: SeccionRegistros) {
   onSeccion(seccion);
-  window.setTimeout(() => document.getElementById("seccion-ficha")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  window.setTimeout(
+    () =>
+      document
+        .getElementById("seccion-ficha")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    60,
+  );
 }
 
 type ItemDetalle = { titulo: string; detalle: string; tono?: Tono; etiqueta?: string };
@@ -5827,7 +8529,10 @@ function DetalleModal({
       ) : (
         <ul className="space-y-2">
           {items.map((it, i) => (
-            <li key={i} className="rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.05] p-3">
+            <li
+              key={i}
+              className="rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.05] p-3"
+            >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold">{it.titulo}</p>
                 {it.etiqueta && <Badge tono={it.tono ?? "primary"}>{it.etiqueta}</Badge>}
@@ -5865,52 +8570,148 @@ const ETIQUETA_SECCION: Partial<Record<SeccionRegistros, string>> = {
   historia: "Historia clínica",
 };
 
-function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+function AlertasPaciente({
+  datos,
+  onSeccion,
+}: {
+  datos: Registros;
+  onSeccion: (s: SeccionRegistros) => void;
+}) {
   const [abierta, setAbierta] = useState<string | null>(null);
   const hoy = hoyISO();
   const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((a, m) => a + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((a, m) => a + m.monto, 0);
-  const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((a, m) => a + m.monto, 0);
+  const creditos = datos.cuenta
+    .filter((m) => m.tipo === "Nota de crédito")
+    .reduce((a, m) => a + m.monto, 0);
   const saldo = cargos - pagos - creditos;
-  type Alerta = { id: string; texto: string; detalle: string; seccion: SeccionRegistros; tono: Tono; icon: LucideIcon; items: ItemDetalle[] };
+  type Alerta = {
+    id: string;
+    texto: string;
+    detalle: string;
+    seccion: SeccionRegistros;
+    tono: Tono;
+    icon: LucideIcon;
+    items: ItemDetalle[];
+  };
   const alertas: Alerta[] = [];
 
-  const tratPend = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado");
+  const tratPend = datos.tratamientos.filter(
+    (t) => t.estado === "Pendiente" || t.estado === "Planificado",
+  );
   if (tratPend.length)
     alertas.push({
-      id: "trat", texto: "Tratamiento pendiente", detalle: `${tratPend.length} ${tratPend.length === 1 ? "tratamiento requiere" : "tratamientos requieren"} atención`, seccion: "tratamientos", tono: "ambar", icon: Stethoscope,
-      items: tratPend.map((t) => ({ titulo: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`, detalle: `${t.profesional || "Sin profesional"}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}${t.diagnostico ? ` · ${t.diagnostico}` : ""}`, etiqueta: t.estado, tono: "ambar" })),
+      id: "trat",
+      texto: "Tratamiento pendiente",
+      detalle: `${tratPend.length} ${tratPend.length === 1 ? "tratamiento requiere" : "tratamientos requieren"} atención`,
+      seccion: "tratamientos",
+      tono: "ambar",
+      icon: Stethoscope,
+      items: tratPend.map((t) => ({
+        titulo: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`,
+        detalle: `${t.profesional || "Sin profesional"}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}${t.diagnostico ? ` · ${t.diagnostico}` : ""}`,
+        etiqueta: t.estado,
+        tono: "ambar",
+      })),
     });
-  const presPend = datos.presupuestos.filter((p) => p.estado === "Borrador" || p.estado === "Enviado");
+  const presPend = datos.presupuestos.filter(
+    (p) => p.estado === "Borrador" || p.estado === "Enviado",
+  );
   if (presPend.length)
     alertas.push({
-      id: "pres", texto: "Presupuesto pendiente", detalle: `${presPend.length} sin aprobación final`, seccion: "presupuestos", tono: "ambar", icon: ReceiptText,
-      items: presPend.map((p) => ({ titulo: `${p.numero} · ${formatearMonto(p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0))}`, detalle: `${formatearFecha(p.fecha)} · ${p.lineas.map((l) => l.descripcion).join(", ")}`, etiqueta: p.estado, tono: "ambar" })),
+      id: "pres",
+      texto: "Presupuesto pendiente",
+      detalle: `${presPend.length} sin aprobación final`,
+      seccion: "presupuestos",
+      tono: "ambar",
+      icon: ReceiptText,
+      items: presPend.map((p) => ({
+        titulo: `${p.numero} · ${formatearMonto(p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0))}`,
+        detalle: `${formatearFecha(p.fecha)} · ${p.lineas.map((l) => l.descripcion).join(", ")}`,
+        etiqueta: p.estado,
+        tono: "ambar",
+      })),
     });
   const turnosAtrasados = datos.turnos.filter((t) => t.fecha < hoy && t.estado === "Pendiente");
-  const controlesVencidos = datos.notasClinicas.filter((n) => n.proximoControl && n.proximoControl < hoy);
+  const controlesVencidos = datos.notasClinicas.filter(
+    (n) => n.proximoControl && n.proximoControl < hoy,
+  );
   if (turnosAtrasados.length + controlesVencidos.length)
     alertas.push({
-      id: "control", texto: "Control atrasado", detalle: `${turnosAtrasados.length + controlesVencidos.length} seguimiento(s) para revisar`, seccion: "turnos", tono: "rojo", icon: Clock3,
+      id: "control",
+      texto: "Control atrasado",
+      detalle: `${turnosAtrasados.length + controlesVencidos.length} seguimiento(s) para revisar`,
+      seccion: "turnos",
+      tono: "rojo",
+      icon: Clock3,
       items: [
-        ...turnosAtrasados.map((t) => ({ titulo: `Turno del ${formatearFecha(t.fecha)} ${t.hora}`, detalle: `${t.motivo} · quedó sin confirmar ni atender`, etiqueta: "Atrasado", tono: "rojo" as Tono })),
-        ...controlesVencidos.map((n) => ({ titulo: `Control indicado para el ${formatearFecha(n.proximoControl)}`, detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""} · ${n.profesional}`, etiqueta: "Vencido", tono: "rojo" as Tono })),
+        ...turnosAtrasados.map((t) => ({
+          titulo: `Turno del ${formatearFecha(t.fecha)} ${t.hora}`,
+          detalle: `${t.motivo} · quedó sin confirmar ni atender`,
+          etiqueta: "Atrasado",
+          tono: "rojo" as Tono,
+        })),
+        ...controlesVencidos.map((n) => ({
+          titulo: `Control indicado para el ${formatearFecha(n.proximoControl)}`,
+          detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""} · ${n.profesional}`,
+          etiqueta: "Vencido",
+          tono: "rojo" as Tono,
+        })),
       ],
     });
   const estPend = datos.estudios.filter((e) => e.estadoInforme === "Sin informar");
   if (estPend.length)
     alertas.push({
-      id: "est", texto: "Estudio sin informe", detalle: `${estPend.length} ${estPend.length === 1 ? "estudio espera" : "estudios esperan"} informe`, seccion: "estudios", tono: "ambar", icon: Images,
-      items: estPend.map((e) => ({ titulo: `${e.tipo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`, detalle: `${formatearFecha(e.fecha)} · solicitó ${e.solicitante || e.profesional || "—"}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`, etiqueta: "Sin informar", tono: "ambar" })),
+      id: "est",
+      texto: "Estudio sin informe",
+      detalle: `${estPend.length} ${estPend.length === 1 ? "estudio espera" : "estudios esperan"} informe`,
+      seccion: "estudios",
+      tono: "ambar",
+      icon: Images,
+      items: estPend.map((e) => ({
+        titulo: `${e.tipo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`,
+        detalle: `${formatearFecha(e.fecha)} · solicitó ${e.solicitante || e.profesional || "—"}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`,
+        etiqueta: "Sin informar",
+        tono: "ambar",
+      })),
     });
   if (saldo > 0)
     alertas.push({
-      id: "pago", texto: "Pago pendiente", detalle: `Saldo ${formatearMonto(saldo)}`, seccion: "cuenta", tono: "rojo", icon: Wallet,
-      items: [...datos.cuenta].sort((a, b) => b.fecha.localeCompare(a.fecha)).map((m) => ({ titulo: `${m.concepto} · ${formatearMonto(m.monto)}`, detalle: `${formatearFecha(m.fecha)}${m.medio ? ` · ${m.medio}` : ""}`, etiqueta: m.tipo, tono: (m.tipo === "Cargo" ? "gris" : "verde") as Tono })),
+      id: "pago",
+      texto: "Pago pendiente",
+      detalle: `Saldo ${formatearMonto(saldo)}`,
+      seccion: "cuenta",
+      tono: "rojo",
+      icon: Wallet,
+      items: [...datos.cuenta]
+        .sort((a, b) => b.fecha.localeCompare(a.fecha))
+        .map((m) => ({
+          titulo: `${m.concepto} · ${formatearMonto(m.monto)}`,
+          detalle: `${formatearFecha(m.fecha)}${m.medio ? ` · ${m.medio}` : ""}`,
+          etiqueta: m.tipo,
+          tono: (m.tipo === "Cargo" ? "gris" : "verde") as Tono,
+        })),
     });
-  const haySeguimientoReciente = [...datos.notasClinicas.map((n) => n.fecha), ...datos.historia.map((h) => h.fecha), ...datos.turnos.map((t) => t.fecha)].some((f) => f >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10));
+  const haySeguimientoReciente = [
+    ...datos.notasClinicas.map((n) => n.fecha),
+    ...datos.historia.map((h) => h.fecha),
+    ...datos.turnos.map((t) => t.fecha),
+  ].some((f) => f >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10));
   if (!haySeguimientoReciente)
-    alertas.push({ id: "seg", texto: "Sin seguimiento reciente", detalle: "Sin actividad clínica en 60 días", seccion: "historia", tono: "rojo", icon: Activity, items: [{ titulo: "No hay consultas, notas ni turnos en los últimos 60 días", detalle: "Conviene contactar al paciente para un control." }] });
+    alertas.push({
+      id: "seg",
+      texto: "Sin seguimiento reciente",
+      detalle: "Sin actividad clínica en 60 días",
+      seccion: "historia",
+      tono: "rojo",
+      icon: Activity,
+      items: [
+        {
+          titulo: "No hay consultas, notas ni turnos en los últimos 60 días",
+          detalle: "Conviene contactar al paciente para un control.",
+        },
+      ],
+    });
 
   const ICONO_TONO: Record<Tono, string> = {
     primary: "bg-primary/10 text-primary",
@@ -5933,7 +8734,11 @@ function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s
             <p className="text-xs text-muted-foreground">Lo que requiere atención en esta ficha.</p>
           </div>
         </div>
-        {alertas.length > 0 && <Badge tono={alertas.some((x) => x.tono === "rojo") ? "rojo" : "ambar"}>{alertas.length}</Badge>}
+        {alertas.length > 0 && (
+          <Badge tono={alertas.some((x) => x.tono === "rojo") ? "rojo" : "ambar"}>
+            {alertas.length}
+          </Badge>
+        )}
       </div>
       {alertas.length === 0 ? (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-3 py-2.5 text-xs text-emerald-700">
@@ -5948,14 +8753,20 @@ function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s
               onClick={() => setAbierta(x.id)}
               className="group flex items-center gap-2.5 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${ICONO_TONO[x.tono]}`}>
+              <span
+                className={`grid size-8 shrink-0 place-items-center rounded-lg ${ICONO_TONO[x.tono]}`}
+              >
                 <x.icon className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-xs font-semibold leading-snug">{x.texto}</span>
-                <span className="block text-[11px] leading-snug text-muted-foreground">{x.detalle}</span>
+                <span className="block text-[11px] leading-snug text-muted-foreground">
+                  {x.detalle}
+                </span>
               </span>
-              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">Ver</span>
+              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                Ver
+              </span>
             </button>
           ))}
         </div>
@@ -5974,11 +8785,25 @@ function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s
   );
 }
 
-function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
-  const piezas = Array.from(new Set([
-    ...datos.diagnosticos.map((d) => d.pieza), ...datos.tratamientos.map((t) => t.pieza), ...datos.historia.map((h) => h.pieza),
-    ...datos.estudios.map((e) => e.pieza || e.zona).filter(Boolean) as string[], ...datos.fotografias.map((f) => f.pieza), ...datos.notasClinicas.map((n) => n.piezas),
-  ].flatMap((p) => p.split(/[,;\s]+/).filter((x) => /^\d{1,2}$/.test(x))))).sort();
+function PiezaContexto({
+  datos,
+  onSeccion,
+}: {
+  datos: Registros;
+  onSeccion: (s: SeccionRegistros) => void;
+}) {
+  const piezas = Array.from(
+    new Set(
+      [
+        ...datos.diagnosticos.map((d) => d.pieza),
+        ...datos.tratamientos.map((t) => t.pieza),
+        ...datos.historia.map((h) => h.pieza),
+        ...(datos.estudios.map((e) => e.pieza || e.zona).filter(Boolean) as string[]),
+        ...datos.fotografias.map((f) => f.pieza),
+        ...datos.notasClinicas.map((n) => n.piezas),
+      ].flatMap((p) => p.split(/[,;\s]+/).filter((x) => /^\d{1,2}$/.test(x))),
+    ),
+  ).sort();
   const [pieza, setPieza] = useState(piezas[0] ?? "");
   const [abierto, setAbierto] = useState<string | null>(null);
   const incluye = (texto: string) => texto.split(/[,;\s]+/).includes(pieza);
@@ -5989,17 +8814,88 @@ function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: 
   const fotos = datos.fotografias.filter((f) => f.pieza === pieza);
   if (piezas.length === 0) return null;
 
-  const grupos: { id: string; label: string; valor: number; icon: LucideIcon; seccion: SeccionRegistros; items: ItemDetalle[] }[] = [
-    { id: "diag", label: "Diagnósticos", valor: diagnosticos.length, icon: Activity, seccion: "estudios", items: diagnosticos.map((d) => ({ titulo: d.titulo, detalle: `${formatearFecha(d.fecha)}${d.descripcion ? ` · ${d.descripcion}` : ""}`, etiqueta: d.estado, tono: TONO_DIAGNOSTICO[d.estado] })) },
-    { id: "trat", label: "Tratamientos", valor: tratamientos.length, icon: Stethoscope, seccion: "tratamientos", items: tratamientos.map((t) => ({ titulo: t.nombre, detalle: `${t.profesional}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}`, etiqueta: t.estado, tono: TONO_TRATAMIENTO[t.estado] })) },
-    { id: "notas", label: "Notas clínicas", valor: notas.length, icon: ClipboardList, seccion: "historia", items: notas.map((n) => ({ titulo: n.motivoConsulta, detalle: `${formatearFecha(n.fecha)} · ${n.profesional}${n.diagnostico ? ` · ${n.diagnostico}` : ""}` })) },
-    { id: "img", label: "Imágenes y estudios", valor: estudios.length + fotos.length, icon: Images, seccion: "estudios", items: [...estudios.map((e) => ({ titulo: e.tipo, detalle: `${formatearFecha(e.fecha)}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`, etiqueta: e.estadoInforme, tono: TONO_INFORME[e.estadoInforme] })), ...fotos.map((f) => ({ titulo: `Fotografía · ${f.tipo}`, detalle: formatearFecha(f.fecha) }))] },
+  const grupos: {
+    id: string;
+    label: string;
+    valor: number;
+    icon: LucideIcon;
+    seccion: SeccionRegistros;
+    items: ItemDetalle[];
+  }[] = [
+    {
+      id: "diag",
+      label: "Diagnósticos",
+      valor: diagnosticos.length,
+      icon: Activity,
+      seccion: "estudios",
+      items: diagnosticos.map((d) => ({
+        titulo: d.titulo,
+        detalle: `${formatearFecha(d.fecha)}${d.descripcion ? ` · ${d.descripcion}` : ""}`,
+        etiqueta: d.estado,
+        tono: TONO_DIAGNOSTICO[d.estado],
+      })),
+    },
+    {
+      id: "trat",
+      label: "Tratamientos",
+      valor: tratamientos.length,
+      icon: Stethoscope,
+      seccion: "tratamientos",
+      items: tratamientos.map((t) => ({
+        titulo: t.nombre,
+        detalle: `${t.profesional}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}`,
+        etiqueta: t.estado,
+        tono: TONO_TRATAMIENTO[t.estado],
+      })),
+    },
+    {
+      id: "notas",
+      label: "Notas clínicas",
+      valor: notas.length,
+      icon: ClipboardList,
+      seccion: "historia",
+      items: notas.map((n) => ({
+        titulo: n.motivoConsulta,
+        detalle: `${formatearFecha(n.fecha)} · ${n.profesional}${n.diagnostico ? ` · ${n.diagnostico}` : ""}`,
+      })),
+    },
+    {
+      id: "img",
+      label: "Imágenes y estudios",
+      valor: estudios.length + fotos.length,
+      icon: Images,
+      seccion: "estudios",
+      items: [
+        ...estudios.map((e) => ({
+          titulo: e.tipo,
+          detalle: `${formatearFecha(e.fecha)}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`,
+          etiqueta: e.estadoInforme,
+          tono: TONO_INFORME[e.estadoInforme],
+        })),
+        ...fotos.map((f) => ({
+          titulo: `Fotografía · ${f.tipo}`,
+          detalle: formatearFecha(f.fecha),
+        })),
+      ],
+    },
   ];
   const actual = grupos.find((g) => g.id === abierto);
   const actividad = [
-    ...datos.historia.filter((h) => incluye(h.pieza)).map((h) => ({ fecha: h.fecha, texto: `${h.motivo}: ${h.detalle}`, quien: h.profesional })),
-    ...tratamientos.flatMap((t) => (t.sesiones ?? []).map((ss) => ({ fecha: ss.fecha, texto: `${t.nombre}: ${ss.detalle}`, quien: ss.profesional }))),
-    ...estudios.map((e) => ({ fecha: e.fecha, texto: `${e.tipo}${e.diagnostico ? `: ${e.diagnostico}` : ""}`, quien: e.profesional || e.solicitante })),
+    ...datos.historia
+      .filter((h) => incluye(h.pieza))
+      .map((h) => ({ fecha: h.fecha, texto: `${h.motivo}: ${h.detalle}`, quien: h.profesional })),
+    ...tratamientos.flatMap((t) =>
+      (t.sesiones ?? []).map((ss) => ({
+        fecha: ss.fecha,
+        texto: `${t.nombre}: ${ss.detalle}`,
+        quien: ss.profesional,
+      })),
+    ),
+    ...estudios.map((e) => ({
+      fecha: e.fecha,
+      texto: `${e.tipo}${e.diagnostico ? `: ${e.diagnostico}` : ""}`,
+      quien: e.profesional || e.solicitante,
+    })),
   ]
     .sort((x, y) => y.fecha.localeCompare(x.fecha))
     .slice(0, 4);
@@ -6043,14 +8939,20 @@ function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: 
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-lg font-bold leading-tight">{g.valor}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">{g.label}</span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">
+                {g.label}
+              </span>
             </span>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">Ver</span>
+            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              Ver
+            </span>
           </button>
         ))}
       </div>
       <div className="mt-3 flex-1 rounded-xl border border-primary/10 bg-white/70 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Última actividad en la pieza {pieza}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Última actividad en la pieza {pieza}
+        </p>
         {actividad.length === 0 ? (
           <p className="mt-2 text-xs text-muted-foreground">Sin actividad registrada todavía.</p>
         ) : (
@@ -6082,29 +8984,149 @@ function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: 
 }
 
 function AuditoriaSec({ datos }: { datos: Registros }) {
-  const lista = [...datos.auditoria].sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`)).slice(0, 8);
-  return <div className="card-grad p-3"><div className="flex items-center gap-2"><span className={`${CIRCULO_ICONO} size-8`}><UserRound className="size-3.5" /></span><div><p className="text-sm font-semibold">Historial de cambios</p><p className="text-xs text-muted-foreground">Quién hizo cada cambio en la ficha y cuándo.</p></div></div>{lista.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Sin acciones registradas.</p> : <div className="mt-2 divide-y divide-border">{lista.map((a) => <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"><span><strong>{a.usuario}</strong> · {a.accion}</span><span className="text-[10px] text-muted-foreground">{formatearFecha(a.fecha)} · {a.hora}</span></div>)}</div>}</div>;
+  const lista = [...datos.auditoria]
+    .sort((a, b) => `${b.fecha}${b.hora}${b.id}`.localeCompare(`${a.fecha}${a.hora}${a.id}`))
+    .slice(0, 8);
+  return (
+    <div className="card-grad p-3">
+      <div className="flex items-center gap-2">
+        <span className={`${CIRCULO_ICONO} size-8`}>
+          <UserRound className="size-3.5" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold">Historial de cambios</p>
+          <p className="text-xs text-muted-foreground">
+            Quién hizo cada cambio en la ficha y cuándo.
+          </p>
+        </div>
+      </div>
+      {lista.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">Sin acciones registradas.</p>
+      ) : (
+        <div className="mt-2 divide-y divide-border">
+          {lista.map((a) => (
+            <div
+              key={a.id}
+              className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
+            >
+              <span>
+                <strong>{a.usuario}</strong> · {a.accion}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {formatearFecha(a.fecha)} · {a.hora}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; contexto?: ContextoPaciente; onSeccion: (s: SeccionRegistros) => void }) {
+function ResumenPaciente({
+  datos,
+  contexto,
+  onSeccion,
+}: {
+  datos: Registros;
+  contexto?: ContextoPaciente;
+  onSeccion: (s: SeccionRegistros) => void;
+}) {
   if (!contexto?.paciente) return null;
   const hoy = hoyISO();
-  const tratamientosActivos = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento").length;
-  const proximoTurno = [...datos.turnos].filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`).sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
-  const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((acc, m) => acc + m.monto, 0);
+  const tratamientosActivos = datos.tratamientos.filter(
+    (t) => t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento",
+  ).length;
+  const proximoTurno = [...datos.turnos]
+    .filter((t) => t.estado !== "Cancelado" && `${t.fecha} ${t.hora}` >= `${hoy} 00:00`)
+    .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`))[0];
+  const cargos = datos.cuenta
+    .filter((m) => m.tipo === "Cargo")
+    .reduce((acc, m) => acc + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((acc, m) => acc + m.monto, 0);
-  const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((acc, m) => acc + m.monto, 0);
+  const creditos = datos.cuenta
+    .filter((m) => m.tipo === "Nota de crédito")
+    .reduce((acc, m) => acc + m.monto, 0);
   const saldo = cargos - pagos - creditos;
   const inicialesPaciente = iniciales(contexto.paciente) || "PA";
-  return <>
-    <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
-      <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" /><div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{(datos.antecedentes?.alergias.length ?? 0) > 0 && <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive"><ShieldAlert className="size-3" />Alergia: {datos.antecedentes.alergias.join(", ")}</p>}{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
-      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${proximoTurno.fecha.slice(8, 10)}/${proximoTurno.fecha.slice(5, 7)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
-    </section>
-    <div className="mb-4 grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
-    <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>
-  </>;
+  return (
+    <>
+      <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
+        <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">
+              {inicialesPaciente}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">
+                Ficha del paciente
+              </p>
+              <h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>
+              {(datos.antecedentes?.alergias.length ?? 0) > 0 && (
+                <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+                  <ShieldAlert className="size-3" />
+                  Alergia: {datos.antecedentes.alergias.join(", ")}
+                </p>
+              )}
+              {contexto.email && (
+                <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
+              {datos.notasClinicas.length} notas clínicas
+            </span>
+            <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
+              {datos.estudios.length + datos.fotografias.length} imágenes
+            </span>
+            <span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">
+              {datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos
+            </span>
+          </div>
+        </div>
+        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+          <ResumenCuenta
+            etiqueta="Tratamientos activos"
+            valor={String(tratamientosActivos)}
+            icon={Stethoscope}
+            tono="text-primary"
+          />
+          <ResumenCuenta
+            etiqueta="Próximo turno"
+            valor={
+              proximoTurno
+                ? `${proximoTurno.fecha.slice(8, 10)}/${proximoTurno.fecha.slice(5, 7)} · ${proximoTurno.hora}`
+                : "Sin turno"
+            }
+            icon={CalendarDays}
+          />
+          <ResumenCuenta
+            etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"}
+            valor={formatearMonto(Math.abs(saldo))}
+            icon={Wallet}
+            tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""}
+          />
+          <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
+          <ResumenCuenta
+            etiqueta="Fotografías"
+            valor={String(datos.fotografias.length)}
+            icon={Camera}
+          />
+        </div>
+      </section>
+      <div className="mb-4 grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
+        <AlertasPaciente datos={datos} onSeccion={onSeccion} />
+        <PiezaContexto datos={datos} onSeccion={onSeccion} />
+      </div>
+      <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]">
+        <TimelinePaciente datos={datos} onSeccion={onSeccion} />
+        <AuditoriaSec datos={datos} />
+      </div>
+    </>
+  );
 }
 
 /* ───────────── Componente principal ───────────── */

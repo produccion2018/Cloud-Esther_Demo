@@ -61,6 +61,8 @@ import {
   type DocSolicitada,
 } from "@/lib/cloud-esther/portal-store";
 import { capitalizarNombre } from "@/lib/utils";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
+import { totalesPresupuesto } from "@/components/cloud-esther/presupuestos/Presupuestos";
 
 /* Ubicación: src/components/cloud-esther/PortalPaciente.tsx
 
@@ -1618,7 +1620,7 @@ function Documentos({ ctx }: { ctx: Ctx }) {
     );
   };
   const imprimirPresupuesto = (p: Registros["presupuestos"][number]) => {
-    const total = p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0);
+    const total = totalesPresupuesto(p, storePresupuestos.leer().planes).final;
     const filas = p.lineas
       .map(
         (l) =>
@@ -1633,7 +1635,40 @@ function Documentos({ ctx }: { ctx: Ctx }) {
   };
 
   const responder = (p: Registros["presupuestos"][number], estado: "Aprobado" | "Rechazado") => {
-    cambiar("presupuestos", (prev) => prev.map((x) => (x.id === p.id ? { ...x, estado } : x)));
+    cambiar("presupuestos", (prev) =>
+      prev.map((x) =>
+        x.id === p.id
+          ? {
+              ...x,
+              estado,
+              respondido: hoyISO(),
+              seguimientos: [
+                ...(x.seguimientos ?? []),
+                {
+                  fecha: new Date().toISOString(),
+                  texto: `${estado} por el paciente desde el portal`,
+                  autor: nombre,
+                },
+              ],
+            }
+          : x,
+      ),
+    );
+    if (estado === "Aprobado") {
+      const tot = totalesPresupuesto(p, storePresupuestos.leer().planes);
+      cambiar("cuenta", (prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          fecha: hoyISO(),
+          tipo: "Cargo",
+          concepto: `Presupuesto ${p.numero} aprobado`,
+          medio: tot.plan ? tot.plan.nombre : "A definir",
+          monto: tot.final,
+          notas: tot.cuotas > 1 ? `${tot.cuotas} cuotas de ${ars(tot.cuota)}` : "",
+        },
+      ]);
+    }
     cambiar("auditoria", (prev) => [
       ...prev,
       {
@@ -1647,7 +1682,7 @@ function Documentos({ ctx }: { ctx: Ctx }) {
     registrarEventoPortal(
       ctx.paciente.id,
       estado === "Aprobado" ? "Presupuesto aprobado" : "Presupuesto rechazado",
-      `${p.numero} · ${ars(p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0))}`,
+      `${p.numero} · ${ars(totalesPresupuesto(p, storePresupuestos.leer().planes).final)}`,
     );
     onToast(
       estado === "Aprobado"
@@ -1659,7 +1694,7 @@ function Documentos({ ctx }: { ctx: Ctx }) {
   const TABS = [
     {
       id: "presupuestos" as const,
-      label: `Presupuestos (${registros.presupuestos.length})`,
+      label: `Presupuestos (${registros.presupuestos.filter((p) => p.estado !== "Borrador").length})`,
       icon: ReceiptText,
     },
     { id: "recetas" as const, label: `Recetas (${registros.recetas.length})`, icon: PillIcon },
@@ -1692,71 +1727,84 @@ function Documentos({ ctx }: { ctx: Ctx }) {
           <Vacio icon={ReceiptText} texto="No tenés presupuestos." />
         ) : (
           <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {registros.presupuestos.map((p) => {
-              const total = p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0);
-              return (
-                <li key={p.id} className="card-grad flex flex-col p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-display text-base font-semibold">Presupuesto {p.numero}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatearFecha(p.fecha)}
-                        {p.profesional ? ` · ${p.profesional}` : ""}
-                      </p>
+            {registros.presupuestos
+              .filter((p) => p.estado !== "Borrador")
+              .map((p) => {
+                const tot = totalesPresupuesto(p, storePresupuestos.leer().planes);
+                const total = tot.final;
+                return (
+                  <li key={p.id} className="card-grad flex flex-col p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-display text-base font-semibold">
+                          Presupuesto {p.numero}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatearFecha(p.fecha)}
+                          {p.profesional ? ` · ${p.profesional}` : ""}
+                        </p>
+                      </div>
+                      <Pill
+                        clase={
+                          p.estado === "Aprobado"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : p.estado === "Rechazado"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-amber-100 text-amber-700"
+                        }
+                      >
+                        {p.estado === "Enviado" ? "Para revisar" : p.estado}
+                      </Pill>
                     </div>
-                    <Pill
-                      clase={
-                        p.estado === "Aprobado"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : p.estado === "Rechazado"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-100 text-amber-700"
-                      }
-                    >
-                      {p.estado === "Enviado" ? "Para revisar" : p.estado}
-                    </Pill>
-                  </div>
-                  <ul className="mt-3 divide-y divide-primary/[0.07] rounded-xl bg-white/80 px-3 text-xs">
-                    {p.lineas.map((l, i) => (
-                      <li key={i} className="flex justify-between gap-2 py-2">
-                        <span>
-                          {l.descripcion}
-                          {l.pieza ? ` · pieza ${l.pieza}` : ""}
-                        </span>
-                        <span className="font-semibold">{ars(l.cantidad * l.precio)}</span>
+                    <ul className="mt-3 divide-y divide-primary/[0.07] rounded-xl bg-white/80 px-3 text-xs">
+                      {p.lineas.map((l, i) => (
+                        <li key={i} className="flex justify-between gap-2 py-2">
+                          <span>
+                            {l.descripcion}
+                            {l.pieza ? ` · pieza ${l.pieza}` : ""}
+                          </span>
+                          <span className="font-semibold">{ars(l.cantidad * l.precio)}</span>
+                        </li>
+                      ))}
+                      <li className="flex justify-between py-2 text-sm font-bold">
+                        <span>Total</span>
+                        <span>{ars(total)}</span>
                       </li>
-                    ))}
-                    <li className="flex justify-between py-2 text-sm font-bold">
-                      <span>Total</span>
-                      <span>{ars(total)}</span>
-                    </li>
-                  </ul>
-                  {p.notas && <p className="mt-2 text-xs text-muted-foreground">{p.notas}</p>}
-                  <div className="min-h-3 flex-1" />
-                  <div className="flex flex-wrap justify-end gap-1.5 border-t border-primary/10 pt-2.5">
-                    <button className={BTN_SECUNDARIO} onClick={() => imprimirPresupuesto(p)}>
-                      <Download className="size-3.5" />
-                      Descargar
-                    </button>
-                    {p.estado === "Enviado" && storePortal.leer().config.presupuestosOnline && (
-                      <>
-                        <button
-                          className={BTN_SECUNDARIO}
-                          onClick={() => responder(p, "Rechazado")}
-                        >
-                          <X className="size-3.5" />
-                          Rechazar
-                        </button>
-                        <button className={BTN_PRIMARIO} onClick={() => responder(p, "Aprobado")}>
-                          <Check className="size-3.5" />
-                          Aprobar
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
+                      {(tot.descuento > 0 || tot.cuotas > 1) && (
+                        <li className="py-2 text-right text-[11px] text-muted-foreground">
+                          {tot.descuento > 0 ? `Incluye ${p.descuentoPct}% de descuento. ` : ""}
+                          {tot.plan
+                            ? `${tot.plan.nombre}${tot.cuotas > 1 ? `: ${tot.cuotas} cuotas de ${ars(tot.cuota)}` : ""}`
+                            : ""}
+                        </li>
+                      )}
+                    </ul>
+                    {p.notas && <p className="mt-2 text-xs text-muted-foreground">{p.notas}</p>}
+                    <div className="min-h-3 flex-1" />
+                    <div className="flex flex-wrap justify-end gap-1.5 border-t border-primary/10 pt-2.5">
+                      <button className={BTN_SECUNDARIO} onClick={() => imprimirPresupuesto(p)}>
+                        <Download className="size-3.5" />
+                        Descargar
+                      </button>
+                      {p.estado === "Enviado" && storePortal.leer().config.presupuestosOnline && (
+                        <>
+                          <button
+                            className={BTN_SECUNDARIO}
+                            onClick={() => responder(p, "Rechazado")}
+                          >
+                            <X className="size-3.5" />
+                            Rechazar
+                          </button>
+                          <button className={BTN_PRIMARIO} onClick={() => responder(p, "Aprobado")}>
+                            <Check className="size-3.5" />
+                            Aprobar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
           </ul>
         ))}
 

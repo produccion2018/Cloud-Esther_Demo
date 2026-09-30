@@ -37,7 +37,7 @@ import {
   useTodosLosRegistros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { CloudEstherProvider, MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
@@ -49,7 +49,13 @@ import {
   type Turno,
 } from "@/lib/cloud-esther/agenda-store";
 import { cambiarEstadoNotif } from "@/lib/cloud-esther/notificaciones-store";
-import { SUPPLIES, stockLevel } from "@/lib/cloud-esther/inventario-data";
+import {
+  nivelStock,
+  registrarMovimiento,
+  registrarPedidoEquipo,
+  storeInventario,
+} from "@/lib/cloud-esther/inventario-store";
+import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import {
   CHECKLIST_GABINETE,
   asegurarAcceso,
@@ -1451,7 +1457,15 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
   const { checklist } = storeEquipoPortal.usar();
   const clave = `${ctx.yo.id}:${hoyISO()}`;
   const hechas = checklist[clave] ?? [];
-  const bajos = SUPPLIES.filter((s) => stockLevel(s) === "bajo");
+  const { plan } = useCloudEsther();
+  const conInventario = MODULES.some((m) => m.id === "inventario" && availableIn(m, plan));
+  const { insumos, pedidos } = storeInventario.usar();
+  const nombreYo = `${ctx.yo.firstName} ${ctx.yo.lastName}`;
+  const sede = SUCURSALES[0] ?? "Clínica Centro";
+  const deSede = insumos.filter((s) => s.sucursal === sede);
+  const bajos = deSede.filter((s) => ["Bajo", "Agotado"].includes(nivelStock(s)));
+  const [uso, setUso] = useState({ id: deSede[0]?.id ?? "", cant: "1" });
+  const misPedidos = pedidos.filter((p) => p.autor === nombreYo).slice(0, 3);
   const alternar = (tarea: string) => {
     if (ctx.vista) return ctx.onToast("En la vista previa no se marcan tareas.");
     const sig = hechas.includes(tarea) ? hechas.filter((x) => x !== tarea) : [...hechas, tarea];
@@ -1498,43 +1512,113 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
           })}
         </ul>
       </Tarjeta>
-      <Tarjeta>
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <Package className="size-4 text-primary" /> Insumos con stock bajo
-        </p>
-        {bajos.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">Todo en orden.</p>
-        ) : (
-          <ul className="mt-2 space-y-1.5">
-            {bajos.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs ring-1 ring-amber-200"
+      {conInventario && (
+        <>
+          <Tarjeta>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Package className="size-4 text-primary" /> Insumos con stock bajo
+            </p>
+            {bajos.length === 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">Todo en orden.</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {bajos.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs ring-1 ring-amber-200"
+                  >
+                    <span>
+                      <b>{s.nombre}</b> · {s.ubicacion}
+                    </span>
+                    <span className="font-semibold text-amber-700">
+                      {s.stock} {s.unidad} (mín. {s.minimo})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              className={`${BTN_SECUNDARIO} mt-3 w-full`}
+              onClick={() => {
+                if (ctx.vista) return ctx.onToast("En la vista previa no se envían pedidos.");
+                const detalle = bajos.length
+                  ? `Reponer: ${bajos.map((s) => s.nombre).join(", ")}`
+                  : "Revisar insumos del gabinete";
+                registrarPedidoEquipo(nombreYo, sede, detalle);
+                registrarEventoEquipo(ctx.yo.id, "Pidió reposición", detalle);
+                ctx.onToast("Pedido de reposición enviado a administración");
+              }}
+            >
+              <Package className="size-3.5" /> Pedir reposición
+            </button>
+            {misPedidos.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {misPedidos.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex justify-between gap-2 text-[11px] text-muted-foreground"
+                  >
+                    <span className="truncate">{p.detalle}</span>
+                    <span
+                      className={`shrink-0 font-semibold ${p.estado === "Resuelto" ? "text-emerald-600" : "text-amber-700"}`}
+                    >
+                      {p.estado}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Tarjeta>
+          <Tarjeta>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Package className="size-4 text-primary" /> Registrar uso de insumos
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Se descuenta del stock de {sede}.</p>
+            <div className="mt-2 grid grid-cols-[1fr_72px] gap-2">
+              <select
+                aria-label="Insumo usado"
+                value={uso.id}
+                onChange={(e) => setUso((u) => ({ ...u, id: e.target.value }))}
+                className="h-10 rounded-xl border border-primary/15 bg-white px-3 text-sm"
               >
-                <span>
-                  <b>{s.name}</b> · {s.clinic}
-                </span>
-                <span className="font-semibold text-amber-700">
-                  {s.quantity} {s.unit} (mín. {s.min})
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <button
-          className={`${BTN_SECUNDARIO} mt-3 w-full`}
-          onClick={() => {
-            registrarEventoEquipo(
-              ctx.yo.id,
-              "Pidió reposición",
-              bajos.map((s) => s.name).join(", ") || "Insumos",
-            );
-            ctx.onToast("Pedido de reposición enviado a administración");
-          }}
-        >
-          <Package className="size-3.5" /> Pedir reposición
-        </button>
-      </Tarjeta>
+                {deSede.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre} ({s.stock})
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                aria-label="Cantidad usada"
+                value={uso.cant}
+                onChange={(e) => setUso((u) => ({ ...u, cant: e.target.value }))}
+                className="h-10 rounded-xl border border-primary/15 bg-white px-3 text-sm"
+              />
+            </div>
+            <button
+              className={`${BTN_SECUNDARIO} mt-2 w-full`}
+              onClick={() => {
+                if (ctx.vista) return ctx.onToast("En la vista previa no se registra consumo.");
+                const ins = deSede.find((s) => s.id === uso.id);
+                const n = Number(uso.cant);
+                if (!ins || !(n > 0)) return ctx.onToast("Elegí el insumo y la cantidad.");
+                registrarMovimiento({
+                  insumoId: ins.id,
+                  tipo: "Salida",
+                  cantidad: -n,
+                  motivo: `Uso en ${ctx.yo.office ?? "gabinete"}`,
+                  usuario: nombreYo,
+                  referencia: "",
+                });
+                ctx.onToast(`Registrado: ${n} ${ins.unidad} de ${ins.nombre}`);
+              }}
+            >
+              <Check className="size-3.5" /> Registrar uso
+            </button>
+          </Tarjeta>
+        </>
+      )}
     </div>
   );
 }

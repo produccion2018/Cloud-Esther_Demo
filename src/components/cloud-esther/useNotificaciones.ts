@@ -3,7 +3,12 @@ import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
-import { SUPPLIES, stockLevel } from "@/lib/cloud-esther/inventario-data";
+import {
+  diasParaVencer,
+  nivelStock,
+  storeInventario,
+  sucursalesDelPlan,
+} from "@/lib/cloud-esther/inventario-store";
 import {
   storeNotificaciones,
   type CategoriaNotif,
@@ -60,6 +65,7 @@ export function useNotificaciones() {
   const { plan } = useCloudEsther();
   const { manuales, estados, preferencias } = storeNotificaciones.usar();
   const { turnos, espera, tareas } = storeAgenda.usar();
+  const inventario = storeInventario.usar();
   const { conversaciones, recordatorios } = storeComunicacion.usar();
   const { pacientes } = usePacientes();
   const { miembros } = useEquipo();
@@ -221,20 +227,49 @@ export function useNotificaciones() {
     }
   }
 
-  /* ── Insumos ── TODO: leer del store de Inventario cuando sea por empresa. */
+  /* ── Insumos: stock bajo, agotados, vencimientos y pedidos del equipo ── */
   if (tiene("inventario")) {
-    for (const s of SUPPLIES.filter((x) => stockLevel(x) === "bajo")) {
-      auto.push({
-        id: `stock-${s.id}-${s.quantity}`,
-        titulo: `Stock bajo: ${s.name}`,
-        detalle: `Quedan ${s.quantity} ${s.unit} en ${s.clinic} (mínimo ${s.min}). Proveedor: ${s.provider}.`,
-        categoria: "Insumos",
-        prioridad: s.quantity <= s.min / 2 ? "Urgente" : "Alta",
-        fecha: `${hoy}T07:15:00`,
-        asignado: "Administración",
-        accion: { label: "Pedir reposición", to: "/demo/inventario" },
-      });
+    const sedes = sucursalesDelPlan(plan === "grupo");
+    const prov = (id: string) => inventario.proveedores.find((p) => p.id === id)?.nombre ?? "—";
+    for (const s of inventario.insumos.filter((x) => sedes.includes(x.sucursal))) {
+      const nivel = nivelStock(s);
+      if (nivel === "Bajo" || nivel === "Agotado")
+        auto.push({
+          id: `stock-${s.id}-${s.stock}`,
+          titulo: nivel === "Agotado" ? `Sin stock: ${s.nombre}` : `Stock bajo: ${s.nombre}`,
+          detalle: `Quedan ${s.stock} ${s.unidad} en ${s.sucursal} (mínimo ${s.minimo}). Proveedor: ${prov(s.proveedorId)}.`,
+          categoria: "Insumos",
+          prioridad: nivel === "Agotado" || s.stock <= s.minimo / 2 ? "Urgente" : "Alta",
+          fecha: `${hoy}T07:15:00`,
+          asignado: "Administración",
+          accion: { label: "Pedir reposición", to: "/demo/inventario" },
+        });
+      const dv = diasParaVencer(s);
+      if (dv !== null && dv <= 30 && s.stock > 0)
+        auto.push({
+          id: `vence-${s.id}-${s.vencimiento}`,
+          titulo: dv < 0 ? `Insumo vencido: ${s.nombre}` : `Vence pronto: ${s.nombre}`,
+          detalle: `Lote ${s.lote || "s/d"} en ${s.sucursal}: ${dv < 0 ? `venció hace ${-dv} días` : `vence en ${dv} días`} (${s.stock} ${s.unidad}).`,
+          categoria: "Insumos",
+          prioridad: dv < 0 ? "Urgente" : "Normal",
+          fecha: `${hoy}T07:20:00`,
+          asignado: "Administración",
+          accion: { label: "Ver vencimientos", to: "/demo/inventario" },
+        });
     }
+    for (const p of inventario.pedidos.filter(
+      (x) => x.estado === "Pendiente" && sedes.includes(x.sucursal),
+    ))
+      auto.push({
+        id: `pedido-${p.id}`,
+        titulo: `Pedido de insumos de ${p.autor}`,
+        detalle: `${p.detalle} (${p.sucursal}).`,
+        categoria: "Insumos",
+        prioridad: "Alta",
+        fecha: p.fecha,
+        asignado: "Administración",
+        accion: { label: "Ver pedido", to: "/demo/inventario" },
+      });
   }
 
   /* ── Pacientes: cumpleaños ── */

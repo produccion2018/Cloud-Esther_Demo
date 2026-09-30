@@ -9,6 +9,7 @@ import {
   type Turno as TurnoAgenda,
 } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { normalizarBusqueda } from "@/lib/utils";
 import type { FormEvent, ReactNode } from "react";
 import {
   Plus, X, Trash2, ChevronDown, History, Stethoscope, FolderOpen, FileText, ReceiptText,
@@ -170,7 +171,16 @@ type TratamientoPaciente = {
   presupuestoId?: number | null;
   estudioIds?: number[];
   fotografiaIds?: number[];
+  prioridad?: PrioridadTratamiento;
+  sesionesPlan?: number;
+  sesiones?: SesionTratamiento[];
+  costo?: number;
+  fin?: string;
+  historial?: { estado: EstadoTratamiento; fecha: string }[];
 };
+
+type PrioridadTratamiento = "Alta" | "Media" | "Baja";
+type SesionTratamiento = { id: number; fecha: string; profesional: string; detalle: string };
 
 type DocumentoPaciente = {
   id: number;
@@ -522,6 +532,48 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           presupuestoId: 1,
           estudioIds: [2],
           fotografiaIds: [1],
+          prioridad: "Alta",
+          sesionesPlan: 2,
+          costo: 60000,
+          sesiones: [{ id: 1, fecha: "2026-08-20", profesional: "Dr. Carlos Rodríguez", detalle: "Remoción de caries y restauración con resina A2." }],
+          historial: [
+            { estado: "Planificado", fecha: "2026-08-18" },
+            { estado: "En tratamiento", fecha: "2026-08-20" },
+          ],
+        },
+        {
+          id: 2,
+          nombre: "Endodoncia",
+          pieza: "36",
+          estado: "Planificado",
+          profesional: "Dr. Carlos Rodríguez",
+          inicio: "2026-10-06",
+          notas: "Paciente con bruxismo: evaluar corona posterior.",
+          diagnostico: "Pulpitis irreversible en pieza 36.",
+          prioridad: "Media",
+          sesionesPlan: 3,
+          costo: 120000,
+          sesiones: [],
+          historial: [{ estado: "Planificado", fecha: "2026-09-25" }],
+        },
+        {
+          id: 3,
+          nombre: "Limpieza dental",
+          pieza: "",
+          estado: "Completado",
+          profesional: "Dra. Laura Gómez",
+          inicio: "2026-07-10",
+          fin: "2026-07-10",
+          notas: "",
+          prioridad: "Baja",
+          sesionesPlan: 1,
+          costo: 25000,
+          sesiones: [{ id: 1, fecha: "2026-07-10", profesional: "Dra. Laura Gómez", detalle: "Tartrectomía y pulido. Indicaciones de higiene." }],
+          historial: [
+            { estado: "Planificado", fecha: "2026-07-01" },
+            { estado: "En tratamiento", fecha: "2026-07-10" },
+            { estado: "Completado", fecha: "2026-07-10" },
+          ],
         },
       ],
       documentos: [
@@ -1950,140 +2002,583 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
 /* ───────────── Tratamientos ───────────── */
 
+/* Catálogo orientativo: sesiones y valor sugerido para autocompletar el formulario. */
+const CATALOGO_TRATAMIENTOS: Record<string, { sesiones: number; precio: number }> = {
+  "Primera consulta": { sesiones: 1, precio: 15000 },
+  Control: { sesiones: 1, precio: 10000 },
+  "Limpieza dental": { sesiones: 1, precio: 25000 },
+  Restauración: { sesiones: 1, precio: 40000 },
+  "Restauración estética": { sesiones: 2, precio: 60000 },
+  Endodoncia: { sesiones: 3, precio: 120000 },
+  Extracción: { sesiones: 1, precio: 45000 },
+  "Control de ortodoncia": { sesiones: 12, precio: 480000 },
+  Blanqueamiento: { sesiones: 2, precio: 90000 },
+  "Evaluación de implante": { sesiones: 1, precio: 20000 },
+  Implante: { sesiones: 4, precio: 650000 },
+  Corona: { sesiones: 3, precio: 280000 },
+  Urgencia: { sesiones: 1, precio: 30000 },
+};
+
+const PRIORIDADES_TRATAMIENTO = ["Alta", "Media", "Baja"] as const;
+const TONO_PRIORIDAD: Record<PrioridadTratamiento, Tono> = { Alta: "rojo", Media: "ambar", Baja: "gris" };
+const PASOS_TRATAMIENTO = ["Pendiente", "Planificado", "En tratamiento", "Completado"] as const;
+
+/** Piezas válidas en notación FDI (permanentes 11–48 y temporales 51–85). */
+function piezaValida(pieza: string) {
+  return pieza
+    .split(/[,\s-]+/)
+    .filter(Boolean)
+    .every((p) => /^([1-4][1-8]|[5-8][1-5])$/.test(p));
+}
+
 function TratamientoForm({
+  inicial,
   presupuestos,
   onSubmit,
   onCancel,
 }: {
+  inicial?: TratamientoPaciente | undefined;
   presupuestos: PresupuestoPaciente[];
   onSubmit: (t: Omit<TratamientoPaciente, "id">) => void;
   onCancel: () => void;
 }) {
-  const [nombre, setNombre] = useState("");
-  const [pieza, setPieza] = useState("");
-  const [estado, setEstado] = useState<EstadoTratamiento>("Planificado");
-  const [profesional, setProfesional] = useState("");
-  const [inicio, setInicio] = useState("");
-  const [notas, setNotas] = useState("");
-  const [diagnostico, setDiagnostico] = useState("");
-  const [evolucion, setEvolucion] = useState("");
-  const [presupuestoId, setPresupuestoId] = useState<number | null>(null);
+  const profesionales = useProfesionales();
+  const [nombre, setNombre] = useState(inicial?.nombre ?? "");
+  const [pieza, setPieza] = useState(inicial?.pieza ?? "");
+  const [estado, setEstado] = useState<EstadoTratamiento>(inicial?.estado ?? "Planificado");
+  const [prioridad, setPrioridad] = useState<PrioridadTratamiento>(inicial?.prioridad ?? "Media");
+  const [profesional, setProfesional] = useState(inicial?.profesional ?? profesionales[0] ?? "");
+  const [inicio, setInicio] = useState(inicial?.inicio ?? hoyISO());
+  const [sesionesPlan, setSesionesPlan] = useState(String(inicial?.sesionesPlan ?? 1));
+  const [costo, setCosto] = useState(inicial?.costo ? String(inicial.costo) : "");
+  const [notas, setNotas] = useState(inicial?.notas ?? "");
+  const [diagnostico, setDiagnostico] = useState(inicial?.diagnostico ?? "");
+  const [evolucion, setEvolucion] = useState(inicial?.evolucion ?? "");
+  const [presupuestoId, setPresupuestoId] = useState<number | null>(inicial?.presupuestoId ?? null);
+  const [error, setError] = useState("");
+
+  // Al elegir una práctica del catálogo se sugieren sesiones y valor (se pueden cambiar).
+  const elegirNombre = (v: string) => {
+    setNombre(v);
+    const sugerido = CATALOGO_TRATAMIENTOS[v];
+    if (sugerido && !inicial) {
+      setSesionesPlan(String(sugerido.sesiones));
+      setCosto(String(sugerido.precio));
+    }
+  };
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ nombre: nombre.trim(), pieza: pieza.trim(), estado, profesional: profesional.trim(), inicio, notas: notas.trim(), diagnostico: diagnostico.trim(), evolucion: evolucion.trim(), presupuestoId, estudioIds: [], fotografiaIds: [] });
+    if (pieza.trim() && !piezaValida(pieza.trim())) {
+      setError("Revisá la pieza: usá la numeración FDI (11 a 48, o 51 a 85 en temporales). Podés separar varias con coma.");
+      return;
+    }
+    onSubmit({
+      nombre: nombre.trim(),
+      pieza: pieza.trim(),
+      estado,
+      prioridad,
+      profesional,
+      inicio,
+      sesionesPlan: Math.max(1, Number(sesionesPlan) || 1),
+      costo: Number(costo) || 0,
+      notas: notas.trim(),
+      diagnostico: diagnostico.trim(),
+      evolucion: evolucion.trim(),
+      presupuestoId,
+      estudioIds: inicial?.estudioIds ?? [],
+      fotografiaIds: inicial?.fotografiaIds ?? [],
+      sesiones: inicial?.sesiones ?? [],
+      historial: inicial?.historial ?? [{ estado, fecha: inicio || hoyISO() }],
+      ...(inicial?.fin ? { fin: inicial.fin } : {}),
+    });
   };
 
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Tratamiento *">
-        <input autoFocus required list="dl-practicas" value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Ej: Endodoncia, restauración estética" />
+        <input autoFocus required list="dl-tratamientos" value={nombre} onChange={(e) => elegirNombre(e.target.value)} className={INPUT} placeholder="Ej: Endodoncia, restauración estética" />
+        <datalist id="dl-tratamientos">
+          {Object.keys(CATALOGO_TRATAMIENTOS).map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
       </Field>
-      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
         <Field label="Pieza dental">
-          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21" />
+          <input value={pieza} onChange={(e) => setPieza(e.target.value)} className={INPUT} placeholder="Ej: 21 o 36, 37" />
         </Field>
         <Field label="Estado">
           <SelectField value={estado} onChange={(v) => setEstado(v as EstadoTratamiento)} options={ESTADOS_TRATAMIENTO} />
         </Field>
-        <Field label="Presupuesto relacionado">
-          <SelectId value={presupuestoId} onChange={setPresupuestoId} opciones={presupuestos.map((p) => ({ id: p.id, label: `${p.numero} · ${p.estado}` }))} placeholder="Sin vincular" />
+        <Field label="Prioridad">
+          <SelectField value={prioridad} onChange={(v) => setPrioridad(v as PrioridadTratamiento)} options={PRIORIDADES_TRATAMIENTO} />
         </Field>
         <Field label="Profesional">
-          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Nombre del profesional" />
+          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
         </Field>
         <Field label="Fecha de inicio">
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={INPUT} />
         </Field>
+        <Field label="Sesiones estimadas">
+          <input type="number" min={1} max={60} value={sesionesPlan} onChange={(e) => setSesionesPlan(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Valor (ARS)">
+          <input type="number" min={0} value={costo} onChange={(e) => setCosto(e.target.value)} className={INPUT} placeholder="0" />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Presupuesto relacionado">
+            <SelectId value={presupuestoId} onChange={setPresupuestoId} opciones={presupuestos.map((p) => ({ id: p.id, label: `${p.numero} · ${p.estado}` }))} placeholder="Sin vincular" />
+          </Field>
+        </div>
       </div>
       <Field label="Diagnóstico">
         <textarea rows={2} value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} className={TEXTAREA} placeholder="Diagnóstico que origina el tratamiento…" />
       </Field>
-      <Field label="Evolución">
-        <textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Evolución del tratamiento…" />
-      </Field>
-      <Field label="Notas">
-        <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones del tratamiento…" />
-      </Field>
-      <Acciones etiqueta="Guardar tratamiento" onCancel={onCancel} />
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Evolución">
+          <textarea rows={2} value={evolucion} onChange={(e) => setEvolucion(e.target.value)} className={TEXTAREA} placeholder="Cómo viene evolucionando…" />
+        </Field>
+        <Field label="Notas">
+          <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={TEXTAREA} placeholder="Observaciones del tratamiento…" />
+        </Field>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Acciones etiqueta={inicial ? "Guardar cambios" : "Guardar tratamiento"} onCancel={onCancel} />
     </form>
   );
 }
 
-function TratamientosSec({ datos, cambiar, onToast, onSeccion }: PropsSeccion) {
+function SesionForm({
+  tratamiento,
+  onSubmit,
+  onCancel,
+}: {
+  tratamiento: TratamientoPaciente;
+  onSubmit: (s: Omit<SesionTratamiento, "id">) => void;
+  onCancel: () => void;
+}) {
+  const profesionales = useProfesionales();
+  const [fecha, setFecha] = useState(hoyISO());
+  const [profesional, setProfesional] = useState(tratamiento.profesional || profesionales[0] || "");
+  const [detalle, setDetalle] = useState("");
+  const numero = (tratamiento.sesiones?.length ?? 0) + 1;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ fecha, profesional, detalle: detalle.trim() });
+      }}
+      className="space-y-2.5"
+    >
+      <p className="rounded-lg bg-primary/[0.05] px-3 py-2 text-xs text-muted-foreground">
+        Sesión <b className="text-foreground">{numero}</b> de {tratamiento.sesionesPlan ?? 1} · {tratamiento.nombre}
+        {tratamiento.pieza ? ` · pieza ${tratamiento.pieza}` : ""}. También se agrega a la historia clínica.
+      </p>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Fecha">
+          <input type="date" value={fecha} max={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Profesional">
+          <SelectField value={profesional} onChange={setProfesional} options={profesionales} placeholder="Seleccionar" />
+        </Field>
+      </div>
+      <Field label="Qué se hizo *">
+        <textarea autoFocus required rows={3} value={detalle} onChange={(e) => setDetalle(e.target.value)} className={TEXTAREA} placeholder="Ej: Apertura cameral y conductometría. Medicación intraconducto." />
+      </Field>
+      <Acciones etiqueta="Registrar sesión" onCancel={onCancel} />
+    </form>
+  );
+}
+
+/* Línea de pasos: Pendiente → Planificado → En tratamiento → Completado. */
+function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente }) {
+  if (tratamiento.estado === "Cancelado") {
+    return (
+      <p className="mt-3 rounded-lg bg-destructive/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-destructive">
+        Tratamiento cancelado{tratamiento.historial?.find((h) => h.estado === "Cancelado")?.fecha ? ` el ${formatearFecha(tratamiento.historial.find((h) => h.estado === "Cancelado")?.fecha ?? "")}` : ""}.
+      </p>
+    );
+  }
+  const estado = tratamiento.estado === "Finalizado" ? "Completado" : tratamiento.estado;
+  const actual = PASOS_TRATAMIENTO.indexOf(estado);
+  return (
+    <ol className="mt-3 grid grid-cols-4 gap-1">
+      {PASOS_TRATAMIENTO.map((paso, i) => {
+        const hecho = i <= actual;
+        const fecha = tratamiento.historial?.find((h) => h.estado === paso)?.fecha ?? "";
+        return (
+          <li key={paso} className="min-w-0">
+            <div className="flex items-center">
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                  hecho ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
+                } ${i === actual ? "ring-4 ring-primary/15" : ""}`}
+              >
+                {hecho ? <Check className="size-3" /> : i + 1}
+              </span>
+              {i < PASOS_TRATAMIENTO.length - 1 && <span className={`mx-1 h-0.5 flex-1 rounded-full ${i < actual ? "bg-primary" : "bg-border"}`} />}
+            </div>
+            <p className={`mt-1 truncate text-[10px] font-semibold ${hecho ? "text-foreground" : "text-muted-foreground"}`}>{paso}</p>
+            <p className="text-[10px] text-muted-foreground">{hecho && fecha ? formatearFecha(fecha) : " "}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* Plan de tratamiento para imprimir o entregar al paciente. */
+function imprimirPlanTratamiento(lista: TratamientoPaciente[], paciente: string) {
+  const filas = lista
+    .map(
+      (t) =>
+        `<tr><td>${escapar(t.nombre)}</td><td>${escapar(t.pieza || "—")}</td><td>${escapar(t.prioridad ?? "Media")}</td><td>${escapar(t.estado)}</td><td>${t.sesiones?.length ?? 0} / ${t.sesionesPlan ?? 1}</td><td class="n">${escapar(formatearMonto(t.costo ?? 0))}</td></tr>`,
+    )
+    .join("");
+  const total = lista.reduce((acc, t) => acc + (t.costo ?? 0), 0);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Plan de tratamiento · ${escapar(paciente)}</title>
+  <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:13px}h1{font-size:20px;margin:0 0 4px}
+  .meta{color:#6b6480;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee8fb}
+  th{color:#6d28d9;font-weight:600;font-size:12px}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #6d28d9}
+  .firma{display:flex;gap:48px;margin-top:56px}.firma p{border-top:1px solid #999;width:220px;padding-top:6px;font-size:11px;color:#6b6480}</style></head><body>
+  <h1>Plan de tratamiento</h1><p class="meta">Paciente: <b>${escapar(paciente)}</b> · Emitido el ${escapar(formatearFecha(hoyISO()))}</p>
+  <table><thead><tr><th>Tratamiento</th><th>Pieza</th><th>Prioridad</th><th>Estado</th><th>Sesiones</th><th class="n">Valor</th></tr></thead>
+  <tbody>${filas}</tbody><tfoot><tr><td colspan="5">Total estimado</td><td class="n">${escapar(formatearMonto(total))}</td></tr></tfoot></table>
+  <p class="meta" style="margin-top:12px">Los valores y la cantidad de sesiones son estimados y pueden cambiar según la evolución clínica.</p>
+  <div class="firma"><p>Firma del profesional</p><p>Conformidad del paciente</p></div><script>window.onload=()=>{window.print()}</script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  w.document.write(html);
+  w.document.close();
+  return true;
+}
+
+function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
+  const [editar, setEditar] = useState<TratamientoPaciente | null>(null);
+  const [sesionDe, setSesionDe] = useState<TratamientoPaciente | null>(null);
+  const [verSesiones, setVerSesiones] = useState<number | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<"" | "activos" | "Pendiente" | "completados" | "Cancelado">("");
+
+  const esActivo = (t: TratamientoPaciente) => t.estado === "Planificado" || t.estado === "En tratamiento";
+  const esCompletado = (t: TratamientoPaciente) => t.estado === "Completado" || t.estado === "Finalizado";
+  const ORDEN_PRIORIDAD: Record<PrioridadTratamiento, number> = { Alta: 0, Media: 1, Baja: 2 };
+  const todos = [...datos.tratamientos].sort(
+    (a, b) =>
+      Number(esCompletado(a) || a.estado === "Cancelado") - Number(esCompletado(b) || b.estado === "Cancelado") ||
+      ORDEN_PRIORIDAD[a.prioridad ?? "Media"] - ORDEN_PRIORIDAD[b.prioridad ?? "Media"] ||
+      (b.inicio || "").localeCompare(a.inicio || ""),
+  );
+  const texto = normalizarBusqueda(busqueda);
+  const lista = todos.filter((t) => {
+    const okFiltro =
+      !filtro ? true : filtro === "activos" ? esActivo(t) : filtro === "completados" ? esCompletado(t) : t.estado === filtro;
+    const okTexto = !texto || normalizarBusqueda(`${t.nombre} ${t.pieza} ${t.profesional}`).includes(texto);
+    return okFiltro && okTexto;
+  });
+
+  const activos = datos.tratamientos.filter(esActivo).length;
+  const pendientes = datos.tratamientos.filter((t) => t.estado === "Pendiente").length;
+  const completados = datos.tratamientos.filter(esCompletado).length;
+  const vigentes = datos.tratamientos.filter((t) => t.estado !== "Cancelado");
+  const valorPlan = vigentes.reduce((acc, t) => acc + (t.costo ?? 0), 0);
+  const sesionesHechas = vigentes.reduce((acc, t) => acc + (t.sesiones?.length ?? 0), 0);
+  const sesionesTotales = vigentes.reduce((acc, t) => acc + (t.sesionesPlan ?? 1), 0);
+
+  const agregarAuditoria = (accion: string) =>
+    cambiar("auditoria", (prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), usuario: "Profesional", accion, fecha: hoyISO(), hora: new Date().toTimeString().slice(0, 5) },
+    ]);
 
   const cambiarEstado = (t: TratamientoPaciente, estado: EstadoTratamiento) => {
     // TODO backend: PATCH /pacientes/:id/tratamientos/:tratamientoId { estado }
-    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
+    cambiar("tratamientos", (prev) =>
+      prev.map((x) =>
+        x.id === t.id
+          ? {
+              ...x,
+              estado,
+              historial: [...(x.historial ?? []).filter((h) => h.estado !== estado), { estado, fecha: hoyISO() }],
+              ...(estado === "Completado" ? { fin: hoyISO() } : {}),
+            }
+          : x,
+      ),
+    );
+    agregarAuditoria(`${t.nombre}: ${estado.toLowerCase()}`);
     onToast(`${t.nombre}: ${estado.toLowerCase()}`);
   };
+
+  const registrarSesion = (t: TratamientoPaciente, s: Omit<SesionTratamiento, "id">) => {
+    // TODO backend: POST /pacientes/:id/tratamientos/:tratamientoId/sesiones
+    const sesiones = [...(t.sesiones ?? []), { ...s, id: Date.now() }];
+    const iniciar = t.estado === "Pendiente" || t.estado === "Planificado";
+    cambiar("tratamientos", (prev) =>
+      prev.map((x) =>
+        x.id === t.id
+          ? {
+              ...x,
+              sesiones,
+              evolucion: s.detalle,
+              ...(iniciar
+                ? { estado: "En tratamiento" as const, historial: [...(x.historial ?? []), { estado: "En tratamiento" as const, fecha: s.fecha }] }
+                : {}),
+            }
+          : x,
+      ),
+    );
+    cambiar("historia", (prev) => [
+      ...prev,
+      { id: Date.now() + 1, fecha: s.fecha, profesional: s.profesional, motivo: `${t.nombre} · sesión ${sesiones.length}`, pieza: t.pieza, detalle: s.detalle },
+    ]);
+    agregarAuditoria(`Registró la sesión ${sesiones.length} de ${t.nombre}`);
+    onToast(
+      sesiones.length >= (t.sesionesPlan ?? 1)
+        ? `Sesión registrada. Se completaron las ${t.sesionesPlan ?? 1} sesiones: ya podés marcarlo como completado.`
+        : `Sesión ${sesiones.length} de ${t.sesionesPlan ?? 1} registrada y agregada a la historia clínica`,
+    );
+  };
+
+  const crearPresupuesto = (t: TratamientoPaciente) => {
+    // TODO backend: POST /pacientes/:id/presupuestos
+    const id = Date.now();
+    const numero = `PR-${String(datos.presupuestos.length + 1).padStart(4, "0")}`;
+    cambiar("presupuestos", (prev) => [
+      ...prev,
+      {
+        id,
+        numero,
+        fecha: hoyISO(),
+        estado: "Borrador",
+        lineas: [{ descripcion: t.nombre, pieza: t.pieza, cantidad: 1, precio: t.costo ?? 0 }],
+        notas: `Generado desde el tratamiento ${t.nombre}.`,
+        tratamientoId: t.id,
+        profesional: t.profesional,
+      },
+    ]);
+    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, presupuestoId: id } : x)));
+    onToast(`Presupuesto ${numero} creado en borrador`);
+  };
+
+  const FILTROS: { id: typeof filtro; label: string }[] = [
+    { id: "", label: `Todos (${todos.length})` },
+    { id: "activos", label: `En curso (${activos})` },
+    { id: "Pendiente", label: `Pendientes (${pendientes})` },
+    { id: "completados", label: `Completados (${completados})` },
+    { id: "Cancelado", label: "Cancelados" },
+  ];
 
   return (
     <div className="space-y-3">
       <Encabezado
+        icon={Stethoscope}
         titulo="Tratamientos"
-        descripcion="Tratamientos planificados, en curso y finalizados."
+        descripcion="Plan de tratamiento del paciente: sesiones, avance, valores y presupuestos."
         etiquetaBoton="Agregar tratamiento"
         onAgregar={() => setAbierto(true)}
       />
-      {datos.tratamientos.length === 0 ? (
-        <EstadoVacio
-          icon={Stethoscope}
-          titulo="Sin tratamientos"
-          texto="Cada tratamiento pasa por estos estados:"
-          chips={ESTADOS_TRATAMIENTO}
-        />
-      ) : (
-        <ul className="space-y-2.5">
-          {datos.tratamientos.map((t) => (
-            <li key={t.id} className={`${ITEM} flex flex-wrap items-center gap-3`}>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold">{t.nombre}</p>
-                  {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
-                  <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
-                </div>
-                <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
-                  {t.profesional && <span>{t.profesional}</span>}
-                  {t.inicio && <span>Inicio: {formatearFecha(t.inicio)}</span>}
-                </p>
-                {t.diagnostico && <p className="mt-1 text-xs text-muted-foreground">Diagnóstico: {t.diagnostico}</p>}
-                {t.evolucion && <p className="mt-0.5 text-xs text-muted-foreground">Evolución: {t.evolucion}</p>}
-                {t.notas && <p className="mt-0.5 text-xs italic text-muted-foreground">{t.notas}</p>}
-                <div className="mt-1 flex flex-wrap gap-1.5">{t.presupuestoId && <Badge tono="verde">Presupuesto vinculado</Badge>}{(t.estudioIds?.length ?? 0) > 0 && <Badge tono="gris">Estudios {t.estudioIds?.length}</Badge>}{(t.fotografiaIds?.length ?? 0) > 0 && <Badge tono="gris">Fotos {t.fotografiaIds?.length}</Badge>}</div>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {t.estado === "Pendiente" && <BotonMini icon={Check} label="Planificar" onClick={() => cambiarEstado(t, "Planificado")} />}
-                {t.estado === "Planificado" && <BotonMini icon={Check} label="Iniciar" onClick={() => cambiarEstado(t, "En tratamiento")} />}
-                {t.estado === "En tratamiento" && <BotonMini icon={Check} label="Completar" onClick={() => cambiarEstado(t, "Completado")} />}
-                {(t.estado === "Pendiente" || t.estado === "Planificado" || t.estado === "En tratamiento") && (
-                  <BotonMini icon={X} label="Cancelar" onClick={() => cambiarEstado(t, "Cancelado")} />
-                )}
-                {t.presupuestoId && onSeccion && <BotonMini icon={ReceiptText} label="Ver presupuesto" onClick={() => onSeccion("presupuestos")} />}
-                <BotonBorrar
-                  etiqueta="Eliminar tratamiento"
-                  onClick={() => {
-                    // TODO backend: DELETE /pacientes/:id/tratamientos/:tratamientoId
-                    cambiar("tratamientos", (prev) => prev.filter((x) => x.id !== t.id));
-                    onToast("Tratamiento eliminado");
-                  }}
-                />
-              </div>
-            </li>
+
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <ResumenCuenta etiqueta="En curso" valor={String(activos)} icon={Activity} tono="text-primary" />
+        <ResumenCuenta etiqueta="Pendientes" valor={String(pendientes)} icon={Clock3} tono={pendientes ? "text-amber-600" : ""} />
+        <ResumenCuenta etiqueta="Sesiones realizadas" valor={`${sesionesHechas} / ${sesionesTotales}`} icon={Check} tono="text-emerald-600" />
+        <ResumenCuenta etiqueta="Valor del plan" valor={formatearMonto(valorPlan)} icon={CircleDollarSign} />
+      </div>
+
+      {todos.length > 0 && (
+        <div className="card-grad flex flex-wrap items-center gap-1.5 p-2">
+          {FILTROS.map((f) => (
+            <button
+              key={f.label}
+              type="button"
+              onClick={() => setFiltro(f.id)}
+              aria-pressed={filtro === f.id}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                filtro === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
           ))}
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar tratamiento, pieza o profesional"
+            className="ml-auto h-8 w-full rounded-full border border-border bg-background px-3 text-xs outline-none focus:border-primary sm:w-64"
+          />
+          <button
+            type="button"
+            className={BTN_SECUNDARIO}
+            onClick={() => {
+              const ok = imprimirPlanTratamiento(todos.filter((t) => t.estado !== "Cancelado"), contexto?.paciente ?? "Paciente");
+              onToast(ok ? "Plan de tratamiento listo para imprimir" : "Permití las ventanas emergentes para imprimir");
+            }}
+          >
+            <Printer className="size-4" />
+            Imprimir plan
+          </button>
+        </div>
+      )}
+
+      {todos.length === 0 ? (
+        <EstadoVacio icon={Stethoscope} titulo="Sin tratamientos" texto="Cada tratamiento pasa por estos estados:" chips={PASOS_TRATAMIENTO} />
+      ) : lista.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-primary/20 px-3 py-4 text-center text-xs text-muted-foreground">
+          No hay tratamientos que coincidan.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+          {lista.map((t) => {
+            const hechas = t.sesiones?.length ?? 0;
+            const plan = t.sesionesPlan ?? 1;
+            const avance = esCompletado(t) ? 100 : Math.min(100, Math.round((hechas / plan) * 100));
+            const presupuesto = datos.presupuestos.find((p) => p.id === t.presupuestoId);
+            const cerrado = esCompletado(t) || t.estado === "Cancelado";
+            return (
+              <li key={t.id} className="card-grad flex flex-col p-4">
+                <div className="flex items-start gap-3">
+                  <span className={`${CIRCULO_ICONO} size-10`}>
+                    <Stethoscope className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold">{t.nombre}</p>
+                      {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
+                      <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
+                      {!cerrado && <Badge tono={TONO_PRIORIDAD[t.prioridad ?? "Media"]}>Prioridad {(t.prioridad ?? "Media").toLowerCase()}</Badge>}
+                    </div>
+                    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {t.profesional && <span>{t.profesional}</span>}
+                      {t.inicio && <span>Inicio: {formatearFecha(t.inicio)}</span>}
+                      {t.fin && <span>Fin: {formatearFecha(t.fin)}</span>}
+                      {presupuesto && <span>Presupuesto {presupuesto.numero} · {presupuesto.estado}</span>}
+                    </p>
+                  </div>
+                  {(t.costo ?? 0) > 0 && <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo ?? 0)}</span>}
+                </div>
+
+                <PasosTratamiento tratamiento={t} />
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold">Sesiones {hechas} de {plan}</span>
+                    <span className="text-muted-foreground">{avance}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500 transition-all" style={{ width: `${avance}%` }} />
+                  </div>
+                </div>
+
+                {(t.diagnostico || t.evolucion || t.notas) && (
+                  <div className="mt-2 space-y-0.5 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
+                    {t.diagnostico && <p><b className="font-semibold text-foreground">Diagnóstico:</b> {t.diagnostico}</p>}
+                    {t.evolucion && <p><b className="font-semibold text-foreground">Última evolución:</b> {t.evolucion}</p>}
+                    {t.notas && <p className="italic">{t.notas}</p>}
+                  </div>
+                )}
+
+                {hechas > 0 && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setVerSesiones(verSesiones === t.id ? null : t.id)}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      <ChevronDown className={`size-3.5 transition-transform ${verSesiones === t.id ? "rotate-180" : ""}`} />
+                      {verSesiones === t.id ? "Ocultar sesiones" : `Ver sesiones (${hechas})`}
+                    </button>
+                    {verSesiones === t.id && (
+                      <ol className="mt-1.5 space-y-1.5 border-l-2 border-primary/20 pl-3">
+                        {t.sesiones?.map((s, i) => (
+                          <li key={s.id} className="text-xs">
+                            <p className="font-semibold">
+                              Sesión {i + 1} · {formatearFecha(s.fecha)}
+                              {s.profesional && <span className="font-normal text-muted-foreground"> · {s.profesional}</span>}
+                            </p>
+                            <p className="text-muted-foreground">{s.detalle}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                )}
+
+                <div className="min-h-3 flex-1" />
+                <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-2.5">
+                  {t.estado === "Pendiente" && <BotonMini icon={Check} label="Planificar" onClick={() => cambiarEstado(t, "Planificado")} />}
+                  {!cerrado && <BotonMini icon={Plus} label="Registrar sesión" onClick={() => setSesionDe(t)} />}
+                  {t.estado === "En tratamiento" && <BotonMini icon={PackageCheck} label="Completar" onClick={() => cambiarEstado(t, "Completado")} />}
+                  {!cerrado && onSeccion && <BotonMini icon={CalendarDays} label="Turno" onClick={() => onSeccion("turnos")} />}
+                  {presupuesto && onSeccion ? (
+                    <BotonMini icon={ReceiptText} label="Presupuesto" onClick={() => onSeccion("presupuestos")} />
+                  ) : (
+                    !cerrado && <BotonMini icon={ReceiptText} label="Crear presupuesto" onClick={() => crearPresupuesto(t)} />
+                  )}
+                  <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
+                  {!cerrado && <BotonMini icon={X} label="Cancelar" onClick={() => cambiarEstado(t, "Cancelado")} />}
+                  {t.estado === "Cancelado" && <BotonMini icon={RotateCw} label="Reactivar" onClick={() => cambiarEstado(t, "Planificado")} />}
+                  <BotonBorrar
+                    etiqueta="Eliminar tratamiento"
+                    onClick={() => {
+                      // TODO backend: DELETE /pacientes/:id/tratamientos/:tratamientoId
+                      cambiar("tratamientos", (prev) => prev.filter((x) => x.id !== t.id));
+                      onToast("Tratamiento eliminado");
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
-      {abierto && (
-        <Modal title="Agregar tratamiento" onClose={() => setAbierto(false)}>
+
+      {(abierto || editar) && (
+        <Modal title={editar ? "Editar tratamiento" : "Agregar tratamiento"} onClose={() => { setAbierto(false); setEditar(null); }}>
           <TratamientoForm
+            inicial={editar ?? undefined}
             presupuestos={datos.presupuestos}
-            onCancel={() => setAbierto(false)}
-            onSubmit={(nuevo) => {
-              // TODO backend: POST /pacientes/:id/tratamientos
-              cambiar("tratamientos", (prev) => [...prev, { ...nuevo, id: Date.now() }]);
+            onCancel={() => { setAbierto(false); setEditar(null); }}
+            onSubmit={(t) => {
+              if (editar) {
+                // TODO backend: PUT /pacientes/:id/tratamientos/:tratamientoId
+                cambiar("tratamientos", (prev) =>
+                  prev.map((x) =>
+                    x.id === editar.id
+                      ? {
+                          ...x,
+                          ...t,
+                          historial:
+                            t.estado !== editar.estado
+                              ? [...(x.historial ?? []).filter((h) => h.estado !== t.estado), { estado: t.estado, fecha: hoyISO() }]
+                              : x.historial ?? [],
+                        }
+                      : x,
+                  ),
+                );
+                onToast("Tratamiento actualizado");
+              } else {
+                // TODO backend: POST /pacientes/:id/tratamientos
+                cambiar("tratamientos", (prev) => [...prev, { ...t, id: Date.now() }]);
+                agregarAuditoria(`Agregó el tratamiento ${t.nombre}`);
+                onToast("Tratamiento guardado");
+              }
               setAbierto(false);
-              onToast("Tratamiento guardado");
+              setEditar(null);
+            }}
+          />
+        </Modal>
+      )}
+      {sesionDe && (
+        <Modal title="Registrar sesión" onClose={() => setSesionDe(null)}>
+          <SesionForm
+            tratamiento={sesionDe}
+            onCancel={() => setSesionDe(null)}
+            onSubmit={(s) => {
+              registrarSesion(sesionDe, s);
+              setSesionDe(null);
             }}
           />
         </Modal>
@@ -5092,7 +5587,7 @@ function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (
     ...datos.cuenta.map((m) => ({ id: `mov-${m.id}`, fecha: m.fecha, titulo: m.tipo === "Cargo" ? "Facturación / cargo" : m.tipo, detalle: m.concepto, icon: Wallet, seccion: "cuenta" as SeccionRegistros, tono: TONO_MOVIMIENTO[m.tipo] })),
   ] as Evento[]).sort((a, b) => `${b.fecha}${b.hora ?? ""}${b.id}`.localeCompare(`${a.fecha}${a.hora ?? ""}${a.id}`)).slice(0, 16);
 
-  return <div className="card-grad p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{e.fecha}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
+  return <div className="card-grad p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{formatearFecha(e.fecha)}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
 }
 
 function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {

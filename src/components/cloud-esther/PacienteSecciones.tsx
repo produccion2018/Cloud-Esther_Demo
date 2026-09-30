@@ -784,7 +784,7 @@ const ITEM =
   "relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-white via-card to-primary/[0.035] p-3.5 shadow-[0_8px_24px_-18px_rgba(124,58,237,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.32)]";
 
 const ESTUDIO_ITEM =
-  "relative overflow-hidden rounded-2xl border border-primary/10 bg-card shadow-[0_8px_24px_-18px_rgba(124,58,237,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.30)]";
+  "card-grad overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.30)]";
 
 const INPUT =
   "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -2887,16 +2887,105 @@ function iconoEstudio(tipo: string): LucideIcon {
   return FileText;
 }
 
-function VistaEstudio({ estudio, alto = "h-28" }: { estudio: EstudioPaciente | null; alto?: string }) {
-  const Icono = estudio ? iconoEstudio(estudio.tipo) : Images;
+/* Ilustración de ejemplo cuando el estudio no tiene imagen adjunta (según el tipo de estudio). */
+function IlustracionEstudio({ tipo, className = "" }: { tipo: string; className?: string }) {
+  const esFoto = tipo.startsWith("Fotografía");
+  const fondo = esFoto ? ["#fdf2f8", "#fce7f3"] : ["#1e293b", "#0b1220"];
+  const hueso = "#cbd5e1";
+  const diente = "#e2e8f0";
+  const id = `ilu-${tipo.replace(/\W/g, "")}`;
+  let contenido: ReactNode;
+  if (tipo.includes("panorámica") || tipo.includes("Cefalométrica")) {
+    contenido = (
+      <g>
+        <path d="M18 34 Q60 6 102 34" fill="none" stroke={hueso} strokeOpacity="0.25" strokeWidth="10" />
+        <path d="M18 56 Q60 82 102 56" fill="none" stroke={hueso} strokeOpacity="0.25" strokeWidth="10" />
+        {Array.from({ length: 10 }, (_, i) => {
+          const x = 22 + i * 8.4;
+          const yTop = 30 - Math.sin((i / 9) * Math.PI) * 12;
+          const yBot = 50 + Math.sin((i / 9) * Math.PI) * 12;
+          return (
+            <g key={i}>
+              <rect x={x} y={yTop} width="6" height="11" rx="2.5" fill={diente} opacity="0.85" />
+              <rect x={x} y={yBot} width="6" height="11" rx="2.5" fill={diente} opacity="0.85" />
+            </g>
+          );
+        })}
+      </g>
+    );
+  } else if (tipo.includes("periapical") || tipo.includes("Oclusal")) {
+    contenido = (
+      <g>
+        {[36, 56, 76].map((x, i) => (
+          <g key={x}>
+            <path d={`M${x} 20 q0 -8 8 -8 q8 0 8 8 v10 q0 4 -3 6 l-2 26 q-1 4 -3 0 l-1 -18 l-1 18 q-2 4 -3 0 l-2 -26 q-3 -2 -3 -6 z`} fill={diente} opacity={i === 1 ? 0.95 : 0.7} />
+            {i === 1 && <circle cx={x + 11} cy="22" r="3" fill="#0b1220" opacity="0.55" />}
+          </g>
+        ))}
+      </g>
+    );
+  } else if (tipo.includes("Bitewing")) {
+    contenido = (
+      <g>
+        {[20, 42, 64, 86].map((x) => (
+          <g key={x}>
+            <rect x={x} y="18" width="16" height="20" rx="5" fill={diente} opacity="0.85" />
+            <rect x={x} y="44" width="16" height="20" rx="5" fill={diente} opacity="0.85" />
+          </g>
+        ))}
+      </g>
+    );
+  } else if (tipo.startsWith("Tomografía")) {
+    contenido = (
+      <g>
+        <ellipse cx="60" cy="40" rx="34" ry="26" fill="none" stroke={hueso} strokeOpacity="0.5" strokeWidth="3" />
+        <ellipse cx="60" cy="40" rx="22" ry="16" fill="none" stroke={diente} strokeOpacity="0.8" strokeWidth="4" strokeDasharray="5 3" />
+        <line x1="20" y1="40" x2="100" y2="40" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
+        <line x1="60" y1="10" x2="60" y2="70" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
+      </g>
+    );
+  } else if (esFoto) {
+    contenido = (
+      <g>
+        <path d="M22 36 Q60 70 98 36 Q60 50 22 36 Z" fill="#f472b6" opacity="0.55" />
+        {Array.from({ length: 8 }, (_, i) => (
+          <rect key={i} x={30 + i * 7.5} y={37 + Math.abs(i - 3.5) * -1} width="6.5" height="9" rx="2" fill="#ffffff" />
+        ))}
+      </g>
+    );
+  } else {
+    contenido = <path d="M46 16 h20 l12 12 v36 h-32 z" fill={diente} opacity="0.8" />;
+  }
   return (
-    <div className={`grid ${alto} place-items-center overflow-hidden rounded-lg border border-border bg-muted/40`}>
+    <svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden="true">
+      <defs>
+        <radialGradient id={id} cx="50%" cy="40%" r="75%">
+          <stop offset="0%" stopColor={fondo[0]} />
+          <stop offset="100%" stopColor={fondo[1]} />
+        </radialGradient>
+      </defs>
+      <rect width="120" height="80" fill={`url(#${id})`} />
+      {contenido}
+    </svg>
+  );
+}
+
+function VistaEstudio({ estudio, alto = "h-28" }: { estudio: EstudioPaciente | null; alto?: string }) {
+  return (
+    <div className={`relative grid ${alto} place-items-center overflow-hidden rounded-lg border border-border bg-muted/40`}>
       {estudio && estudio.url && esImagen(estudio.archivoNombre) ? (
         <img src={estudio.url} alt={estudio.tipo} className="h-full w-full object-contain" />
+      ) : estudio ? (
+        <>
+          <IlustracionEstudio tipo={estudio.tipo} className="h-full w-full" />
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-medium text-white">
+            Imagen de ejemplo
+          </span>
+        </>
       ) : (
         <div className="text-center text-muted-foreground">
-          <Icono className="mx-auto size-7 text-primary/60" />
-          <p className="mt-1 text-[11px]">Sin imagen adjunta</p>
+          <Images className="mx-auto size-7 text-primary/60" />
+          <p className="mt-1 text-[11px]">Elegí un estudio</p>
         </div>
       )}
     </div>
@@ -3058,7 +3147,7 @@ function VisorEstudio({
 
 /* Galería */
 function GaleriaTab({
-  estudios,
+  estudios: todos,
   onVer,
   onBorrar,
 }: {
@@ -3066,7 +3155,19 @@ function GaleriaTab({
   onVer: (id: number) => void;
   onBorrar: (s: EstudioPaciente) => void;
 }) {
-  if (estudios.length === 0) {
+  const [filtroTipo, setFiltroTipo] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<"" | EstadoInforme>("");
+  const [busqueda, setBusqueda] = useState("");
+  const tipos = Array.from(new Set(todos.map((s) => s.tipo)));
+  const q = busqueda.trim().toLowerCase();
+  const estudios = todos.filter(
+    (s) =>
+      (!filtroTipo || s.tipo === filtroTipo) &&
+      (!filtroEstado || s.estadoInforme === filtroEstado) &&
+      (!q || `${s.tipo} ${s.zona} ${s.pieza ?? ""} ${s.diagnostico} ${s.solicitante}`.toLowerCase().includes(q)),
+  );
+
+  if (todos.length === 0) {
     return (
       <EstadoVacio
         icon={Images}
@@ -3088,6 +3189,39 @@ function GaleriaTab({
           {estudios.length} {estudios.length === 1 ? "estudio" : "estudios"}
         </span>
       </div>
+
+      <div className="card-grad flex flex-wrap items-center gap-2 p-2.5">
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por pieza, zona o diagnóstico"
+          className={`${INPUT} min-w-48 flex-1`}
+        />
+        <div className="w-52">
+          <SelectField value={filtroTipo} onChange={setFiltroTipo} options={tipos} placeholder="Todos los tipos" />
+        </div>
+        <div className="flex gap-1">
+          {(["", ...ESTADOS_INFORME] as const).map((e) => (
+            <button
+              key={e || "todos"}
+              type="button"
+              onClick={() => setFiltroEstado(e)}
+              aria-pressed={filtroEstado === e}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                filtroEstado === e ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {e || "Todos"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {estudios.length === 0 && (
+        <p className="rounded-xl border border-dashed border-primary/20 px-3 py-4 text-center text-xs text-muted-foreground">
+          Ningún estudio coincide con los filtros.
+        </p>
+      )}
 
       <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
         {estudios.map((s) => {
@@ -3112,17 +3246,17 @@ function GaleriaTab({
                       alt={s.tipo}
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                     />
-                  ) : (
+                  ) : tieneArchivo ? (
                     <div className="grid h-full place-items-center text-center">
                       <div>
                         <span className="mx-auto grid size-8 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
                           <Icono className="size-3.5" />
                         </span>
-                        <p className="mt-1 text-[9px] font-medium text-muted-foreground">
-                          {tieneArchivo ? "Archivo adjunto" : "Sin imagen"}
-                        </p>
+                        <p className="mt-1 text-[9px] font-medium text-muted-foreground">Archivo adjunto</p>
                       </div>
                     </div>
+                  ) : (
+                    <IlustracionEstudio tipo={s.tipo} className="h-full w-full transition-transform duration-300 group-hover:scale-[1.04]" />
                   )}
                   <span className="absolute bottom-1 right-1 rounded-full border border-border/70 bg-background/90 px-1.5 py-0.5 text-[9px] font-semibold text-foreground shadow-sm backdrop-blur transition-colors group-hover:border-primary/30 group-hover:text-primary">
                     Ver
@@ -3733,7 +3867,7 @@ function CompararFotografias({ fotografias }: { fotografias: FotografiaClinica[]
   const despues = fotografias.find((f) => f.id === despuesId) ?? fotografias[fotografias.length - 1];
   if (fotografias.length < 2) return <EstadoVacio icon={GitCompare} titulo="Comparación de fotografías" texto="Cargá al menos dos fotografías clínicas para comparar antes y después." />;
   const opciones = fotografias.map((f) => ({ id: f.id, label: `${f.tipo} · ${formatearFecha(f.fecha)}` }));
-  const imagen = (f: FotografiaClinica, className = "") => f?.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className={`h-full w-full object-contain ${className}`} /> : <div className="grid h-full place-items-center text-xs text-muted-foreground">Sin imagen</div>;
+  const imagen = (f: FotografiaClinica, className = "") => f?.url && esImagen(f.archivoNombre) ? <img src={f.url} alt={f.tipo} className={`h-full w-full object-contain ${className}`} /> : <IlustracionEstudio tipo="Fotografía clínica" className="h-full w-full" />;
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2"><Field label="Antes"><SelectId value={antes.id} onChange={setAntesId} opciones={opciones} /></Field><Field label="Después"><SelectId value={despues.id} onChange={setDespuesId} opciones={opciones} /></Field></div>
@@ -3823,29 +3957,22 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         descripcion="Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
         etiquetaBoton="Cargar estudio"
         onAgregar={() => setAbierto(true)}
-        botonClassName="rounded-lg px-3 py-1.5 text-xs shadow-sm"
       />
 
-      <div className="rounded-xl border border-border/80 bg-card px-3 py-2.5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-semibold text-primary ring-1 ring-primary/10">
-            {contexto?.paciente ? iniciales(contexto.paciente) : <HeartPulse className="size-4" />}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{contexto?.paciente || "Paciente"}</p>
-            <p className="text-[11px] text-muted-foreground">
-              {datos.estudios.length} estudios · {informados} informados · {datos.anotaciones.length} mediciones
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">
-              {activos} diagnósticos activos
-            </span>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
+        <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
+        <ResumenCuenta etiqueta="Informados" valor={String(informados)} icon={Check} tono="text-emerald-600" />
+        <ResumenCuenta
+          etiqueta="Sin informar"
+          valor={String(datos.estudios.length - informados)}
+          icon={Clock3}
+          tono={datos.estudios.length - informados > 0 ? "text-amber-600" : ""}
+        />
+        <ResumenCuenta etiqueta="Mediciones" valor={String(datos.anotaciones.length)} icon={Ruler} />
+        <ResumenCuenta etiqueta="Diagnósticos activos" valor={String(activos)} icon={Activity} tono="text-primary" />
       </div>
 
-      <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
+      <div className="card-grad p-1">
         <div className="grid grid-cols-2 gap-1 md:grid-cols-6">
           {TABS.map((t) => {
             const activa = tab === t.id;

@@ -40,28 +40,28 @@ type PlanInfo = {
 export const PLANS: Record<PlanId, PlanInfo> = {
   inicial: {
     id: "inicial",
-    name: "Clínica Inicial",
+    name: "Start",
     level: 1,
     audience: "Odontólogo independiente",
     price: "$29.000",
   },
   profesional: {
     id: "profesional",
-    name: "Clínica Profesional",
+    name: "Pro",
     level: 2,
     audience: "Clínica en crecimiento",
     price: "$59.000",
   },
   avanzada: {
     id: "avanzada",
-    name: "Clínica Avanzada",
+    name: "Plus",
     level: 3,
     audience: "Clínica integral",
     price: "$99.000",
   },
   grupo: {
     id: "grupo",
-    name: "Grupo Odontológico",
+    name: "Enterprise",
     level: 4,
     audience: "Multi-sede",
     price: "$179.000",
@@ -344,7 +344,7 @@ export const MODULES: AppModule[] = [
     icon: "workflow",
     path: "/demo/automatizaciones",
     group: "Administración",
-    minPlan: "avanzada",
+    minPlan: "grupo",
   },
   {
     id: "multiempresa",

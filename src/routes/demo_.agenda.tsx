@@ -311,13 +311,13 @@ function obtenerDiasMes(iso: string) {
 /* ───────────── Estilos compartidos ───────────── */
 
 const CARD =
-  "rounded-3xl border border-primary/25 bg-card/95 bg-gradient-to-br from-white via-card/95 to-primary/[0.045] p-4 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10";
+  "rounded-3xl border border-primary/25 bg-card/95 bg-gradient-to-br from-white via-primary/[0.02] to-primary/[0.08] p-4 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10";
 
 const ITEM =
-  "rounded-2xl border border-primary/18 bg-card/90 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/8";
+  "rounded-2xl border border-primary/18 bg-card/90 bg-gradient-to-br from-white via-white to-primary/[0.06] shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/8";
 
 const STAT_CARD =
-  "group relative flex min-h-[108px] flex-col overflow-hidden rounded-3xl border border-primary/25 bg-white/95 bg-gradient-to-br from-white via-white to-primary/[0.055] p-5 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/45 hover:shadow-lg hover:shadow-primary/12";
+  "group relative flex min-h-[108px] flex-col overflow-hidden rounded-3xl border border-primary/25 bg-white/95 bg-gradient-to-br from-white via-primary/[0.025] to-primary/[0.09] p-5 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/45 hover:shadow-lg hover:shadow-primary/12";
 
 const INPUT =
   "h-11 w-full rounded-2xl border border-primary/20 bg-white/90 px-3.5 text-sm shadow-sm shadow-primary/5 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15";
@@ -955,7 +955,7 @@ function TurnoCard({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border bg-card/80 p-3.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
+      className={`group relative overflow-hidden rounded-2xl border bg-card/80 bg-gradient-to-r from-white via-white to-primary/[0.07] p-3.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
     >
       <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
 

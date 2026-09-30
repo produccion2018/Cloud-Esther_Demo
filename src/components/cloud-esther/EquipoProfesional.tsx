@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
 import type { ComponentType, ReactNode } from "react"
 import {
   Search,
@@ -343,6 +344,9 @@ export function EquipoProfesional() {
   const [filter, setFilter] = useState<FilterKey>("todos")
   const [selected, setSelected] = useState<TeamMember | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>("info")
+  // Permisos y accesos: desde el plan Plus (Start y Pro usan los permisos por rol predeterminados).
+  const { plan } = useCloudEsther()
+  const conPermisos = planLevel(plan) >= 3
 
   const [addOpen, setAddOpen] = useState(false)
 
@@ -732,7 +736,9 @@ export function EquipoProfesional() {
                         <BotonAccion icon={Eye} label="Perfil" onClick={() => openDetail(m)} />
                         <BotonAccion icon={Pencil} label="Editar" onClick={() => openEdit(m)} />
                         <BotonAccion icon={CalendarDays} label="Horario" onClick={() => openDetail(m, "agenda")} />
-                        <BotonAccion icon={ShieldCheck} label="Permisos" onClick={() => openDetail(m, "permisos")} />
+                        {conPermisos && (
+                          <BotonAccion icon={ShieldCheck} label="Permisos" onClick={() => openDetail(m, "permisos")} />
+                        )}
                         {m.status === "inactivo" ? (
                           <BotonAccion icon={UserCheck} label="Activar" onClick={() => activate(m)} />
                         ) : (
@@ -769,7 +775,7 @@ export function EquipoProfesional() {
                 ["permisos", "Permisos"],
                 ["comisiones", "Comisiones"],
               ] as [DetailTab, string][]
-            ).map(([id, label]) => (
+            ).filter(([id]) => conPermisos || id !== "permisos").map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setDetailTab(id)}
@@ -907,7 +913,7 @@ export function EquipoProfesional() {
             </div>
           )}
 
-          {detailTab === "permisos" && (
+          {detailTab === "permisos" && conPermisos && (
             <div className="space-y-2">
               {selected.permissions.map((p) => (
                 <label

@@ -36,7 +36,7 @@ import {
   Sun,
 } from "lucide-react";
 
-import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 
 import {
   cargarSettings,
@@ -76,16 +76,18 @@ const TABS: {
   id: TabId;
   label: string;
   icon: typeof Settings;
+  /** Nivel de plan mínimo: Start y Pro tienen la configuración básica. */
+  min?: number;
 }[] = [
   { id: "general", label: "General", icon: Settings },
   { id: "profesionales", label: "Profesionales", icon: Users },
-  { id: "directorio", label: "Directorio", icon: FolderOpen },
-  { id: "actividad", label: "Actividad", icon: Activity },
+  { id: "directorio", label: "Directorio", icon: FolderOpen, min: 3 },
+  { id: "actividad", label: "Actividad", icon: Activity, min: 3 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
-  { id: "integraciones", label: "Integraciones", icon: PlugZap },
-  { id: "seguridad", label: "Seguridad", icon: ShieldCheck },
-  { id: "auditoria", label: "Auditoría", icon: FileClock },
+  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 2 },
+  { id: "seguridad", label: "Seguridad", icon: ShieldCheck, min: 3 },
+  { id: "auditoria", label: "Auditoría", icon: FileClock, min: 3 },
 ];
 
 type Props = {
@@ -208,6 +210,11 @@ export function ConfiguracionModule({ onToast }: Props) {
   const { clinic, plan } = useCloudEsther();
 
   const [tab, setTab] = useState<TabId>("general");
+  // Si se cambia a un plan que no incluye la pestaña abierta, se vuelve a General.
+  useEffect(() => {
+    const t = TABS.find((x) => x.id === tab);
+    if (t?.min && planLevel(plan) < t.min) setTab("general");
+  }, [plan, tab]);
 
   const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
   // Ajustes de la empresa de la sesión (se recargan si cambia la sesión).
@@ -241,7 +248,7 @@ export function ConfiguracionModule({ onToast }: Props) {
         {/* PESTAÑAS EN UNA SOLA LÍNEA, SIN SCROLL */}
         <div className="mt-5 w-full border-b border-border/70">
           <div className="flex w-full items-stretch gap-0">
-            {TABS.map((item) => {
+            {TABS.filter((t) => !t.min || planLevel(plan) >= t.min).map((item) => {
               const Icon = item.icon;
               const activo = tab === item.id;
 

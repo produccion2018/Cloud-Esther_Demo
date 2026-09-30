@@ -5,24 +5,16 @@ import { cn } from "@/lib/utils";
 import {
   MODULES,
   availableIn,
+  planLevel,
   ModuleIcon,
   PLANS,
   useCloudEsther,
   type PlanId,
 } from "@/lib/cloud-esther/data";
-import {
-  useClinicSettings,
-  SIDEBAR_COLORS,
-  FONT_SIZE_PX,
-} from "@/lib/cloud-esther/settings-store";
+import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 
@@ -35,7 +27,7 @@ const GROUPS = [
   "Sistema",
 ] as const;
 
-type SubItem = { label: string; to?: string };
+type SubItem = { label: string; to?: string; minPlan?: PlanId };
 
 const SUBMENUS: Record<string, { children: SubItem[] }> = {
   "/demo/equipo-profesional": {
@@ -43,7 +35,11 @@ const SUBMENUS: Record<string, { children: SubItem[] }> = {
       { label: "Integrantes", to: "/demo/equipo-profesional" },
       { label: "Especialidades", to: "/demo/equipo-profesional/especialidades" },
       { label: "Agendas y horarios", to: "/demo/equipo-profesional/agendas-horarios" },
-      { label: "Permisos y accesos", to: "/demo/equipo-profesional/permisos-accesos" },
+      {
+        label: "Permisos y accesos",
+        to: "/demo/equipo-profesional/permisos-accesos",
+        minPlan: "avanzada",
+      },
     ],
   },
 };
@@ -108,7 +104,10 @@ function SubList({
 }) {
   return (
     <div
-      className={cn("grid transition-[grid-template-rows] duration-200 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
+      className={cn(
+        "grid transition-[grid-template-rows] duration-200 ease-out",
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+      )}
       aria-hidden={!open}
     >
       <div className="overflow-hidden">
@@ -158,7 +157,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const { plan, disabled } = useCloudEsther();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
-  const toggle = (key: string, current: boolean) => setOpenMap((prev) => ({ ...prev, [key]: !current }));
+  const toggle = (key: string, current: boolean) =>
+    setOpenMap((prev) => ({ ...prev, [key]: !current }));
   // Contador de avisos sin leer (solo en el cliente, para no generar diferencias de hidratación).
   const { sinLeer } = useNotificaciones();
   const [montado, setMontado] = useState(false);
@@ -182,7 +182,9 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                 const unlocked = availableIn(m, plan);
                 const off = disabled.includes(m.id);
                 const active =
-                  m.path === "/demo" ? pathname === "/demo" : pathname === m.path || pathname.startsWith(`${m.path}/`);
+                  m.path === "/demo"
+                    ? pathname === "/demo"
+                    : pathname === m.path || pathname.startsWith(`${m.path}/`);
 
                 if (!unlocked) {
                   return (
@@ -214,9 +216,14 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                             off && "opacity-40",
                           )}
                         >
-                          <ModuleIcon name={m.icon} className={cn("size-4 shrink-0", active && "text-sidebar-primary")} />
+                          <ModuleIcon
+                            name={m.icon}
+                            className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                          />
                           <span className="truncate">{m.label}</span>
-                          {off && <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>}
+                          {off && (
+                            <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>
+                          )}
                         </Link>
                         <button
                           type="button"
@@ -231,10 +238,22 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                             off && "opacity-40",
                           )}
                         >
-                          <ChevronDown className={cn("size-3.5 transition-transform duration-200", isOpen && "rotate-180")} />
+                          <ChevronDown
+                            className={cn(
+                              "size-3.5 transition-transform duration-200",
+                              isOpen && "rotate-180",
+                            )}
+                          />
                         </button>
                       </div>
-                      <SubList items={submenu.children} open={isOpen} pathname={pathname} onNavigate={onNavigate} />
+                      <SubList
+                        items={submenu.children.filter(
+                          (c) => !c.minPlan || planLevel(c.minPlan) <= planLevel(plan),
+                        )}
+                        open={isOpen}
+                        pathname={pathname}
+                        onNavigate={onNavigate}
+                      />
                     </li>
                   );
                 }
@@ -252,9 +271,14 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                         off && "opacity-40",
                       )}
                     >
-                      <ModuleIcon name={m.icon} className={cn("size-4 shrink-0", active && "text-sidebar-primary")} />
+                      <ModuleIcon
+                        name={m.icon}
+                        className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                      />
                       <span className="truncate">{m.label}</span>
-                      {off && <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>}
+                      {off && (
+                        <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>
+                      )}
                       {!off && m.id === "notificaciones" && montado && sinLeer > 0 && (
                         <span
                           className="ml-auto grid min-w-5 place-items-center rounded-full bg-sidebar-primary px-1.5 text-[10px] font-bold text-sidebar-primary-foreground"
@@ -292,7 +316,9 @@ function EmpresaActiva() {
         {iniciales(clinica.nombre)}
       </span>
       <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">{clinica.nombre}</p>
+        <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">
+          {clinica.nombre}
+        </p>
         <p className="truncate text-[11px] text-sidebar-foreground/55">{usuario.nombre}</p>
       </div>
     </div>
@@ -346,7 +372,11 @@ function PlanFooter() {
       <button
         type="button"
         onClick={() => {
-          if (window.confirm("¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.")) {
+          if (
+            window.confirm(
+              "¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.",
+            )
+          ) {
             borrarDatosGuardados();
             window.location.reload();
           }
@@ -381,7 +411,11 @@ function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
             <Menu className="size-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] border-sidebar-border bg-sidebar p-0" style={sidebarStyle}>
+        <SheetContent
+          side="left"
+          className="w-[280px] border-sidebar-border bg-sidebar p-0"
+          style={sidebarStyle}
+        >
           <SheetTitle className="sr-only">Navegación</SheetTitle>
           <SidebarInner />
         </SheetContent>
@@ -398,7 +432,10 @@ function hexToRgb(hex: string) {
 }
 
 function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (v: number) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0");
+  const toHex = (v: number) =>
+    Math.round(Math.max(0, Math.min(255, v)))
+      .toString(16)
+      .padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
@@ -451,22 +488,40 @@ function moduloDeRuta(pathname: string) {
   ).sort((a, b) => b.path.length - a.path.length)[0];
 }
 
-/** Aviso cuando se entra por URL a un módulo que no incluye el plan activo. */
-function ModuloNoIncluido({ label }: { label: string }) {
-  const { plan } = useCloudEsther();
+/** Subsecciones con plan propio dentro de un módulo (ej.: Permisos y accesos desde Plus). */
+const SUBRUTAS_PLAN: { path: string; label: string; minPlan: PlanId }[] = Object.values(SUBMENUS)
+  .flatMap((m) => m.children)
+  .filter((c): c is SubItem & { to: string; minPlan: PlanId } => !!c.to && !!c.minPlan)
+  .map((c) => ({ path: c.to, label: c.label, minPlan: c.minPlan }));
+
+/** Aviso cuando se entra a algo que no incluye el plan activo. En el demo se puede probar el
+    plan que lo incluye ahí mismo, sin salir de la página ni volver a registrarse. */
+function ModuloNoIncluido({ label, minPlan }: { label: string; minPlan: PlanId }) {
+  const { plan, setPlan, planContratado } = useCloudEsther();
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
       <div className="card-premium max-w-md p-8 text-center">
         <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
           <Lock className="size-5" />
         </span>
-        <p className="mt-4 text-base font-semibold text-foreground">{label} no está incluido en tu plan</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tu plan actual es {PLANS[plan].name}. Mejorá tu plan para acceder a este módulo.
+        <p className="mt-4 text-base font-semibold text-foreground">
+          {label} está incluido desde el plan {PLANS[minPlan].name}
         </p>
-        <Link to={"/demo" as never} className="btn-ce mt-5">
-          Volver al Dashboard
-        </Link>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {planContratado
+            ? `Tu plan contratado es ${PLANS[plan].name}. Para sumarlo, pedile el cambio de plan a tu ejecutivo de cuenta.`
+            : `Estás viendo el demo con el plan ${PLANS[plan].name}. Probá el plan ${PLANS[minPlan].name} sin salir de acá.`}
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {!planContratado && (
+            <button type="button" className="btn-ce" onClick={() => setPlan(minPlan)}>
+              Probar el plan {PLANS[minPlan].name}
+            </button>
+          )}
+          <Link to={"/demo" as never} className="btn-ce-outline">
+            Volver al Dashboard
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -477,10 +532,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const modulo = moduloDeRuta(pathname);
+  const subBloqueada = SUBRUTAS_PLAN.find(
+    (x) =>
+      (pathname === x.path || pathname.startsWith(`${x.path}/`)) &&
+      planLevel(x.minPlan) > planLevel(plan),
+  );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
   const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
   // Con un plan que ya tiene 3D, el 2D no tiene sentido: se va directo al 3D.
-  const irAl3D = bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
+  const irAl3D =
+    bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
@@ -496,7 +557,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [settings.darkModePage, settings.fontSize]);
 
   const colorHex = SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed";
-  const sidebarStyle = buildSidebarPalette(colorHex, settings.darkModeSidebar || settings.darkModePage);
+  const sidebarStyle = buildSidebarPalette(
+    colorHex,
+    settings.darkModeSidebar || settings.darkModePage,
+  );
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -517,7 +581,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : bloqueado ? (
-            <ModuloNoIncluido label={bloqueado.label} />
+            <ModuloNoIncluido label={bloqueado.label} minPlan={bloqueado.minPlan} />
+          ) : subBloqueada ? (
+            <ModuloNoIncluido label={subBloqueada.label} minPlan={subBloqueada.minPlan} />
           ) : (
             children
           )}

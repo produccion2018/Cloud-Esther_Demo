@@ -20,7 +20,7 @@ import { plans, type Plan } from "@/lib/site-data";
  * Configuración visual de cada plan.
  *
  * Start / Pro:
- * configuración básica o heredada.
+ * configuración básica.
  *
  * Plus / Enterprise:
  * configuración avanzada.
@@ -33,7 +33,7 @@ const EXTRAS_POR_PLAN: {
   ia: boolean;
 }[] = [
   { basica: true, avanzada: false, ia: false },
-  { basica: false, avanzada: true, ia: false },
+  { basica: true, avanzada: false, ia: false },
   { basica: false, avanzada: true, ia: true },
   { basica: false, avanzada: true, ia: true },
 ];

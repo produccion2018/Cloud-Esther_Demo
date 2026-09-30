@@ -49,7 +49,7 @@ function Dashboard() {
             <div>
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Clínico</span>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">Desde Clínica Inicial</span>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">Desde Start</span>
               </div>
               <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Centro de operaciones</h1>
               <p className="mt-1 text-sm text-muted-foreground">Todo lo que pasa hoy en la Clínica Centro, en una sola pantalla.</p>

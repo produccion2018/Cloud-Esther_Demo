@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Lock, Sparkles, RotateCcw, Check, ListChecks, Download } from "lucide-react";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
-import { Odontogram3D } from "@/components/odontogram/Odontogram3D";
+// El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
+// así Pacientes e Historia cargan rápido en los planes con 2D.
+const Odontogram3D = lazy(() =>
+  import("@/components/odontogram/Odontogram3D").then((m) => ({ default: m.Odontogram3D })),
+);
 import {
   defaultChart,
   TEETH_BY_FDI,
@@ -30,9 +34,9 @@ type Props = {
 };
 
 const PLAN_MINIMO_3D: PlanId = "avanzada";
-/** "Odontograma 3D avanzado" (Grupo Odontológico): exportar el informe del odontograma. */
+/** "Odontograma 3D avanzado" (Enterprise): exportar el informe del odontograma. */
 const PLAN_INFORME_3D: PlanId = "grupo";
-/** Esther IA (chat clínico) está incluida desde Clínica Avanzada, igual que el módulo IA Esther. */
+/** Esther IA (chat clínico) está incluida desde Plus, igual que el módulo IA Esther. */
 const PLAN_MINIMO_IA: PlanId = "avanzada";
 
 /* Todo lo del odontograma se guarda por clínica (tenant) + paciente,
@@ -222,12 +226,20 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
         <div className="space-y-4">
           <div className="rounded-[28px] bg-gradient-to-b from-primary/[0.07] via-primary/[0.02] to-transparent p-1">
             <div className="h-[calc(100vh-240px)] min-h-[600px] overflow-hidden rounded-[24px] border border-border/70">
-              <Odontogram3D
-                key={clavePaciente}
-                value={chart}
-                onChange={handleChange}
-                onSelectTooth={setFdiSeleccionado}
-              />
+              <Suspense
+                fallback={
+                  <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                    Cargando odontograma 3D…
+                  </div>
+                }
+              >
+                <Odontogram3D
+                  key={clavePaciente}
+                  value={chart}
+                  onChange={handleChange}
+                  onSelectTooth={setFdiSeleccionado}
+                />
+              </Suspense>
             </div>
           </div>
 
@@ -361,6 +373,16 @@ function ResumenHallazgos3D({
   );
 }
 
+function ProbarPlan({ minPlan }: { minPlan: PlanId }) {
+  const { setPlan, planContratado } = useCloudEsther();
+  if (planContratado) return null;
+  return (
+    <button type="button" className="btn-ce mt-3" onClick={() => setPlan(minPlan)}>
+      Probar el plan {PLANS[minPlan].name}
+    </button>
+  );
+}
+
 function PanelBloqueado({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div className={`${CARD} grid place-items-center border-dashed text-center`}>
@@ -370,6 +392,7 @@ function PanelBloqueado({ titulo, texto }: { titulo: string; texto: string }) {
         </span>
         <p className="mt-2 text-sm font-semibold text-foreground">{titulo}</p>
         <p className="mt-1 text-xs text-muted-foreground">{texto}</p>
+        <ProbarPlan minPlan={PLAN_MINIMO_IA} />
       </div>
     </div>
   );
@@ -391,6 +414,7 @@ function UpgradeAviso({ planActual }: { planActual: string }) {
           Plan actual: {planActual}. Necesitás {PLANS[PLAN_MINIMO_3D].name} o superior para
           activarlo.
         </p>
+        <ProbarPlan minPlan={PLAN_MINIMO_3D} />
       </div>
     </div>
   );

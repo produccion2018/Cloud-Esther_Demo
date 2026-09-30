@@ -2799,7 +2799,7 @@ function Reportes({ ctx }: { ctx: Ctx }) {
           </button>
         ) : (
           <Pill clase="bg-muted text-muted-foreground">
-            Libro IVA desde el plan Clínica Avanzada
+            Libro IVA desde el plan Plus
           </Pill>
         )}
       </Encabezado>

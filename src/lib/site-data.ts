@@ -64,7 +64,7 @@ export const plans: Plan[] = [
       "Gestión de pacientes",
       "Gestión clínica",
       "Historia clínica",
-      "Odontograma básico",
+      "Odontograma 2D",
       "Recetas y tratamientos",
       "Estudios clínicos",
       "Finanzas y facturación básica",
@@ -91,10 +91,9 @@ export const plans: Plan[] = [
       "Laboratorio",
       "Analítica y reportes",
       "Documentos",
-      "Seguridad y permisos",
       "Notificaciones avanzadas",
       "Integraciones básicas",
-      "Configuración avanzada",
+      "Configuración básica",
     ],
     featured: true,
   },
@@ -117,7 +116,7 @@ export const plans: Plan[] = [
       "Marketing y captación",
       "Inventario",
       "Recursos Humanos",
-      "Automatizaciones con n8n",
+      "Permisos y accesos",
       "Esther IA",
       "Analítica avanzada",
       "Auditoría",
@@ -145,7 +144,7 @@ export const plans: Plan[] = [
       "Comunicación avanzada",
       "Marketing y captación avanzada",
       "Recursos Humanos avanzado",
-      "Automatizaciones avanzadas con n8n",
+      "Automatizaciones y workflows con n8n",
       "Esther IA avanzada",
       "Analítica avanzada",
       "Auditoría completa",
@@ -199,7 +198,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Historia clínica", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma básico", values: ["✓", "✓", "✓", "✓"] },
+  { feature: "Odontograma 2D", values: ["✓", "✓", "—", "—"] },
 
   { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
 
@@ -261,7 +260,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Automatizaciones n8n",
-    values: ["—", "—", "✓", "Avanzadas"],
+    values: ["—", "—", "—", "✓"],
   },
 
   {
@@ -275,8 +274,8 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Seguridad y permisos",
-    values: ["Básica", "✓", "Avanzada", "Avanzada"],
+    feature: "Permisos y accesos",
+    values: ["—", "—", "✓", "Avanzados"],
   },
 
   {
@@ -286,7 +285,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Configuración",
-    values: ["Básica", "Avanzada", "Avanzada", "Avanzada"],
+    values: ["Básica", "Básica", "Avanzada", "Avanzada"],
   },
 
   {
@@ -371,8 +370,7 @@ export const additionalModules: AdditionalModule[] = [
   {
     id: "inventario",
     name: "Inventario",
-    description:
-      "Control de insumos, existencias, movimientos y disponibilidad.",
+    description: "Control de insumos, existencias, movimientos y disponibilidad.",
   },
   {
     id: "recursos-humanos",
@@ -383,32 +381,27 @@ export const additionalModules: AdditionalModule[] = [
   {
     id: "analitica-avanzada",
     name: "Analítica avanzada",
-    description:
-      "Indicadores y análisis avanzados para conocer el rendimiento de la clínica.",
+    description: "Indicadores y análisis avanzados para conocer el rendimiento de la clínica.",
   },
   {
     id: "laboratorio",
     name: "Laboratorio",
-    description:
-      "Gestión y seguimiento de trabajos enviados al laboratorio.",
+    description: "Gestión y seguimiento de trabajos enviados al laboratorio.",
   },
   {
     id: "estudios-diagnostico",
     name: "Estudios y diagnóstico",
-    description:
-      "Gestión de estudios, imágenes, diagnósticos y documentación clínica asociada.",
+    description: "Gestión de estudios, imágenes, diagnósticos y documentación clínica asociada.",
   },
   {
     id: "integraciones",
     name: "Integraciones",
-    description:
-      "Conexión de Cloud Esther con servicios externos y herramientas compatibles.",
+    description: "Conexión de Cloud Esther con servicios externos y herramientas compatibles.",
   },
   {
     id: "automatizaciones-n8n",
     name: "Automatizaciones n8n",
-    description:
-      "Automatización de procesos y flujos de trabajo mediante n8n.",
+    description: "Automatización de procesos y flujos de trabajo mediante n8n.",
   },
 ];
 

@@ -1,7 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { MailCheck, ArrowRight, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { MailCheck, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,12 @@ function Registro() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
+  const [entrando, setEntrando] = useState(false);
+  const router = useRouter();
+  // Apenas se crea la cuenta se descarga el panel, así "Continuar" entra con un solo clic.
+  useEffect(() => {
+    if (sent) void router.preloadRoute({ to: "/demo" }).catch(() => {});
+  }, [sent, router]);
 
   const primerNombre = cuenta?.nombre.split(" ")[0] ?? "";
 
@@ -113,7 +119,13 @@ function Registro() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
-                      <Input id="pass" name="pass" type="password" required placeholder="••••••••" />
+                      <Input
+                        id="pass"
+                        name="pass"
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                      />
                     </div>
                   </div>
 
@@ -178,9 +190,7 @@ function Registro() {
                 <h1 className="mt-6 text-2xl font-bold lg:text-3xl">
                   Revisá tu correo electrónico
                 </h1>
-                <p className="mt-3 text-muted-foreground">
-                  Te enviamos un correo de confirmación.
-                </p>
+                <p className="mt-3 text-muted-foreground">Te enviamos un correo de confirmación.</p>
 
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
@@ -201,8 +211,8 @@ function Registro() {
                   </div>
                   <p className="mt-3 text-sm font-semibold">Confirmá tu cuenta</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Hola {primerNombre}, tu cuenta de {cuenta?.clinica} está casi lista. Confirmá
-                    tu correo para entrar al panel de Cloud Esther.
+                    Hola {primerNombre}, tu cuenta de {cuenta?.clinica} está casi lista. Confirmá tu
+                    correo para entrar al panel de Cloud Esther.
                   </p>
                   <span className="bg-brand mt-4 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground">
                     Confirmar cuenta
@@ -216,9 +226,22 @@ function Registro() {
                   variant="hero"
                   size="xl"
                   className="mt-8"
-                  onClick={() => navigate({ to: "/demo" })}
+                  disabled={entrando}
+                  onClick={() => {
+                    // Un solo clic: se marca enseguida y se navega (el panel ya quedó precargado).
+                    setEntrando(true);
+                    void navigate({ to: "/demo" });
+                  }}
                 >
-                  Continuar <ArrowRight className="size-4" />
+                  {entrando ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> Entrando al panel…
+                    </>
+                  ) : (
+                    <>
+                      Continuar <ArrowRight className="size-4" />
+                    </>
+                  )}
                 </Button>
               </motion.div>
             )}

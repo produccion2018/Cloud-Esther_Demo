@@ -16,6 +16,7 @@ import { Route as DemostracionRouteImport } from './routes/demostracion'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
 import { Route as PlanesRouteImport } from './routes/planes'
+import { Route as PortalRouteImport } from './routes/portal'
 import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frecuentes'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AppIndexRouteImport } from './routes/app.index'
@@ -81,6 +82,11 @@ const NosotrosRoute = NosotrosRouteImport.update({
 const PlanesRoute = PlanesRouteImport.update({
   id: '/planes',
   path: '/planes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PreguntasFrecuentesRoute = PreguntasFrecuentesRouteImport.update({
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo/agenda': typeof DemoAgendaRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
+  '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
   '/demo_/agenda': typeof DemoAgendaRoute
@@ -373,6 +382,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/planes'
+    | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/planes'
+    | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo/agenda'
@@ -453,6 +464,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/planes'
+    | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
     | '/demo_/agenda'
@@ -494,6 +506,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
   PlanesRoute: typeof PlanesRoute
+  PortalRoute: typeof PortalRoute
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
@@ -576,6 +589,13 @@ declare module '@tanstack/react-router' {
       path: '/planes'
       fullPath: '/planes'
       preLoaderRoute: typeof PlanesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/preguntas-frecuentes': {
@@ -806,6 +826,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
   PlanesRoute: PlanesRoute,
+  PortalRoute: PortalRoute,
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   DemoAgendaRoute: DemoAgendaRoute,

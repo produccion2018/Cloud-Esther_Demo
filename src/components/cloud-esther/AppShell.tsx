@@ -16,6 +16,7 @@ import {
   FONT_SIZE_PX,
 } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
+import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
 import {
   Sheet,
   SheetContent,
@@ -47,7 +48,7 @@ const SUBMENUS: Record<string, { children: SubItem[] }> = {
   },
 };
 
-function BrandMark({ className }: { className?: string }) {
+export function BrandMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <defs>
@@ -340,6 +341,18 @@ function PlanFooter() {
         <LogOut className="size-3.5" />
         {planContratado ? "Cerrar sesión" : "Salir del demo"}
       </Link>
+      <button
+        type="button"
+        onClick={() => {
+          if (window.confirm("¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.")) {
+            borrarDatosGuardados();
+            window.location.reload();
+          }
+        }}
+        className="mt-1.5 w-full text-center text-[10.5px] text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80"
+      >
+        Restablecer datos de práctica
+      </button>
     </div>
   );
 }

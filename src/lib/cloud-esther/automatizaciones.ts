@@ -30,7 +30,7 @@ const DATOS_INICIALES: Automatizacion[] = [
 /* ───────────── Store a nivel módulo (mismo patrón que pacientes.ts) ───────────── */
 
 /* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
-const store = crearStorePorEmpresa<Automatizacion[]>(() => DATOS_INICIALES);
+const store = crearStorePorEmpresa<Automatizacion[]>(() => DATOS_INICIALES, { persistir: "automatizaciones" });
 
 function setAutomatizacionesGlobal(
   actualizar: Automatizacion[] | ((prev: Automatizacion[]) => Automatizacion[]),

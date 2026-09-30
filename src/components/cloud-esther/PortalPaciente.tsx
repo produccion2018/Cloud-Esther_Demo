@@ -1,23 +1,74 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import {
+  Bell,
+  CalendarCheck2,
   CalendarDays,
   CalendarPlus,
   Check,
+  CheckCheck,
   ChevronRight,
   ClipboardList,
-  Clock,
   CreditCard,
   Download,
+  Eye,
   FileText,
   Home,
+  Landmark,
   LogOut,
-  MapPin,
+  Menu,
   MessageCircle,
-  Pill,
+  Paperclip,
+  Pill as PillIcon,
+  Printer,
+  ReceiptText,
+  RefreshCcw,
+  ScanLine,
+  Send,
+  ShieldCheck,
+  KeyRound,
+  Mail,
+  Stethoscope,
   Upload,
+  UserRound,
   Wallet,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { BrandMark } from "@/components/cloud-esther/AppShell";
+import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
+import { useRegistrosPacientes, type Registros } from "@/components/cloud-esther/PacienteSecciones";
+import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import {
+  TRATAMIENTOS as PRACTICAS,
+  setTurnosStore,
+  storeAgenda,
+  type Turno,
+} from "@/lib/cloud-esther/agenda-store";
+import { setComunicacion, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
+import {
+  DOCS_BASE,
+  docsDe,
+  guardarSesionPortal,
+  leerSesionPortal,
+  registrarEventoPortal,
+  setPortal,
+  storePortal,
+  type DocSolicitada,
+} from "@/lib/cloud-esther/portal-store";
+import { capitalizarNombre } from "@/lib/utils";
+
+/* Ubicación: src/components/cloud-esther/PortalPaciente.tsx
+
+   Portal del paciente: lo que ve cada paciente de SU información en la clínica. Todo sale de
+   los datos reales del demo (Agenda, carpeta del paciente, cuenta corriente y Comunicación),
+   separado por empresa. Lo que el paciente hace acá (pedir o confirmar turnos, aprobar un
+   presupuesto, pagar, escribir) aparece al instante en los módulos de la clínica.
+   TODO backend: login propio del paciente (magic link) y API filtrada por pacienteId + clinicId. */
 
 type Seccion =
   | "inicio"
@@ -25,1651 +76,2414 @@ type Seccion =
   | "tratamientos"
   | "documentos"
   | "documentacion"
-  | "pagos";
+  | "pagos"
+  | "mensajes"
+  | "perfil";
 
-type EstadoCita =
-  | "Confirmada"
-  | "Pendiente"
-  | "Cancelada"
-  | "Realizada";
-
-type TipoDoc = "Receta" | "Estudio" | "Presupuesto";
-
-type EstadoDocumentacion =
-  | "Pendiente"
-  | "Adjuntada"
-  | "En revisión"
-  | "Aprobada"
-  | "Rechazada";
-
-type Cita = {
-  id: number;
-  fecha: string;
-  hora: string;
-  profesional: string;
-  especialidad: string;
-  motivo: string;
-  estado: EstadoCita;
-  observaciones?: string;
-};
-
-type Tratamiento = {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  progreso: number;
-  estado: "En curso" | "Finalizado";
-  profesional: string;
-  ultimaSesion: string;
-};
-
-type Documento = {
-  id: number;
-  tipo: TipoDoc;
-  titulo: string;
-  descripcion: string;
-  fecha: string;
-};
-
-type Pago = {
-  id: number;
-  concepto: string;
-  fecha: string;
-  monto: number;
-  estado: "Pagado" | "Pendiente";
-};
-
-type DocumentacionSolicitadaItem = {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  obligatorio: boolean;
-  estado: EstadoDocumentacion;
-  archivo?: string;
-};
-
-const PACIENTE = {
-  nombre: "María González",
-  corto: "María",
-};
-
-const CITAS_INICIALES: Cita[] = [
-  {
-    id: 1,
-    fecha: "2026-09-25",
-    hora: "15:30",
-    profesional: "Dra. Lucía Ferrer",
-    especialidad: "Odontología general",
-    motivo: "Control y seguimiento",
-    estado: "Confirmada",
-    observaciones: "Continuar con el tratamiento restaurador.",
-  },
-  {
-    id: 2,
-    fecha: "2026-10-02",
-    hora: "10:00",
-    profesional: "Dra. Lucía Ferrer",
-    especialidad: "Odontología general",
-    motivo: "Restauración estética",
-    estado: "Pendiente",
-  },
-  {
-    id: 3,
-    fecha: "2026-08-21",
-    hora: "11:30",
-    profesional: "Dra. Lucía Ferrer",
-    especialidad: "Odontología general",
-    motivo: "Limpieza y control",
-    estado: "Realizada",
-  },
-  {
-    id: 4,
-    fecha: "2026-08-07",
-    hora: "16:00",
-    profesional: "Dra. Lucía Ferrer",
-    especialidad: "Odontología general",
-    motivo: "Evaluación inicial",
-    estado: "Realizada",
-  },
+const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
+  { id: "inicio", label: "Inicio", icon: Home },
+  { id: "turnos", label: "Mis turnos", icon: CalendarDays },
+  { id: "tratamientos", label: "Tratamientos", icon: Stethoscope },
+  { id: "documentos", label: "Recetas y estudios", icon: FileText },
+  { id: "documentacion", label: "Documentación", icon: Upload },
+  { id: "pagos", label: "Pagos", icon: Wallet },
+  { id: "mensajes", label: "Mensajes", icon: MessageCircle },
+  { id: "perfil", label: "Mis datos", icon: UserRound },
 ];
 
-const TRATAMIENTOS: Tratamiento[] = [
-  {
-    id: 1,
-    nombre: "Restauración estética",
-    descripcion:
-      "Tratamiento restaurador para mejorar la función y estética dental.",
-    progreso: 65,
-    estado: "En curso",
-    profesional: "Dra. Lucía Ferrer",
-    ultimaSesion: "2026-09-12",
-  },
-  {
-    id: 2,
-    nombre: "Limpieza y control",
-    descripcion:
-      "Limpieza profesional y control general de salud bucal.",
-    progreso: 100,
-    estado: "Finalizado",
-    profesional: "Dra. Lucía Ferrer",
-    ultimaSesion: "2026-08-21",
-  },
-];
+/* ───────────── Utilidades ───────────── */
 
-const DOCUMENTOS: Documento[] = [
-  {
-    id: 1,
-    tipo: "Receta",
-    titulo: "Receta odontológica",
-    descripcion: "Indicaciones posteriores a la consulta.",
-    fecha: "2026-09-12",
-  },
-  {
-    id: 2,
-    tipo: "Estudio",
-    titulo: "Radiografía panorámica",
-    descripcion: "Estudio radiográfico odontológico.",
-    fecha: "2026-08-07",
-  },
-  {
-    id: 3,
-    tipo: "Presupuesto",
-    titulo: "Presupuesto tratamiento restaurador",
-    descripcion: "Detalle del tratamiento y valores asociados.",
-    fecha: "2026-08-07",
-  },
-  {
-    id: 4,
-    tipo: "Estudio",
-    titulo: "Radiografía periapical",
-    descripcion: "Estudio solicitado durante el tratamiento.",
-    fecha: "2026-09-12",
-  },
-];
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sumarDias(iso: string, n: number) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function fechaLarga(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  if (iso === hoyISO()) return "Hoy";
+  if (iso === sumarDias(hoyISO(), 1)) return "Mañana";
+  return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+}
+function formatearFecha(iso: string) {
+  return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
+}
+function ars(n: number) {
+  return `$ ${n.toLocaleString("es-AR")}`;
+}
+function escapar(t: string) {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function abrirImpresion(titulo: string, cuerpo: string, clinica: string) {
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  w.document
+    .write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapar(titulo)}</title>
+  <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:13px}h1{font-size:20px;margin:0}
+  .meta{color:#6b6480;font-size:12px;margin:4px 0 16px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee8fb}
+  th{color:#6d28d9;font-size:12px}.n{text-align:right}.tot td{font-weight:700;border-top:2px solid #6d28d9}</style></head><body>
+  <p class="meta">${escapar(clinica)}</p><h1>${escapar(titulo)}</h1>${cuerpo}<script>window.onload=()=>window.print()</script></body></html>`);
+  w.document.close();
+  return true;
+}
 
-const PAGOS_INICIALES: Pago[] = [
-  {
-    id: 1,
-    concepto: "Restauración estética",
-    fecha: "2026-09-12",
-    monto: 45000,
-    estado: "Pagado",
-  },
-  {
-    id: 2,
-    concepto: "Limpieza y control",
-    fecha: "2026-08-21",
-    monto: 18000,
-    estado: "Pagado",
-  },
-  {
-    id: 3,
-    concepto: "Restauración estética - próxima sesión",
-    fecha: "2026-10-02",
-    monto: 35000,
-    estado: "Pendiente",
-  },
-];
+function descargarICS(t: Turno, clinica: string) {
+  const inicio = `${t.fecha.replace(/-/g, "")}T${t.hora.replace(":", "")}00`;
+  const [h = 0, m = 0] = t.hora.split(":").map(Number);
+  const finMin = h * 60 + m + 45;
+  const fin = `${t.fecha.replace(/-/g, "")}T${String(Math.floor(finMin / 60)).padStart(2, "0")}${String(finMin % 60).padStart(2, "0")}00`;
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Cloud Esther//Portal//ES",
+    "BEGIN:VEVENT",
+    `UID:turno-${t.id}@cloudesther`,
+    `DTSTART:${inicio}`,
+    `DTEND:${fin}`,
+    `SUMMARY:Turno odontológico · ${t.tratamiento}`,
+    `LOCATION:${clinica} · ${t.sucursal}`,
+    `DESCRIPTION:Con ${t.odontologo}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT2H",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Recordatorio de turno",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `turno-${t.fecha}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-const DOCUMENTACION_INICIAL: DocumentacionSolicitadaItem[] = [
-  {
-    id: 1,
-    titulo: "Documento de identidad",
-    descripcion:
-      "Adjuntá una imagen clara del frente y dorso de tu documento.",
-    obligatorio: true,
-    estado: "Pendiente",
-  },
-  {
-    id: 2,
-    titulo: "Estudio radiográfico",
-    descripcion:
-      "Adjuntá el estudio radiográfico solicitado por la profesional.",
-    obligatorio: true,
-    estado: "Pendiente",
-  },
-  {
-    id: 3,
-    titulo: "Orden médica",
-    descripcion:
-      "Adjuntá la orden médica correspondiente al tratamiento.",
-    obligatorio: false,
-    estado: "Pendiente",
-  },
-];
+/* ───────────── Estilos y piezas ───────────── */
 
-const BTN =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-
-const BTN_PRIMARY =
+const BTN_PRIMARIO =
   "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-
-const BTN_SECONDARY =
+const BTN_SECUNDARIO =
   "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-
-const CARD =
-  "rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md md:p-5";
-
 const INPUT =
-  "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
 
-function ars(valor: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(valor);
-}
+const ESTADO_TURNO: Record<Turno["estado"], string> = {
+  Confirmada: "bg-emerald-100 text-emerald-700",
+  Pendiente: "bg-amber-100 text-amber-700",
+  Atendida: "bg-primary/10 text-primary",
+  Ausente: "bg-muted text-muted-foreground",
+  Cancelada: "bg-destructive/10 text-destructive",
+};
 
-function fechaCorta(fecha: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "short",
-  }).format(new Date(`${fecha}T12:00:00`));
-}
-
-function fechaLarga(fecha: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${fecha}T12:00:00`));
-}
-
-function estadoStyle(estado: EstadoCita) {
-  switch (estado) {
-    case "Confirmada":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    case "Pendiente":
-      return "border-amber-200 bg-amber-50 text-amber-700";
-    case "Cancelada":
-      return "border-red-200 bg-red-50 text-red-700";
-    case "Realizada":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-}
-
-function documentacionEstadoStyle(estado: EstadoDocumentacion) {
-  switch (estado) {
-    case "Pendiente":
-      return "border-amber-200 bg-amber-50 text-amber-700";
-    case "Adjuntada":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-    case "En revisión":
-      return "border-violet-200 bg-violet-50 text-violet-700";
-    case "Aprobada":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    case "Rechazada":
-      return "border-red-200 bg-red-50 text-red-700";
-  }
-}
-
-function documentoIcono(tipo: TipoDoc) {
-  switch (tipo) {
-    case "Receta":
-      return <Pill className="h-5 w-5" />;
-    case "Estudio":
-      return <FileText className="h-5 w-5" />;
-    case "Presupuesto":
-      return <Wallet className="h-5 w-5" />;
-  }
-}
-
-function DienteIcon({ className = "h-8 w-8" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M14.5 8.5C11.4 8.5 9 11 9 14.1c0 3.3 1.7 5.6 2.6 8.2 1.2 3.5 1.2 10.5 4.5 10.5 2.7 0 2.5-8.2 7.9-8.2s5.2 8.2 7.9 8.2c3.3 0 3.3-7 4.5-10.5.9-2.6 2.6-4.9 2.6-8.2 0-3.1-2.4-5.6-5.5-5.6-3.2 0-5.1 1.9-7.5 1.9s-4.3-1.9-7.5-1.9Z"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function Badge({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Pill({ children, clase }: { children: ReactNode; clase: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${clase}`}
     >
       {children}
     </span>
   );
 }
 
-function Encabezado({
-  eyebrow,
-  titulo,
-  descripcion,
-}: {
-  eyebrow: string;
-  titulo: string;
-  descripcion: string;
-}) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="mb-6">
-      <p className="mb-1 text-sm font-semibold text-primary">{eyebrow}</p>
-      <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-        {titulo}
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">{descripcion}</p>
-    </div>
-  );
-}
-
-function CitaFila({
-  cita,
-  onCancelar,
-}: {
-  cita: Cita;
-  onCancelar?: (id: number) => void;
-}) {
-  return (
-    <div className={CARD}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <span className="text-xs font-semibold uppercase">
-              {new Intl.DateTimeFormat("es-AR", {
-                month: "short",
-              })
-                .format(new Date(`${cita.fecha}T12:00:00`))
-                .replace(".", "")}
-            </span>
-            <span className="text-lg font-bold">
-              {new Date(`${cita.fecha}T12:00:00`).getDate()}
-            </span>
-          </div>
-
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold">{cita.motivo}</h3>
-              <Badge className={estadoStyle(cita.estado)}>
-                {cita.estado}
-              </Badge>
-            </div>
-
-            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-              <p className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {cita.hora} hs · {fechaLarga(cita.fecha)}
-              </p>
-              <p className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {cita.profesional} · {cita.especialidad}
-              </p>
-            </div>
-
-            {cita.observaciones && (
-              <p className="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
-                {cita.observaciones}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {onCancelar && cita.estado !== "Cancelada" && (
-          <button
-            type="button"
-            className={`${BTN_SECONDARY} shrink-0 text-red-600 hover:border-red-200 hover:bg-red-50`}
-            onClick={() => onCancelar(cita.id)}
-          >
-            <X className="h-4 w-4" />
-            Cancelar
-          </button>
-        )}
-      </div>
-    </div>
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
 
 function Modal({
-  abierto,
   titulo,
-  onCerrar,
+  onClose,
   children,
 }: {
-  abierto: boolean;
   titulo: string;
-  onCerrar: () => void;
-  children: React.ReactNode;
+  onClose: () => void;
+  children: ReactNode;
 }) {
-  if (!abierto) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-xl">
-        <div className="flex items-center justify-between border-b border-border p-5">
-          <h2 className="text-lg font-bold">{titulo}</h2>
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onMouseDown={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Portal del paciente
+            </p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">{titulo}</h2>
+          </div>
           <button
-            type="button"
-            onClick={onCerrar}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onClick={onClose}
             aria-label="Cerrar"
+            className="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-muted"
           >
-            <X className="h-5 w-5" />
+            <X className="size-4" />
           </button>
         </div>
-
-        <div className="p-5">{children}</div>
+        {children}
       </div>
     </div>
   );
 }
 
-function DocumentacionSolicitada({
-  documentos,
-  onAdjuntar,
+function Tarjeta({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`card-grad p-4 ${className}`}>{children}</div>;
+}
+
+function TituloSeccion({
+  icon: Icon,
+  titulo,
+  descripcion,
+  children,
 }: {
-  documentos: DocumentacionSolicitadaItem[];
-  onAdjuntar: (id: number, archivo: string) => void;
+  icon: LucideIcon;
+  titulo: string;
+  descripcion: string;
+  children?: ReactNode;
 }) {
   return (
-    <section>
-      <Encabezado
-        eyebrow="DOCUMENTACIÓN"
-        titulo="Documentación solicitada"
-        descripcion="Completá y adjuntá la documentación que la clínica necesita."
-      />
-
-      <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 md:p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <FileText className="h-5 w-5" />
-          </div>
-
-          <div>
-            <h2 className="font-semibold">Documentación pendiente</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Adjuntá los archivos solicitados para que el equipo pueda
-              revisar tu documentación.
-            </p>
-          </div>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15">
+          <Icon className="size-5" />
+        </span>
+        <div>
+          <h2 className="font-display text-xl font-semibold tracking-tight">{titulo}</h2>
+          <p className="text-sm text-muted-foreground">{descripcion}</p>
         </div>
       </div>
-
-      <div className="space-y-4">
-        {documentos.map((documento) => (
-          <div key={documento.id} className={CARD}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <FileText className="h-5 w-5" />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold">{documento.titulo}</h3>
-
-                    <Badge
-                      className={documentacionEstadoStyle(documento.estado)}
-                    >
-                      {documento.estado}
-                    </Badge>
-
-                    {documento.obligatorio && (
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Obligatorio
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {documento.descripcion}
-                  </p>
-
-                  {documento.archivo && (
-                    <p className="mt-2 flex items-center gap-2 text-xs font-medium text-primary">
-                      <Check className="h-4 w-4" />
-                      {documento.archivo}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <label className={`${BTN_SECONDARY} shrink-0 cursor-pointer`}>
-                <Upload className="h-4 w-4" />
-                {documento.estado === "Pendiente"
-                  ? "Adjuntar archivo"
-                  : "Cambiar archivo"}
-
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(event) => {
-                    const archivo = event.target.files?.[0];
-
-                    if (!archivo) return;
-
-                    onAdjuntar(documento.id, archivo.name);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
+      {children && <div className="flex flex-wrap gap-2">{children}</div>}
+    </div>
   );
 }
 
+function Vacio({ icon: Icon, texto }: { icon: LucideIcon; texto: string }) {
+  return (
+    <div className="card-grad grid min-h-32 place-items-center p-6 text-center">
+      <div>
+        <Icon className="mx-auto size-7 text-primary/50" />
+        <p className="mt-2 text-sm text-muted-foreground">{texto}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Página ───────────── */
+
+/* /portal: entrada de los pacientes. Con ?vista=ID el equipo lo ve como ese paciente sin login. */
 export default function PortalPaciente() {
+  return (
+    <CloudEstherProvider>
+      <PortalGate />
+    </CloudEstherProvider>
+  );
+}
+
+function PortalGate() {
+  const [montado, setMontado] = useState(false);
+  const [sesion, setSesion] = useState<number | null>(null);
+  const [vista, setVista] = useState<number | null>(null);
+  const { pacientes } = usePacientes();
+  const { accesos } = storePortal.usar();
+
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vista");
+    if (v) setVista(Number(v));
+    setSesion(leerSesionPortal());
+    setMontado(true);
+  }, []);
+
+  if (!montado) return <div className="min-h-screen bg-[#faf9ff]" />;
+  if (vista !== null)
+    return <PortalInner modo="vista" pacienteInicial={vista} onSalir={() => {}} />;
+  // Si al paciente le revocaron el acceso, se cierra su sesión.
+  const valida =
+    sesion !== null &&
+    accesos[sesion]?.estado === "Activo" &&
+    pacientes.some((p) => p.id === sesion);
+  if (!valida)
+    return (
+      <LoginPortal
+        onIngresar={(id) => {
+          guardarSesionPortal(id);
+          setSesion(id);
+        }}
+      />
+    );
+  return (
+    <PortalInner
+      modo="paciente"
+      pacienteInicial={sesion}
+      onSalir={() => {
+        guardarSesionPortal(null);
+        setSesion(null);
+      }}
+    />
+  );
+}
+
+function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void }) {
+  const { clinica: clinicaSesion } = useSesion();
+  const { pacientes } = usePacientes();
+  const { accesos } = storePortal.usar();
+  const [usuario, setUsuario] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [error, setError] = useState("");
+  const [aviso, setAviso] = useState("");
+  const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
+
+  const buscar = () => {
+    const u = usuario.trim().toLowerCase();
+    const dni = u.replace(/\D/g, "");
+    return pacientes.find(
+      (p) =>
+        (dni.length >= 7 && p.documento === dni) ||
+        (u.includes("@") && p.email.toLowerCase() === u),
+    );
+  };
+
+  const pedirCodigo = () => {
+    setError("");
+    const p = buscar();
+    if (!p) return setError("No encontramos un paciente con ese DNI o correo en esta clínica.");
+    const a = accesos[p.id];
+    if (!a || a.estado === "Revocado")
+      return setError("Todavía no tenés acceso al portal. Pedile a la clínica que te invite.");
+    const oculto = p.email.replace(/^(.).*(@.*)$/, "$1***$2");
+    setAviso(`Te enviamos el código a ${oculto}. (Código de práctica: ${a.codigo})`);
+  };
+
+  const ingresar = (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    const p = buscar();
+    if (!p) return setError("No encontramos un paciente con ese DNI o correo en esta clínica.");
+    const a = accesos[p.id];
+    if (!a || a.estado === "Revocado")
+      return setError("Tu acceso al portal no está habilitado. Comunicate con la clínica.");
+    if (codigo.trim() !== a.codigo)
+      return setError("El código no es correcto. Revisá el correo o pedí uno nuevo.");
+    setPortal("accesos", (prev) => ({
+      ...prev,
+      [p.id]: {
+        ...a,
+        estado: "Activo",
+        ultimoIngreso: new Date().toISOString(),
+        ingresos: a.ingresos + 1,
+      },
+    }));
+    registrarEventoPortal(
+      p.id,
+      "Ingreso",
+      a.estado === "Invitado" ? "Primer ingreso al portal" : "Entró al portal",
+    );
+    onIngresar(p.id);
+  };
+
+  return (
+    <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_520px]">
+      <div className="relative hidden overflow-hidden lg:block">
+        <HeroParallax />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/70 via-primary/20 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-10 text-white">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
+            Portal del paciente
+          </p>
+          <h1 className="mt-2 max-w-lg font-display text-4xl font-bold leading-tight">
+            Tus turnos, tratamientos y pagos, en un solo lugar.
+          </h1>
+          <p className="mt-2 max-w-md text-sm text-white/85">
+            Pedí o cambiá turnos, mirá tus recetas y estudios, aprobá presupuestos y escribile a tu
+            clínica.
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-center bg-[#faf9ff] p-6">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center gap-2.5">
+            <BrandMark className="size-10" />
+            <span className="leading-tight">
+              <span className="block font-display text-base font-semibold">Cloud Esther</span>
+              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Portal del paciente
+              </span>
+            </span>
+          </div>
+          <h2 className="mt-8 font-display text-2xl font-bold tracking-tight">
+            Ingresá a tu portal
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{clinica}</p>
+          <form onSubmit={ingresar} className="mt-6 space-y-3">
+            <Field label="DNI o correo">
+              <input
+                autoFocus
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                className={INPUT}
+                placeholder="Ej: 95222294"
+              />
+            </Field>
+            <Field label="Código de acceso">
+              <input
+                inputMode="numeric"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className={`${INPUT} tracking-[0.4em]`}
+                placeholder="••••••"
+              />
+            </Field>
+            <button
+              type="button"
+              onClick={pedirCodigo}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <Mail className="size-3.5" /> Recibir el código por correo
+            </button>
+            {aviso && (
+              <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{aviso}</p>
+            )}
+            {error && (
+              <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {error}
+              </p>
+            )}
+            <button type="submit" className={`${BTN_PRIMARIO} w-full`}>
+              <KeyRound className="size-4" />
+              Ingresar
+            </button>
+          </form>
+          <p className="mt-6 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ShieldCheck className="size-3.5 text-emerald-600" /> Sin contraseñas: cada ingreso usa
+            un código de tu clínica.
+          </p>
+          <p className="mt-8 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
+            Para practicar: DNI <b>95222294</b> (Mauro Pinto) y el código que muestra “Recibir el
+            código”. Los accesos se gestionan en Cloud Esther → Portal del paciente.
+          </p>
+          <Link
+            to="/demo/portal-paciente"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            <ChevronRight className="size-3.5 rotate-180" /> Volver a Cloud Esther
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type Ctx = {
+  paciente: Paciente;
+  nombre: string;
+  registros: Registros;
+  cambiar: <K extends keyof Registros>(clave: K, fn: (prev: Registros[K]) => Registros[K]) => void;
+  turnos: Turno[];
+  clinica: string;
+  onToast: (m: string) => void;
+  ir: (s: Seccion) => void;
+};
+
+function PortalInner({
+  modo,
+  pacienteInicial,
+  onSalir,
+}: {
+  modo: "paciente" | "vista";
+  pacienteInicial: number | null;
+  onSalir: () => void;
+}) {
+  const { clinica: clinicaSesion } = useSesion();
+  const { pacientes, activoId } = usePacientes();
+  const { de, cambiar } = useRegistrosPacientes();
+  const { turnos: todosTurnos } = storeAgenda.usar();
+  const { config } = storePortal.usar();
+  const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("inicio");
+  const [pacienteId, setPacienteId] = useState<number | null>(pacienteInicial);
+  const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const timer = useRef<number | null>(null);
 
-  const [citas, setCitas] = useState<Cita[]>(CITAS_INICIALES);
-  const [pagos, setPagos] = useState<Pago[]>(PAGOS_INICIALES);
+  useEffect(() => setMontado(true), []);
 
-  const [documentacion, setDocumentacion] = useState<
-    DocumentacionSolicitadaItem[]
-  >(DOCUMENTACION_INICIAL);
+  const activos = pacientes.filter((p) => p.estado === "Activo");
+  const paciente =
+    modo === "paciente"
+      ? pacientes.find((p) => p.id === pacienteId)
+      : (activos.find((p) => p.id === pacienteId) ??
+        activos.find((p) => p.id === activoId) ??
+        activos[0]);
+  const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
 
-  const [modal, setModal] = useState<
-    "turno" | "pago" | null
-  >(null);
+  const onToast = (m: string) => {
+    setToast(m);
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setToast(null), 2800);
+  };
 
-  const [mensaje, setMensaje] = useState<string | null>(null);
+  if (!paciente) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#faf9ff] p-6 text-center">
+        <div>
+          <p className="text-lg font-semibold">Todavía no hay pacientes activos</p>
+          <Link to="/demo/pacientes" className={`${BTN_PRIMARIO} mt-3`}>
+            Ir a Pacientes
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  const [form, setForm] = useState({
-    fecha: "",
-    hora: "",
-    motivo: "",
-    observaciones: "",
-  });
+  const nombre = `${paciente.nombre} ${paciente.apellido}`;
+  const ctx: Ctx = {
+    paciente,
+    nombre,
+    registros: de(paciente.id),
+    cambiar: (clave, fn) => cambiar(paciente.id, clave, fn),
+    turnos: todosTurnos.filter((t) => t.paciente === nombre),
+    clinica,
+    onToast,
+    ir: (s) => {
+      setSeccion(s);
+      setMenu(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+  };
 
-  const proximas = citas.filter(
-    (cita) =>
-      cita.estado === "Confirmada" || cita.estado === "Pendiente"
+  const sinLeer =
+    storeComunicacion
+      .leer()
+      .conversaciones.find((c) => c.paciente === nombre)
+      ?.mensajes.filter((m) => m.de === "clinica").length ?? 0;
+
+  const sidebar = (
+    <div className="flex h-full flex-col">
+      <div className="px-5 pb-4 pt-5">
+        <div className="flex items-center gap-2.5">
+          <BrandMark className="size-9 shrink-0" />
+          <span className="leading-tight">
+            <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
+              Cloud Esther
+            </span>
+            <span className="block text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
+              Portal del paciente
+            </span>
+          </span>
+        </div>
+        <div className="mt-4 rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+            Tu clínica
+          </p>
+          <p className="truncate text-[13px] font-medium text-sidebar-foreground">{clinica}</p>
+          <p className="truncate text-[11px] text-sidebar-foreground/60">{paciente.sucursal}</p>
+        </div>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 pb-6">
+        <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+          Mi portal
+        </p>
+        <ul className="space-y-0.5">
+          {SECCIONES.filter(
+            (s) =>
+              (s.id !== "pagos" || config.pagosOnline) && (s.id !== "mensajes" || config.mensajes),
+          ).map((s) => {
+            const activo = seccion === s.id;
+            return (
+              <li key={s.id}>
+                <button
+                  onClick={() => ctx.ir(s.id)}
+                  className={`group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+                    activo
+                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                  }`}
+                >
+                  <s.icon className={`size-4 shrink-0 ${activo ? "text-sidebar-primary" : ""}`} />
+                  <span className="truncate">{s.label}</span>
+                  {s.id === "mensajes" && montado && sinLeer > 0 && (
+                    <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-sidebar-primary px-1.5 text-[10px] font-bold text-sidebar-primary-foreground">
+                      {sinLeer}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <div className="space-y-2 border-t border-sidebar-border p-3">
+        <div className="flex items-center gap-2.5 rounded-xl bg-sidebar-accent/50 p-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-xs font-bold text-white">
+            {`${paciente.nombre[0] ?? ""}${paciente.apellido[0] ?? ""}`}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-medium text-sidebar-foreground">
+              {nombre}
+            </span>
+            <span className="block truncate text-[11px] text-sidebar-foreground/55">
+              {paciente.obraSocial || "Paciente particular"}
+            </span>
+          </span>
+        </div>
+        {modo === "paciente" ? (
+          <button
+            onClick={onSalir}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="size-3.5" />
+            Cerrar sesión
+          </button>
+        ) : (
+          <Link
+            to="/demo/portal-paciente"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="size-3.5" />
+            Volver al monitoreo
+          </Link>
+        )}
+      </div>
+    </div>
   );
 
-  const historial = citas.filter(
-    (cita) =>
-      cita.estado === "Realizada" || cita.estado === "Cancelada"
+  return (
+    <div className="flex min-h-screen bg-[#faf9ff]">
+      <aside className="hidden w-64 shrink-0 self-stretch border-r border-sidebar-border bg-sidebar lg:block">
+        <div className="sticky top-0 h-screen">{sidebar}</div>
+      </aside>
+      {menu && (
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenu(false)}>
+          <aside className="h-full w-64 bg-sidebar" onClick={(e) => e.stopPropagation()}>
+            {sidebar}
+          </aside>
+        </div>
+      )}
+
+      <main className="relative min-w-0 flex-1 overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.12),transparent_28%),radial-gradient(circle_at_92%_40%,rgba(52,211,153,0.07),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+        />
+        <div className="relative mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 lg:px-8">
+          {modo === "paciente" ? (
+            <button
+              className="mb-3 grid size-9 place-items-center rounded-lg border border-primary/15 bg-white lg:hidden"
+              aria-label="Abrir menú"
+              onClick={() => setMenu(true)}
+            >
+              <Menu className="size-4" />
+            </button>
+          ) : (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
+              <button
+                className="grid size-8 place-items-center rounded-lg border border-amber-200 bg-white lg:hidden"
+                aria-label="Abrir menú"
+                onClick={() => setMenu(true)}
+              >
+                <Menu className="size-4" />
+              </button>
+              <Eye className="size-4 shrink-0" />
+              <span className="font-semibold">Vista previa del equipo:</span>
+              <span>así ve el portal</span>
+              <select
+                value={paciente.id}
+                onChange={(e) => {
+                  setPacienteId(Number(e.target.value));
+                  onToast("Ahora ves el portal de otro paciente");
+                }}
+                aria-label="Paciente"
+                className="h-8 rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-foreground outline-none"
+              >
+                {activos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} {p.apellido}
+                  </option>
+                ))}
+              </select>
+              <span className="ml-auto hidden text-amber-700/80 md:inline">
+                Lo que hagas acá queda registrado como si fuera el paciente.
+              </span>
+            </div>
+          )}
+
+          {!montado ? (
+            <div className="card-grad h-[520px] animate-pulse" />
+          ) : (
+            <>
+              {seccion === "inicio" && <Inicio ctx={ctx} />}
+              {seccion === "turnos" && <Turnos ctx={ctx} />}
+              {seccion === "tratamientos" && <Tratamientos ctx={ctx} />}
+              {seccion === "documentos" && <Documentos ctx={ctx} />}
+              {seccion === "documentacion" && <Documentacion ctx={ctx} />}
+              {seccion === "pagos" && <Pagos ctx={ctx} />}
+              {seccion === "mensajes" && <Mensajes ctx={ctx} />}
+              {seccion === "perfil" && <Perfil ctx={ctx} />}
+            </>
+          )}
+        </div>
+      </main>
+
+      {toast && (
+        <div
+          className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
+          role="status"
+        >
+          {toast}
+        </div>
+      )}
+    </div>
   );
+}
 
-  const proxima = proximas[0];
+/* ───────────── Cálculos compartidos ───────────── */
 
-  const saldo = pagos
-    .filter((pago) => pago.estado === "Pendiente")
-    .reduce((total, pago) => total + pago.monto, 0);
+function proximos(turnos: Turno[]) {
+  const hoy = hoyISO();
+  return turnos
+    .filter((t) => t.fecha >= hoy && (t.estado === "Pendiente" || t.estado === "Confirmada"))
+    .sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
+}
 
-  function avisar(texto: string) {
-    setMensaje(texto);
+function saldoDe(r: Registros) {
+  return r.cuenta.reduce((acc, m) => acc + (m.tipo === "Cargo" ? m.monto : -m.monto), 0);
+}
 
-    window.setTimeout(() => {
-      setMensaje(null);
-    }, 3500);
-  }
+function avanceTratamiento(t: Registros["tratamientos"][number]) {
+  if (t.estado === "Completado" || t.estado === "Finalizado") return 100;
+  const plan = t.sesionesPlan ?? 1;
+  return Math.min(100, Math.round(((t.sesiones?.length ?? 0) / plan) * 100));
+}
 
-  function ir(nuevaSeccion: Seccion) {
-    setSeccion(nuevaSeccion);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+/* ───────────── Inicio ───────────── */
 
-  function cancelarCita(id: number) {
-    setCitas((actuales) =>
-      actuales.map((cita) =>
-        cita.id === id
-          ? { ...cita, estado: "Cancelada" }
-          : cita
-      )
-    );
+function Inicio({ ctx }: { ctx: Ctx }) {
+  const { paciente, registros, turnos, ir, clinica } = ctx;
+  const [ahora, setAhora] = useState<Date | null>(null);
+  useEffect(() => setAhora(new Date()), []);
+  const lista = proximos(turnos);
+  const prox = lista[0];
+  const saldo = saldoDe(registros);
+  const enCurso = registros.tratamientos.filter(
+    (t) => t.estado === "En tratamiento" || t.estado === "Planificado",
+  );
+  const docs = docsDe(storePortal.usar().docs, paciente.id);
+  const docsPend = docs.filter(
+    (d) => d.obligatorio && (d.estado === "Pendiente" || d.estado === "Rechazada"),
+  );
+  const presPend = registros.presupuestos.filter((p) => p.estado === "Enviado");
+  const porConfirmar = lista.filter((t) => t.estado === "Pendiente");
+  const hora = ahora?.getHours() ?? 12;
+  const saludo = hora < 12 ? "Buen día" : hora < 20 ? "Buenas tardes" : "Buenas noches";
 
-    avisar("El turno fue cancelado correctamente.");
-  }
-
-  function solicitarTurno(event: React.FormEvent) {
-    event.preventDefault();
-
-    if (!form.fecha || !form.hora || !form.motivo) {
-      avisar("Completá los campos obligatorios.");
-      return;
-    }
-
-    const nuevaCita: Cita = {
-      id: Date.now(),
-      fecha: form.fecha,
-      hora: form.hora,
-      profesional: "Dra. Lucía Ferrer",
-      especialidad: "Odontología general",
-      motivo: form.motivo,
-      estado: "Pendiente",
-      observaciones: form.observaciones || undefined,
-    };
-
-    setCitas((actuales) => [...actuales, nuevaCita]);
-
-    setForm({
-      fecha: "",
-      hora: "",
-      motivo: "",
-      observaciones: "",
-    });
-
-    setModal(null);
-    avisar("Tu solicitud de turno fue enviada.");
-  }
-
-  function pagar(id: number) {
-    setPagos((actuales) =>
-      actuales.map((pago) =>
-        pago.id === id
-          ? { ...pago, estado: "Pagado" }
-          : pago
-      )
-    );
-
-    setModal(null);
-    avisar("El pago fue registrado correctamente.");
-  }
-
-  function adjuntarDocumentacion(id: number, archivo: string) {
-    setDocumentacion((actuales) =>
-      actuales.map((documento) =>
-        documento.id === id
-          ? {
-              ...documento,
-              estado: "Adjuntada",
-              archivo,
-            }
-          : documento
-      )
-    );
-
-    avisar("La documentación fue adjuntada correctamente.");
-  }
-
-  const nav = [
-    {
-      id: "inicio" as const,
-      label: "Inicio",
-      icon: Home,
-    },
-    {
-      id: "turnos" as const,
-      label: "Turnos",
-      icon: CalendarDays,
-    },
-    {
-      id: "tratamientos" as const,
-      label: "Tratamientos",
-      icon: ClipboardList,
-    },
-    {
-      id: "documentos" as const,
-      label: "Documentos",
-      icon: FileText,
-    },
-    {
-      id: "documentacion" as const,
-      label: "Documentación solicitada",
-      icon: Upload,
-    },
-    {
-      id: "pagos" as const,
-      label: "Pagos",
-      icon: CreditCard,
-    },
+  const pendientes: {
+    icon: LucideIcon;
+    texto: string;
+    accion: string;
+    ir: Seccion;
+    tono: string;
+  }[] = [
+    ...porConfirmar.map((t) => ({
+      icon: CalendarCheck2,
+      texto: `Confirmá tu turno del ${fechaLarga(t.fecha).toLowerCase()} a las ${t.hora}`,
+      accion: "Confirmar",
+      ir: "turnos" as Seccion,
+      tono: "text-amber-600",
+    })),
+    ...presPend.map((p) => ({
+      icon: ReceiptText,
+      texto: `Tenés el presupuesto ${p.numero} para revisar`,
+      accion: "Ver",
+      ir: "documentos" as Seccion,
+      tono: "text-primary",
+    })),
+    ...(docsPend.length
+      ? [
+          {
+            icon: Upload,
+            texto: `Faltan ${docsPend.length} ${docsPend.length === 1 ? "documento obligatorio" : "documentos obligatorios"}`,
+            accion: "Subir",
+            ir: "documentacion" as Seccion,
+            tono: "text-sky-600",
+          },
+        ]
+      : []),
+    ...(saldo > 0
+      ? [
+          {
+            icon: Wallet,
+            texto: `Saldo pendiente de ${ars(saldo)}`,
+            accion: "Pagar",
+            ir: "pagos" as Seccion,
+            tono: "text-destructive",
+          },
+        ]
+      : []),
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
-        {/* SIDEBAR */}
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card/95 md:flex md:flex-col">
-          <div className="flex h-full flex-col p-4">
-            <div className="mb-8 flex items-center gap-3 px-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                <DienteIcon className="h-6 w-6" />
-              </div>
-
-              <div>
-                <p className="font-bold leading-tight">Cloud Esther</p>
-                <p className="text-xs text-muted-foreground">
-                  Portal del paciente
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-3 px-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Mi portal
-            </div>
-
-            <nav className="space-y-1">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const activo = seccion === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => ir(item.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all ${
-                      activo
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="mt-auto">
-              <div className="mb-3 rounded-2xl border border-border bg-background p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    MG
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">
-                      {PACIENTE.nombre}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Paciente
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className={`${BTN_SECONDARY} w-full`}
-                onClick={() => avisar("Volviendo a Cloud Esther...")}
-              >
-                <LogOut className="h-4 w-4" />
-                Volver a Cloud Esther
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* CONTENIDO */}
-        <div className="min-w-0 flex-1">
-          {/* MOBILE HEADER */}
-          <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur md:hidden">
-            <div className="flex h-16 items-center justify-between px-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <DienteIcon className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold">Cloud Esther</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Portal del paciente
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                MG
-              </div>
-            </div>
-          </header>
-
-          <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-6 md:py-8 md:pb-10">
-            {/* INICIO */}
-            {seccion === "inicio" && (
-              <section>
-                <div className="mb-6 overflow-hidden rounded-3xl border border-border bg-card">
-                  <div className="relative p-6 md:p-8">
-                    <div className="relative z-10 max-w-2xl">
-                      <p className="mb-2 text-sm font-semibold text-primary">
-                        BIENVENIDA
-                      </p>
-
-                      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                        Hola, {PACIENTE.corto}
-                      </h1>
-
-                      <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground md:text-base">
-                        Desde tu portal podés gestionar tus turnos,
-                        consultar tratamientos, ver documentación y
-                        administrar tus pagos.
-                      </p>
-
-                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                        <button
-                          type="button"
-                          className={BTN_PRIMARY}
-                          onClick={() => setModal("turno")}
-                        >
-                          <CalendarPlus className="h-4 w-4" />
-                          Solicitar turno
-                        </button>
-
-                        <button
-                          type="button"
-                          className={BTN_SECONDARY}
-                          onClick={() => ir("documentos")}
-                        >
-                          <FileText className="h-4 w-4" />
-                          Ver documentos
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pointer-events-none absolute -right-10 -top-10 hidden h-56 w-56 rounded-full bg-primary/5 md:block" />
-                    <div className="pointer-events-none absolute -bottom-20 right-24 hidden h-48 w-48 rounded-full bg-primary/5 md:block" />
-                  </div>
-                </div>
-
-                {/* PRÓXIMA CITA / SALDO */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className={CARD}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Próximo turno
-                        </p>
-
-                        {proxima ? (
-                          <>
-                            <h2 className="mt-1 text-xl font-bold">
-                              {fechaCorta(proxima.fecha)} · {proxima.hora}
-                            </h2>
-
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {proxima.motivo}
-                            </p>
-
-                            <p className="mt-3 text-sm font-medium">
-                              {proxima.profesional}
-                            </p>
-                          </>
-                        ) : (
-                          <h2 className="mt-1 text-xl font-bold">
-                            No tenés turnos próximos
-                          </h2>
-                        )}
-                      </div>
-
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CalendarDays className="h-5 w-5" />
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="mt-5 flex items-center gap-1 text-sm font-semibold text-primary"
-                      onClick={() => ir("turnos")}
-                    >
-                      Ver mis turnos
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className={CARD}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Saldo pendiente
-                        </p>
-
-                        <h2 className="mt-1 text-xl font-bold">
-                          {ars(saldo)}
-                        </h2>
-
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {pagos.filter(
-                            (pago) => pago.estado === "Pendiente"
-                          ).length}{" "}
-                          pago
-                          {pagos.filter(
-                            (pago) => pago.estado === "Pendiente"
-                          ).length !== 1
-                            ? "s"
-                            : ""}{" "}
-                          pendiente
-                          {pagos.filter(
-                            (pago) => pago.estado === "Pendiente"
-                          ).length !== 1
-                            ? "s"
-                            : ""}
-                        </p>
-                      </div>
-
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Wallet className="h-5 w-5" />
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="mt-5 flex items-center gap-1 text-sm font-semibold text-primary"
-                      onClick={() => ir("pagos")}
-                    >
-                      Ver pagos
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* ACCESOS RÁPIDOS */}
-                <div className="mt-8">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-bold">Accesos rápidos</h2>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-                    <button
-                      type="button"
-                      className={`${CARD} text-left`}
-                      onClick={() => ir("turnos")}
-                    >
-                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CalendarDays className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="font-semibold">Turnos</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Consultá y gestioná tus turnos.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`${CARD} text-left`}
-                      onClick={() => ir("tratamientos")}
-                    >
-                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <ClipboardList className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="font-semibold">Tratamientos</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Consultá el avance de tus tratamientos.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`${CARD} text-left`}
-                      onClick={() => ir("documentos")}
-                    >
-                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <FileText className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="font-semibold">Documentos</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Accedé a tus recetas y estudios.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`${CARD} text-left`}
-                      onClick={() => ir("documentacion")}
-                    >
-                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Upload className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="font-semibold">
-                        Documentación
-                      </h3>
-
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Adjuntá documentación solicitada.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`${CARD} text-left`}
-                      onClick={() => ir("pagos")}
-                    >
-                      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CreditCard className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="font-semibold">Pagos</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Consultá tus pagos y saldo.
-                      </p>
-                    </button>
-                  </div>
-                </div>
-
-                {/* TRATAMIENTO ACTUAL */}
-                <div className="mt-8">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-bold">
-                      Tratamiento actual
-                    </h2>
-
-                    <button
-                      type="button"
-                      className="text-sm font-semibold text-primary"
-                      onClick={() => ir("tratamientos")}
-                    >
-                      Ver todos
-                    </button>
-                  </div>
-
-                  <div className={CARD}>
-                    {TRATAMIENTOS.filter(
-                      (tratamiento) =>
-                        tratamiento.estado === "En curso"
-                    ).map((tratamiento) => (
-                      <div key={tratamiento.id}>
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <h3 className="font-semibold">
-                              {tratamiento.nombre}
-                            </h3>
-
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {tratamiento.descripcion}
-                            </p>
-                          </div>
-
-                          <Badge className="w-fit border-blue-200 bg-blue-50 text-blue-700">
-                            {tratamiento.progreso}% completado
-                          </Badge>
-                        </div>
-
-                        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{
-                              width: `${tratamiento.progreso}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* TURNOS */}
-            {seccion === "turnos" && (
-              <section>
-                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                  <Encabezado
-                    eyebrow="MI AGENDA"
-                    titulo="Mis turnos"
-                    descripcion="Consultá tus próximos turnos y el historial de atención."
-                  />
-
-                  <button
-                    type="button"
-                    className={`${BTN_PRIMARY} shrink-0`}
-                    onClick={() => setModal("turno")}
-                  >
-                    <CalendarPlus className="h-4 w-4" />
-                    Solicitar turno
-                  </button>
-                </div>
-
-                <div className="mb-8">
-                  <div className="mb-4 flex items-center gap-2">
-                    <h2 className="text-lg font-bold">
-                      Próximos turnos
-                    </h2>
-
-                    <Badge className="border-primary/20 bg-primary/5 text-primary">
-                      {proximas.length}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-4">
-                    {proximas.length > 0 ? (
-                      proximas.map((cita) => (
-                        <CitaFila
-                          key={cita.id}
-                          cita={cita}
-                          onCancelar={cancelarCita}
-                        />
-                      ))
-                    ) : (
-                      <div className={`${CARD} text-center`}>
-                        <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground" />
-                        <h3 className="mt-3 font-semibold">
-                          No tenés turnos próximos
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Solicitá un nuevo turno para continuar.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
-                    <h2 className="text-lg font-bold">
-                      Historial
-                    </h2>
-
-                    <Badge className="border-border bg-muted text-muted-foreground">
-                      {historial.length}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-4">
-                    {historial.map((cita) => (
-                      <CitaFila key={cita.id} cita={cita} />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* TRATAMIENTOS */}
-            {seccion === "tratamientos" && (
-              <section>
-                <Encabezado
-                  eyebrow="MI SALUD"
-                  titulo="Tratamientos"
-                  descripcion="Consultá el estado y avance de tus tratamientos."
-                />
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {TRATAMIENTOS.map((tratamiento) => (
-                    <div key={tratamiento.id} className={CARD}>
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-lg font-bold">
-                              {tratamiento.nombre}
-                            </h2>
-
-                            <Badge
-                              className={
-                                tratamiento.estado === "Finalizado"
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                  : "border-blue-200 bg-blue-50 text-blue-700"
-                              }
-                            >
-                              {tratamiento.estado}
-                            </Badge>
-                          </div>
-
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                            {tratamiento.descripcion}
-                          </p>
-                        </div>
-
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          <ClipboardList className="h-5 w-5" />
-                        </div>
-                      </div>
-
-                      <div className="mt-6">
-                        <div className="mb-2 flex items-center justify-between text-sm">
-                          <span className="font-medium">
-                            Progreso
-                          </span>
-                          <span className="font-semibold text-primary">
-                            {tratamiento.progreso}%
-                          </span>
-                        </div>
-
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary"
-                            style={{
-                              width: `${tratamiento.progreso}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">
-                            Profesional
-                          </p>
-                          <p className="mt-1 text-sm font-semibold">
-                            {tratamiento.profesional}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">
-                            Última sesión
-                          </p>
-                          <p className="mt-1 text-sm font-semibold">
-                            {fechaCorta(tratamiento.ultimaSesion)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* DOCUMENTOS */}
-            {seccion === "documentos" && (
-              <section>
-                <Encabezado
-                  eyebrow="MI DOCUMENTACIÓN"
-                  titulo="Documentos"
-                  descripcion="Consultá las recetas, estudios y presupuestos disponibles."
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  {DOCUMENTOS.map((documento) => (
-                    <div key={documento.id} className={CARD}>
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          {documentoIcono(documento.tipo)}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="border-primary/20 bg-primary/5 text-primary">
-                              {documento.tipo}
-                            </Badge>
-
-                            <span className="text-xs text-muted-foreground">
-                              {fechaCorta(documento.fecha)}
-                            </span>
-                          </div>
-
-                          <h2 className="mt-2 font-semibold">
-                            {documento.titulo}
-                          </h2>
-
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {documento.descripcion}
-                          </p>
-
-                          <button
-                            type="button"
-                            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary"
-                            onClick={() =>
-                              avisar(
-                                `Abriendo ${documento.titulo}...`
-                              )
-                            }
-                          >
-                            <Download className="h-4 w-4" />
-                            Ver documento
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* DOCUMENTACIÓN SOLICITADA */}
-            {seccion === "documentacion" && (
-              <DocumentacionSolicitada
-                documentos={documentacion}
-                onAdjuntar={adjuntarDocumentacion}
-              />
-            )}
-
-            {/* PAGOS */}
-            {seccion === "pagos" && (
-              <section>
-                <Encabezado
-                  eyebrow="CUENTA"
-                  titulo="Pagos"
-                  descripcion="Consultá tus pagos realizados y los importes pendientes."
-                />
-
-                <div className="mb-6 grid gap-4 md:grid-cols-3">
-                  <div className={CARD}>
-                    <p className="text-sm text-muted-foreground">
-                      Saldo pendiente
-                    </p>
-                    <p className="mt-1 text-2xl font-bold">
-                      {ars(saldo)}
-                    </p>
-                  </div>
-
-                  <div className={CARD}>
-                    <p className="text-sm text-muted-foreground">
-                      Pagado
-                    </p>
-
-                    <p className="mt-1 text-2xl font-bold">
-                      {ars(
-                        pagos
-                          .filter(
-                            (pago) => pago.estado === "Pagado"
-                          )
-                          .reduce(
-                            (total, pago) => total + pago.monto,
-                            0
-                          )
-                      )}
-                    </p>
-                  </div>
-
-                  <div className={CARD}>
-                    <p className="text-sm text-muted-foreground">
-                      Movimientos
-                    </p>
-
-                    <p className="mt-1 text-2xl font-bold">
-                      {pagos.length}
-                    </p>
-                  </div>
-                </div>
-
-                <div className={CARD}>
-                  <div className="mb-4">
-                    <h2 className="text-lg font-bold">
-                      Movimientos
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Historial de pagos de tu cuenta.
-                    </p>
-                  </div>
-
-                  <div className="divide-y divide-border">
-                    {pagos.map((pago) => (
-                      <div
-                        key={pago.id}
-                        className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                            <CreditCard className="h-5 w-5" />
-                          </div>
-
-                          <div>
-                            <p className="font-semibold">
-                              {pago.concepto}
-                            </p>
-
-                            <p className="text-sm text-muted-foreground">
-                              {fechaCorta(pago.fecha)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <p className="font-bold">
-                            {ars(pago.monto)}
-                          </p>
-
-                          {pago.estado === "Pagado" ? (
-                            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
-                              <Check className="mr-1 h-3.5 w-3.5" />
-                              Pagado
-                            </Badge>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`${BTN_PRIMARY} min-h-9 px-3 text-xs`}
-                              onClick={() => {
-                                setModal("pago");
-                              }}
-                            >
-                              Pagar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-          </main>
+    <div className="space-y-4">
+      {/* Imagen del consultorio (la misma del Dashboard) */}
+      <div className="relative h-52 w-full overflow-hidden rounded-2xl md:h-60">
+        <HeroParallax />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          <span className="rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm">
+            {ahora
+              ? ahora.toLocaleDateString("es-AR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })
+              : "\u00a0"}
+          </span>
+        </div>
+        <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-background/90 py-1 pl-1 pr-3 shadow-sm backdrop-blur-sm">
+          <span className="grid size-7 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-[11px] font-bold text-white">
+            {`${paciente.nombre[0] ?? ""}${paciente.apellido[0] ?? ""}`}
+          </span>
+          <span className="text-xs font-semibold">{paciente.nombre}</span>
         </div>
       </div>
 
-      {/* BOTÓN CONTACTO */}
-      <button
-        type="button"
-        onClick={() => avisar("Abriendo contacto con la clínica...")}
-        className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl md:bottom-6 md:right-6"
-        aria-label="Contactar con la clínica"
-      >
-        <MessageCircle className="h-5 w-5" />
-      </button>
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-violet-600 to-fuchsia-600 px-6 py-5 text-white shadow-[0_20px_45px_-25px_rgba(124,58,237,0.8)]">
+        <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full border-[26px] border-white/10" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/75">
+              {saludo}
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">
+              Hola, {paciente.nombre}
+            </h1>
+            <p className="mt-1 text-sm text-white/85">
+              {storePortal.leer().config.bienvenida ||
+                `Este es tu espacio en ${clinica}: turnos, tratamientos, recetas, estudios y pagos.`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => ir("turnos")}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow"
+            >
+              <CalendarPlus className="size-4" />
+              Pedir turno
+            </button>
+            <button
+              onClick={() => ir("mensajes")}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/25"
+            >
+              <MessageCircle className="size-4" />
+              Escribir a la clínica
+            </button>
+          </div>
+        </div>
+      </section>
 
-      {/* MOBILE NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card/95 backdrop-blur md:hidden">
-        <div className="grid grid-cols-5 px-2 py-2">
-          {[
-            {
-              id: "inicio" as const,
-              label: "Inicio",
-              icon: Home,
-            },
-            {
-              id: "turnos" as const,
-              label: "Turnos",
-              icon: CalendarDays,
-            },
-            {
-              id: "tratamientos" as const,
-              label: "Tratamientos",
-              icon: ClipboardList,
-            },
-            {
-              id: "documentos" as const,
-              label: "Docs.",
-              icon: FileText,
-            },
-            {
-              id: "pagos" as const,
-              label: "Pagos",
-              icon: CreditCard,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-            const activo = seccion === item.id;
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            l: "Próximo turno",
+            v: prox ? `${fechaLarga(prox.fecha)} · ${prox.hora}` : "Sin turnos",
+            d: prox ? `${prox.tratamiento} · ${prox.odontologo}` : "Pedí uno cuando quieras",
+            i: CalendarDays,
+            s: "turnos" as Seccion,
+          },
+          {
+            l: "Tratamientos en curso",
+            v: String(enCurso.length),
+            d: enCurso[0]
+              ? `${enCurso[0].nombre} · ${avanceTratamiento(enCurso[0])}%`
+              : "Nada en curso",
+            i: Stethoscope,
+            s: "tratamientos" as Seccion,
+          },
+          {
+            l: "Saldo de tu cuenta",
+            v: saldo > 0 ? ars(saldo) : "Al día",
+            d: saldo > 0 ? "Podés pagarlo online" : "No tenés deudas",
+            i: Wallet,
+            s: "pagos" as Seccion,
+          },
+          {
+            l: "Recetas y estudios",
+            v: String(registros.recetas.length + registros.estudios.length),
+            d: `${registros.recetas.length} recetas · ${registros.estudios.length} estudios`,
+            i: FileText,
+            s: "documentos" as Seccion,
+          },
+        ].map((c) => (
+          <button
+            key={c.l}
+            onClick={() => ir(c.s)}
+            className="group relative min-h-[108px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 text-left shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all hover:-translate-y-0.5 hover:border-primary/45"
+          >
+            <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
+            <div className="relative flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">
+                  {c.l}
+                </p>
+                <p className="mt-2 truncate text-lg font-bold text-foreground">{c.v}</p>
+                <p className="mt-1 truncate text-[11px] text-muted-foreground">{c.d}</p>
+              </div>
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
+                <c.i className="size-4" />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
 
-            return (
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Tarjeta>
+          <div className="flex items-center justify-between">
+            <p className="font-display text-base font-semibold">Tus próximos turnos</p>
+            <button
+              onClick={() => ir("turnos")}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              Ver todos <ChevronRight className="size-3.5" />
+            </button>
+          </div>
+          {lista.length === 0 ? (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              No tenés turnos agendados.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {lista.slice(0, 3).map((t) => (
+                <FilaTurno key={t.id} t={t} ctx={ctx} compacta />
+              ))}
+            </ul>
+          )}
+          {enCurso[0] && (
+            <div className="mt-4 rounded-xl border border-primary/10 bg-white/80 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">
+                  {enCurso[0].nombre}
+                  {enCurso[0].pieza ? ` · pieza ${enCurso[0].pieza}` : ""}
+                </p>
+                <Pill clase="bg-primary/10 text-primary">
+                  {avanceTratamiento(enCurso[0])}% completado
+                </Pill>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500"
+                  style={{ width: `${avanceTratamiento(enCurso[0])}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {enCurso[0].sesiones?.length ?? 0} de {enCurso[0].sesionesPlan ?? 1} sesiones ·{" "}
+                {enCurso[0].profesional}
+              </p>
+            </div>
+          )}
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                ["Recetas y estudios", FileText, "documentos"],
+                ["Pagos", Wallet, "pagos"],
+                ["Documentación", Upload, "documentacion"],
+                ["Mensajes", MessageCircle, "mensajes"],
+              ] as const
+            ).map(([l, Icon, destino]) => (
               <button
-                key={item.id}
-                type="button"
-                onClick={() => ir(item.id)}
-                className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold transition-colors ${
-                  activo
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground"
-                }`}
+                key={l}
+                onClick={() => ir(destino)}
+                className="group flex flex-col items-start gap-2 rounded-xl border border-primary/10 bg-white/80 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30"
               >
-                <Icon className="h-5 w-5" />
-                {item.label}
+                <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="size-4" />
+                </span>
+                <span className="flex w-full items-center justify-between text-xs font-semibold">
+                  {l}
+                  <ChevronRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </span>
               </button>
+            ))}
+          </div>
+        </Tarjeta>
+
+        <Tarjeta>
+          <p className="flex items-center gap-2 font-display text-base font-semibold">
+            <Bell className="size-4 text-primary" /> Pendientes para vos
+          </p>
+          {pendientes.length === 0 ? (
+            <div className="mt-6 text-center">
+              <CheckCheck className="mx-auto size-8 text-emerald-500" />
+              <p className="mt-1 text-sm font-medium">¡Tenés todo al día!</p>
+            </div>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {pendientes.map((p, i) => (
+                <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/80 p-2.5">
+                  <span
+                    className={`grid size-8 shrink-0 place-items-center rounded-full bg-primary/[0.07] ${p.tono}`}
+                  >
+                    <p.icon className="size-4" />
+                  </span>
+                  <span className="flex-1 text-xs">{p.texto}</span>
+                  <button onClick={() => ir(p.ir)} className={BTN_SECUNDARIO}>
+                    {p.accion}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-50 to-white p-3 ring-1 ring-emerald-100">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+              <ShieldCheck className="size-3.5" /> Tus datos están protegidos
+            </p>
+            <p className="mt-0.5 text-[11px] text-emerald-800/80">
+              Solo vos y tu equipo tratante pueden ver esta información.
+            </p>
+          </div>
+        </Tarjeta>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Turnos ───────────── */
+
+function FilaTurno({ t, ctx, compacta = false }: { t: Turno; ctx: Ctx; compacta?: boolean }) {
+  const [reprogramar, setReprogramar] = useState(false);
+  const [cancelar, setCancelar] = useState(false);
+  const futuro = t.fecha >= hoyISO() && (t.estado === "Pendiente" || t.estado === "Confirmada");
+  const d = new Date(`${t.fecha}T12:00:00`);
+
+  const cambiarEstado = (estado: Turno["estado"], msg: string, extra: Partial<Turno> = {}) => {
+    setTurnosStore((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...extra, estado } : x)));
+    const tipo = extra.fecha
+      ? "Turno cambiado"
+      : estado === "Confirmada"
+        ? "Turno confirmado"
+        : "Turno cancelado";
+    registrarEventoPortal(
+      ctx.paciente.id,
+      tipo,
+      `${t.tratamiento} · ${formatearFecha(extra.fecha ?? t.fecha)} ${extra.hora ?? t.hora}`,
+    );
+    ctx.onToast(msg);
+  };
+
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/10 bg-white/80 p-3">
+      <span className="grid w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 py-1.5 text-center">
+        <span className="text-[10px] font-semibold uppercase text-primary/80">
+          {MESES[d.getMonth()]}
+        </span>
+        <span className="font-display text-xl font-bold leading-none text-primary">
+          {d.getDate()}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{t.hora}</span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+          {t.tratamiento}
+          <Pill clase={ESTADO_TURNO[t.estado]}>
+            {t.estado === "Atendida"
+              ? "Realizado"
+              : t.estado === "Confirmada"
+                ? "Confirmado"
+                : t.estado === "Cancelada"
+                  ? "Cancelado"
+                  : t.estado === "Ausente"
+                    ? "No asististe"
+                    : "Por confirmar"}
+          </Pill>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {fechaLarga(t.fecha)} · {t.odontologo} · {t.sucursal}
+        </p>
+      </div>
+      {futuro && (
+        <div className="flex flex-wrap gap-1.5">
+          {t.estado === "Pendiente" && (
+            <button
+              className={BTN_PRIMARIO}
+              onClick={() => cambiarEstado("Confirmada", "¡Listo! Tu turno quedó confirmado")}
+            >
+              <Check className="size-3.5" />
+              Confirmar
+            </button>
+          )}
+          {!compacta && (
+            <>
+              <button className={BTN_SECUNDARIO} onClick={() => descargarICS(t, ctx.clinica)}>
+                <CalendarPlus className="size-3.5" />
+                Agendar
+              </button>
+              <button className={BTN_SECUNDARIO} onClick={() => setReprogramar(true)}>
+                <RefreshCcw className="size-3.5" />
+                Cambiar
+              </button>
+              <button
+                className={`${BTN_SECUNDARIO} !text-destructive`}
+                onClick={() => {
+                  const horas =
+                    (new Date(`${t.fecha}T${t.hora}:00`).getTime() - Date.now()) / 3_600_000;
+                  const minimo = storePortal.leer().config.horasMinimasCancelar;
+                  if (horas < minimo)
+                    return ctx.onToast(
+                      `Faltan menos de ${minimo} h: para cancelar, escribile a la clínica.`,
+                    );
+                  setCancelar(true);
+                }}
+              >
+                <X className="size-3.5" />
+                Cancelar
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {reprogramar && (
+        <Modal titulo="Cambiar fecha del turno" onClose={() => setReprogramar(false)}>
+          <SolicitudForm
+            ctx={ctx}
+            inicial={t}
+            onCancel={() => setReprogramar(false)}
+            onSubmit={(datos) => {
+              cambiarEstado(
+                "Pendiente",
+                `Turno cambiado al ${fechaLarga(datos.fecha).toLowerCase()} a las ${datos.hora}. La clínica lo va a confirmar.`,
+                { fecha: datos.fecha, hora: datos.hora, odontologo: datos.odontologo },
+              );
+              setReprogramar(false);
+            }}
+          />
+        </Modal>
+      )}
+      {cancelar && (
+        <Modal titulo="Cancelar turno" onClose={() => setCancelar(false)}>
+          <CancelarForm
+            onCancel={() => setCancelar(false)}
+            onSubmit={(motivo) => {
+              cambiarEstado("Cancelada", "Turno cancelado. Avisamos a la clínica.", {
+                notas: `Cancelado por el paciente desde el portal: ${motivo}`,
+              });
+              setCancelar(false);
+            }}
+          />
+        </Modal>
+      )}
+    </li>
+  );
+}
+
+function CancelarForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (motivo: string) => void;
+  onCancel: () => void;
+}) {
+  const [motivo, setMotivo] = useState("No puedo asistir");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(motivo);
+      }}
+      className="space-y-3"
+    >
+      <p className="text-sm text-muted-foreground">
+        Si cancelás con al menos 24 h de anticipación, liberamos el horario para otro paciente.
+        ¡Gracias!
+      </p>
+      <Field label="Motivo">
+        <select value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT}>
+          {["No puedo asistir", "Me siento mejor", "Problemas de horario", "Otro motivo"].map(
+            (m) => (
+              <option key={m}>{m}</option>
+            ),
+          )}
+        </select>
+      </Field>
+      <div className="flex justify-end gap-2">
+        <button type="button" className={BTN_SECUNDARIO} onClick={onCancel}>
+          Volver
+        </button>
+        <button type="submit" className={`${BTN_PRIMARIO} !bg-destructive`}>
+          <X className="size-4" />
+          Cancelar turno
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function SolicitudForm({
+  ctx,
+  inicial,
+  onSubmit,
+  onCancel,
+}: {
+  ctx: Ctx;
+  inicial?: Turno;
+  onSubmit: (d: {
+    fecha: string;
+    hora: string;
+    odontologo: string;
+    tratamiento: string;
+    notas: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const { miembros } = useEquipo();
+  const { turnos } = storeAgenda.usar();
+  const odontologos = miembros
+    .filter((m) => m.role === "odontologo" && m.status === "activo")
+    .map((m) => `${m.firstName} ${m.lastName}`);
+  const [tratamiento, setTratamiento] = useState(inicial?.tratamiento ?? "Control");
+  const [odontologo, setOdontologo] = useState(inicial?.odontologo ?? odontologos[0] ?? "");
+  const [fecha, setFecha] = useState(
+    inicial?.fecha && inicial.fecha > hoyISO() ? inicial.fecha : sumarDias(hoyISO(), 1),
+  );
+  const [hora, setHora] = useState("");
+  const [notas, setNotas] = useState("");
+  const dia = new Date(`${fecha}T12:00:00`).getDay();
+  const HORARIOS = Array.from(
+    { length: 22 },
+    (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`,
+  );
+  const ocupados = new Set(
+    turnos
+      .filter(
+        (t) =>
+          t.fecha === fecha &&
+          t.odontologo === odontologo &&
+          t.estado !== "Cancelada" &&
+          t.id !== inicial?.id,
+      )
+      .map((t) => t.hora),
+  );
+  const libres =
+    dia === 0
+      ? []
+      : HORARIOS.filter(
+          (h) =>
+            !ocupados.has(h) && (fecha > hoyISO() || h > new Date().toTimeString().slice(0, 5)),
+        );
+
+  return (
+    <form
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        if (!hora) return;
+        onSubmit({ fecha, hora, odontologo, tratamiento, notas: notas.trim() });
+      }}
+      className="space-y-3"
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Motivo">
+          <select
+            value={tratamiento}
+            onChange={(e) => setTratamiento(e.target.value)}
+            className={INPUT}
+            disabled={!!inicial}
+          >
+            {PRACTICAS.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Profesional">
+          <select
+            value={odontologo}
+            onChange={(e) => {
+              setOdontologo(e.target.value);
+              setHora("");
+            }}
+            className={INPUT}
+          >
+            {odontologos.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <Field label="Día">
+        <input
+          type="date"
+          value={fecha}
+          min={hoyISO()}
+          onChange={(e) => {
+            setFecha(e.target.value);
+            setHora("");
+          }}
+          className={INPUT}
+        />
+      </Field>
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Horarios disponibles
+        </p>
+        {libres.length === 0 ? (
+          <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            No hay horarios ese día. Probá con otra fecha.
+          </p>
+        ) : (
+          <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-6">
+            {libres.map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => setHora(h)}
+                aria-pressed={hora === h}
+                className={`rounded-lg border py-1.5 text-xs font-semibold transition-colors ${hora === h ? "border-primary bg-primary text-primary-foreground" : "border-primary/15 bg-white hover:border-primary/40"}`}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {!inicial && (
+        <Field label="Comentario para la clínica">
+          <input
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            className={INPUT}
+            placeholder="Opcional (ej: tengo dolor en una muela)"
+          />
+        </Field>
+      )}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={BTN_SECUNDARIO} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="submit" className={BTN_PRIMARIO} disabled={!hora}>
+          <Check className="size-4" />
+          {inicial ? "Cambiar turno" : hora ? `Pedir turno ${hora}` : "Elegí un horario"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Turnos({ ctx }: { ctx: Ctx }) {
+  const { config } = storePortal.usar();
+  const [pedir, setPedir] = useState(false);
+  const [vista, setVista] = useState<"proximos" | "historial">("proximos");
+  const lista = proximos(ctx.turnos);
+  const historial = ctx.turnos
+    .filter((t) => !lista.includes(t))
+    .sort((a, b) => `${b.fecha}${b.hora}`.localeCompare(`${a.fecha}${a.hora}`));
+  const realizados = ctx.turnos.filter((t) => t.estado === "Atendida").length;
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={CalendarDays}
+        titulo="Mis turnos"
+        descripcion="Pedí, confirmá, cambiá o cancelá tus turnos. La clínica lo ve al instante."
+      >
+        {config.turnosOnline ? (
+          <button className={BTN_PRIMARIO} onClick={() => setPedir(true)}>
+            <CalendarPlus className="size-4" />
+            Pedir turno
+          </button>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            Para pedir turnos, escribí a la clínica.
+          </span>
+        )}
+      </TituloSeccion>
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          ["Próximos", lista.length],
+          ["Por confirmar", lista.filter((t) => t.estado === "Pendiente").length],
+          ["Realizados", realizados],
+        ].map(([l, v]) => (
+          <Tarjeta key={l} className="!p-3.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              {l}
+            </p>
+            <p className="mt-1 text-xl font-bold">{v}</p>
+          </Tarjeta>
+        ))}
+      </div>
+      <div className="inline-flex rounded-full border border-primary/15 bg-white p-0.5">
+        {(["proximos", "historial"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setVista(v)}
+            aria-pressed={vista === v}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold ${vista === v ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+          >
+            {v === "proximos" ? `Próximos (${lista.length})` : `Historial (${historial.length})`}
+          </button>
+        ))}
+      </div>
+      {(vista === "proximos" ? lista : historial).length === 0 ? (
+        <Vacio
+          icon={CalendarDays}
+          texto={
+            vista === "proximos"
+              ? "No tenés turnos próximos. ¡Pedí uno!"
+              : "Todavía no hay turnos anteriores."
+          }
+        />
+      ) : (
+        <ul className="space-y-2">
+          {(vista === "proximos" ? lista : historial).map((t) => (
+            <FilaTurno key={t.id} t={t} ctx={ctx} />
+          ))}
+        </ul>
+      )}
+      {pedir && (
+        <Modal titulo="Pedir un turno" onClose={() => setPedir(false)}>
+          <SolicitudForm
+            ctx={ctx}
+            onCancel={() => setPedir(false)}
+            onSubmit={(d) => {
+              setTurnosStore((prev) => [
+                ...prev,
+                {
+                  id: Date.now(),
+                  fecha: d.fecha,
+                  hora: d.hora,
+                  paciente: ctx.nombre,
+                  tratamiento: d.tratamiento,
+                  odontologo: d.odontologo,
+                  sucursal: ctx.paciente.sucursal || "Clínica Centro",
+                  gabinete: "Gabinete 1",
+                  estado: "Pendiente",
+                  notas: `Pedido desde el portal del paciente${d.notas ? `: ${d.notas}` : ""}`,
+                },
+              ]);
+              setPedir(false);
+              registrarEventoPortal(
+                ctx.paciente.id,
+                "Turno pedido",
+                `${d.tratamiento} · ${formatearFecha(d.fecha)} ${d.hora} con ${d.odontologo}`,
+              );
+              ctx.onToast(
+                `Turno pedido para el ${fechaLarga(d.fecha).toLowerCase()} a las ${d.hora}. Ya figura en la agenda de la clínica.`,
+              );
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ───────────── Tratamientos ───────────── */
+
+function Tratamientos({ ctx }: { ctx: Ctx }) {
+  const lista = [...ctx.registros.tratamientos].sort(
+    (a, b) => avanceTratamiento(a) - avanceTratamiento(b),
+  );
+  const PASOS = ["Planificado", "En tratamiento", "Completado"];
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={Stethoscope}
+        titulo="Mis tratamientos"
+        descripcion="Avance, sesiones realizadas y próximos pasos de cada tratamiento."
+      />
+      {lista.length === 0 ? (
+        <Vacio icon={Stethoscope} texto="Todavía no tenés tratamientos cargados." />
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {lista.map((t) => {
+            const av = avanceTratamiento(t);
+            const paso =
+              t.estado === "Completado" || t.estado === "Finalizado"
+                ? 2
+                : t.estado === "En tratamiento"
+                  ? 1
+                  : 0;
+            return (
+              <li key={t.id} className="card-grad flex flex-col p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-display text-base font-semibold">{t.nombre}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.pieza ? `Pieza ${t.pieza} · ` : ""}
+                      {t.profesional}
+                      {t.inicio ? ` · desde ${formatearFecha(t.inicio)}` : ""}
+                    </p>
+                  </div>
+                  <Pill
+                    clase={
+                      t.estado === "Cancelado"
+                        ? "bg-destructive/10 text-destructive"
+                        : av === 100
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-primary/10 text-primary"
+                    }
+                  >
+                    {t.estado === "Cancelado" ? "Cancelado" : `${av}%`}
+                  </Pill>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-primary/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500"
+                    style={{ width: `${av}%` }}
+                  />
+                </div>
+                <ol className="mt-3 grid grid-cols-3 gap-1 text-center text-[10.5px]">
+                  {PASOS.map((p, i) => (
+                    <li
+                      key={p}
+                      className={`rounded-lg py-1 font-semibold ${i <= paso && t.estado !== "Cancelado" ? "bg-primary/10 text-primary" : "bg-muted/60 text-muted-foreground"}`}
+                    >
+                      {p}
+                    </li>
+                  ))}
+                </ol>
+                {t.diagnostico && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    <b className="text-foreground">Por qué:</b> {t.diagnostico}
+                  </p>
+                )}
+                {!!t.sesiones?.length && (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      Sesiones ({t.sesiones.length} de {t.sesionesPlan ?? 1})
+                    </p>
+                    <ol className="mt-1.5 space-y-1.5 border-l-2 border-primary/20 pl-3">
+                      {t.sesiones.map((s, i) => (
+                        <li key={s.id} className="text-xs">
+                          <b>Sesión {i + 1}</b> · {formatearFecha(s.fecha)} —{" "}
+                          <span className="text-muted-foreground">{s.detalle}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                <div className="min-h-3 flex-1" />
+                {t.estado !== "Completado" &&
+                  t.estado !== "Finalizado" &&
+                  t.estado !== "Cancelado" && (
+                    <div className="flex justify-end gap-1.5 border-t border-primary/10 pt-2.5">
+                      <button className={BTN_SECUNDARIO} onClick={() => ctx.ir("turnos")}>
+                        <CalendarPlus className="size-3.5" />
+                        Pedir próxima sesión
+                      </button>
+                    </div>
+                  )}
+              </li>
             );
           })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ───────────── Recetas, estudios y presupuestos ───────────── */
+
+function Documentos({ ctx }: { ctx: Ctx }) {
+  const { registros, cambiar, clinica, nombre, onToast } = ctx;
+  const [tab, setTab] = useState<"presupuestos" | "recetas" | "estudios">(
+    registros.presupuestos.some((p) => p.estado === "Enviado") ? "presupuestos" : "recetas",
+  );
+
+  const imprimirReceta = (r: Registros["recetas"][number]) => {
+    const filas = r.medicamentos
+      .map(
+        (m) =>
+          `<tr><td>${escapar(m.nombre)} ${escapar(m.presentacion)}</td><td>${escapar(m.posologia)}</td><td class="n">${m.cantidad}</td></tr>`,
+      )
+      .join("");
+    abrirImpresion(
+      `Receta ${r.numero}`,
+      `<p class="meta">Paciente: <b>${escapar(nombre)}</b> · ${formatearFecha(r.fecha)} · ${escapar(r.profesional)} (${escapar(r.matricula)})</p><table><tr><th>Medicamento</th><th>Indicación</th><th class="n">Cant.</th></tr>${filas}</table><p>${escapar(r.indicaciones)}</p>`,
+      clinica,
+    );
+  };
+  const imprimirPresupuesto = (p: Registros["presupuestos"][number]) => {
+    const total = p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0);
+    const filas = p.lineas
+      .map(
+        (l) =>
+          `<tr><td>${escapar(l.descripcion)}</td><td>${escapar(l.pieza)}</td><td class="n">${l.cantidad}</td><td class="n">${ars(l.precio * l.cantidad)}</td></tr>`,
+      )
+      .join("");
+    abrirImpresion(
+      `Presupuesto ${p.numero}`,
+      `<p class="meta">Paciente: <b>${escapar(nombre)}</b> · ${formatearFecha(p.fecha)}</p><table><tr><th>Prestación</th><th>Pieza</th><th class="n">Cant.</th><th class="n">Importe</th></tr>${filas}<tr class="tot"><td colspan="3">Total</td><td class="n">${ars(total)}</td></tr></table><p>${escapar(p.notas)}</p>`,
+      clinica,
+    );
+  };
+
+  const responder = (p: Registros["presupuestos"][number], estado: "Aprobado" | "Rechazado") => {
+    cambiar("presupuestos", (prev) => prev.map((x) => (x.id === p.id ? { ...x, estado } : x)));
+    cambiar("auditoria", (prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        usuario: `${nombre} (portal)`,
+        accion: `${estado === "Aprobado" ? "Aprobó" : "Rechazó"} el presupuesto ${p.numero}`,
+        fecha: hoyISO(),
+        hora: new Date().toTimeString().slice(0, 5),
+      },
+    ]);
+    registrarEventoPortal(
+      ctx.paciente.id,
+      estado === "Aprobado" ? "Presupuesto aprobado" : "Presupuesto rechazado",
+      `${p.numero} · ${ars(p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0))}`,
+    );
+    onToast(
+      estado === "Aprobado"
+        ? `¡Gracias! Aprobaste el presupuesto ${p.numero}. La clínica te va a contactar.`
+        : `Presupuesto ${p.numero} rechazado`,
+    );
+  };
+
+  const TABS = [
+    {
+      id: "presupuestos" as const,
+      label: `Presupuestos (${registros.presupuestos.length})`,
+      icon: ReceiptText,
+    },
+    { id: "recetas" as const, label: `Recetas (${registros.recetas.length})`, icon: PillIcon },
+    { id: "estudios" as const, label: `Estudios (${registros.estudios.length})`, icon: ScanLine },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={FileText}
+        titulo="Recetas, estudios y presupuestos"
+        descripcion="Descargá tus recetas, mirá tus estudios y aprobá presupuestos online."
+      />
+      <div className="inline-flex flex-wrap gap-1 rounded-2xl border border-primary/10 bg-white p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            aria-pressed={tab === t.id}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold ${tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <t.icon className="size-3.5" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "presupuestos" &&
+        (registros.presupuestos.length === 0 ? (
+          <Vacio icon={ReceiptText} texto="No tenés presupuestos." />
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {registros.presupuestos.map((p) => {
+              const total = p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0);
+              return (
+                <li key={p.id} className="card-grad flex flex-col p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-display text-base font-semibold">Presupuesto {p.numero}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatearFecha(p.fecha)}
+                        {p.profesional ? ` · ${p.profesional}` : ""}
+                      </p>
+                    </div>
+                    <Pill
+                      clase={
+                        p.estado === "Aprobado"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : p.estado === "Rechazado"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-100 text-amber-700"
+                      }
+                    >
+                      {p.estado === "Enviado" ? "Para revisar" : p.estado}
+                    </Pill>
+                  </div>
+                  <ul className="mt-3 divide-y divide-primary/[0.07] rounded-xl bg-white/80 px-3 text-xs">
+                    {p.lineas.map((l, i) => (
+                      <li key={i} className="flex justify-between gap-2 py-2">
+                        <span>
+                          {l.descripcion}
+                          {l.pieza ? ` · pieza ${l.pieza}` : ""}
+                        </span>
+                        <span className="font-semibold">{ars(l.cantidad * l.precio)}</span>
+                      </li>
+                    ))}
+                    <li className="flex justify-between py-2 text-sm font-bold">
+                      <span>Total</span>
+                      <span>{ars(total)}</span>
+                    </li>
+                  </ul>
+                  {p.notas && <p className="mt-2 text-xs text-muted-foreground">{p.notas}</p>}
+                  <div className="min-h-3 flex-1" />
+                  <div className="flex flex-wrap justify-end gap-1.5 border-t border-primary/10 pt-2.5">
+                    <button className={BTN_SECUNDARIO} onClick={() => imprimirPresupuesto(p)}>
+                      <Download className="size-3.5" />
+                      Descargar
+                    </button>
+                    {p.estado === "Enviado" && storePortal.leer().config.presupuestosOnline && (
+                      <>
+                        <button
+                          className={BTN_SECUNDARIO}
+                          onClick={() => responder(p, "Rechazado")}
+                        >
+                          <X className="size-3.5" />
+                          Rechazar
+                        </button>
+                        <button className={BTN_PRIMARIO} onClick={() => responder(p, "Aprobado")}>
+                          <Check className="size-3.5" />
+                          Aprobar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ))}
+
+      {tab === "recetas" &&
+        (registros.recetas.length === 0 ? (
+          <Vacio icon={PillIcon} texto="No tenés recetas emitidas." />
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {registros.recetas.map((r) => (
+              <li key={r.id} className="card-grad p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-display text-base font-semibold">Receta {r.numero}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatearFecha(r.fecha)} · {r.profesional}
+                    </p>
+                  </div>
+                  <Pill
+                    clase={
+                      r.estado === "Anulada"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-emerald-100 text-emerald-700"
+                    }
+                  >
+                    {r.estado}
+                  </Pill>
+                </div>
+                <ul className="mt-3 space-y-1.5">
+                  {r.medicamentos.map((m, i) => (
+                    <li key={i} className="rounded-xl bg-white/80 px-3 py-2 text-xs">
+                      <b>{m.nombre}</b> {m.presentacion} ·{" "}
+                      <span className="text-muted-foreground">{m.posologia}</span>
+                    </li>
+                  ))}
+                </ul>
+                {r.vencimiento && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Válida hasta el {formatearFecha(r.vencimiento)}
+                  </p>
+                )}
+                <div className="mt-3 flex justify-end border-t border-primary/10 pt-2.5">
+                  <button className={BTN_SECUNDARIO} onClick={() => imprimirReceta(r)}>
+                    <Printer className="size-3.5" />
+                    Descargar receta
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      {tab === "estudios" &&
+        (registros.estudios.length === 0 ? (
+          <Vacio icon={ScanLine} texto="No tenés estudios cargados." />
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {registros.estudios.map((e) => (
+              <li key={e.id} className="card-grad overflow-hidden">
+                <div className="grid h-28 place-items-center bg-gradient-to-br from-slate-800 via-slate-700 to-primary/70 text-white/80">
+                  <ScanLine className="size-9" />
+                </div>
+                <div className="p-3.5">
+                  <p className="text-sm font-semibold">{e.tipo}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatearFecha(e.fecha)}
+                    {e.pieza ? ` · pieza ${e.pieza}` : e.zona ? ` · ${e.zona}` : ""}
+                  </p>
+                  {e.diagnostico && (
+                    <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                      {e.diagnostico}
+                    </p>
+                  )}
+                  <p className="mt-2 flex items-center justify-between">
+                    <Pill clase="bg-primary/10 text-primary">{e.estadoInforme}</Pill>
+                    <button
+                      className="text-xs font-semibold text-primary hover:underline"
+                      onClick={() =>
+                        onToast("El estudio en alta resolución se descarga desde la app")
+                      }
+                    >
+                      Ver estudio
+                    </button>
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ))}
+    </div>
+  );
+}
+
+/* ───────────── Documentación solicitada ───────────── */
+
+function Documentacion({ ctx }: { ctx: Ctx }) {
+  const docs = docsDe(storePortal.usar().docs, ctx.paciente.id);
+  const input = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState<string | null>(null);
+  const listos = docs.filter((d) => d.estado === "En revisión" || d.estado === "Aprobada").length;
+
+  const guardar = (sig: DocSolicitada[]) =>
+    setPortal("docs", (prev) => ({ ...prev, [ctx.paciente.id]: sig }));
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={Upload}
+        titulo="Documentación solicitada"
+        descripcion="Subí lo que te pide la clínica. Lo revisan y te avisamos cuando esté aprobado."
+      />
+      <Tarjeta>
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-semibold">Tu documentación</span>
+          <span className="text-muted-foreground">
+            {listos} de {docs.length} entregados
+          </span>
         </div>
-      </nav>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500"
+            style={{ width: `${(listos / docs.length) * 100}%` }}
+          />
+        </div>
+      </Tarjeta>
+      <input
+        ref={input}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f && subiendo) {
+            guardar(
+              docs.map((d) =>
+                d.id === subiendo
+                  ? { ...d, estado: "En revisión", archivo: f.name, observacion: "" }
+                  : d,
+              ),
+            );
+            registrarEventoPortal(
+              ctx.paciente.id,
+              "Documento subido",
+              docs.find((d) => d.id === subiendo)?.titulo ?? f.name,
+            );
+            ctx.onToast(`"${f.name}" enviado. La clínica lo va a revisar.`);
+          }
+          e.target.value = "";
+          setSubiendo(null);
+        }}
+      />
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {docs.map((d) => (
+          <li key={d.id} className="card-grad flex items-start gap-3 p-4">
+            <span
+              className={`grid size-10 shrink-0 place-items-center rounded-full ${d.estado === "Aprobada" ? "bg-emerald-100 text-emerald-600" : d.estado === "En revisión" ? "bg-sky-100 text-sky-600" : "bg-primary/10 text-primary"}`}
+            >
+              {d.estado === "Aprobada" ? (
+                <Check className="size-5" />
+              ) : (
+                <ClipboardList className="size-5" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                {d.titulo}
+                {d.obligatorio && <Pill clase="bg-muted text-muted-foreground">Obligatorio</Pill>}
+                <Pill
+                  clase={
+                    d.estado === "Aprobada"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : d.estado === "En revisión"
+                        ? "bg-sky-100 text-sky-700"
+                        : d.estado === "Rechazada"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-amber-100 text-amber-700"
+                  }
+                >
+                  {d.estado}
+                </Pill>
+              </p>
+              <p className="text-xs text-muted-foreground">{d.descripcion}</p>
+              {d.estado === "Rechazada" && d.observacion && (
+                <p className="mt-1 text-[11px] text-destructive">
+                  La clínica pidió: {d.observacion}
+                </p>
+              )}
+              {d.archivo && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Paperclip className="size-3" />
+                  {d.archivo}
+                </p>
+              )}
+            </div>
+            {d.estado !== "Aprobada" && (
+              <button
+                className={
+                  d.estado === "Pendiente" || d.estado === "Rechazada"
+                    ? BTN_PRIMARIO
+                    : BTN_SECUNDARIO
+                }
+                onClick={() => {
+                  setSubiendo(d.id);
+                  input.current?.click();
+                }}
+              >
+                <Upload className="size-3.5" />
+                {d.estado === "Pendiente"
+                  ? "Subir"
+                  : d.estado === "Rechazada"
+                    ? "Subir de nuevo"
+                    : "Reemplazar"}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
-      {/* MODAL SOLICITAR TURNO */}
-      <Modal
-        abierto={modal === "turno"}
-        titulo="Solicitar turno"
-        onCerrar={() => setModal(null)}
+/* ───────────── Pagos ───────────── */
+
+function Pagos({ ctx }: { ctx: Ctx }) {
+  const { registros, cambiar, onToast, nombre, clinica } = ctx;
+  const [pagar, setPagar] = useState(false);
+  const saldo = saldoDe(registros);
+  const movs = [...registros.cuenta].sort((a, b) =>
+    `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
+  );
+  const pagado = registros.cuenta
+    .filter((m) => m.tipo !== "Cargo")
+    .reduce((a, m) => a + m.monto, 0);
+  const cargos = registros.cuenta
+    .filter((m) => m.tipo === "Cargo")
+    .reduce((a, m) => a + m.monto, 0);
+
+  const comprobante = (m: (typeof movs)[number]) =>
+    abrirImpresion(
+      `Comprobante de pago`,
+      `<p class="meta">Paciente: <b>${escapar(nombre)}</b> · ${formatearFecha(m.fecha)}</p><table><tr><th>Concepto</th><th>Medio</th><th class="n">Importe</th></tr><tr><td>${escapar(m.concepto)}</td><td>${escapar(m.medio || "—")}</td><td class="n">${ars(m.monto)}</td></tr></table>`,
+      clinica,
+    );
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={Wallet}
+        titulo="Pagos"
+        descripcion="Tu cuenta con la clínica: lo que se cobró, lo que pagaste y tu saldo."
       >
-        <form onSubmit={solicitarTurno} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold">
-              Fecha
-            </label>
+        {saldo > 0 && storePortal.leer().config.pagosOnline && (
+          <button className={BTN_PRIMARIO} onClick={() => setPagar(true)}>
+            <CreditCard className="size-4" />
+            Pagar {ars(saldo)}
+          </button>
+        )}
+      </TituloSeccion>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div
+          className={`rounded-[22px] p-4 text-white shadow-lg ${saldo > 0 ? "bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600" : "bg-gradient-to-br from-emerald-500 to-emerald-600"}`}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/80">
+            Saldo pendiente
+          </p>
+          <p className="mt-2 font-display text-3xl font-bold">
+            {saldo > 0 ? ars(saldo) : "Al día"}
+          </p>
+          <p className="mt-1 text-xs text-white/80">
+            {saldo > 0 ? "Podés pagarlo online ahora" : "No tenés deudas con la clínica"}
+          </p>
+        </div>
+        <Tarjeta>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Total de prestaciones
+          </p>
+          <p className="mt-2 text-2xl font-bold">{ars(cargos)}</p>
+        </Tarjeta>
+        <Tarjeta>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Total pagado
+          </p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600">{ars(pagado)}</p>
+        </Tarjeta>
+      </div>
+      {movs.length === 0 ? (
+        <Vacio icon={Wallet} texto="Todavía no hay movimientos en tu cuenta." />
+      ) : (
+        <Tarjeta className="!p-0 overflow-hidden">
+          <ul className="divide-y divide-primary/[0.07]">
+            {movs.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <span
+                  className={`grid size-9 place-items-center rounded-full ${m.tipo === "Cargo" ? "bg-primary/10 text-primary" : "bg-emerald-100 text-emerald-600"}`}
+                >
+                  {m.tipo === "Cargo" ? (
+                    <ReceiptText className="size-4" />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{m.concepto}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatearFecha(m.fecha)} ·{" "}
+                    {m.tipo === "Cargo"
+                      ? "Prestación"
+                      : `${m.tipo}${m.medio ? ` · ${m.medio}` : ""}`}
+                  </p>
+                </div>
+                <span
+                  className={`text-sm font-bold ${m.tipo === "Cargo" ? "" : "text-emerald-600"}`}
+                >
+                  {m.tipo === "Cargo" ? "" : "− "}
+                  {ars(m.monto)}
+                </span>
+                {m.tipo !== "Cargo" && (
+                  <button className={BTN_SECUNDARIO} onClick={() => comprobante(m)}>
+                    <Download className="size-3.5" />
+                    Comprobante
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Tarjeta>
+      )}
+      {pagar && (
+        <Modal titulo="Pagar online" onClose={() => setPagar(false)}>
+          <PagoForm
+            saldo={saldo}
+            onCancel={() => setPagar(false)}
+            onSubmit={(monto, medio) => {
+              cambiar("cuenta", (prev) => [
+                ...prev,
+                {
+                  id: Date.now(),
+                  fecha: hoyISO(),
+                  tipo: "Pago",
+                  concepto: "Pago online desde el portal",
+                  medio,
+                  monto,
+                  notas: "",
+                },
+              ]);
+              setPagar(false);
+              registrarEventoPortal(
+                ctx.paciente.id,
+                "Pago online",
+                `${ars(monto)} con ${medio.toLowerCase()}`,
+              );
+              onToast(
+                `¡Pago de ${ars(monto)} acreditado! Ya figura en tu cuenta y en la de la clínica.`,
+              );
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
 
+function PagoForm({
+  saldo,
+  onSubmit,
+  onCancel,
+}: {
+  saldo: number;
+  onSubmit: (monto: number, medio: string) => void;
+  onCancel: () => void;
+}) {
+  const [medio, setMedio] = useState("Tarjeta de crédito");
+  const [monto, setMonto] = useState(String(saldo));
+  const [tarjeta, setTarjeta] = useState("");
+  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState("");
+  const MEDIOS: { id: string; icon: LucideIcon; ayuda: string }[] = [
+    { id: "Tarjeta de crédito", icon: CreditCard, ayuda: "Hasta 3 cuotas sin interés" },
+    { id: "Tarjeta de débito", icon: CreditCard, ayuda: "Se debita al instante" },
+    { id: "Transferencia", icon: Landmark, ayuda: "CBU / alias de la clínica" },
+  ];
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = Number(monto);
+        if (!n || n <= 0 || n > saldo)
+          return setError(`Ingresá un monto entre $ 1 y ${ars(saldo)}.`);
+        if (medio.startsWith("Tarjeta") && tarjeta.replace(/\D/g, "").length < 15)
+          return setError("Revisá el número de tarjeta.");
+        setProcesando(true);
+        window.setTimeout(() => onSubmit(n, medio), 900);
+      }}
+      className="space-y-3"
+    >
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {MEDIOS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => setMedio(m.id)}
+            aria-pressed={medio === m.id}
+            className={`rounded-2xl border p-3 text-left transition-colors ${medio === m.id ? "border-primary bg-primary/[0.06]" : "border-border bg-white"}`}
+          >
+            <m.icon className="size-4 text-primary" />
+            <p className="mt-1 text-xs font-semibold">{m.id}</p>
+            <p className="text-[10.5px] text-muted-foreground">{m.ayuda}</p>
+          </button>
+        ))}
+      </div>
+      <Field label="Monto a pagar">
+        <input
+          type="number"
+          min={1}
+          max={saldo}
+          value={monto}
+          onChange={(e) => setMonto(e.target.value)}
+          className={INPUT}
+        />
+      </Field>
+      {medio.startsWith("Tarjeta") ? (
+        <Field label="Número de tarjeta">
+          <input
+            inputMode="numeric"
+            value={tarjeta}
+            onChange={(e) => setTarjeta(e.target.value.replace(/[^\d ]/g, "").slice(0, 19))}
+            className={INPUT}
+            placeholder="4509 9535 6623 3704 (de prueba)"
+          />
+        </Field>
+      ) : (
+        <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-xs">
+          Alias: <b>clinica.esther.mp</b> · CBU 0000003100012345678901. Cuando transfieras, tocá “Ya
+          transferí”.
+        </p>
+      )}
+      <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <ShieldCheck className="size-3.5 text-emerald-600" /> Pago seguro de práctica: no se cobra
+        nada real.
+      </p>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={BTN_SECUNDARIO} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="submit" className={BTN_PRIMARIO} disabled={procesando}>
+          {procesando ? (
+            <RefreshCcw className="size-4 animate-spin" />
+          ) : (
+            <Check className="size-4" />
+          )}
+          {procesando
+            ? "Procesando…"
+            : medio === "Transferencia"
+              ? "Ya transferí"
+              : `Pagar ${ars(Number(monto) || 0)}`}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ───────────── Mensajes (se ven en Comunicación) ───────────── */
+
+function Mensajes({ ctx }: { ctx: Ctx }) {
+  const { conversaciones } = storeComunicacion.usar();
+  const conv = conversaciones.find((c) => c.paciente === ctx.nombre);
+  const [texto, setTexto] = useState("");
+  const fin = useRef<HTMLDivElement>(null);
+  useEffect(() => fin.current?.scrollIntoView({ block: "end" }), [conv?.mensajes.length]);
+  const mensajes = (conv?.mensajes ?? []).filter((m) => m.de === "paciente" || m.de === "clinica");
+
+  const enviar = () => {
+    const limpio = texto.trim();
+    if (!limpio) return;
+    const msg = {
+      id: Date.now(),
+      de: "paciente" as const,
+      texto: limpio,
+      fecha: new Date().toISOString(),
+    };
+    if (conv) {
+      setComunicacion("conversaciones", (prev) =>
+        prev.map((c) =>
+          c.id === conv.id
+            ? {
+                ...c,
+                estado: "Pendiente",
+                noLeidos: c.noLeidos + 1,
+                mensajes: [...c.mensajes, msg],
+              }
+            : c,
+        ),
+      );
+    } else {
+      setComunicacion("conversaciones", (prev) => [
+        {
+          id: Date.now() + 1,
+          paciente: ctx.nombre,
+          telefono: ctx.paciente.telefono,
+          email: ctx.paciente.email,
+          canal: "WhatsApp",
+          estado: "Pendiente",
+          asignado: "",
+          etiquetas: ["Portal"],
+          noLeidos: 1,
+          fijada: false,
+          mensajes: [msg],
+        },
+        ...prev,
+      ]);
+    }
+    setTexto("");
+    registrarEventoPortal(ctx.paciente.id, "Mensaje", limpio.slice(0, 80));
+    ctx.onToast("Mensaje enviado. Te respondemos por acá y por WhatsApp.");
+  };
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={MessageCircle}
+        titulo="Mensajes"
+        descripcion="Escribile a la clínica. Te responden por acá (y te llega aviso por WhatsApp)."
+      />
+      <div className="card-grad flex h-[560px] flex-col overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-primary/10 px-4 py-3">
+          <BrandMark className="size-9" />
+          <div>
+            <p className="text-sm font-semibold">{ctx.clinica}</p>
+            <p className="text-[11px] text-muted-foreground">
+              Recepción · suele responder en menos de 1 hora
+            </p>
+          </div>
+        </div>
+        <div className="flex-1 space-y-2 overflow-y-auto bg-[radial-gradient(rgba(124,58,237,0.06)_1px,transparent_1px)] bg-[length:18px_18px] px-4 py-3">
+          {mensajes.length === 0 && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              ¿Tenés alguna duda? Escribinos 👋
+            </p>
+          )}
+          {mensajes.map((m) => {
+            const propio = m.de === "paciente";
+            return (
+              <div key={m.id} className={`flex ${propio ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[78%] whitespace-pre-line rounded-2xl px-3 py-2 text-sm shadow-sm ${propio ? "rounded-br-md bg-gradient-to-br from-primary to-violet-600 text-white" : "rounded-bl-md border border-primary/10 bg-white"}`}
+                >
+                  {m.texto}
+                  <span
+                    className={`mt-0.5 block text-right text-[10px] ${propio ? "text-white/75" : "text-muted-foreground"}`}
+                  >
+                    {new Date(m.fecha).toTimeString().slice(0, 5)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={fin} />
+        </div>
+        <div className="border-t border-primary/10 p-3">
+          <div className="mb-2 flex flex-wrap gap-1">
+            {[
+              "Quiero cambiar mi turno",
+              "Tengo dolor",
+              "¿Aceptan mi obra social?",
+              "Consulta sobre mi presupuesto",
+            ].map((r) => (
+              <button
+                key={r}
+                onClick={() => setTexto(r)}
+                className="rounded-full border border-primary/15 bg-white px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/35 hover:text-primary"
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
             <input
-              type="date"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") enviar();
+              }}
+              placeholder="Escribí tu mensaje…"
               className={INPUT}
-              value={form.fecha}
-              min="2026-09-25"
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  fecha: event.target.value,
-                })
-              }
             />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold">
-              Hora
-            </label>
-
-            <input
-              type="time"
-              className={INPUT}
-              value={form.hora}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  hora: event.target.value,
-                })
-              }
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold">
-              Motivo de la consulta
-            </label>
-
-            <select
-              className={INPUT}
-              value={form.motivo}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  motivo: event.target.value,
-                })
-              }
-            >
-              <option value="">Seleccionar motivo</option>
-              <option value="Control y seguimiento">
-                Control y seguimiento
-              </option>
-              <option value="Restauración estética">
-                Restauración estética
-              </option>
-              <option value="Limpieza y control">
-                Limpieza y control
-              </option>
-              <option value="Consulta general">
-                Consulta general
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold">
-              Observaciones
-            </label>
-
-            <textarea
-              className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Podés agregar información adicional..."
-              value={form.observaciones}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  observaciones: event.target.value,
-                })
-              }
-            />
-          </div>
-
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              className={BTN_SECONDARY}
-              onClick={() => setModal(null)}
-            >
-              Cancelar
+            <button className={BTN_PRIMARIO} onClick={enviar} disabled={!texto.trim()}>
+              <Send className="size-3.5" />
+              Enviar
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-            <button type="submit" className={BTN_PRIMARY}>
-              <CalendarPlus className="h-4 w-4" />
-              Solicitar turno
+/* ───────────── Mis datos ───────────── */
+
+function Perfil({ ctx }: { ctx: Ctx }) {
+  const { setPacientes } = usePacientes();
+  const p = ctx.paciente;
+  const [telefono, setTelefono] = useState(p.telefono);
+  const [email, setEmail] = useState(p.email);
+  const [direccion, setDireccion] = useState(p.direccion);
+  const [recordatorios, setRecordatorios] = useState({
+    whatsapp: true,
+    email: true,
+    promos: false,
+  });
+  const [error, setError] = useState("");
+  const cambios = useMemo(
+    () => telefono !== p.telefono || email !== p.email || direccion !== p.direccion,
+    [telefono, email, direccion, p],
+  );
+
+  return (
+    <div className="space-y-4">
+      <TituloSeccion
+        icon={UserRound}
+        titulo="Mis datos"
+        descripcion="Mantené tus datos de contacto al día para recibir recordatorios."
+      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <form
+          className="card-grad space-y-3 p-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+              return setError("Revisá el correo.");
+            if (telefono.replace(/\D/g, "").length < 8) return setError("Revisá el teléfono.");
+            setPacientes((prev) =>
+              prev.map((x) =>
+                x.id === p.id
+                  ? {
+                      ...x,
+                      telefono: telefono.trim(),
+                      email: email.trim(),
+                      direccion: capitalizarNombre(direccion.trim()),
+                    }
+                  : x,
+              ),
+            );
+            setError("");
+            registrarEventoPortal(p.id, "Datos actualizados", "Teléfono, correo o dirección");
+            ctx.onToast("Datos actualizados. La clínica ya los ve en tu ficha.");
+          }}
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Nombre">
+              <input
+                value={`${p.nombre} ${p.apellido}`}
+                disabled
+                className={`${INPUT} bg-muted/40`}
+              />
+            </Field>
+            <Field label="DNI">
+              <input
+                value={p.documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                disabled
+                className={`${INPUT} bg-muted/40`}
+              />
+            </Field>
+            <Field label="Teléfono">
+              <input
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className={INPUT}
+              />
+            </Field>
+            <Field label="Correo">
+              <input value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
+            </Field>
+            <Field label="Dirección">
+              <input
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                className={INPUT}
+                placeholder="Calle, número, ciudad"
+              />
+            </Field>
+            <Field label="Obra social">
+              <input
+                value={`${p.obraSocial || "Particular"}${p.afiliado ? ` · ${p.afiliado}` : ""}`}
+                disabled
+                className={`${INPUT} bg-muted/40`}
+              />
+            </Field>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Para cambiar tu nombre, DNI u obra social, escribinos desde Mensajes.
+          </p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex justify-end">
+            <button type="submit" className={BTN_PRIMARIO} disabled={!cambios}>
+              <Check className="size-4" />
+              Guardar cambios
             </button>
           </div>
         </form>
-      </Modal>
-
-      {/* MODAL PAGO */}
-      <Modal
-        abierto={modal === "pago"}
-        titulo="Realizar pago"
-        onCerrar={() => setModal(null)}
-      >
-        <div className="space-y-5">
-          <div className="rounded-xl border border-border bg-background p-4">
-            <p className="text-sm text-muted-foreground">
-              Seleccioná el pago pendiente que querés registrar.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {pagos
-              .filter((pago) => pago.estado === "Pendiente")
-              .map((pago) => (
-                <div
-                  key={pago.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
-                >
-                  <div>
-                    <p className="font-semibold">{pago.concepto}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {fechaCorta(pago.fecha)}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-bold">{ars(pago.monto)}</p>
-
-                    <button
-                      type="button"
-                      className={`${BTN_PRIMARY} mt-2 min-h-9 px-3 text-xs`}
-                      onClick={() => pagar(pago.id)}
-                    >
-                      Confirmar pago
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
+        <div className="card-grad h-fit space-y-3 p-5">
+          <p className="font-display text-base font-semibold">Cómo te avisamos</p>
+          {(
+            [
+              ["whatsapp", "Recordatorios por WhatsApp", MessageCircle],
+              ["email", "Recordatorios por correo", Bell],
+              ["promos", "Novedades y promociones", ReceiptText],
+            ] as const
+          ).map(([k, l, Icon]) => (
+            <label
+              key={k}
+              className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2.5 text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <Icon className="size-4 text-primary" />
+                {l}
+              </span>
+              <input
+                type="checkbox"
+                checked={recordatorios[k]}
+                onChange={(e) => {
+                  setRecordatorios((r) => ({ ...r, [k]: e.target.checked }));
+                  ctx.onToast("Preferencia guardada");
+                }}
+                className="size-4 accent-[var(--color-primary)]"
+              />
+            </label>
+          ))}
         </div>
-      </Modal>
-
-      {/* MENSAJE */}
-      {mensaje && (
-        <div className="fixed bottom-20 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 md:bottom-6">
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium shadow-xl">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Check className="h-4 w-4" />
-            </div>
-
-            <span>{mensaje}</span>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

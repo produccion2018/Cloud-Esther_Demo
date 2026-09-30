@@ -89,7 +89,7 @@ const DATOS_INICIALES: Conector[] = [
 /* ───────────── Store a nivel módulo (mismo patrón que pacientes.ts / automatizaciones.ts) ───────────── */
 
 /* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
-const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES);
+const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES, { persistir: "integraciones" });
 
 function setConectoresGlobal(
   actualizar: Conector[] | ((prev: Conector[]) => Conector[]),

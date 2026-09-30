@@ -505,7 +505,7 @@ export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(() => 
     recordatorios: {},
     config: CONFIG,
   };
-});
+}, { persistir: "comunicacion" });
 
 type Actualizar<T> = T | ((prev: T) => T);
 

@@ -18,8 +18,18 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
-import { useEquipo, TIPOS_AUSENCIA, type Ausencia, type TipoAusencia } from "@/lib/cloud-esther/equipo-store";
-import { emptyMember, permsFor, type TeamMember, type TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
+import {
+  useEquipo,
+  TIPOS_AUSENCIA,
+  type Ausencia,
+  type TipoAusencia,
+} from "@/lib/cloud-esther/equipo-store";
+import {
+  emptyMember,
+  permsFor,
+  type TeamMember,
+  type TeamRole,
+} from "@/lib/cloud-esther/equipo-profesional-data";
 import { capitalizarNombre } from "@/lib/utils";
 
 /* Ubicación: src/components/cloud-esther/EquipoPaneles.tsx
@@ -74,17 +84,31 @@ const INPUT =
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </span>
       {children}
     </label>
   );
 }
 
-function Resumen({ label, valor, icon: Icon, tono = "text-foreground" }: { label: string; valor: string; icon: LucideIcon; tono?: string }) {
+function Resumen({
+  label,
+  valor,
+  icon: Icon,
+  tono = "text-foreground",
+}: {
+  label: string;
+  valor: string;
+  icon: LucideIcon;
+  tono?: string;
+}) {
   return (
     <div className="card-grad flex items-start justify-between p-3.5">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {label}
+        </p>
         <p className={`mt-1 text-xl font-bold ${tono}`}>{valor}</p>
       </div>
       <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -96,15 +120,28 @@ function Resumen({ label, valor, icon: Icon, tono = "text-foreground" }: { label
 
 function Avatar({ m, size = "size-10" }: { m: TeamMember; size?: string }) {
   return (
-    <span className={`grid ${size} shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-xs font-bold text-white shadow-sm`}>
+    <span
+      className={`grid ${size} shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-xs font-bold text-white shadow-sm`}
+    >
       {`${m.firstName[0] ?? ""}${m.lastName[0] ?? ""}`.toUpperCase()}
     </span>
   );
 }
 
-function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: ReactNode }) {
+function Modal({
+  titulo,
+  onClose,
+  children,
+}: {
+  titulo: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={onClose}>
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onMouseDown={onClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -114,10 +151,16 @@ function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => v
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Equipo</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Equipo
+            </p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">{titulo}</h2>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" className="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-muted">
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-muted"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -145,15 +188,22 @@ export function DesempenoEquipo() {
       const ausentes = periodo.filter((t) => t.estado === "Ausente").length;
       const cancelados = periodo.filter((t) => t.estado === "Cancelada").length;
       const cerrados = atendidos.length + ausentes;
-      const produccion = atendidos.reduce((a, t) => a + (VALOR_PRACTICA[t.tratamiento] ?? 20000), 0);
-      const pctComision = m.commissions?.length ? m.commissions.reduce((a, c) => a + c.percentage, 0) / m.commissions.length : 0;
+      const produccion = atendidos.reduce(
+        (a, t) => a + (VALOR_PRACTICA[t.tratamiento] ?? 20000),
+        0,
+      );
+      const pctComision = m.commissions?.length
+        ? m.commissions.reduce((a, c) => a + c.percentage, 0) / m.commissions.length
+        : 0;
       return {
         m,
         atendidos: atendidos.length,
         ausentes,
         cancelados,
         asistencia: cerrados ? Math.round((atendidos.length / cerrados) * 100) : 100,
-        proximos: suyos.filter((t) => t.fecha > hoy && t.fecha <= sumarDias(hoy, 7) && t.estado !== "Cancelada").length,
+        proximos: suyos.filter(
+          (t) => t.fecha > hoy && t.fecha <= sumarDias(hoy, 7) && t.estado !== "Cancelada",
+        ).length,
         pacientes: new Set(atendidos.map((t) => t.paciente)).size,
         produccion,
         comision: Math.round((produccion * pctComision) / 100),
@@ -166,12 +216,17 @@ export function DesempenoEquipo() {
   const totalAtendidos = filas.reduce((a, f) => a + f.atendidos, 0);
   const totalProd = filas.reduce((a, f) => a + f.produccion, 0);
   const totalAus = filas.reduce((a, f) => a + f.ausentes, 0);
-  const asistenciaGeneral = totalAtendidos + totalAus ? Math.round((totalAtendidos / (totalAtendidos + totalAus)) * 100) : 100;
+  const asistenciaGeneral =
+    totalAtendidos + totalAus
+      ? Math.round((totalAtendidos / (totalAtendidos + totalAus)) * 100)
+      : 100;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">Calculado con los turnos de la Agenda. Los valores de producción son orientativos.</p>
+        <p className="text-sm text-muted-foreground">
+          Calculado con los turnos de la Agenda. Los valores de producción son orientativos.
+        </p>
         <div className="flex rounded-full border border-primary/15 bg-white p-0.5">
           {([7, 30, 90] as const).map((d) => (
             <button
@@ -186,13 +241,34 @@ export function DesempenoEquipo() {
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        <Resumen label="Turnos atendidos" valor={String(totalAtendidos)} icon={Check} tono="text-primary" />
-        <Resumen label="Asistencia general" valor={`${asistenciaGeneral}%`} icon={TrendingUp} tono="text-emerald-600" />
-        <Resumen label="Ausencias de pacientes" valor={String(totalAus)} icon={CalendarX2} tono={totalAus ? "text-amber-600" : ""} />
-        <Resumen label="Producción estimada" valor={`$ ${totalProd.toLocaleString("es-AR")}`} icon={Trophy} />
+        <Resumen
+          label="Turnos atendidos"
+          valor={String(totalAtendidos)}
+          icon={Check}
+          tono="text-primary"
+        />
+        <Resumen
+          label="Asistencia general"
+          valor={`${asistenciaGeneral}%`}
+          icon={TrendingUp}
+          tono="text-emerald-600"
+        />
+        <Resumen
+          label="Ausencias de pacientes"
+          valor={String(totalAus)}
+          icon={CalendarX2}
+          tono={totalAus ? "text-amber-600" : ""}
+        />
+        <Resumen
+          label="Producción estimada"
+          valor={`$ ${totalProd.toLocaleString("es-AR")}`}
+          icon={Trophy}
+        />
       </div>
       {filas.length === 0 ? (
-        <p className="card-grad p-6 text-center text-sm text-muted-foreground">No hay odontólogos activos para medir.</p>
+        <p className="card-grad p-6 text-center text-sm text-muted-foreground">
+          No hay odontólogos activos para medir.
+        </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {filas.map((f, i) => (
@@ -201,24 +277,34 @@ export function DesempenoEquipo() {
                 <span className="relative">
                   <Avatar m={f.m} size="size-11" />
                   {i === 0 && f.produccion > 0 && (
-                    <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-amber-400 text-white shadow" title="Mayor producción">
+                    <span
+                      className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-amber-400 text-white shadow"
+                      title="Mayor producción"
+                    >
                       <Trophy className="size-3" />
                     </span>
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{nombreDe(f.m)}</p>
-                  <p className="text-[11px] text-muted-foreground">{f.m.specialties?.join(", ") || "Odontología general"}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {f.m.specialties?.join(", ") || "Odontología general"}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-base font-bold">$ {f.produccion.toLocaleString("es-AR")}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {f.pctComision ? `Comisión ${f.pctComision.toFixed(0)}%: $ ${f.comision.toLocaleString("es-AR")}` : "Sin comisión configurada"}
+                    {f.pctComision
+                      ? `Comisión ${f.pctComision.toFixed(0)}%: $ ${f.comision.toLocaleString("es-AR")}`
+                      : "Sin comisión configurada"}
                   </p>
                 </div>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-primary/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${(f.produccion / maxProd) * 100}%` }} />
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500"
+                  style={{ width: `${(f.produccion / maxProd) * 100}%` }}
+                />
               </div>
               <div className="mt-3 grid grid-cols-5 gap-1.5 text-center">
                 {[
@@ -235,7 +321,10 @@ export function DesempenoEquipo() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Asistencia de sus pacientes: <b className={f.asistencia >= 85 ? "text-emerald-600" : "text-amber-600"}>{f.asistencia}%</b>
+                Asistencia de sus pacientes:{" "}
+                <b className={f.asistencia >= 85 ? "text-emerald-600" : "text-amber-600"}>
+                  {f.asistencia}%
+                </b>
               </p>
             </li>
           ))}
@@ -263,7 +352,13 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
   const afectados = (a: Ausencia) => {
     const m = miembros.find((x) => x.id === a.miembroId);
     if (!m) return [];
-    return turnosDe(turnos, m).filter((t) => t.fecha >= a.desde && t.fecha <= a.hasta && t.estado !== "Cancelada" && t.estado !== "Atendida");
+    return turnosDe(turnos, m).filter(
+      (t) =>
+        t.fecha >= a.desde &&
+        t.fecha <= a.hasta &&
+        t.estado !== "Cancelada" &&
+        t.estado !== "Atendida",
+    );
   };
 
   const COLOR: Record<TipoAusencia, string> = {
@@ -276,7 +371,9 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">Vacaciones, licencias y capacitaciones. Te avisa si hay turnos que reprogramar.</p>
+        <p className="text-sm text-muted-foreground">
+          Vacaciones, licencias y capacitaciones. Te avisa si hay turnos que reprogramar.
+        </p>
         <div className="flex gap-2">
           <button className={BTN_SECUNDARIO} onClick={() => setVerPasadas((v) => !v)}>
             <Clock3 className="size-3.5" />
@@ -289,17 +386,33 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
-        <Resumen label="Fuera hoy" valor={String(hoyFuera.length)} icon={CalendarOff} tono={hoyFuera.length ? "text-amber-600" : ""} />
-        <Resumen label="Próximos 30 días" valor={String(proximas.length)} icon={Clock3} tono="text-primary" />
+        <Resumen
+          label="Fuera hoy"
+          valor={String(hoyFuera.length)}
+          icon={CalendarOff}
+          tono={hoyFuera.length ? "text-amber-600" : ""}
+        />
+        <Resumen
+          label="Próximos 30 días"
+          valor={String(proximas.length)}
+          icon={Clock3}
+          tono="text-primary"
+        />
         <Resumen
           label="Turnos a reprogramar"
-          valor={String(ausencias.filter((a) => a.hasta >= hoy).reduce((acc, a) => acc + afectados(a).length, 0))}
+          valor={String(
+            ausencias
+              .filter((a) => a.hasta >= hoy)
+              .reduce((acc, a) => acc + afectados(a).length, 0),
+          )}
           icon={RefreshCcw}
           tono="text-destructive"
         />
       </div>
       {lista.length === 0 ? (
-        <p className="card-grad p-6 text-center text-sm text-muted-foreground">No hay ausencias registradas.</p>
+        <p className="card-grad p-6 text-center text-sm text-muted-foreground">
+          No hay ausencias registradas.
+        </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {lista.map((a) => {
@@ -307,7 +420,12 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
             if (!m) return null;
             const turnosAfectados = afectados(a);
             const enCurso = a.desde <= hoy && a.hasta >= hoy;
-            const dias = Math.round((new Date(`${a.hasta}T12:00:00`).getTime() - new Date(`${a.desde}T12:00:00`).getTime()) / 86_400_000) + 1;
+            const dias =
+              Math.round(
+                (new Date(`${a.hasta}T12:00:00`).getTime() -
+                  new Date(`${a.desde}T12:00:00`).getTime()) /
+                  86_400_000,
+              ) + 1;
             return (
               <li key={a.id} className={`card-grad p-4 ${a.hasta < hoy ? "opacity-60" : ""}`}>
                 <div className="flex items-start gap-3">
@@ -315,11 +433,22 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
                       {nombreDe(m)}
-                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${COLOR[a.tipo]}`}>{a.tipo}</span>
-                      {enCurso && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-700">En curso</span>}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${COLOR[a.tipo]}`}
+                      >
+                        {a.tipo}
+                      </span>
+                      {enCurso && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-700">
+                          En curso
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {a.desde === a.hasta ? formatearFecha(a.desde) : `Del ${formatearFecha(a.desde)} al ${formatearFecha(a.hasta)}`} · {dias} {dias === 1 ? "día" : "días"}
+                      {a.desde === a.hasta
+                        ? formatearFecha(a.desde)
+                        : `Del ${formatearFecha(a.desde)} al ${formatearFecha(a.hasta)}`}{" "}
+                      · {dias} {dias === 1 ? "día" : "días"}
                       {a.nota ? ` · ${a.nota}` : ""}
                     </p>
                   </div>
@@ -337,8 +466,13 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
                 {turnosAfectados.length > 0 && a.hasta >= hoy && (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/15 bg-destructive/[0.05] px-3 py-2">
                     <p className="text-xs text-destructive">
-                      {turnosAfectados.length} {turnosAfectados.length === 1 ? "turno agendado" : "turnos agendados"} en esas fechas:{" "}
-                      {turnosAfectados.slice(0, 3).map((t) => `${formatearFecha(t.fecha).slice(0, 5)} ${t.paciente}`).join(", ")}
+                      {turnosAfectados.length}{" "}
+                      {turnosAfectados.length === 1 ? "turno agendado" : "turnos agendados"} en esas
+                      fechas:{" "}
+                      {turnosAfectados
+                        .slice(0, 3)
+                        .map((t) => `${formatearFecha(t.fecha).slice(0, 5)} ${t.paciente}`)
+                        .join(", ")}
                       {turnosAfectados.length > 3 ? "…" : ""}
                     </p>
                     <Link to="/demo/agenda" className={BTN_SECUNDARIO}>
@@ -370,7 +504,15 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
   );
 }
 
-function AusenciaForm({ miembros, onSubmit, onCancel }: { miembros: TeamMember[]; onSubmit: (a: Omit<Ausencia, "id">) => void; onCancel: () => void }) {
+function AusenciaForm({
+  miembros,
+  onSubmit,
+  onCancel,
+}: {
+  miembros: TeamMember[];
+  onSubmit: (a: Omit<Ausencia, "id">) => void;
+  onCancel: () => void;
+}) {
   const [miembroId, setMiembroId] = useState(miembros[0]?.id ?? "");
   const [tipo, setTipo] = useState<TipoAusencia>("Vacaciones");
   const [desde, setDesde] = useState(hoyISO());
@@ -389,7 +531,11 @@ function AusenciaForm({ miembros, onSubmit, onCancel }: { miembros: TeamMember[]
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Integrante">
-          <select value={miembroId} onChange={(e) => setMiembroId(e.target.value)} className={INPUT}>
+          <select
+            value={miembroId}
+            onChange={(e) => setMiembroId(e.target.value)}
+            className={INPUT}
+          >
             {miembros.map((m) => (
               <option key={m.id} value={m.id}>
                 {nombreDe(m)}
@@ -398,21 +544,41 @@ function AusenciaForm({ miembros, onSubmit, onCancel }: { miembros: TeamMember[]
           </select>
         </Field>
         <Field label="Tipo">
-          <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoAusencia)} className={INPUT}>
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoAusencia)}
+            className={INPUT}
+          >
             {TIPOS_AUSENCIA.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
         </Field>
         <Field label="Desde">
-          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+            className={INPUT}
+          />
         </Field>
         <Field label="Hasta">
-          <input type="date" value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} className={INPUT} />
+          <input
+            type="date"
+            value={hasta}
+            min={desde}
+            onChange={(e) => setHasta(e.target.value)}
+            className={INPUT}
+          />
         </Field>
       </div>
       <Field label="Nota">
-        <input value={nota} onChange={(e) => setNota(e.target.value)} className={INPUT} placeholder="Opcional" />
+        <input
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          className={INPUT}
+          placeholder="Opcional"
+        />
       </Field>
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
@@ -449,11 +615,22 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
     e.preventDefault();
     const limpio = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) return setError("Ingresá un correo válido.");
-    if (miembros.some((m) => m.email.toLowerCase() === limpio)) return setError("Ese correo ya es parte del equipo.");
-    const [firstName = "", ...resto] = capitalizarNombre(nombre.trim() || limpio.split("@")[0] || "").split(" ");
+    if (miembros.some((m) => m.email.toLowerCase() === limpio))
+      return setError("Ese correo ya es parte del equipo.");
+    const [firstName = "", ...resto] = capitalizarNombre(
+      nombre.trim() || limpio.split("@")[0] || "",
+    ).split(" ");
     setMiembros((prev) => [
       ...prev,
-      { ...emptyMember(), firstName, lastName: resto.join(" "), email: limpio, role: rol, status: "pendiente", permissions: permsFor(rol) },
+      {
+        ...emptyMember(),
+        firstName,
+        lastName: resto.join(" "),
+        email: limpio,
+        role: rol,
+        status: "pendiente",
+        permissions: permsFor(rol),
+      },
     ]);
     setNombre("");
     setEmail("");
@@ -467,15 +644,31 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
         <p className="flex items-center gap-2 text-sm font-semibold">
           <UserPlus className="size-4 text-primary" /> Invitar al equipo
         </p>
-        <p className="text-xs text-muted-foreground">Le llega un correo para crear su usuario con el rol y los permisos elegidos.</p>
+        <p className="text-xs text-muted-foreground">
+          Le llega un correo para crear su usuario con el rol y los permisos elegidos.
+        </p>
         <Field label="Nombre y apellido">
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Ej: Julieta Paredes" />
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            className={INPUT}
+            placeholder="Ej: Julieta Paredes"
+          />
         </Field>
         <Field label="Correo *">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="nombre@clinica.com" />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={INPUT}
+            placeholder="nombre@clinica.com"
+          />
         </Field>
         <Field label="Rol">
-          <select value={rol} onChange={(e) => setRol(e.target.value as TeamRole)} className={INPUT}>
+          <select
+            value={rol}
+            onChange={(e) => setRol(e.target.value as TeamRole)}
+            className={INPUT}
+          >
             {ROLES.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
@@ -492,10 +685,15 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
 
       <div className="space-y-2">
         <p className="px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-          Invitaciones pendientes <span className="rounded-full bg-primary/10 px-1.5 text-primary">{pendientes.length}</span>
+          Invitaciones pendientes{" "}
+          <span className="rounded-full bg-primary/10 px-1.5 text-primary">
+            {pendientes.length}
+          </span>
         </p>
         {pendientes.length === 0 ? (
-          <p className="card-grad p-6 text-center text-sm text-muted-foreground">No hay invitaciones pendientes.</p>
+          <p className="card-grad p-6 text-center text-sm text-muted-foreground">
+            No hay invitaciones pendientes.
+          </p>
         ) : (
           pendientes.map((m) => (
             <div key={m.id} className="card-grad flex flex-wrap items-center gap-3 p-3.5">
@@ -508,7 +706,10 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                <button className={BTN_SECUNDARIO} onClick={() => onToast(`Invitación reenviada a ${m.email}`)}>
+                <button
+                  className={BTN_SECUNDARIO}
+                  onClick={() => onToast(`Invitación reenviada a ${m.email}`)}
+                >
                   <RefreshCcw className="size-3.5" />
                   Reenviar
                 </button>

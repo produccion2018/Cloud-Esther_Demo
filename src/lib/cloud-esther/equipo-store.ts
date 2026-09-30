@@ -30,7 +30,7 @@ const store = crearStorePorEmpresa<EstadoEquipo>(() => ({
     { id: "a-1", miembroId: "3", tipo: "Capacitación", desde: diaISO(0), hasta: diaISO(0), nota: "Curso de bioseguridad" },
     { id: "a-2", miembroId: "2", tipo: "Vacaciones", desde: diaISO(12), hasta: diaISO(19), nota: "" },
   ],
-}));
+}), { persistir: "equipo" });
 
 type Actualizar<T> = T | ((prev: T) => T);
 const aplicar = <T>(prev: T, a: Actualizar<T>) =>

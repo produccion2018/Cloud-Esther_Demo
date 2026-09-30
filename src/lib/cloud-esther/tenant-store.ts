@@ -22,13 +22,52 @@ export function claveTenant(base: string): string {
   return `${base}:${tenantActual()}`;
 }
 
-export function crearStorePorEmpresa<T>(inicial: () => T) {
+/* Versión de los datos guardados: subirla cuando cambian los datos de ejemplo o su forma,
+   así cada navegador arranca de nuevo con los datos actualizados. */
+const VERSION_DATOS = "v1";
+
+type OpcionesStore = {
+  /** Si se indica, los datos de cada empresa se guardan en el navegador (localStorage) con
+      esta clave y se sincronizan entre pestañas (ej.: el Portal del paciente y Cloud Esther). */
+  persistir?: string;
+};
+
+export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStore = {}) {
   const porEmpresa = new Map<string, T>();
   const oyentes = new Set<() => void>();
+  const cargados = new Set<string>();
+  const clave = (tenant: string) => `cloud-esther:${VERSION_DATOS}:${opciones.persistir}:${tenant}`;
 
   const de = (tenant: string): T => {
     if (!porEmpresa.has(tenant)) porEmpresa.set(tenant, inicial());
     return porEmpresa.get(tenant) as T;
+  };
+
+  const avisar = () => oyentes.forEach((f) => f());
+
+  // Se lee del navegador recién después de hidratar (nunca en el primer render),
+  // para que el HTML del servidor y el del cliente coincidan.
+  const cargar = (tenant: string) => {
+    if (!opciones.persistir || cargados.has(tenant) || typeof window === "undefined") return;
+    cargados.add(tenant);
+    try {
+      const guardado = window.localStorage.getItem(clave(tenant));
+      if (guardado) {
+        porEmpresa.set(tenant, JSON.parse(guardado) as T);
+        avisar();
+      }
+    } catch {
+      /* datos corruptos o sin almacenamiento: se usan los de ejemplo */
+    }
+  };
+
+  const guardar = (tenant: string, valor: T) => {
+    if (!opciones.persistir || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(clave(tenant), JSON.stringify(valor));
+    } catch {
+      /* sin espacio o bloqueado: sigue funcionando en memoria */
+    }
   };
 
   const leer = (): T => de(tenantActual());
@@ -36,13 +75,34 @@ export function crearStorePorEmpresa<T>(inicial: () => T) {
   const leerServidor = (): T => de(TENANT_DEMO);
 
   const poner = (siguiente: T) => {
-    porEmpresa.set(tenantActual(), siguiente);
-    oyentes.forEach((f) => f());
+    const tenant = tenantActual();
+    porEmpresa.set(tenant, siguiente);
+    guardar(tenant, siguiente);
+    avisar();
   };
+
+  // Otra pestaña guardó cambios de esta empresa: se toman al instante.
+  if (opciones.persistir && typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (!e.key || !e.newValue) return;
+      const tenant = tenantActual();
+      if (e.key !== clave(tenant)) return;
+      try {
+        porEmpresa.set(tenant, JSON.parse(e.newValue) as T);
+        avisar();
+      } catch {
+        /* ignorar */
+      }
+    });
+  }
 
   const suscribir = (f: () => void) => {
     oyentes.add(f);
-    const dejarSesion = suscribirSesion(f);
+    const dejarSesion = suscribirSesion(() => {
+      queueMicrotask(() => cargar(tenantActual()));
+      f();
+    });
+    queueMicrotask(() => cargar(tenantActual()));
     return () => {
       oyentes.delete(f);
       dejarSesion();
@@ -53,7 +113,25 @@ export function crearStorePorEmpresa<T>(inicial: () => T) {
     return useSyncExternalStore(suscribir, leer, leerServidor);
   }
 
-  return { leer, poner, usar };
+  /* leer/poner fuera de React (setters de otros módulos) también toman lo guardado. */
+  const leerConCarga = (): T => {
+    if (typeof window !== "undefined") cargar(tenantActual());
+    return leer();
+  };
+
+  return { leer: leerConCarga, poner, usar };
+}
+
+/** Borra los datos de práctica guardados de la empresa activa (vuelven los de ejemplo). */
+export function borrarDatosGuardados() {
+  try {
+    const sufijo = `:${tenantActual()}`;
+    Object.keys(window.localStorage)
+      .filter((k) => k.startsWith("cloud-esther:v") && k.endsWith(sufijo))
+      .forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* ignorar */
+  }
 }
 
 /** Hook: id de la empresa activa (para recargar datos de localStorage al cambiar de sesión). */

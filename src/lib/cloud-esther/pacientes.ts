@@ -91,7 +91,7 @@ type Estado = {
 };
 
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes. */
-const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }));
+const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), { persistir: "pacientes" });
 
 export function usePacientes() {
   const actual = store.usar();

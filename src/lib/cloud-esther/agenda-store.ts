@@ -150,7 +150,7 @@ export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(() => {
     recordatorios: RECORDATORIOS_INICIAL,
     tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
   };
-});
+}, { persistir: "agenda" });
 
 type Actualizar<T> = T | ((prev: T) => T);
 function setterAgenda<K extends keyof EstadoAgenda>(clave: K) {

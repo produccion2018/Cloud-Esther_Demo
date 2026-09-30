@@ -719,12 +719,25 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           fecha: "2026-08-20",
           estado: "Aprobado",
           lineas: [
-            { descripcion: "Restauración estética", pieza: "21", cantidad: 1, precio: 0 },
+            { descripcion: "Restauración estética", pieza: "21", cantidad: 1, precio: 60000 },
             { descripcion: "Control", pieza: "21", cantidad: 1, precio: 0 },
           ],
           notas: "Presupuesto asociado al tratamiento actual.",
           diagnosticoId: 1,
           tratamientoId: 1,
+          profesional: "Dr. Carlos Rodríguez",
+        },
+        {
+          id: 2,
+          numero: "PR-0002",
+          fecha: "2026-09-25",
+          estado: "Enviado",
+          lineas: [
+            { descripcion: "Endodoncia", pieza: "36", cantidad: 1, precio: 120000 },
+            { descripcion: "Corona de disilicato", pieza: "36", cantidad: 1, precio: 280000 },
+          ],
+          notas: "Se puede abonar en 3 cuotas sin interés.",
+          tratamientoId: 2,
           profesional: "Dr. Carlos Rodríguez",
         },
       ],
@@ -736,8 +749,17 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
           tipo: "Cargo",
           concepto: "Restauración estética",
           medio: "",
-          monto: 0,
-          notas: "Monto a completar desde el backend.",
+          monto: 60000,
+          notas: "",
+        },
+        {
+          id: 2,
+          fecha: "2026-08-20",
+          tipo: "Pago",
+          concepto: "Seña restauración estética",
+          medio: "Transferencia",
+          monto: 25000,
+          notas: "",
         },
       ],
       profesionales: [
@@ -800,7 +822,7 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
 /* Los registros se comparten entre la página de Pacientes y las páginas de acceso directo del
    sidebar (Historia, Recetas, Estudios…), separados por empresa: cada clínica tiene su propia
    copia y nunca ve los datos de otra. Al conectar el backend se reemplaza por la API. */
-const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES);
+const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES, { persistir: "registros" });
 
 /** Registros de todos los pacientes de la empresa activa (lo usan las alertas de Notificaciones). */
 export function useTodosLosRegistros(): Record<number, Registros> {

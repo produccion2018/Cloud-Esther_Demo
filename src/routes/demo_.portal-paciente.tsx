@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-import PortalPaciente from "@/components/cloud-esther/PortalPaciente";
+import { PortalMonitorPage } from "@/components/cloud-esther/PortalMonitor";
 
 export const Route = createFileRoute("/demo_/portal-paciente")({
-  component: PortalPaciente,
+  head: () => ({ meta: [{ title: "Portal del paciente | Cloud Esther" }] }),
+  component: PortalMonitorPage,
 });

@@ -182,7 +182,7 @@ export const storeNotificaciones = crearStorePorEmpresa<EstadoNotificaciones>(()
       titulo: "Llamar al proveedor de implantes",
     },
   ],
-}));
+}), { persistir: "notificaciones" });
 
 type Actualizar<T> = T | ((prev: T) => T);
 

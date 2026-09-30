@@ -50,7 +50,7 @@ const ROLE_LABEL: Record<TeamRole, string> = {
   administrador: "Administrador/a",
 };
 
-const CARD = "rounded-2xl border border-border bg-card p-4 shadow-sm";
+const CARD = "card-grad p-4";
 const INPUT =
   "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/15";
 const INPUT_HORA =
@@ -81,19 +81,24 @@ export function EquipoSeccion({ seccion }: { seccion: EquipoSeccionId }) {
   const { mensaje, mostrar } = useToast();
 
   return (
-    <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8">
-      <Link
-        to={"/demo/equipo-profesional" as never}
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3.5" />
-        Equipo profesional
-      </Link>
-
-      <h1 className="font-display text-2xl font-bold tracking-tight">{data.titulo}</h1>
-      <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-        {data.descripcion}
-      </p>
+    <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+      />
+    <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
+      <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] p-5 shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)] md:p-7">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-sky-400/55" />
+        <Link
+          to={"/demo/equipo-profesional" as never}
+          className="relative inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/15"
+        >
+          <ArrowLeft className="size-3.5" />
+          Equipo profesional
+        </Link>
+        <h1 className="relative mt-4 text-[30px] font-bold tracking-[-0.035em] md:text-[38px]">{data.titulo}</h1>
+        <p className="relative mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">{data.descripcion}</p>
+      </section>
 
       <div className="mt-5">
         {seccion === "especialidades" && <Especialidades onToast={mostrar} />}
@@ -102,10 +107,11 @@ export function EquipoSeccion({ seccion }: { seccion: EquipoSeccionId }) {
       </div>
 
       {mensaje && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl" role="status">
           {mensaje}
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -347,6 +353,8 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
     );
 
   return (
+    <div className="space-y-4">
+    <CoberturaSemanal miembros={miembros} />
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
       <ul className={`${CARD} h-fit space-y-1 p-2`}>
         {miembros.map((m) => (
@@ -469,6 +477,88 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
         </p>
       </div>
     </div>
+    </div>
+  );
+}
+
+/* Cobertura semanal: cuántos odontólogos atienden en cada franja horaria (descontando descansos). */
+function CoberturaSemanal({ miembros }: { miembros: TeamMember[] }) {
+  const DIAS: ScheduleDay["day"][] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const HORAS = Array.from({ length: 13 }, (_, i) => 8 + i); // 08 a 20
+  const odontologos = miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
+  const aMin = (h?: string) => {
+    const [a = 0, b = 0] = (h ?? "").split(":").map(Number);
+    return a * 60 + b;
+  };
+  const quienes = (dia: ScheduleDay["day"], hora: number) =>
+    odontologos.filter((m) => {
+      const d = m.schedule.find((x) => x.day === dia);
+      if (!d?.active) return false;
+      const t = hora * 60 + 30;
+      const enDescanso = d.breakStart && d.breakEnd && t >= aMin(d.breakStart) && t < aMin(d.breakEnd);
+      return t >= aMin(d.start) && t < aMin(d.end) && !enDescanso;
+    });
+  const max = Math.max(1, odontologos.length);
+  const huecos = DIAS.flatMap((d) => HORAS.filter((h) => h >= 9 && h < 19 && quienes(d, h).length === 0).map((h) => `${d.slice(0, 3)} ${h}h`));
+  return (
+    <div className={CARD}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">Cobertura semanal de odontólogos</p>
+          <p className="text-xs text-muted-foreground">Cuántos profesionales atienden en cada franja. Pasá el mouse para ver quiénes.</p>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          Menos
+          {[0, 0.34, 0.67, 1].map((v) => (
+            <span key={v} className="size-3 rounded" style={{ background: v ? `rgba(124,58,237,${0.15 + v * 0.75})` : "rgba(124,58,237,0.05)" }} />
+          ))}
+          Más
+        </div>
+      </div>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[640px] border-separate border-spacing-1 text-[10px]">
+          <thead>
+            <tr>
+              <th />
+              {HORAS.map((h) => (
+                <th key={h} className="font-medium text-muted-foreground">
+                  {String(h).padStart(2, "0")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {DIAS.map((d) => (
+              <tr key={d}>
+                <td className="pr-2 text-xs font-medium">{d.slice(0, 3)}</td>
+                {HORAS.map((h) => {
+                  const q = quienes(d, h);
+                  return (
+                    <td
+                      key={h}
+                      title={q.length ? `${d} ${h}:00 · ${q.map(nombre).join(", ")}` : `${d} ${h}:00 · sin odontólogos`}
+                      className="h-7 rounded-md text-center font-semibold"
+                      style={{
+                        background: q.length ? `rgba(124,58,237,${0.15 + (q.length / max) * 0.75})` : "rgba(124,58,237,0.05)",
+                        color: q.length / max > 0.5 ? "white" : "rgb(91,33,182)",
+                      }}
+                    >
+                      {q.length || ""}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {huecos.length > 0 && (
+        <p className="mt-2 text-[11px] text-amber-700">
+          Franjas sin odontólogo entre 9 y 19 h: {huecos.slice(0, 8).join(", ")}
+          {huecos.length > 8 ? ` y ${huecos.length - 8} más` : ""}.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -498,6 +588,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
   };
 
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
       <ul className={`${CARD} h-fit space-y-1 p-2`}>
         {miembros.map((m) => {
@@ -605,6 +696,61 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
             </li>
           ))}
         </ul>
+      </div>
+    </div>
+    <MatrizAccesos miembros={miembros} seleccionado={miembro.id} onElegir={setSeleccionado} />
+    </div>
+  );
+}
+
+/* Vista general: qué tiene habilitado cada integrante. */
+function MatrizAccesos({ miembros, seleccionado, onElegir }: { miembros: TeamMember[]; seleccionado: string; onElegir: (id: string) => void }) {
+  const permisos = miembros[0]?.permissions ?? [];
+  return (
+    <div className={CARD}>
+      <p className="text-sm font-semibold">Resumen de accesos del equipo</p>
+      <p className="text-xs text-muted-foreground">Tocá un integrante para editar sus permisos.</p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[820px] text-left text-xs">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
+              <th className="py-2 pr-3 font-semibold">Integrante</th>
+              {permisos.map((p) => (
+                <th key={p.key} className="px-1 py-2 text-center font-semibold" title={p.label}>
+                  {p.label.replace("Gestionar ", "").replace("Ver ", "").replace("Acceder a ", "").replace("Crear ", "Crear ")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-primary/[0.07]">
+            {miembros.map((m) => (
+              <tr
+                key={m.id}
+                onClick={() => onElegir(m.id)}
+                className={`cursor-pointer transition-colors ${m.id === seleccionado ? "bg-primary/[0.07]" : "hover:bg-primary/[0.03]"}`}
+              >
+                <td className="py-2 pr-3">
+                  <p className="font-semibold">{nombre(m)}</p>
+                  <p className="text-[10px] text-muted-foreground">{ROLE_LABEL[m.role]}</p>
+                </td>
+                {permisos.map((p) => {
+                  const on = m.permissions.find((x) => x.key === p.key)?.enabled;
+                  return (
+                    <td key={p.key} className="px-1 py-2 text-center">
+                      {on ? (
+                        <span className="inline-grid size-5 place-items-center rounded-full bg-primary/15 text-primary">
+                          <Check className="size-3" />
+                        </span>
+                      ) : (
+                        <span className="inline-block size-1.5 rounded-full bg-muted-foreground/25" />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -20,6 +20,10 @@ import {
   Briefcase,
   Headset,
   Settings2,
+  Download,
+  TrendingUp,
+  CalendarOff,
+  UserPlus,
 } from "lucide-react"
 
 import {
@@ -31,6 +35,31 @@ import {
 } from "@/lib/cloud-esther/equipo-profesional-data"
 import { useEquipo } from "@/lib/cloud-esther/equipo-store"
 import { capitalizarNombre } from "@/lib/utils"
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
+import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
+
+type VistaEquipo = "integrantes" | "desempeno" | "ausencias" | "invitaciones"
+
+const VISTAS: { id: VistaEquipo; label: string; icon: ComponentType<{ className?: string }> }[] = [
+  { id: "integrantes", label: "Integrantes", icon: Users },
+  { id: "desempeno", label: "Desempeño", icon: TrendingUp },
+  { id: "ausencias", label: "Ausencias y licencias", icon: CalendarOff },
+  { id: "invitaciones", label: "Invitaciones", icon: UserPlus },
+]
+
+const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const
+
+/** Jornada de hoy del integrante (o null si hoy no trabaja). */
+function horarioDeHoy(m: TeamMember) {
+  const hoy = DIAS_SEMANA[new Date().getDay()]
+  return m.schedule.find((d) => d.day === hoy && d.active) ?? null
+}
+
+function minutosJornada(d: { start: string; end: string }) {
+  const [h1 = 0, m1 = 0] = d.start.split(":").map(Number)
+  const [h2 = 0, m2 = 0] = d.end.split(":").map(Number)
+  return Math.max(60, h2 * 60 + m2 - (h1 * 60 + m1))
+}
 
 /* ───────────── Ícono de diente propio (lucide-react no trae uno) ───────────── */
 
@@ -305,7 +334,9 @@ type DetailTab = "info" | "agenda" | "permisos" | "comisiones"
 
 export function EquipoProfesional() {
   // Equipo compartido con Especialidades / Agendas / Permisos, separado por empresa.
-  const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica } = useEquipo()
+  const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
+  const { turnos } = storeAgenda.usar()
+  const [vista, setVista] = useState<VistaEquipo>("integrantes")
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<FilterKey>("todos")
   const [selected, setSelected] = useState<TeamMember | null>(null)
@@ -337,6 +368,7 @@ export function EquipoProfesional() {
       const matchesSearch =
         !search ||
         fullName(m).toLowerCase().includes(search.toLowerCase()) ||
+        (m.licenseNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
         (m.specialties ?? []).some((s) =>
           s.toLowerCase().includes(search.toLowerCase())
         )
@@ -351,32 +383,33 @@ export function EquipoProfesional() {
     })
   }, [members, search, filter])
 
-  const stats = useMemo(() => {
-    const profesionales = members.filter(
-      (m) => m.role === "odontologo"
-    ).length
+  const hoyStr = hoyISO()
+  const stats = {
+    profesionales: members.filter((m) => m.role === "odontologo" && m.status !== "inactivo").length,
+    asistentes: members.filter((m) => m.role === "asistente" && m.status === "activo").length,
+    administracion: members.filter((m) => (m.role === "secretaria" || m.role === "administrador") && m.status !== "inactivo").length,
+    trabajanHoy: members.filter((m) => m.status === "activo" && horarioDeHoy(m) && !ausenteHoy(ausencias, m.id)).length,
+    fueraHoy: members.filter((m) => m.status === "activo" && ausenteHoy(ausencias, m.id)).length,
+    turnosHoy: turnos.filter((t) => t.fecha === hoyStr && t.estado !== "Cancelada").length,
+    atendidosHoy: turnos.filter((t) => t.fecha === hoyStr && t.estado === "Atendida").length,
+    pendientesHoy: turnos.filter((t) => t.fecha === hoyStr && (t.estado === "Pendiente" || t.estado === "Confirmada")).length,
+    pendientes: members.filter((m) => m.status === "pendiente").length,
+  }
 
-    const asistentes = members.filter(
-      (m) => m.role === "asistente" && m.status === "activo"
-    ).length
-
-    const administracion = members.filter(
-      (m) => m.role === "secretaria" || m.role === "administrador"
-    ).length
-
-    const activosHoy = members.filter(
-      (m) =>
-        m.status === "activo" &&
-        m.schedule.some((d) => d.active)
-    ).length
-
-    return {
-      profesionales,
-      asistentes,
-      administracion,
-      activosHoy,
-    }
-  }, [members])
+  function exportarEquipo() {
+    const filas = [
+      ["Nombre", "Rol", "Estado", "Especialidades", "Matrícula", "Correo", "Teléfono", "Días por semana"],
+      ...members.map((m) => [fullName(m), ROLE_LABEL[m.role], STATUS_META[m.status].label, (m.specialties ?? []).join(" / "), m.licenseNumber ?? "", m.email, m.phone, String(m.schedule.filter((d) => d.active).length)]),
+    ]
+    const csv = filas.map((f) => f.map((c) => `"${c.replace(/"/g, '""')}"`).join(";")).join("\n")
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }))
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `equipo-${hoyStr}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast(`${members.length} integrantes exportados`)
+  }
 
   function openDetail(m: TeamMember, tab: DetailTab = "info") {
     setSelected(m)
@@ -503,218 +536,212 @@ export function EquipoProfesional() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8">
-
+    <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+      />
+    <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
       {/* Encabezado */}
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            Equipo profesional
-          </h1>
-
-          <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Gestioná los profesionales y colaboradores de tu clínica, sus roles,
-            especialidades, horarios, agendas y permisos.
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            setDraft(emptyMember())
-            setEditingMember(null)
-            setAddOpen(true)
-          }}
-          className="btn-ce"
-        >
-          <Plus className="size-4" />
-          Agregar integrante
-        </button>
-      </div>
-
-      {/* Resumen */}
-
-      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label="Profesionales"
-          value={stats.profesionales}
-          hint="Odontólogos y especialistas"
-          icon={ToothIcon}
-        />
-
-        <StatCard
-          label="Asistentes"
-          value={stats.asistentes}
-          hint="Activos"
-          icon={Users}
-        />
-
-        <StatCard
-          label="Administración"
-          value={stats.administracion}
-          hint="Secretarias y admins"
-          icon={ClipboardList}
-        />
-
-        <StatCard
-          label="Activos hoy"
-          value={stats.activosHoy}
-          hint="Con jornada configurada"
-          icon={Clock}
-        />
-      </div>
-
-      {/* Buscador y filtros */}
-
-      <div className={`${CARD} mt-3`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o especialidad..."
-              className={`${INPUT_SM} pl-9`}
-            />
+      <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-sky-400/55" />
+        <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+        <div className="relative p-5 md:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                  <Users className="size-3.5" />
+                  Tu equipo
+                </span>
+                <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-3 py-1.5 text-[11px] font-bold text-amber-700">
+                  {members.filter((m) => m.status === "activo").length} activos
+                </span>
+              </div>
+              <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">Equipo profesional</h1>
+              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+                Profesionales y colaboradores de tu clínica: roles, especialidades, horarios, agenda del día, desempeño,
+                ausencias y accesos.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <button onClick={exportarEquipo} className="btn-ce-outline">
+                <Download className="size-4" />
+                Exportar
+              </button>
+              <button
+                onClick={() => {
+                  setDraft(emptyMember())
+                  setEditingMember(null)
+                  setAddOpen(true)
+                }}
+                className="btn-ce"
+              >
+                <Plus className="size-4" />
+                Agregar integrante
+              </button>
+            </div>
           </div>
 
-          <div className="inline-flex flex-wrap gap-1 rounded-full bg-muted/70 p-1 backdrop-blur-sm">
-            {FILTROS.map((f) => (
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Profesionales" value={stats.profesionales} hint={`${stats.asistentes} asistentes · ${stats.administracion} administración`} icon={ToothIcon} />
+            <StatCard label="Trabajando hoy" value={stats.trabajanHoy} hint={stats.fueraHoy ? `${stats.fueraHoy} de licencia o ausente` : "Nadie ausente hoy"} icon={Clock} />
+            <StatCard label="Turnos de hoy" value={stats.turnosHoy} hint={`${stats.atendidosHoy} atendidos · ${stats.pendientesHoy} por atender`} icon={CalendarDays} />
+            <StatCard label="Invitaciones" value={stats.pendientes} hint={stats.pendientes ? "Pendientes de aceptar" : "Todas aceptadas"} icon={Mail} />
+          </div>
+
+          <nav className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5" aria-label="Vistas del equipo">
+            {VISTAS.map((v) => (
               <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  filter === f.id
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                key={v.id}
+                onClick={() => setVista(v.id)}
+                aria-pressed={vista === v.id}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                  vista === v.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"
                 }`}
               >
-                {f.label}
+                <v.icon className="size-3.5" />
+                {v.label}
+                {v.id === "invitaciones" && stats.pendientes > 0 && (
+                  <span className={`grid min-w-4 place-items-center rounded-full px-1 text-[10px] ${vista === v.id ? "bg-white/25" : "bg-primary text-primary-foreground"}`}>{stats.pendientes}</span>
+                )}
               </button>
             ))}
-          </div>
+          </nav>
         </div>
-      </div>
+      </section>
 
-      {/* Listado */}
-
-      <div className={`${CARD} mt-3`}>
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <IconTile icon={Users} />
-
-            <h2 className="text-base font-semibold tracking-tight">
-              Integrantes del equipo
-            </h2>
-          </div>
-
-          <span className="text-xs text-muted-foreground">
-            {filtered.length} resultado(s)
-          </span>
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-            No se encontraron integrantes con ese filtro.
-          </p>
-        ) : (
-          <ul className="space-y-2.5">
-            {filtered.map((m) => {
-              const role = ROLE_META[m.role]
-              const RoleIcon = role.icon
-
-              return (
-                <li
-                  key={m.id}
-                  className={`${ITEM} flex cursor-pointer flex-wrap items-center gap-3`}
-                  onClick={() => openDetail(m)}
-                >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-sm font-bold text-primary-foreground shadow-sm">
-                    {initials(m)}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold">
-                        {fullName(m)}
-                      </p>
-
-                      <StatusBadge status={m.status} />
-                    </div>
-
-                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${role.chip}`}
-                      >
-                        <RoleIcon className="size-3" />
-                        {ROLE_LABEL[m.role]}
-                      </span>
-
-                      {m.specialties?.length ? (
-                        <span>{m.specialties.join(", ")}</span>
-                      ) : null}
-
-                      {m.licenseNumber ? (
-                        <span>{m.licenseNumber}</span>
-                      ) : null}
-
-                      {m.schedule.some((d) => d.active) && (
-                        <span>
-                          {m.schedule.find((d) => d.active)?.start}–
-                          {m.schedule.find((d) => d.active)?.end}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  <div
-                    className="flex flex-wrap justify-end gap-1.5"
-                    onClick={(e) => e.stopPropagation()}
+      <div className="mt-5">
+        {vista === "desempeno" && <DesempenoEquipo />}
+        {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
+        {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}
+        {vista === "integrantes" && (
+          <div className="space-y-3">
+            <div className="card-grad flex flex-col gap-2.5 p-2.5 lg:flex-row lg:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por nombre, especialidad o matrícula"
+                  className={`${INPUT_SM} pl-9`}
+                />
+              </div>
+              <div className="inline-flex flex-wrap gap-1 rounded-full bg-primary/[0.06] p-0.5">
+                {FILTROS.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilter(f.id)}
+                    aria-pressed={filter === f.id}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                      filter === f.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <BotonAccion
-                      icon={Eye}
-                      label="Ver perfil"
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filtered.length === 0 ? (
+              <p className="card-grad py-10 text-center text-sm text-muted-foreground">No se encontraron integrantes con ese filtro.</p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                {filtered.map((m) => {
+                  const role = ROLE_META[m.role]
+                  const RoleIcon = role.icon
+                  const hoyDia = horarioDeHoy(m)
+                  const ausencia = ausenteHoy(ausencias, m.id)
+                  const suyos = turnosDe(turnos, m)
+                  const deHoy = suyos.filter((t) => t.fecha === hoyStr && t.estado !== "Cancelada").sort((a, b) => a.hora.localeCompare(b.hora))
+                  const proximo = deHoy.find((t) => t.estado === "Pendiente" || t.estado === "Confirmada")
+                  const ocupacion = hoyDia ? Math.min(100, Math.round(((deHoy.length * 45) / minutosJornada(hoyDia)) * 100)) : 0
+                  return (
+                    <li
+                      key={m.id}
+                      className={`card-grad group flex cursor-pointer flex-col p-4 transition-all hover:-translate-y-0.5 ${m.status === "inactivo" ? "opacity-60" : ""}`}
                       onClick={() => openDetail(m)}
-                    />
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="relative">
+                          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-violet-400 text-sm font-bold text-white shadow-[0_8px_18px_-8px_rgba(124,58,237,0.7)]">
+                            {initials(m)}
+                          </span>
+                          <span className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-white ${ausencia ? "bg-amber-400" : STATUS_META[m.status].dot}`} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                            {fullName(m) || m.email}
+                            <StatusBadge status={m.status} />
+                          </p>
+                          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${role.chip}`}>
+                              <RoleIcon className="size-3" />
+                              {ROLE_LABEL[m.role]}
+                            </span>
+                            {m.licenseNumber && <span>{m.licenseNumber}</span>}
+                          </p>
+                          {!!m.specialties?.length && <p className="mt-1 truncate text-[11px] text-muted-foreground">{m.specialties.join(" · ")}</p>}
+                        </div>
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          {m.phone && (
+                            <a href={`tel:${m.phone.replace(/[^\d+]/g, "")}`} className="grid size-8 place-items-center rounded-full border border-primary/12 bg-white text-muted-foreground hover:bg-primary/10 hover:text-primary" aria-label="Llamar" title={m.phone}>
+                              <Phone className="size-3.5" />
+                            </a>
+                          )}
+                          {m.email && (
+                            <a href={`mailto:${m.email}`} className="grid size-8 place-items-center rounded-full border border-primary/12 bg-white text-muted-foreground hover:bg-primary/10 hover:text-primary" aria-label="Enviar correo" title={m.email}>
+                              <Mail className="size-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
 
-                    <BotonAccion
-                      icon={Pencil}
-                      label="Editar"
-                      onClick={() => openEdit(m)}
-                    />
+                      <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
+                        <div className="rounded-xl bg-white/80 px-1 py-1.5">
+                          <p className="text-[10px] text-muted-foreground">Hoy</p>
+                          <p className="text-xs font-bold">{ausencia ? ausencia.tipo : hoyDia ? `${hoyDia.start}–${hoyDia.end}` : "No trabaja"}</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-1 py-1.5">
+                          <p className="text-[10px] text-muted-foreground">Turnos hoy</p>
+                          <p className="text-xs font-bold">{m.role === "odontologo" ? deHoy.length : "—"}</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-1 py-1.5">
+                          <p className="text-[10px] text-muted-foreground">Días / semana</p>
+                          <p className="text-xs font-bold">{m.schedule.filter((d) => d.active).length}</p>
+                        </div>
+                      </div>
 
-                    <BotonAccion
-                      icon={CalendarDays}
-                      label="Agenda"
-                      onClick={() => openDetail(m, "agenda")}
-                    />
+                      {m.role === "odontologo" && hoyDia && !ausencia && (
+                        <div className="mt-2.5">
+                          <div className="flex justify-between text-[10.5px]">
+                            <span className="text-muted-foreground">{proximo ? `Próximo: ${proximo.hora} ${proximo.paciente}` : deHoy.length ? "Sin más turnos hoy" : "Agenda libre hoy"}</span>
+                            <span className="font-semibold">{ocupacion}% ocupada</span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
+                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${ocupacion}%` }} />
+                          </div>
+                        </div>
+                      )}
 
-                    <BotonAccion
-                      icon={ShieldCheck}
-                      label="Permisos"
-                      onClick={() => openDetail(m, "permisos")}
-                    />
-
-                    {m.status === "inactivo" ? (
-                      <BotonAccion
-                        icon={UserCheck}
-                        label="Activar"
-                        onClick={() => activate(m)}
-                      />
-                    ) : (
-                      <BotonAccion
-                        icon={UserX}
-                        label="Desactivar"
-                        danger
-                        onClick={() => setConfirmDeactivate(m)}
-                      />
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                      <div className="min-h-3 flex-1" />
+                      <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-primary/10 pt-2.5" onClick={(e) => e.stopPropagation()}>
+                        <BotonAccion icon={Eye} label="Perfil" onClick={() => openDetail(m)} />
+                        <BotonAccion icon={Pencil} label="Editar" onClick={() => openEdit(m)} />
+                        <BotonAccion icon={CalendarDays} label="Horario" onClick={() => openDetail(m, "agenda")} />
+                        <BotonAccion icon={ShieldCheck} label="Permisos" onClick={() => openDetail(m, "permisos")} />
+                        {m.status === "inactivo" ? (
+                          <BotonAccion icon={UserCheck} label="Activar" onClick={() => activate(m)} />
+                        ) : (
+                          <BotonAccion icon={UserX} label="Desactivar" danger onClick={() => setConfirmDeactivate(m)} />
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 
@@ -1278,10 +1305,11 @@ export function EquipoProfesional() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl" role="status">
           {toast}
         </div>
       )}
+    </div>
     </div>
   )
 }

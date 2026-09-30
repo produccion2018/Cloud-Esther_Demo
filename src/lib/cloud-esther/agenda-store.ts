@@ -63,7 +63,7 @@ export const SUCURSALES = ["Clínica Centro", "Clínica Norte", "Clínica Sur"];
 export const ODONTOLOGOS = TEAM_MEMBERS.filter((m) => m.role === "odontologo").map((m) =>
   `${m.firstName} ${m.lastName}`.trim(),
 );
-export const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3"];
+export const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3", "Gabinete 4"];
 export const TRATAMIENTOS = [
   "Primera consulta",
   "Control",
@@ -117,6 +117,11 @@ function turnosEjemplo(hoy: string): Turno[] {
     [2, "11:30", "Mauro Pinto", "Control", 0, "Gabinete 1", "Pendiente"],
     [-32, "15:00", "Mauro Pinto", "Restauración", 0, "Gabinete 1", "Atendida"],
     [-50, "10:30", "Mauro Pinto", "Primera consulta", 0, "Gabinete 1", "Atendida"],
+    [0, "09:00", "Valeria Gómez", "Limpieza dental", 3, "Gabinete 4", "Confirmada"],
+    [0, "11:00", "Diego Ruiz", "Control", 3, "Gabinete 4", "Pendiente"],
+    [0, "14:30", "Ana Torres", "Restauración", 3, "Gabinete 4", "Pendiente"],
+    [1, "09:30", "Florencia Díaz", "Primera consulta", 3, "Gabinete 4", "Pendiente"],
+    [-3, "10:00", "Julián Ortega", "Limpieza dental", 3, "Gabinete 4", "Atendida"],
   ];
   return base.map(([d, hora, paciente, tratamiento, o, gabinete, estado], i) => ({
     id: i + 1,

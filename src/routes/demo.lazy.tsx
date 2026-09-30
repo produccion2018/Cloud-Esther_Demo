@@ -778,7 +778,7 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
             ))}
           </ul>
           <p className="border-t border-border bg-primary/[0.03] px-4 py-2.5 text-[10.5px] leading-snug text-muted-foreground">
-            Paciente de prueba: DNI <b>95222294</b>. Profesional: <b>laura.martinez@cloudesther.com</b>. El código se muestra con “Recibir el código”.
+            Paciente de prueba: DNI <b>95193944</b>. Profesional: <b>jesus.mendez@cloudesther.com</b>. El código se muestra con “Recibir el código”.
           </p>
         </div>
       )}

@@ -200,6 +200,24 @@ export const TEAM_MEMBERS: TeamMember[] = [
     assistantOf: ["6"],
     permissions: permsFor("asistente"),
   },
+  {
+    id: "8",
+    firstName: "Jesús",
+    lastName: "Méndez",
+    role: "odontologo",
+    specialties: ["Odontología general", "Periodoncia"],
+    licenseNumber: "M.P. 52190",
+    office: "Consultorio 4",
+    email: "jesus.mendez@cloudesther.com",
+    phone: "+54 11 4455-1207",
+    status: "activo",
+    schedule: fullWeek("09:00", "17:00", "13:00", "14:00"),
+    permissions: permsFor("odontologo"),
+    commissions: [
+      { service: "Consultas", percentage: 20 },
+      { service: "Tratamientos", percentage: 15 },
+    ],
+  },
 ]
 
 export function emptyMember(): TeamMember {

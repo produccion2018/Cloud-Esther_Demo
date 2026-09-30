@@ -392,7 +392,7 @@ function LoginEquipo({ onIngresar }: { onIngresar: (id: string) => void }) {
             </button>
           </form>
           <p className="mt-6 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
-            Para practicar: <b>laura.martinez@cloudesther.com</b> (odontóloga),{" "}
+            Para practicar: <b>jesus.mendez@cloudesther.com</b> (odontólogo),{" "}
             <b>sofia.rodriguez@cloudesther.com</b> (secretaria) o{" "}
             <b>carolina.lopez@cloudesther.com</b> (asistente), y tocá “Recibir el código”.
           </p>

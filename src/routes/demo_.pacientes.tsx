@@ -1121,11 +1121,12 @@ function CarpetaPaciente({
     : "";
 
   return (
-    <div className="mt-3 overflow-hidden rounded-2xl border border-primary/20 bg-card">
+    <div className="mt-3 overflow-clip rounded-2xl border border-primary/20 bg-card">
       <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)]">
-        {/* Navegación */}
+        {/* Navegación: queda fija al bajar, así la columna nunca se ve vacía */}
 
-        <nav className="border-b border-border bg-muted/20 p-3 md:border-b-0 md:border-r">
+        <nav className="border-b border-primary/10 bg-gradient-to-b from-primary/[0.06] via-primary/[0.03] to-primary/[0.06] p-3 md:border-b-0 md:border-r">
+          <div className="md:sticky md:top-4">
           <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
             Carpeta del paciente
           </p>
@@ -1150,6 +1151,7 @@ function CarpetaPaciente({
                 </button>
               );
             })}
+          </div>
           </div>
         </nav>
 
@@ -1638,7 +1640,7 @@ function PacientesInner() {
 
   return (
     <AppShell>
-      <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
+      <div className="relative min-h-full overflow-clip bg-[#faf9ff]">
         <FondoPacientes />
 
         <div
@@ -1864,7 +1866,7 @@ function PacientesInner() {
                   return (
                     <li
                       key={p.id}
-                      className={`overflow-hidden rounded-[24px] border bg-white/90 shadow-[0_12px_32px_-25px_rgba(76,29,149,0.42)] backdrop-blur-sm transition-all duration-200 ${
+                      className={`overflow-clip rounded-[24px] border bg-white/90 shadow-[0_12px_32px_-25px_rgba(76,29,149,0.42)] backdrop-blur-sm transition-all duration-200 ${
                         abierto
                           ? "border-primary/40 shadow-[0_16px_38px_-24px_rgba(124,58,237,0.5)]"
                           : "border-primary/10 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_38px_-24px_rgba(124,58,237,0.48)]"

@@ -439,7 +439,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
                 className={INPUT}
-                placeholder="Ej: 95222294"
+                placeholder="Ej: 95193944"
               />
             </Field>
             <Field label="Código de acceso">
@@ -476,7 +476,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
             un código de tu clínica.
           </p>
           <p className="mt-8 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
-            Para practicar: DNI <b>95222294</b> (Mauro Pinto) y el código que muestra “Recibir el
+            Para practicar: DNI <b>95193944</b> (Mauro Pinto) y el código que muestra “Recibir el
             código”. Los accesos se gestionan en Cloud Esther → Portal del paciente.
           </p>
           <Link

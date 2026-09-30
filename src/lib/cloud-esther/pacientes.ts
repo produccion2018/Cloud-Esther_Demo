@@ -31,7 +31,7 @@ export const PACIENTE_EJEMPLO: Paciente = {
   id: 1,
   nombre: "Mauro",
   apellido: "Pinto",
-  documento: "95222294",
+  documento: "95193944",
   fechaNacimiento: "1988-04-12",
   genero: "Masculino",
   email: "mauro.pinto@example.com",

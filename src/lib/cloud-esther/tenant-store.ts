@@ -24,7 +24,7 @@ export function claveTenant(base: string): string {
 
 /* Versión de los datos guardados: subirla cuando cambian los datos de ejemplo o su forma,
    así cada navegador arranca de nuevo con los datos actualizados. */
-const VERSION_DATOS = "v1";
+const VERSION_DATOS = "v2";
 
 type OpcionesStore = {
   /** Si se indica, los datos de cada empresa se guardan en el navegador (localStorage) con

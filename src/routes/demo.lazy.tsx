@@ -15,7 +15,7 @@ import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
-  Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus,
+  Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
@@ -695,24 +695,93 @@ function TopBanner({
             <MessageSquare className="size-4 text-muted-foreground" />
           </button>
           <button
-            onClick={() => onToast("La configuración estará disponible próximamente")}
+            onClick={() => {
+              window.location.href = "/demo/configuracion";
+            }}
             aria-label="Configuración"
             className="grid size-8 place-items-center rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-background"
           >
             <Settings className="size-4 text-muted-foreground" />
           </button>
-          <div className="flex max-w-[16rem] items-center gap-2 rounded-full bg-background/95 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm">
-            <span className="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{inicialesUsuario}</span>
-            <span className="hidden min-w-0 leading-tight sm:block">
-              <span className="block truncate text-xs font-semibold text-foreground">{nombre}</span>
-              <span className="block truncate text-[10px] text-muted-foreground">
-                {clinica ? `Dueño/a · ${clinica}` : "Dueño/a"}
-              </span>
-            </span>
-            <ChevronDown className="size-3.5 text-muted-foreground" />
-          </div>
+          <MenuUsuario nombre={nombre} clinica={clinica} iniciales={inicialesUsuario} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* Menú del usuario: accesos claros a los portales para probarlos en el demo. */
+function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?: string | undefined; iniciales: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
+    };
+    document.addEventListener("mousedown", cerrar);
+    return () => document.removeEventListener("mousedown", cerrar);
+  }, [abierto]);
+
+  const ITEMS: { href: string; titulo: string; detalle: string; nueva?: boolean; icon: typeof Users }[] = [
+    { href: "/portal", titulo: "Portal del paciente", detalle: "Así lo ven tus pacientes (DNI + código)", nueva: true, icon: UserRound },
+    { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope },
+    { href: "/demo/portal-paciente", titulo: "Monitoreo del portal", detalle: "Accesos, actividad y documentación de pacientes", icon: ShieldCheck },
+    { href: "/demo/equipo-profesional", titulo: "Equipo y accesos del equipo", detalle: "Integrantes, fichajes y portal del equipo", icon: Users },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-haspopup="menu"
+        className="flex max-w-[16rem] items-center gap-2 rounded-full bg-background/95 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur-sm transition-colors hover:bg-background"
+      >
+        <span className="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{iniciales}</span>
+        <span className="hidden min-w-0 text-left leading-tight sm:block">
+          <span className="block truncate text-xs font-semibold text-foreground">{nombre}</span>
+          <span className="block truncate text-[10px] text-muted-foreground">{clinica ? `Dueño/a · ${clinica}` : "Dueño/a"}</span>
+        </span>
+        <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${abierto ? "rotate-180" : ""}`} />
+      </button>
+      {abierto && (
+        <div role="menu" className="absolute right-0 top-11 z-40 w-80 overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-2xl">
+          <div className="bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 px-4 py-3 text-white">
+            <p className="text-sm font-semibold">{nombre}</p>
+            <p className="text-[11px] text-white/80">{clinica ? `Dueño/a · ${clinica}` : "Dueño/a · Demo"}</p>
+          </div>
+          <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Portales para probar</p>
+          <ul className="px-2 pb-2">
+            {ITEMS.map((it) => (
+              <li key={it.href}>
+                <a
+                  role="menuitem"
+                  href={it.href}
+                  {...(it.nueva ? { target: "_blank", rel: "noreferrer" } : {})}
+                  onClick={() => setAbierto(false)}
+                  className="flex items-start gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-primary/[0.06]"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <it.icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1 text-sm font-medium">
+                      {it.titulo}
+                      {it.nueva && <ExternalLink className="size-3 text-muted-foreground" />}
+                    </span>
+                    <span className="block text-[11px] leading-snug text-muted-foreground">{it.detalle}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="border-t border-border bg-primary/[0.03] px-4 py-2.5 text-[10.5px] leading-snug text-muted-foreground">
+            Paciente de prueba: DNI <b>95222294</b>. Profesional: <b>laura.martinez@cloudesther.com</b>. El código se muestra con “Recibir el código”.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -3658,41 +3658,221 @@ function VisorEstudio({
 }) {
   const [zoom, setZoom] = useState(1);
   const [rotacion, setRotacion] = useState(0);
+  const [espejo, setEspejo] = useState(false);
   const [brillo, setBrillo] = useState(100);
   const [contraste, setContraste] = useState(100);
   const [invertido, setInvertido] = useState(false);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  const [desplazamiento, setDesplazamiento] = useState({ x: 0, y: 0 });
+  const [modoRecorte, setModoRecorte] = useState(false);
+  // Recorte en % del área de la imagen (arriba, derecha, abajo, izquierda).
+  const [recorte, setRecorte] = useState<{ t: number; r: number; b: number; l: number } | null>(null);
+  const [seleccion, setSeleccion] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const arrastre = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
+  const marcoRef = useRef<HTMLDivElement>(null);
 
-  const restablecer = () => { setZoom(1); setRotacion(0); setBrillo(100); setContraste(100); setInvertido(false); };
-  const estiloImagen = {
-    transform: `rotate(${rotacion}deg) scale(${zoom})`,
-    filter: `brightness(${brillo}%) contrast(${contraste}%) ${invertido ? "invert(1)" : ""}`,
-    transition: "transform 180ms ease, filter 180ms ease",
+  const limitarZoom = (z: number) => Math.min(5, Math.max(0.5, Math.round(z * 100) / 100));
+  const restablecer = () => {
+    setZoom(1);
+    setRotacion(0);
+    setEspejo(false);
+    setBrillo(100);
+    setContraste(100);
+    setInvertido(false);
+    setDesplazamiento({ x: 0, y: 0 });
+    setRecorte(null);
+    setModoRecorte(false);
   };
-  const contenido = estudio.url && esImagen(estudio.archivoNombre) ? (
-    <img src={estudio.url} alt={estudio.tipo} className="mx-auto max-h-[58vh] max-w-full object-contain" style={estiloImagen} />
-  ) : <VistaEstudio estudio={estudio} alto="h-64" />;
+
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "+" || e.key === "=") setZoom((z) => limitarZoom(z + 0.25));
+      if (e.key === "-") setZoom((z) => limitarZoom(z - 0.25));
+      if (e.key.toLowerCase() === "r") setRotacion((r) => (r + 90) % 360);
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [onClose]);
+
+  const porcentaje = (e: { clientX: number; clientY: number }) => {
+    const r = marcoRef.current?.getBoundingClientRect();
+    if (!r) return { x: 0, y: 0 };
+    return {
+      x: Math.min(100, Math.max(0, ((e.clientX - r.left) / r.width) * 100)),
+      y: Math.min(100, Math.max(0, ((e.clientY - r.top) / r.height) * 100)),
+    };
+  };
+
+  const estiloImagen = {
+    transform: `translate(${desplazamiento.x}px, ${desplazamiento.y}px) rotate(${rotacion}deg) scale(${espejo ? -zoom : zoom}, ${zoom})`,
+    filter: `brightness(${brillo}%) contrast(${contraste}%) ${invertido ? "invert(1)" : ""}`,
+    transition: arrastre.current ? "none" : "transform 180ms ease, filter 180ms ease",
+    clipPath: recorte ? `inset(${recorte.t}% ${recorte.r}% ${recorte.b}% ${recorte.l}%)` : undefined,
+  };
+  const esFoto = !!estudio.url && esImagen(estudio.archivoNombre);
+
+  const herramienta = (activo: boolean) =>
+    `flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors ${
+      activo ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+    }`;
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/75 p-3 backdrop-blur-sm" onMouseDown={onClose}>
-      <div className={`mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-2xl ${pantallaCompleta ? "max-w-none rounded-none" : ""}`} onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-3 py-2 backdrop-blur">
-          <div className="min-w-0"><p className="truncate text-sm font-semibold">{estudio.tipo}</p><p className="text-[10px] text-muted-foreground">{[formatearFecha(estudio.fecha), estudio.pieza || estudio.zona, estudio.profesional || estudio.solicitante].filter(Boolean).join(" · ")}</p></div>
+      <div
+        className={`mx-auto flex h-full flex-col overflow-hidden border border-white/10 bg-card shadow-2xl ${pantallaCompleta ? "max-w-none rounded-none" : "max-w-6xl rounded-2xl"}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-card via-card to-primary/[0.05] px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{estudio.tipo}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {[formatearFecha(estudio.fecha), estudio.pieza || estudio.zona, estudio.profesional || estudio.solicitante].filter(Boolean).join(" · ")}
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <ControlesZoom zoom={zoom} setZoom={setZoom} />
-            <BotonMini icon={RotateCw} label="Rotar" onClick={() => setRotacion((r) => (r + 90) % 360)} compacto />
-            <BotonMini icon={SunMedium} label="Brillo" onClick={() => setBrillo((v) => v >= 160 ? 70 : v + 15)} compacto />
-            <BotonMini icon={Contrast} label="Contraste" onClick={() => setContraste((v) => v >= 160 ? 70 : v + 15)} compacto />
-            <BotonMini icon={ScanLine} label={invertido ? "Normal" : "Invertir"} onClick={() => setInvertido((v) => !v)} compacto />
-            <BotonMini icon={Maximize2} label={pantallaCompleta ? "Salir" : "Pantalla completa"} onClick={() => setPantallaCompleta((v) => !v)} compacto />
-            <BotonMini icon={RefreshCcw} label="Restablecer" onClick={restablecer} compacto />
-            <button type="button" onClick={onClose} aria-label="Cerrar visor" className="grid size-7 place-items-center rounded-full border border-border bg-card hover:bg-muted"><X className="size-3.5" /></button>
+            <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5">
+              <button type="button" onClick={() => setZoom((z) => limitarZoom(z - 0.25))} aria-label="Alejar" className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary">
+                <ZoomOut className="size-3.5" />
+              </button>
+              <span className="w-10 text-center text-[11px] font-semibold tabular-nums">{Math.round(zoom * 100)}%</span>
+              <button type="button" onClick={() => setZoom((z) => limitarZoom(z + 0.25))} aria-label="Acercar" className="grid size-6 place-items-center rounded-full hover:bg-primary/10 hover:text-primary">
+                <ZoomIn className="size-3.5" />
+              </button>
+            </div>
+            <button type="button" className={herramienta(false)} onClick={() => setRotacion((r) => (r + 90) % 360)}>
+              <RotateCw className="size-3.5" /> Rotar
+            </button>
+            <button type="button" className={herramienta(espejo)} onClick={() => setEspejo((v) => !v)}>
+              <GitCompare className="size-3.5" /> Espejar
+            </button>
+            <button type="button" className={herramienta(invertido)} onClick={() => setInvertido((v) => !v)}>
+              <ScanLine className="size-3.5" /> Invertir
+            </button>
+            <button
+              type="button"
+              className={herramienta(modoRecorte || !!recorte)}
+              onClick={() => {
+                if (recorte) {
+                  setRecorte(null);
+                  return;
+                }
+                setModoRecorte((v) => !v);
+                setSeleccion(null);
+              }}
+            >
+              <Square className="size-3.5" /> {recorte ? "Quitar recorte" : modoRecorte ? "Arrastrá sobre la imagen" : "Recortar"}
+            </button>
+            <button type="button" className={herramienta(pantallaCompleta)} onClick={() => setPantallaCompleta((v) => !v)}>
+              <Maximize2 className="size-3.5" /> {pantallaCompleta ? "Salir" : "Pantalla completa"}
+            </button>
+            <button type="button" className={herramienta(false)} onClick={restablecer}>
+              <RefreshCcw className="size-3.5" /> Restablecer
+            </button>
+            <button type="button" onClick={onClose} aria-label="Cerrar visor" className="grid size-7 place-items-center rounded-full border border-border bg-card hover:bg-muted">
+              <X className="size-3.5" />
+            </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto bg-black/5 p-3"><div className="grid min-h-full place-items-center rounded-xl border border-border bg-black/10 p-2">{contenido}</div></div>
-        <div className="grid grid-cols-1 gap-2 border-t border-border bg-card p-3 md:grid-cols-[1fr_auto]">
-          <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><Badge tono={TONO_INFORME[estudio.estadoInforme]}>{estudio.estadoInforme}</Badge>{(estudio.pieza || estudio.zona) && <Badge tono="primary">Pieza / zona {estudio.pieza || estudio.zona}</Badge>}</div><p className="whitespace-pre-line text-xs">{estudio.diagnostico}</p>{estudio.observaciones && <p className="text-[11px] text-muted-foreground">{estudio.observaciones}</p>}</div>
-          {anotaciones.length > 0 && <div className="rounded-lg border border-border bg-background p-2 text-xs"><p className="font-semibold">Mediciones</p>{anotaciones.map((a) => <div key={a.id} className="mt-1 flex justify-between gap-2"><span>{a.tipoMedicion}</span><strong className="text-primary">{a.valor}</strong></div>)}</div>}
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-border bg-card px-3 py-1.5 text-[11px]">
+          <label className="flex items-center gap-2">
+            <SunMedium className="size-3.5 text-primary" /> Brillo
+            <input type="range" min={40} max={180} value={brillo} onChange={(e) => setBrillo(Number(e.target.value))} className="w-28 accent-[var(--color-primary)]" />
+            <span className="w-9 tabular-nums text-muted-foreground">{brillo}%</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <Contrast className="size-3.5 text-primary" /> Contraste
+            <input type="range" min={40} max={200} value={contraste} onChange={(e) => setContraste(Number(e.target.value))} className="w-28 accent-[var(--color-primary)]" />
+            <span className="w-9 tabular-nums text-muted-foreground">{contraste}%</span>
+          </label>
+          <span className="ml-auto hidden text-muted-foreground md:inline">Rueda del mouse: zoom · Arrastrar: mover · Teclas + − R</span>
+        </div>
+
+        <div
+          className={`relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_center,#2a2140_0%,#0f0b19_100%)] ${modoRecorte ? "cursor-crosshair" : zoom > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
+          onWheel={(e) => setZoom((z) => limitarZoom(z + (e.deltaY < 0 ? 0.15 : -0.15)))}
+          onMouseDown={(e) => {
+            if (modoRecorte) {
+              const p = porcentaje(e);
+              setSeleccion({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+              return;
+            }
+            arrastre.current = { x: e.clientX, y: e.clientY, dx: desplazamiento.x, dy: desplazamiento.y };
+          }}
+          onMouseMove={(e) => {
+            if (modoRecorte && seleccion && e.buttons === 1) {
+              const p = porcentaje(e);
+              setSeleccion((s) => (s ? { ...s, x1: p.x, y1: p.y } : s));
+              return;
+            }
+            const a = arrastre.current;
+            if (a && e.buttons === 1) setDesplazamiento({ x: a.dx + e.clientX - a.x, y: a.dy + e.clientY - a.y });
+          }}
+          onMouseUp={() => {
+            arrastre.current = null;
+            if (modoRecorte && seleccion) {
+              const l = Math.min(seleccion.x0, seleccion.x1);
+              const r = Math.max(seleccion.x0, seleccion.x1);
+              const t = Math.min(seleccion.y0, seleccion.y1);
+              const b = Math.max(seleccion.y0, seleccion.y1);
+              if (r - l > 3 && b - t > 3) setRecorte({ t, r: 100 - r, b: 100 - b, l });
+              setSeleccion(null);
+              setModoRecorte(false);
+            }
+          }}
+          onMouseLeave={() => {
+            arrastre.current = null;
+          }}
+        >
+          <div className="absolute inset-0 grid place-items-center p-6">
+            <div ref={marcoRef} className="relative aspect-[4/3] w-[min(92%,calc((100vh-260px)*4/3))] select-none" style={estiloImagen}>
+              {esFoto ? (
+                <img src={estudio.url} alt={estudio.tipo} draggable={false} className="size-full rounded-xl object-contain" />
+              ) : (
+                <IlustracionEstudio tipo={estudio.tipo} className="size-full rounded-xl" />
+              )}
+            </div>
+            {seleccion && (
+              <div
+                className="pointer-events-none absolute border-2 border-dashed border-white bg-primary/20"
+                style={{
+                  left: `calc(${marcoRef.current?.offsetLeft ?? 0}px + ${Math.min(seleccion.x0, seleccion.x1)}% * ${(marcoRef.current?.offsetWidth ?? 0) / 100})`,
+                  top: `calc(${marcoRef.current?.offsetTop ?? 0}px + ${Math.min(seleccion.y0, seleccion.y1)}% * ${(marcoRef.current?.offsetHeight ?? 0) / 100})`,
+                  width: `${(Math.abs(seleccion.x1 - seleccion.x0) * (marcoRef.current?.offsetWidth ?? 0)) / 100}px`,
+                  height: `${(Math.abs(seleccion.y1 - seleccion.y0) * (marcoRef.current?.offsetHeight ?? 0)) / 100}px`,
+                }}
+              />
+            )}
+          </div>
+          {!esFoto && <span className="absolute bottom-3 left-3 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white">Imagen de ejemplo</span>}
+          {modoRecorte && (
+            <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white shadow">
+              Arrastrá para marcar el área a recortar
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 border-t border-border bg-gradient-to-r from-card via-card to-primary/[0.04] p-3 md:grid-cols-[1fr_auto]">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tono={TONO_INFORME[estudio.estadoInforme]}>{estudio.estadoInforme}</Badge>
+              {(estudio.pieza || estudio.zona) && <Badge tono="primary">Pieza / zona {estudio.pieza || estudio.zona}</Badge>}
+            </div>
+            <p className="whitespace-pre-line text-xs">{estudio.diagnostico}</p>
+            {estudio.observaciones && <p className="text-[11px] text-muted-foreground">{estudio.observaciones}</p>}
+          </div>
+          {anotaciones.length > 0 && (
+            <div className="rounded-lg border border-primary/15 bg-primary/[0.04] p-2 text-xs">
+              <p className="font-semibold">Mediciones</p>
+              {anotaciones.map((a) => (
+                <div key={a.id} className="mt-1 flex justify-between gap-2">
+                  <span>{a.tipoMedicion}</span>
+                  <strong className="text-primary">{a.valor}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -5617,25 +5797,181 @@ function TimelinePaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (
   return <div className="card-grad p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Timeline clínico</p><p className="text-xs text-muted-foreground">Historial central del paciente, ordenado cronológicamente.</p></div><Badge tono="primary">{eventos.length} eventos</Badge></div>{eventos.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p> : <div className="mt-3 space-y-2">{(verTodos ? eventos : eventos.slice(0, TIMELINE_VISIBLES)).map((e) => <button key={e.id} type="button" onClick={() => onSeccion(e.seccion)} className="group flex w-full items-start gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/[0.025]"><span className={`${CIRCULO_ICONO} mt-0.5 size-8`}><e.icon className="size-3.5" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">{e.titulo}</span><Badge tono={e.tono}>{formatearFecha(e.fecha)}{e.hora ? ` · ${e.hora}` : ""}</Badge></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{e.detalle}</span></span><ChevronDown className="mt-1 size-3 rotate-[-90deg] text-muted-foreground transition group-hover:text-primary" /></button>)}{eventos.length > TIMELINE_VISIBLES && <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="inline-flex items-center gap-1 px-1 pt-1 text-xs font-semibold text-primary hover:underline">{verTodos ? "Ver menos" : `Ver todos (${eventos.length})`}<ChevronDown className={`size-3 transition-transform ${verTodos ? "rotate-180" : ""}`} /></button>}</div>}</div>;
 }
 
+/* Lleva a una sección de la ficha y baja hasta ella (antes cambiaba abajo y no se notaba). */
+function irASeccion(onSeccion: (s: SeccionRegistros) => void, seccion: SeccionRegistros) {
+  onSeccion(seccion);
+  window.setTimeout(() => document.getElementById("seccion-ficha")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+}
+
+type ItemDetalle = { titulo: string; detalle: string; tono?: Tono; etiqueta?: string };
+
+function DetalleModal({
+  titulo,
+  items,
+  seccion,
+  etiquetaSeccion,
+  onSeccion,
+  onClose,
+}: {
+  titulo: string;
+  items: ItemDetalle[];
+  seccion: SeccionRegistros;
+  etiquetaSeccion: string;
+  onSeccion: (s: SeccionRegistros) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={titulo} onClose={onClose}>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No hay registros para mostrar.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((it, i) => (
+            <li key={i} className="rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.05] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold">{it.titulo}</p>
+                {it.etiqueta && <Badge tono={it.tono ?? "primary"}>{it.etiqueta}</Badge>}
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{it.detalle}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" className={BTN_SECUNDARIO} onClick={onClose}>
+          Cerrar
+        </button>
+        <button
+          type="button"
+          className={BTN_PRIMARIO}
+          onClick={() => {
+            onClose();
+            irASeccion(onSeccion, seccion);
+          }}
+        >
+          Ir a {etiquetaSeccion}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+const ETIQUETA_SECCION: Partial<Record<SeccionRegistros, string>> = {
+  tratamientos: "Tratamientos",
+  presupuestos: "Presupuestos",
+  turnos: "Turnos",
+  estudios: "Estudios",
+  cuenta: "Cuenta corriente",
+  historia: "Historia clínica",
+};
+
 function AlertasPaciente({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
+  const [abierta, setAbierta] = useState<string | null>(null);
   const hoy = hoyISO();
   const cargos = datos.cuenta.filter((m) => m.tipo === "Cargo").reduce((a, m) => a + m.monto, 0);
   const pagos = datos.cuenta.filter((m) => m.tipo === "Pago").reduce((a, m) => a + m.monto, 0);
   const creditos = datos.cuenta.filter((m) => m.tipo === "Nota de crédito").reduce((a, m) => a + m.monto, 0);
   const saldo = cargos - pagos - creditos;
-  const alertas: { id: string; texto: string; detalle: string; seccion: SeccionRegistros; tono: Tono }[] = [];
-  const pendientes = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado").length;
-  if (pendientes) alertas.push({ id: "trat", texto: "Tratamiento pendiente", detalle: `${pendientes} tratamiento(s) requieren atención`, seccion: "tratamientos", tono: "ambar" });
-  const presupuestosPendientes = datos.presupuestos.filter((p) => p.estado === "Borrador" || p.estado === "Enviado").length;
-  if (presupuestosPendientes) alertas.push({ id: "pres", texto: "Presupuesto pendiente", detalle: `${presupuestosPendientes} presupuesto(s) sin aprobación final`, seccion: "presupuestos", tono: "ambar" });
-  const controlesAtrasados = datos.turnos.filter((t) => t.fecha < hoy && t.estado === "Pendiente").length + datos.notasClinicas.filter((n) => n.proximoControl && n.proximoControl < hoy).length;
-  if (controlesAtrasados) alertas.push({ id: "control", texto: "Control atrasado", detalle: `${controlesAtrasados} seguimiento(s) requieren revisión`, seccion: "turnos", tono: "rojo" });
-  const estudiosPendientes = datos.estudios.filter((e) => e.estadoInforme === "Sin informar").length;
-  if (estudiosPendientes) alertas.push({ id: "est", texto: "Estudio pendiente", detalle: `${estudiosPendientes} estudio(s) sin informe`, seccion: "estudios", tono: "ambar" });
-  if (saldo > 0) alertas.push({ id: "pago", texto: "Pago pendiente", detalle: `Saldo actual ${formatearMonto(saldo)}`, seccion: "cuenta", tono: "rojo" });
+  type Alerta = { id: string; texto: string; detalle: string; seccion: SeccionRegistros; tono: Tono; icon: LucideIcon; items: ItemDetalle[] };
+  const alertas: Alerta[] = [];
+
+  const tratPend = datos.tratamientos.filter((t) => t.estado === "Pendiente" || t.estado === "Planificado");
+  if (tratPend.length)
+    alertas.push({
+      id: "trat", texto: "Tratamiento pendiente", detalle: `${tratPend.length} ${tratPend.length === 1 ? "tratamiento requiere" : "tratamientos requieren"} atención`, seccion: "tratamientos", tono: "ambar", icon: Stethoscope,
+      items: tratPend.map((t) => ({ titulo: `${t.nombre}${t.pieza ? ` · pieza ${t.pieza}` : ""}`, detalle: `${t.profesional || "Sin profesional"}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}${t.diagnostico ? ` · ${t.diagnostico}` : ""}`, etiqueta: t.estado, tono: "ambar" })),
+    });
+  const presPend = datos.presupuestos.filter((p) => p.estado === "Borrador" || p.estado === "Enviado");
+  if (presPend.length)
+    alertas.push({
+      id: "pres", texto: "Presupuesto pendiente", detalle: `${presPend.length} sin aprobación final`, seccion: "presupuestos", tono: "ambar", icon: ReceiptText,
+      items: presPend.map((p) => ({ titulo: `${p.numero} · ${formatearMonto(p.lineas.reduce((a, l) => a + l.cantidad * l.precio, 0))}`, detalle: `${formatearFecha(p.fecha)} · ${p.lineas.map((l) => l.descripcion).join(", ")}`, etiqueta: p.estado, tono: "ambar" })),
+    });
+  const turnosAtrasados = datos.turnos.filter((t) => t.fecha < hoy && t.estado === "Pendiente");
+  const controlesVencidos = datos.notasClinicas.filter((n) => n.proximoControl && n.proximoControl < hoy);
+  if (turnosAtrasados.length + controlesVencidos.length)
+    alertas.push({
+      id: "control", texto: "Control atrasado", detalle: `${turnosAtrasados.length + controlesVencidos.length} seguimiento(s) para revisar`, seccion: "turnos", tono: "rojo", icon: Clock3,
+      items: [
+        ...turnosAtrasados.map((t) => ({ titulo: `Turno del ${formatearFecha(t.fecha)} ${t.hora}`, detalle: `${t.motivo} · quedó sin confirmar ni atender`, etiqueta: "Atrasado", tono: "rojo" as Tono })),
+        ...controlesVencidos.map((n) => ({ titulo: `Control indicado para el ${formatearFecha(n.proximoControl)}`, detalle: `${n.motivoConsulta}${n.piezas ? ` · piezas ${n.piezas}` : ""} · ${n.profesional}`, etiqueta: "Vencido", tono: "rojo" as Tono })),
+      ],
+    });
+  const estPend = datos.estudios.filter((e) => e.estadoInforme === "Sin informar");
+  if (estPend.length)
+    alertas.push({
+      id: "est", texto: "Estudio sin informe", detalle: `${estPend.length} ${estPend.length === 1 ? "estudio espera" : "estudios esperan"} informe`, seccion: "estudios", tono: "ambar", icon: Images,
+      items: estPend.map((e) => ({ titulo: `${e.tipo}${e.pieza ? ` · pieza ${e.pieza}` : ""}`, detalle: `${formatearFecha(e.fecha)} · solicitó ${e.solicitante || e.profesional || "—"}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`, etiqueta: "Sin informar", tono: "ambar" })),
+    });
+  if (saldo > 0)
+    alertas.push({
+      id: "pago", texto: "Pago pendiente", detalle: `Saldo ${formatearMonto(saldo)}`, seccion: "cuenta", tono: "rojo", icon: Wallet,
+      items: [...datos.cuenta].sort((a, b) => b.fecha.localeCompare(a.fecha)).map((m) => ({ titulo: `${m.concepto} · ${formatearMonto(m.monto)}`, detalle: `${formatearFecha(m.fecha)}${m.medio ? ` · ${m.medio}` : ""}`, etiqueta: m.tipo, tono: (m.tipo === "Cargo" ? "gris" : "verde") as Tono })),
+    });
   const haySeguimientoReciente = [...datos.notasClinicas.map((n) => n.fecha), ...datos.historia.map((h) => h.fecha), ...datos.turnos.map((t) => t.fecha)].some((f) => f >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10));
-  if (!haySeguimientoReciente) alertas.push({ id: "seg", texto: "Paciente sin seguimiento reciente", detalle: "No hay actividad clínica en los últimos 60 días", seccion: "historia", tono: "rojo" });
-  return <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-card to-card p-3 shadow-sm"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-full bg-amber-100 text-amber-700"><Bell className="size-4" /></span><div><p className="text-sm font-semibold">Seguimiento y alertas</p><p className="text-xs text-muted-foreground">Situaciones accionables dentro de la ficha.</p></div></div>{alertas.length === 0 ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"><span className="font-semibold">Sin alertas activas.</span> El seguimiento registrado está al día.</div> : <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">{alertas.map((a) => <button key={a.id} type="button" onClick={() => onSeccion(a.seccion)} className="rounded-xl border border-border bg-background p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{a.texto}</span><Badge tono={a.tono}>Ver</Badge></div><p className="mt-0.5 text-[10px] text-muted-foreground">{a.detalle}</p></button>)}</div>}</div>;
+  if (!haySeguimientoReciente)
+    alertas.push({ id: "seg", texto: "Sin seguimiento reciente", detalle: "Sin actividad clínica en 60 días", seccion: "historia", tono: "rojo", icon: Activity, items: [{ titulo: "No hay consultas, notas ni turnos en los últimos 60 días", detalle: "Conviene contactar al paciente para un control." }] });
+
+  const ICONO_TONO: Record<Tono, string> = {
+    primary: "bg-primary/10 text-primary",
+    verde: "bg-emerald-100 text-emerald-600",
+    ambar: "bg-amber-100 text-amber-600",
+    rojo: "bg-destructive/10 text-destructive",
+    gris: "bg-muted text-muted-foreground",
+  };
+  const actual = alertas.find((x) => x.id === abierta);
+
+  return (
+    <div className="card-grad h-full p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className={`${CIRCULO_ICONO} size-9`}>
+            <Bell className="size-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Seguimiento y alertas</p>
+            <p className="text-xs text-muted-foreground">Lo que requiere atención en esta ficha.</p>
+          </div>
+        </div>
+        {alertas.length > 0 && <Badge tono={alertas.some((x) => x.tono === "rojo") ? "rojo" : "ambar"}>{alertas.length}</Badge>}
+      </div>
+      {alertas.length === 0 ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-3 py-2.5 text-xs text-emerald-700">
+          <span className="font-semibold">Sin alertas activas.</span> El seguimiento está al día.
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+          {alertas.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => setAbierta(x.id)}
+              className="group flex items-center gap-2.5 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${ICONO_TONO[x.tono]}`}>
+                <x.icon className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold leading-snug">{x.texto}</span>
+                <span className="block text-[11px] leading-snug text-muted-foreground">{x.detalle}</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">Ver</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {actual && (
+        <DetalleModal
+          titulo={actual.texto}
+          items={actual.items}
+          seccion={actual.seccion}
+          etiquetaSeccion={ETIQUETA_SECCION[actual.seccion] ?? "la sección"}
+          onSeccion={onSeccion}
+          onClose={() => setAbierta(null)}
+        />
+      )}
+    </div>
+  );
 }
 
 function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: SeccionRegistros) => void }) {
@@ -5644,13 +5980,105 @@ function PiezaContexto({ datos, onSeccion }: { datos: Registros; onSeccion: (s: 
     ...datos.estudios.map((e) => e.pieza || e.zona).filter(Boolean) as string[], ...datos.fotografias.map((f) => f.pieza), ...datos.notasClinicas.map((n) => n.piezas),
   ].flatMap((p) => p.split(/[,;\s]+/).filter((x) => /^\d{1,2}$/.test(x))))).sort();
   const [pieza, setPieza] = useState(piezas[0] ?? "");
-  const diagnosticos = datos.diagnosticos.filter((d) => d.pieza.split(/[,;\s]+/).includes(pieza));
-  const tratamientos = datos.tratamientos.filter((t) => t.pieza.split(/[,;\s]+/).includes(pieza));
-  const notas = datos.notasClinicas.filter((n) => n.piezas.split(/[,;\s]+/).includes(pieza));
-  const estudios = datos.estudios.filter((e) => (e.pieza || e.zona).split(/[,;\s]+/).includes(pieza));
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const incluye = (texto: string) => texto.split(/[,;\s]+/).includes(pieza);
+  const diagnosticos = datos.diagnosticos.filter((d) => incluye(d.pieza));
+  const tratamientos = datos.tratamientos.filter((t) => incluye(t.pieza));
+  const notas = datos.notasClinicas.filter((n) => incluye(n.piezas));
+  const estudios = datos.estudios.filter((e) => incluye(e.pieza || e.zona));
   const fotos = datos.fotografias.filter((f) => f.pieza === pieza);
   if (piezas.length === 0) return null;
-  return <div className="card-grad p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Contexto clínico por pieza</p><p className="text-xs text-muted-foreground">Diagnósticos, tratamientos, notas e imágenes de cada pieza.</p></div><div className="flex flex-wrap gap-1.5">{piezas.map((p) => <button key={p} type="button" onClick={() => setPieza(p)} className={`grid size-8 place-items-center rounded-full text-xs font-semibold transition ${pieza === p ? "bg-primary text-primary-foreground shadow" : "border border-border bg-background hover:border-primary/40 hover:text-primary"}`}>{p}</button>)}</div></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{diagnosticos.length}</p><p className="text-[10px] text-muted-foreground">Diagnósticos</p></button><button type="button" onClick={() => onSeccion("tratamientos")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{tratamientos.length}</p><p className="text-[10px] text-muted-foreground">Tratamientos</p></button><button type="button" onClick={() => onSeccion("historia")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{notas.length}</p><p className="text-[10px] text-muted-foreground">Notas clínicas</p></button><button type="button" onClick={() => onSeccion("estudios")} className="rounded-xl border border-border bg-background p-2 text-left"><p className="text-lg font-bold">{estudios.length + fotos.length}</p><p className="text-[10px] text-muted-foreground">Imágenes / estudios</p></button></div></div>;
+
+  const grupos: { id: string; label: string; valor: number; icon: LucideIcon; seccion: SeccionRegistros; items: ItemDetalle[] }[] = [
+    { id: "diag", label: "Diagnósticos", valor: diagnosticos.length, icon: Activity, seccion: "estudios", items: diagnosticos.map((d) => ({ titulo: d.titulo, detalle: `${formatearFecha(d.fecha)}${d.descripcion ? ` · ${d.descripcion}` : ""}`, etiqueta: d.estado, tono: TONO_DIAGNOSTICO[d.estado] })) },
+    { id: "trat", label: "Tratamientos", valor: tratamientos.length, icon: Stethoscope, seccion: "tratamientos", items: tratamientos.map((t) => ({ titulo: t.nombre, detalle: `${t.profesional}${t.inicio ? ` · inicio ${formatearFecha(t.inicio)}` : ""}`, etiqueta: t.estado, tono: TONO_TRATAMIENTO[t.estado] })) },
+    { id: "notas", label: "Notas clínicas", valor: notas.length, icon: ClipboardList, seccion: "historia", items: notas.map((n) => ({ titulo: n.motivoConsulta, detalle: `${formatearFecha(n.fecha)} · ${n.profesional}${n.diagnostico ? ` · ${n.diagnostico}` : ""}` })) },
+    { id: "img", label: "Imágenes y estudios", valor: estudios.length + fotos.length, icon: Images, seccion: "estudios", items: [...estudios.map((e) => ({ titulo: e.tipo, detalle: `${formatearFecha(e.fecha)}${e.diagnostico ? ` · ${e.diagnostico}` : ""}`, etiqueta: e.estadoInforme, tono: TONO_INFORME[e.estadoInforme] })), ...fotos.map((f) => ({ titulo: `Fotografía · ${f.tipo}`, detalle: formatearFecha(f.fecha) }))] },
+  ];
+  const actual = grupos.find((g) => g.id === abierto);
+  const actividad = [
+    ...datos.historia.filter((h) => incluye(h.pieza)).map((h) => ({ fecha: h.fecha, texto: `${h.motivo}: ${h.detalle}`, quien: h.profesional })),
+    ...tratamientos.flatMap((t) => (t.sesiones ?? []).map((ss) => ({ fecha: ss.fecha, texto: `${t.nombre}: ${ss.detalle}`, quien: ss.profesional }))),
+    ...estudios.map((e) => ({ fecha: e.fecha, texto: `${e.tipo}${e.diagnostico ? `: ${e.diagnostico}` : ""}`, quien: e.profesional || e.solicitante })),
+  ]
+    .sort((x, y) => y.fecha.localeCompare(x.fecha))
+    .slice(0, 4);
+
+  return (
+    <div className="card-grad flex h-full flex-col p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className={`${CIRCULO_ICONO} size-9`}>
+            <ScanLine className="size-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Contexto clínico por pieza</p>
+            <p className="text-xs text-muted-foreground">Todo lo registrado sobre cada pieza.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {piezas.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPieza(p)}
+              aria-pressed={pieza === p}
+              className={`grid size-8 place-items-center rounded-full text-xs font-semibold transition ${pieza === p ? "bg-primary text-primary-foreground shadow" : "border border-primary/15 bg-white hover:border-primary/40 hover:text-primary"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {grupos.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => setAbierto(g.id)}
+            className="group flex items-center gap-2.5 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35"
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <g.icon className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg font-bold leading-tight">{g.valor}</span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">{g.label}</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">Ver</span>
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 flex-1 rounded-xl border border-primary/10 bg-white/70 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Última actividad en la pieza {pieza}</p>
+        {actividad.length === 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">Sin actividad registrada todavía.</p>
+        ) : (
+          <ol className="mt-2 space-y-2 border-l-2 border-primary/20 pl-3">
+            {actividad.map((x, i) => (
+              <li key={i} className="text-xs">
+                <p className="line-clamp-2">{x.texto}</p>
+                <p className="text-[10.5px] text-muted-foreground">
+                  {formatearFecha(x.fecha)}
+                  {x.quien ? ` · ${x.quien}` : ""}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+      {actual && (
+        <DetalleModal
+          titulo={`Pieza ${pieza} · ${actual.label}`}
+          items={actual.items}
+          seccion={actual.seccion}
+          etiquetaSeccion={ETIQUETA_SECCION[actual.seccion] ?? "la sección"}
+          onSeccion={onSeccion}
+          onClose={() => setAbierto(null)}
+        />
+      )}
+    </div>
+  );
 }
 
 function AuditoriaSec({ datos }: { datos: Registros }) {
@@ -5674,7 +6102,7 @@ function ResumenPaciente({ datos, contexto, onSeccion }: { datos: Registros; con
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.56_0.18_292)] text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">{inicialesPaciente}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">Ficha del paciente</p><h3 className="truncate text-lg font-semibold tracking-tight">{contexto.paciente}</h3>{(datos.antecedentes?.alergias.length ?? 0) > 0 && <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive"><ShieldAlert className="size-3" />Alergia: {datos.antecedentes.alergias.join(", ")}</p>}{contexto.email && <p className="truncate text-xs text-muted-foreground">{contexto.email}</p>}</div></div><div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.notasClinicas.length} notas clínicas</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.estudios.length + datos.fotografias.length} imágenes</span><span className="rounded-full border border-primary/10 bg-white/70 px-2.5 py-1 font-medium shadow-sm">{datos.diagnosticos.filter((d) => d.estado === "Activo").length} diagnósticos activos</span></div></div>
       <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5"><ResumenCuenta etiqueta="Tratamientos activos" valor={String(tratamientosActivos)} icon={Stethoscope} tono="text-primary" /><ResumenCuenta etiqueta="Próximo turno" valor={proximoTurno ? `${proximoTurno.fecha.slice(8, 10)}/${proximoTurno.fecha.slice(5, 7)} · ${proximoTurno.hora}` : "Sin turno"} icon={CalendarDays} /><ResumenCuenta etiqueta={saldo > 0 ? "Saldo adeudado" : "Saldo"} valor={formatearMonto(Math.abs(saldo))} icon={Wallet} tono={saldo > 0 ? "text-destructive" : saldo < 0 ? "text-emerald-600" : ""} /><ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} /><ResumenCuenta etiqueta="Fotografías" valor={String(datos.fotografias.length)} icon={Camera} /></div>
     </section>
-    <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
+    <div className="mb-4 grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2"><AlertasPaciente datos={datos} onSeccion={onSeccion} /><PiezaContexto datos={datos} onSeccion={onSeccion} /></div>
     <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]"><TimelinePaciente datos={datos} onSeccion={onSeccion} /><AuditoriaSec datos={datos} /></div>
   </>;
 }
@@ -5724,6 +6152,7 @@ export function SeccionPaciente({
       <div className="relative z-10">
         <Datalists />
         <ResumenPaciente datos={datosConAgenda} contexto={contexto} onSeccion={setSeccionActiva} />
+        <div id="seccion-ficha" className="scroll-mt-4" />
 
         {seccionActiva === "historia" && <HistoriaSec {...props} />}
         {seccionActiva === "tratamientos" && <TratamientosSec {...props} />}

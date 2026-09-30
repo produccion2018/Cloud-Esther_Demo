@@ -47,11 +47,19 @@ export function PlanCard({
   index,
   cta = "Elegir plan",
   onSelect,
+  precio,
+  notaPrecio,
+  actual = false,
 }: {
   plan: Plan;
   index: number;
   cta?: string | undefined;
   onSelect?: ((plan: Plan) => void) | undefined;
+  /** Precio a mostrar (dentro de la app; en el sitio público los precios no se muestran). */
+  precio?: string | undefined;
+  notaPrecio?: string | undefined;
+  /** Marca el plan que tiene contratado la clínica. */
+  actual?: boolean | undefined;
 }) {
   const isEnterprise = plan.id === "enterprise";
   const extras = EXTRAS_POR_PLAN[index] ?? EXTRAS_POR_PLAN[0];
@@ -72,14 +80,14 @@ export function PlanCard({
       }}
       whileHover={{ y: -8 }}
       className={`card-premium relative flex flex-col gap-5 p-6 pt-8 transition-shadow duration-300 hover:shadow-glow md:row-span-4 md:grid md:grid-rows-subgrid md:gap-5 ${
-        plan.featured ? "border-primary/40 ring-2 ring-primary/25" : ""
+        actual || (plan.featured && !precio) ? "border-primary/40 ring-2 ring-primary/25" : ""
       }`}
     >
       {isEnterprise && (
         <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-br from-primary/25 via-transparent to-brand/25" />
       )}
 
-      {plan.featured && (
+      {(actual || (plan.featured && !precio)) && (
         <div className="absolute -top-4 left-6 z-20">
           <motion.span
             animate={{ opacity: [0.6, 1, 0.6] }}
@@ -92,7 +100,7 @@ export function PlanCard({
           />
 
           <span className="relative block whitespace-nowrap rounded-full bg-brand px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-lift">
-            Más elegido
+            {actual ? "Tu plan" : "Más elegido"}
           </span>
         </div>
       )}
@@ -110,6 +118,15 @@ export function PlanCard({
         <p className="relative mt-1 text-[13px] leading-relaxed text-muted-foreground">
           {plan.tagline}
         </p>
+
+        {precio && (
+          <p className="relative mt-3 flex flex-wrap items-baseline gap-1">
+            <span className="font-display text-3xl font-bold tracking-tight text-primary">
+              {precio}
+            </span>
+            {notaPrecio && <span className="text-xs text-muted-foreground">{notaPrecio}</span>}
+          </p>
+        )}
       </div>
 
       {/* Resumen del plan */}
@@ -190,7 +207,8 @@ export function PlanCard({
 
       <Button
         className="relative w-full self-end"
-        variant={plan.featured || isEnterprise ? "hero" : "outlineBrand"}
+        variant={actual ? "outlineBrand" : plan.featured || isEnterprise ? "hero" : "outlineBrand"}
+        disabled={actual}
         onClick={() => onSelect?.(plan)}
       >
         {cta}

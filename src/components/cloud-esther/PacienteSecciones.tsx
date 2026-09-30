@@ -638,7 +638,21 @@ function presupuestosDeEjemplo(): Record<number, Registros> {
     ...(estado !== "Borrador" ? { enviado: haceDias(Math.max(0, dias - 1)) } : {}),
     ...extra,
   });
-  const con = (presupuestos: PresupuestoPaciente[]): Registros => ({ ...VACIO, presupuestos });
+  // Cargos de cuenta corriente todavía sin facturar (los toma Facturación → Por facturar).
+  const cargo = (id: number, dias: number, concepto: string, monto: number): Movimiento => ({
+    id,
+    fecha: haceDias(dias),
+    tipo: "Cargo",
+    concepto,
+    medio: "",
+    monto,
+    notas: "",
+  });
+  const con = (presupuestos: PresupuestoPaciente[], cuenta: Movimiento[] = []): Registros => ({
+    ...VACIO,
+    presupuestos,
+    cuenta,
+  });
   return {
     2: con([
       pr(
@@ -654,33 +668,39 @@ function presupuestosDeEjemplo(): Record<number, Registros> {
         { profesional: "Martín González", planId: "f3", respondido: haceDias(8) },
       ),
     ]),
-    3: con([
-      pr(
-        1,
-        "PR-0004",
-        6,
-        "Enviado",
-        [
-          l("Ortodoncia con brackets (tratamiento)", 480000, "", 1, "a19"),
-          l("Control de ortodoncia", 35000, "", 12, "a21"),
-        ],
-        { profesional: "Laura Martínez", planId: "f4" },
-      ),
-    ]),
-    4: con([
-      pr(
-        1,
-        "PR-0005",
-        2,
-        "Enviado",
-        [
-          l("Blanqueamiento en consultorio", 90000, "", 1, "a22"),
-          l("Carilla de resina", 95000, "11", 1, "a23"),
-          l("Carilla de resina", 95000, "21", 1, "a23"),
-        ],
-        { profesional: "Jesús Méndez", planId: "f2", descuentoPct: 5 },
-      ),
-    ]),
+    3: con(
+      [
+        pr(
+          1,
+          "PR-0004",
+          6,
+          "Enviado",
+          [
+            l("Ortodoncia con brackets (tratamiento)", 480000, "", 1, "a19"),
+            l("Control de ortodoncia", 35000, "", 12, "a21"),
+          ],
+          { profesional: "Laura Martínez", planId: "f4" },
+        ),
+      ],
+      [cargo(1, 6, "Consulta de ortodoncia y estudio de modelos", 35000)],
+    ),
+    4: con(
+      [
+        pr(
+          1,
+          "PR-0005",
+          2,
+          "Enviado",
+          [
+            l("Blanqueamiento en consultorio", 90000, "", 1, "a22"),
+            l("Carilla de resina", 95000, "11", 1, "a23"),
+            l("Carilla de resina", 95000, "21", 1, "a23"),
+          ],
+          { profesional: "Jesús Méndez", planId: "f2", descuentoPct: 5 },
+        ),
+      ],
+      [cargo(1, 3, "Consulta y diagnóstico", 25000)],
+    ),
     5: con([
       pr(
         1,
@@ -704,19 +724,22 @@ function presupuestosDeEjemplo(): Record<number, Registros> {
         { profesional: "Jesús Méndez" },
       ),
     ]),
-    7: con([
-      pr(
-        1,
-        "PR-0008",
-        38,
-        "Enviado",
-        [
-          l("Extracción de tercer molar", 140000, "38", 1, "a13"),
-          l("Extracción de tercer molar", 140000, "48", 1, "a13"),
-        ],
-        { profesional: "Martín González", planId: "f1" },
-      ),
-    ]),
+    7: con(
+      [
+        pr(
+          1,
+          "PR-0008",
+          38,
+          "Enviado",
+          [
+            l("Extracción de tercer molar", 140000, "38", 1, "a13"),
+            l("Extracción de tercer molar", 140000, "48", 1, "a13"),
+          ],
+          { profesional: "Martín González", planId: "f1" },
+        ),
+      ],
+      [cargo(1, 2, "Radiografía panorámica", 18000), cargo(2, 2, "Consulta de urgencia", 30000)],
+    ),
     8: con([
       pr(
         1,

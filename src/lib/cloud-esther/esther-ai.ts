@@ -1,15 +1,12 @@
+import { responderRRHH } from "@/lib/cloud-esther/rrhh-store";
+
 export type EstherContext = {
   section?: EstherSection;
   recordId?: string;
 };
 
 export type EstherSection =
-  | "general"
-  | "paciente"
-  | "odontograma"
-  | "historia"
-  | "turnos"
-  | "informe";
+  "general" | "paciente" | "odontograma" | "historia" | "turnos" | "informe" | "rrhh";
 
 export type EstherReply = {
   text: string;
@@ -23,6 +20,7 @@ export const contextProgress: Record<EstherSection, string> = {
   historia: "Estoy preparando un resumen de la historia clínica...",
   turnos: "Estoy revisando los próximos turnos...",
   informe: "Estoy preparando el informe...",
+  rrhh: "Estoy revisando legajos, asistencia y licencias del equipo...",
 };
 
 export type EstherQuickAction = {
@@ -38,7 +36,14 @@ export const estherQuickActions: EstherQuickAction[] = [
   { id: "preparar-informe", label: "Preparar informe", section: "informe" },
   { id: "buscar-informacion", label: "Buscar información", section: "general" },
   { id: "analizar-registros", label: "Analizar registros", section: "turnos" },
+  { id: "equipo-hoy", label: "¿Quién falta hoy?", section: "rrhh" },
+  { id: "resolver-rrhh", label: "Pendientes de RRHH", section: "rrhh" },
+  { id: "costo-equipo", label: "Costo laboral del mes", section: "rrhh" },
 ];
+
+/** Preguntas de Recursos humanos: se responden con los datos reales del equipo. */
+const TEMAS_RRHH =
+  /rrhh|recursos humanos|equipo|emplead|personal|legajo|vacacion|licencia|ausen|falta hoy|fich|asistencia|llega(da)? tarde|sueldo|nomina|nómina|costo laboral|contrato|capacitaci|cumplea|pendientes de rrhh/i;
 
 export async function askEsther(
   message: string,
@@ -47,6 +52,10 @@ export async function askEsther(
   await new Promise((resolve) => setTimeout(resolve, 400));
 
   const section = context.section ?? "general";
+  if (section === "rrhh" || TEMAS_RRHH.test(message)) {
+    const pregunta = /pendientes de rrhh/i.test(message) ? "¿Qué tengo que resolver?" : message;
+    return { text: responderRRHH(pregunta), needsRealData: false };
+  }
   return {
     text:
       `Recibí tu solicitud sobre ${sectionName(section)}: "${message}". ` +
@@ -65,6 +74,7 @@ function sectionName(section: EstherSection): string {
     historia: "la historia clínica",
     turnos: "los turnos",
     informe: "un informe",
+    rrhh: "recursos humanos",
   };
   return names[section];
 }

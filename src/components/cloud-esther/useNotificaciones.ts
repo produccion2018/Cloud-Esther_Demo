@@ -15,6 +15,7 @@ import {
   type EstadoNotif,
   type PrioridadNotif,
 } from "@/lib/cloud-esther/notificaciones-store";
+import { insightsRRHH, storeRRHH } from "@/lib/cloud-esther/rrhh-store";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 
 /* Ubicación: src/components/cloud-esther/useNotificaciones.ts
@@ -66,6 +67,7 @@ export function useNotificaciones() {
   const { manuales, estados, preferencias } = storeNotificaciones.usar();
   const { turnos, espera, tareas } = storeAgenda.usar();
   const inventario = storeInventario.usar();
+  storeRRHH.usar(); // recalcula las alertas de RRHH cuando cambian legajos o solicitudes
   const { conversaciones, recordatorios } = storeComunicacion.usar();
   const { pacientes } = usePacientes();
   const { miembros } = useEquipo();
@@ -270,6 +272,22 @@ export function useNotificaciones() {
         asignado: "Administración",
         accion: { label: "Ver pedido", to: "/demo/inventario" },
       });
+  }
+
+  /* ── Recursos humanos: solicitudes, contratos, documentos y capacitaciones ── */
+  if (tiene("rrhh")) {
+    for (const i of insightsRRHH().filter((x) => x.nivel !== "info")) {
+      auto.push({
+        id: `rrhh-${i.id}`,
+        titulo: i.titulo,
+        detalle: i.detalle,
+        categoria: "Equipo",
+        prioridad: i.nivel === "alta" ? "Alta" : "Normal",
+        fecha: `${hoy}T07:40:00`,
+        asignado: "Administración",
+        accion: { label: "Abrir RRHH", to: "/demo/rrhh" },
+      });
+    }
   }
 
   /* ── Pacientes: cumpleaños ── */

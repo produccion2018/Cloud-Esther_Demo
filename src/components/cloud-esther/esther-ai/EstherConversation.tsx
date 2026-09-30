@@ -38,7 +38,7 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping }: Props
                 className={
                   m.author === "user"
                     ? "max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2.5 text-sm text-primary-foreground shadow-[var(--shadow-glow)]"
-                    : "glass-panel max-w-[90%] rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground"
+                    : "glass-panel max-w-[90%] whitespace-pre-line rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground"
                 }
               >
                 {m.author === "esther" && (

@@ -11,11 +11,27 @@ import {
    horarios" y "Permisos y accesos", separado por empresa (cada clínica tiene su equipo).
    TODO backend: reemplazar por GET/PUT /equipo filtrado por clinicId. */
 
-export const TIPOS_AUSENCIA = ["Vacaciones", "Licencia médica", "Capacitación", "Trámite personal"] as const;
+export const TIPOS_AUSENCIA = [
+  "Vacaciones",
+  "Licencia médica",
+  "Capacitación",
+  "Trámite personal",
+] as const;
 export type TipoAusencia = (typeof TIPOS_AUSENCIA)[number];
-export type Ausencia = { id: string; miembroId: string; tipo: TipoAusencia; desde: string; hasta: string; nota: string };
+export type Ausencia = {
+  id: string;
+  miembroId: string;
+  tipo: TipoAusencia;
+  desde: string;
+  hasta: string;
+  nota: string;
+};
 
-type EstadoEquipo = { miembros: TeamMember[]; especialidades: string[]; ausencias: Ausencia[] };
+export type EstadoEquipo = {
+  miembros: TeamMember[];
+  especialidades: string[];
+  ausencias: Ausencia[];
+};
 
 function diaISO(n: number) {
   const d = new Date();
@@ -23,14 +39,31 @@ function diaISO(n: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const store = crearStorePorEmpresa<EstadoEquipo>(() => ({
-  miembros: TEAM_MEMBERS,
-  especialidades: ESPECIALIDADES,
-  ausencias: [
-    { id: "a-1", miembroId: "3", tipo: "Capacitación", desde: diaISO(0), hasta: diaISO(0), nota: "Curso de bioseguridad" },
-    { id: "a-2", miembroId: "2", tipo: "Vacaciones", desde: diaISO(12), hasta: diaISO(19), nota: "" },
-  ],
-}), { persistir: "equipo" });
+const store = crearStorePorEmpresa<EstadoEquipo>(
+  () => ({
+    miembros: TEAM_MEMBERS,
+    especialidades: ESPECIALIDADES,
+    ausencias: [
+      {
+        id: "a-1",
+        miembroId: "3",
+        tipo: "Capacitación",
+        desde: diaISO(0),
+        hasta: diaISO(0),
+        nota: "Curso de bioseguridad",
+      },
+      {
+        id: "a-2",
+        miembroId: "2",
+        tipo: "Vacaciones",
+        desde: diaISO(12),
+        hasta: diaISO(19),
+        nota: "",
+      },
+    ],
+  }),
+  { persistir: "equipo" },
+);
 
 type Actualizar<T> = T | ((prev: T) => T);
 const aplicar = <T>(prev: T, a: Actualizar<T>) =>
@@ -57,5 +90,16 @@ export function useEquipo() {
   const actualizarMiembro = (id: string, fn: (m: TeamMember) => TeamMember) =>
     setMiembros((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
 
-  return { miembros, especialidades, ausencias, setMiembros, setEspecialidades, setAusencias, actualizarMiembro };
+  return {
+    miembros,
+    especialidades,
+    ausencias,
+    setMiembros,
+    setEspecialidades,
+    setAusencias,
+    actualizarMiembro,
+  };
 }
+
+/** Acceso directo al store (lectura/escritura fuera de componentes, ej. RRHH o Esther). */
+export const storeEquipo = store;

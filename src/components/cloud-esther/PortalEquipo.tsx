@@ -56,6 +56,8 @@ import {
   storeInventario,
 } from "@/lib/cloud-esther/inventario-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
+import { ComunicadosPortal, MiRRHHPortal } from "@/components/cloud-esther/rrhh/PortalRRHH";
+import { marcas, storeRRHH } from "@/lib/cloud-esther/rrhh-store";
 import {
   CHECKLIST_GABINETE,
   asegurarAcceso,
@@ -1632,9 +1634,12 @@ function Avisos({
   ctx: Ctx;
   avisos: ReturnType<typeof useNotificaciones>["notificaciones"];
 }) {
+  const { plan } = useCloudEsther();
+  const conRRHH = MODULES.some((m) => m.id === "rrhh" && availableIn(m, plan));
   return (
     <div className="space-y-3">
       <h1 className="font-display text-xl font-semibold">Avisos para vos</h1>
+      {conRRHH && <ComunicadosPortal yo={ctx.yo} vista={!!ctx.vista} onToast={ctx.onToast} />}
       {avisos.length === 0 ? (
         <div className="card-grad p-8 text-center">
           <CheckCheck className="mx-auto size-8 text-emerald-500" />
@@ -1682,9 +1687,13 @@ function Avisos({
 /* ───────────── Mi perfil ───────────── */
 
 function PerfilEquipo({ ctx }: { ctx: Ctx }) {
-  const { ausencias } = useEquipo();
+  const { plan } = useCloudEsther();
+  const conRRHH = MODULES.some((m) => m.id === "rrhh" && availableIn(m, plan));
+  const { ausencias, miembros: miembrosEquipo } = useEquipo();
   const { fichajes } = storeEquipoPortal.usar();
-  const mios = fichajes
+  const { fichajes: historial, config } = storeRRHH.usar();
+  void fichajes; // se re-renderiza cuando ficha desde el portal
+  const mios = marcas(historial, miembrosEquipo, config.toleranciaMin)
     .filter((f) => f.miembroId === ctx.yo.id)
     .sort((a, b) => `${b.fecha}${b.entrada}`.localeCompare(`${a.fecha}${a.entrada}`))
     .slice(0, 10);
@@ -1740,7 +1749,7 @@ function PerfilEquipo({ ctx }: { ctx: Ctx }) {
                 <li key={f.id} className="flex justify-between rounded-lg bg-white/80 px-3 py-1.5">
                   <span>{etiquetaDia(f.fecha)}</span>
                   <span className="font-semibold">
-                    {f.entrada} – {f.salida ?? "en curso"}
+                    {f.entrada} – {f.salida || "en curso"}
                   </span>
                 </li>
               ))}
@@ -1748,6 +1757,7 @@ function PerfilEquipo({ ctx }: { ctx: Ctx }) {
           )}
         </Tarjeta>
       </div>
+      {conRRHH && <MiRRHHPortal yo={ctx.yo} vista={!!ctx.vista} onToast={ctx.onToast} />}
       <Tarjeta>
         <p className="flex items-center gap-2 text-sm font-semibold">
           <ShieldCheck className="size-4 text-primary" /> Lo que podés hacer

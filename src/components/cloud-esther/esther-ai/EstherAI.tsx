@@ -133,8 +133,8 @@ export function EstherAI({
               </h2>
               <EstherQuickActionsBlock disabled={esther.isBusy} onAction={handleAction} />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Esther todavía no está conectada a los datos reales de Cloud Esther, así que no
-                informa datos clínicos. Las respuestas actuales son una demostración del módulo.
+                Esther ya responde con los datos reales de Recursos humanos (asistencia, licencias,
+                vencimientos, nómina y vacaciones). Para datos clínicos todavía es una demostración.
               </p>
             </div>
           </motion.div>

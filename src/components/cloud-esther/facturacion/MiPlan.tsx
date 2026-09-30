@@ -18,11 +18,9 @@ import { PlanCard } from "@/components/site/PlanCards";
 import { plans as PLANES_SITIO, type Plan } from "@/lib/site-data";
 import { PLANS, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import {
-  IVA_SUSCRIPCION,
   setFacturacion,
   storeFacturacion,
   suscripcionEjemplo,
-  totalSuscripcion,
   type FacturaSuscripcion,
   type MedioSuscripcion,
   type Suscripcion,
@@ -36,7 +34,6 @@ import {
   INPUT,
   Modal as ModalBase,
   Pill,
-  ars,
   fecha,
   imprimirHTML,
 } from "@/components/cloud-esther/rrhh/ui";
@@ -96,16 +93,13 @@ function imprimirFactura(
   f: FacturaSuscripcion,
   cliente: { razonSocial: string; idFiscal: string },
 ) {
-  const t = totalSuscripcion(f.neto);
   imprimirHTML(
     `Factura ${f.numero}`,
     `<h1>Cloud Esther</h1><p>Cloud Esther S.A.S. · Software de gestión odontológica</p>
 <div class="meta"><div><b>Factura A ${f.numero}</b><br>Fecha: ${fecha(f.fecha)}<br>Vence: ${fecha(f.vence)}</div>
 <div><b>${cliente.razonSocial}</b><br>${cliente.idFiscal}</div></div>
-<h2>Detalle</h2><table><tr><th>Concepto</th><th class="r">Importe</th></tr>
-<tr><td>Plan ${PLANS[f.planId].name} · ${f.ciclo === "Anual" ? "12 meses desde" : "período"} ${nombrePeriodo(f.periodo)}</td><td class="r">${ars(t.neto)}</td></tr>
-<tr><td>IVA ${IVA_SUSCRIPCION} %</td><td class="r">${ars(t.iva)}</td></tr>
-<tr class="tot"><td>Total</td><td class="r">${ars(t.total)}</td></tr></table>
+<h2>Detalle</h2><table><tr><th>Concepto</th></tr>
+<tr><td>Plan ${PLANS[f.planId].name} · ${f.ciclo === "Anual" ? "12 meses desde" : "período"} ${nombrePeriodo(f.periodo)}</td></tr></table>
 <p>${f.estado === "Pagada" ? `Pagada el ${fecha(f.pagada ?? "")} con ${f.medio ?? ""}` : "Pendiente de pago"}</p>`,
   );
 }
@@ -192,8 +186,8 @@ export function MiPlan({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
                   A pagar · {nombrePeriodo(pendiente.periodo)}
                 </p>
-                <p className="mt-1 text-4xl font-bold tracking-tight">
-                  {ars(totalSuscripcion(pendiente.neto).total)}
+                <p className="mt-1 text-2xl font-bold tracking-tight">
+                  {PLANS[pendiente.planId].name}
                 </p>
                 <p className="mt-1 text-[12px] text-white/75">
                   Factura {pendiente.numero} · vence {fecha(pendiente.vence)}
@@ -275,7 +269,6 @@ export function MiPlan({
                         : `vence ${fecha(f.vence)}`}
                     </p>
                   </div>
-                  <b className="text-primary">{ars(totalSuscripcion(f.neto).total)}</b>
                   <Pill
                     clase={
                       f.estado === "Pagada"
@@ -377,7 +370,6 @@ export function MiPlan({
                         ...f,
                         planId: pagar.planId,
                         ciclo: pagar.ciclo,
-                        neto: pagar.neto,
                         estado: "Pagada",
                         pagada: hoy,
                         medio: detalle,
@@ -389,7 +381,7 @@ export function MiPlan({
               onToast(
                 tipo === "Transferencia"
                   ? "Transferencia informada: la factura quedó pagada"
-                  : `Pago aprobado · ${ars(totalSuscripcion(pagar.neto).total)}`,
+                  : `Pago aprobado`,
               );
             }}
           />
@@ -559,7 +551,6 @@ function PagoForm({
   const [error, setError] = useState("");
   const [procesando, setProcesando] = useState(false);
   const tarjeta = useTarjeta();
-  const t = totalSuscripcion(factura.neto);
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
@@ -584,16 +575,11 @@ function PagoForm({
           <span className="text-muted-foreground">
             Plan {PLANS[factura.planId].name} · {factura.ciclo}
           </span>
-          <span>{ars(t.neto)}</span>
+          <span className="font-semibold">Factura A {factura.numero}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">IVA {IVA_SUSCRIPCION} %</span>
-          <span>{ars(t.iva)}</span>
-        </div>
-        <div className="mt-1 flex justify-between border-t border-primary/10 pt-1 text-base font-bold text-primary">
-          <span>Total</span>
-          <span>{ars(t.total)}</span>
-        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          El importe lo informa Cloud Esther en la factura.
+        </p>
       </div>
       <ElegirMedio valor={tipo} onChange={setTipo} />
       {tipo === "Tarjeta" &&
@@ -659,7 +645,7 @@ function PagoForm({
             ? "Procesando…"
             : tipo === "Transferencia"
               ? "Informar transferencia"
-              : `Pagar ${ars(t.total)}`}
+              : "Pagar"}
         </button>
       </div>
     </form>

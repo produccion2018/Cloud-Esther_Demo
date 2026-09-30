@@ -97,7 +97,6 @@ import {
   facturaPendiente,
   useSuscripcion,
 } from "@/components/cloud-esther/facturacion/MiPlan";
-import { totalSuscripcion } from "@/lib/cloud-esther/facturacion-store";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
    Facturación electrónica según el país fiscal de la clínica, cobros (se registran en la cuenta
@@ -511,10 +510,8 @@ export function Facturacion() {
               <Crown className="size-4" />
             </span>
             <p className="min-w-0 flex-1 text-sm">
-              <b>Tu suscripción a Cloud Esther</b> vence el {fecha(suscPendiente.vence)} ·{" "}
-              <span className="font-semibold text-primary">
-                $ {totalSuscripcion(suscPendiente.neto).total.toLocaleString("es-AR")}
-              </span>
+              <b>Tu suscripción a Cloud Esther</b> vence el {fecha(suscPendiente.vence)} · factura{" "}
+              <span className="font-semibold text-primary">{suscPendiente.numero}</span>
             </p>
             <button type="button" className={BTN_PRIMARIO} onClick={() => setSeccion("plan")}>
               <Wallet className="size-4" /> Pagar ahora

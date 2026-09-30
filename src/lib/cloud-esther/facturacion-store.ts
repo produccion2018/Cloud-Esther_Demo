@@ -266,7 +266,6 @@ export type FacturaSuscripcion = {
   vence: string;
   planId: PlanId;
   ciclo: CicloPlan;
-  neto: number;
   estado: "Pagada" | "Pendiente";
   pagada?: string;
   medio?: string;
@@ -277,15 +276,6 @@ export type Suscripcion = {
   debitoAutomatico: boolean;
   facturas: FacturaSuscripcion[];
 };
-
-export const IVA_SUSCRIPCION = 21;
-/** Importe de ejemplo para practicar: el real de cada factura lo informa el backend. */
-const NETO_EJEMPLO = 99000;
-
-export function totalSuscripcion(neto: number) {
-  const iva = Math.round((neto * IVA_SUSCRIPCION) / 100);
-  return { neto, iva, total: neto + iva };
-}
 
 export function suscripcionEjemplo(): Suscripcion {
   const dia = (d: Date) => d.toISOString().slice(0, 10);
@@ -303,7 +293,6 @@ export function suscripcionEjemplo(): Suscripcion {
       vence: dia(vence),
       planId: "avanzada",
       ciclo: "Mensual",
-      neto: NETO_EJEMPLO,
       estado: "Pagada",
       pagada: dia(new Date(vence.getTime() - 3 * 86_400_000)),
       medio: "Visa •••• 4242",
@@ -319,7 +308,6 @@ export function suscripcionEjemplo(): Suscripcion {
     vence: dia(new Date(hoy.getTime() + 5 * 86_400_000)),
     planId: "avanzada",
     ciclo: "Mensual",
-    neto: NETO_EJEMPLO,
     estado: "Pendiente",
   });
   return {

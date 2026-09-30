@@ -14,6 +14,7 @@ import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemostracionRouteImport } from './routes/demostracion'
 import { Route as EquipoRouteImport } from './routes/equipo'
+import { Route as FormularioRouteImport } from './routes/formulario'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
 import { Route as PlanesRouteImport } from './routes/planes'
@@ -73,6 +74,11 @@ const DemostracionRoute = DemostracionRouteImport.update({
 const EquipoRoute = EquipoRouteImport.update({
   id: '/equipo',
   path: '/equipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormularioRoute = FormularioRouteImport.update({
+  id: '/formulario',
+  path: '/formulario',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/equipo': typeof EquipoRoute
+  '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/equipo': typeof EquipoRoute
+  '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -345,6 +353,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
   '/equipo': typeof EquipoRoute
+  '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/planes': typeof PlanesRoute
@@ -389,6 +398,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demostracion'
     | '/equipo'
+    | '/formulario'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demostracion'
     | '/equipo'
+    | '/formulario'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demostracion'
     | '/equipo'
+    | '/formulario'
     | '/login'
     | '/nosotros'
     | '/planes'
@@ -516,6 +528,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   DemostracionRoute: typeof DemostracionRoute
   EquipoRoute: typeof EquipoRoute
+  FormularioRoute: typeof FormularioRoute
   LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
   PlanesRoute: typeof PlanesRoute
@@ -588,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/equipo'
       fullPath: '/equipo'
       preLoaderRoute: typeof EquipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/formulario': {
+      id: '/formulario'
+      path: '/formulario'
+      fullPath: '/formulario'
+      preLoaderRoute: typeof FormularioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -844,6 +864,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   DemostracionRoute: DemostracionRoute,
   EquipoRoute: EquipoRoute,
+  FormularioRoute: FormularioRoute,
   LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
   PlanesRoute: PlanesRoute,

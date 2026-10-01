@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import { Eye, ArrowUp, ArrowRight, ArrowLeft } from "lucide-react";
@@ -22,6 +22,10 @@ export interface Odontogram3DProps {
   onSelectTooth?: (fdi: number | null) => void;
   className?: string;
   showUI?: boolean;
+  /** Pieza seleccionada desde afuera (ficha clínica, accesos rápidos). */
+  selectedFdi?: number | null;
+  /** false: el panel inferior no muestra los botones de estado (los tiene la ficha de la pieza). */
+  estadosEnPanel?: boolean;
 }
 
 const VIEW_ICONS: Record<CameraView, typeof Eye> = {
@@ -38,6 +42,8 @@ export function Odontogram3D({
   onSelectTooth,
   className,
   showUI = true,
+  selectedFdi,
+  estadosEnPanel = true,
 }: Odontogram3DProps) {
   const [internal, setInternal] = useState<Record<number, ToothState>>(
     () => defaultValue ?? defaultChart(),
@@ -47,6 +53,10 @@ export function Odontogram3D({
 
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selectedFdi !== undefined) setSelected(selectedFdi);
+  }, [selectedFdi]);
   const [view, setView] = useState<CameraView>("anterior");
   const [nonce, setNonce] = useState(0);
   // El modelo tarda un momento en crearse (WebGL + geometría): se muestra un cargador hasta el primer cuadro.
@@ -240,33 +250,43 @@ export function Odontogram3D({
                   </div>
                 </div>
 
-                <div className="flex flex-1 flex-wrap justify-end gap-1.5">
-                  {TOOTH_STATES.map((s) => {
-                    const active = (chart[def.fdi] ?? "sano") === s;
+                {estadosEnPanel ? (
+                  <div className="flex flex-1 flex-wrap justify-end gap-1.5">
+                    {TOOTH_STATES.map((s) => {
+                      const active = (chart[def.fdi] ?? "sano") === s;
 
-                    return (
-                      <button
-                        key={s}
-                        onClick={() => setState(def.fdi, s)}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
-                          active
-                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                            : "border-border bg-secondary text-secondary-foreground hover:bg-accent",
-                        )}
-                      >
-                        <span
-                          className="size-2.5 rounded-full"
-                          style={{
-                            backgroundColor: TOOTH_STATE_META[s].color,
-                          }}
-                        />
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => setState(def.fdi, s)}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
+                            active
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                              : "border-border bg-secondary text-secondary-foreground hover:bg-accent",
+                          )}
+                        >
+                          <span
+                            className="size-2.5 rounded-full"
+                            style={{
+                              backgroundColor: TOOTH_STATE_META[s].color,
+                            }}
+                          />
 
-                        {TOOTH_STATE_META[s].label}
-                      </button>
-                    );
-                  })}
-                </div>
+                          {TOOTH_STATE_META[s].label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs font-semibold text-foreground">
+                    <span
+                      className="size-2.5 rounded-full"
+                      style={{ backgroundColor: TOOTH_STATE_META[chart[def.fdi] ?? "sano"].color }}
+                    />
+                    {TOOTH_STATE_META[chart[def.fdi] ?? "sano"].label}
+                  </span>
+                )}
               </div>
             ) : (
               <p className="text-center text-sm text-muted-foreground">

@@ -28,6 +28,7 @@ import {
   Stethoscope,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
@@ -72,10 +73,6 @@ type ModalActivo =
   | { tipo: "espera" }
   | { tipo: "tarea" }
   | null;
-type ItemDia =
-  | { tipo: "turno"; hora: string; turno: Turno }
-  | { tipo: "bloqueo"; hora: string; bloqueo: Bloqueo };
-
 /* ───────────── Datos ───────────── */
 
 /* Horario de atención usado para mostrar los turnos libres del día. */
@@ -313,6 +310,9 @@ function obtenerDiasMes(iso: string) {
 
 const CARD =
   "rounded-3xl border border-primary/25 bg-card/95 bg-gradient-to-br from-white via-primary/[0.02] to-primary/[0.08] p-4 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10";
+
+const CARD_MAIN =
+  "rounded-3xl border border-primary/20 bg-card/95 bg-gradient-to-br from-white via-white to-primary/[0.05] p-4 shadow-[0_18px_44px_-34px_rgba(76,29,149,0.5)] backdrop-blur-sm md:p-5 dark:from-card dark:via-card";
 
 const ITEM =
   "rounded-2xl border border-primary/18 bg-card/90 bg-gradient-to-br from-white via-white to-primary/[0.06] shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/8";
@@ -1173,111 +1173,610 @@ function PeriodNavigator({
   );
 }
 
-/* ───────────── Vista semanal ───────────── */
+/* ───────────── Vista diaria: línea de tiempo ───────────── */
 
-function SemanaView({
+function slotDe(hora: string) {
+  const [h = "00", m = "00"] = hora.split(":");
+  return `${h.padStart(2, "0")}:${Number(m) < 30 ? "00" : "30"}`;
+}
+
+function horaActual() {
+  return new Date().toTimeString().slice(0, 5);
+}
+
+type FilaDia =
+  | { tipo: "turnos"; slot: string; turnos: Turno[] }
+  | { tipo: "bloqueo"; slot: string; bloqueo: Bloqueo; inicio: boolean }
+  | { tipo: "libre"; slot: string }
+  | { tipo: "ocupado"; slot: string }
+  | { tipo: "pasado"; slot: string; hasta: string };
+
+function DiaTimeline({
+  fecha,
+  hoy,
+  turnos,
+  bloqueos,
+  libres,
+  renderTurno,
+  onAgendar,
+  onDesbloquear,
+}: {
+  fecha: string;
+  hoy: string;
+  turnos: Turno[];
+  bloqueos: Bloqueo[];
+  libres: string[];
+  renderTurno: (t: Turno) => ReactNode;
+  onAgendar: (hora: string) => void;
+  onDesbloquear: (id: number) => void;
+}) {
+  const ahora = fecha === hoy ? horaActual() : null;
+  const slots = Array.from(
+    new Set([...HORARIOS_DEL_DIA, ...turnos.map((t) => slotDe(t.hora))]),
+  ).sort();
+
+  const filas: FilaDia[] = [];
+  for (const slot of slots) {
+    const ts = turnos
+      .filter((t) => slotDe(t.hora) === slot)
+      .sort((a, b) => a.hora.localeCompare(b.hora));
+    const bloqueo = bloqueos.find((b) => slot >= slotDe(b.desde) && slot < b.hasta);
+    const pasado = fecha < hoy || (ahora !== null && slot < ahora);
+    if (ts.length) filas.push({ tipo: "turnos", slot, turnos: ts });
+    else if (bloqueo) {
+      const prev = filas[filas.length - 1];
+      const inicio = !(prev?.tipo === "bloqueo" && prev.bloqueo.id === bloqueo.id);
+      filas.push({ tipo: "bloqueo", slot, bloqueo, inicio });
+    } else if (libres.includes(slot)) filas.push({ tipo: "libre", slot });
+    else if (pasado) {
+      // Los horarios pasados sin actividad se agrupan en una sola fila.
+      const prev = filas[filas.length - 1];
+      if (prev?.tipo === "pasado") prev.hasta = slot;
+      else filas.push({ tipo: "pasado", slot, hasta: slot });
+    } else filas.push({ tipo: "ocupado", slot });
+  }
+
+  const activos = turnos.filter((t) => t.estado !== "Cancelada").length;
+  const ocupacion = Math.min(
+    100,
+    Math.round((activos / Math.max(1, HORARIOS_DEL_DIA.length)) * 100),
+  );
+  const indiceAhora = ahora ? filas.findIndex((f) => f.slot > ahora) : -1;
+
+  return (
+    <div>
+      {/* Resumen del día */}
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {(
+          [
+            ["Turnos", activos, "en el día"],
+            ["Libres", libres.length, "para agendar"],
+            ["Ocupación", `${ocupacion}%`, "de la jornada"],
+          ] as const
+        ).map(([l, v, s]) => (
+          <div
+            key={l}
+            className="rounded-2xl border border-primary/12 bg-gradient-to-br from-white to-primary/[0.05] px-3 py-2.5 dark:from-card"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">{l}</p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{v}</p>
+            <p className="text-[10.5px] text-muted-foreground">{s}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-primary/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary to-pink-400"
+          style={{ width: `${ocupacion}%` }}
+        />
+      </div>
+
+      <ol className="relative">
+        {filas.map((f, i) => (
+          <li key={f.slot}>
+            {i === indiceAhora && (
+              <div
+                className="relative my-1 flex items-center gap-2 pl-[52px]"
+                aria-label="Hora actual"
+              >
+                <span className="absolute left-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold tabular-nums text-primary-foreground shadow-sm">
+                  {ahora}
+                </span>
+                <span className="size-2 rounded-full bg-primary ring-4 ring-primary/15" />
+                <span className="h-px flex-1 bg-primary/60" />
+              </div>
+            )}
+            <div className="grid grid-cols-[56px_minmax(0,1fr)] gap-3">
+              <div className="pt-2 text-right">
+                <span
+                  className={`text-[11px] tabular-nums ${f.slot.endsWith(":00") ? "font-bold text-foreground/80" : "font-medium text-muted-foreground/70"}`}
+                >
+                  {f.slot}
+                </span>
+              </div>
+              <div
+                className={`border-t py-1.5 ${f.slot.endsWith(":00") ? "border-primary/12" : "border-dashed border-primary/[0.08]"}`}
+              >
+                {f.tipo === "turnos" && (
+                  <div className="space-y-2">{f.turnos.map(renderTurno)}</div>
+                )}
+                {f.tipo === "bloqueo" &&
+                  (f.inicio ? (
+                    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-primary/30 bg-[repeating-linear-gradient(135deg,transparent,transparent_8px,rgba(124,58,237,0.05)_8px,rgba(124,58,237,0.05)_16px)] px-3.5 py-2.5">
+                      <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+                        <Lock className="size-3.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">Horario bloqueado</p>
+                        <p className="text-xs text-muted-foreground">
+                          {f.bloqueo.desde} a {f.bloqueo.hasta} · {f.bloqueo.motivo}
+                        </p>
+                      </div>
+                      <BotonAccion
+                        label="Desbloquear"
+                        onClick={() => onDesbloquear(f.bloqueo.id)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-6 rounded-xl bg-[repeating-linear-gradient(135deg,transparent,transparent_8px,rgba(124,58,237,0.05)_8px,rgba(124,58,237,0.05)_16px)]" />
+                  ))}
+                {f.tipo === "libre" && (
+                  <button
+                    type="button"
+                    onClick={() => onAgendar(f.slot)}
+                    className="group flex h-9 w-full items-center gap-2 rounded-xl border border-dashed border-transparent px-3 text-[11px] font-semibold text-muted-foreground/70 transition-all hover:border-primary/35 hover:bg-primary/[0.05] hover:text-primary"
+                  >
+                    <span className="size-1.5 rounded-full bg-emerald-500/70" />
+                    Disponible
+                    <span className="ml-auto inline-flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                      <Plus className="size-3" />
+                      Agendar a las {f.slot}
+                    </span>
+                  </button>
+                )}
+                {f.tipo === "ocupado" && (
+                  <p className="flex h-9 items-center px-3 text-[11px] text-muted-foreground/60">
+                    Sin profesionales disponibles
+                  </p>
+                )}
+                {f.tipo === "pasado" && (
+                  <p className="flex h-7 items-center px-3 text-[11px] text-muted-foreground/50">
+                    {f.hasta !== f.slot ? `Hasta las ${f.hasta} · sin actividad` : "Sin actividad"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/* ───────────── Vista semanal: grilla por hora ───────────── */
+
+const HORAS_SEMANA = Array.from({ length: 12 }, (_, i) => String(8 + i).padStart(2, "0"));
+
+function SemanaGrid({
   semana,
+  hoy,
   turnos,
   bloqueos,
   onEditar,
+  onAgendar,
 }: {
   semana: string[];
+  hoy: string;
   turnos: Turno[];
   bloqueos: Bloqueo[];
   onEditar: (turno: Turno) => void;
+  onAgendar: (fecha: string, hora: string) => void;
 }) {
+  const horas = Array.from(
+    new Set([
+      ...HORAS_SEMANA,
+      ...turnos.filter((t) => semana.includes(t.fecha)).map((t) => t.hora.slice(0, 2)),
+    ]),
+  ).sort();
   return (
-    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-7">
-      {semana.map((fecha) => {
-        const turnosDia = turnos
-          .filter((t) => t.fecha === fecha)
-          .sort((a, b) => a.hora.localeCompare(b.hora));
-
-        const bloqueosDia = bloqueos
-          .filter((b) => b.fecha === fecha)
-          .sort((a, b) => a.desde.localeCompare(b.desde));
-
-        const esHoy = fecha === hoyISO();
-
-        return (
-          <div
-            key={fecha}
-            className={`rounded-2xl border p-2.5 transition-all ${
-              esHoy
-                ? "border-primary/35 bg-primary/[0.045] shadow-sm"
-                : "border-primary/15 bg-card/70"
-            }`}
-          >
-            <div className="mb-2.5 flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="overflow-x-auto rounded-2xl border border-primary/15 bg-white/80 dark:bg-card/80">
+      <div className="min-w-[700px]">
+        <div className="sticky top-0 z-10 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-primary/12 bg-gradient-to-b from-primary/[0.05] to-transparent">
+          <div />
+          {semana.map((fecha) => {
+            const esHoy = fecha === hoy;
+            const n = turnos.filter((t) => t.fecha === fecha && t.estado !== "Cancelada").length;
+            return (
+              <div
+                key={fecha}
+                className="flex flex-col items-center gap-0.5 border-l border-primary/10 py-2.5"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {nombreDiaCorto(fecha)}
-                </p>
-
-                <p className={`mt-0.5 text-lg font-bold ${esHoy ? "text-primary" : ""}`}>
-                  {parseISO(fecha).getDate()}
-                </p>
-              </div>
-
-              <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                {turnosDia.length}
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {turnosDia.map((turno) => {
-                const accent = ESTADO_ACCENT[turno.estado];
-
-                return (
-                  <button
-                    key={turno.id}
-                    onClick={() => onEditar(turno)}
-                    className={`group relative w-full overflow-hidden rounded-xl border p-2.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
-                  >
-                    <span className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
-
-                    <div className="pl-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold tabular-nums">{turno.hora}</span>
-
-                        <span className="size-1.5 rounded-full bg-current opacity-60" />
-                      </div>
-
-                      <p className="mt-1 truncate text-xs font-semibold">{turno.paciente}</p>
-
-                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                        {turno.tratamiento}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {bloqueosDia.map((bloqueo) => (
-                <div
-                  key={`b-${bloqueo.id}`}
-                  className="rounded-xl border border-dashed border-primary/25 bg-primary/[0.035] p-2.5"
+                </span>
+                <span
+                  className={`grid size-8 place-items-center rounded-full text-sm font-bold ${esHoy ? "bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_rgba(124,58,237,0.8)]" : "text-foreground"}`}
                 >
-                  <div className="flex items-center gap-1.5 text-primary">
-                    <Lock className="size-3" />
-                    <span className="text-[10px] font-semibold">
-                      {bloqueo.desde} — {bloqueo.hasta}
-                    </span>
-                  </div>
+                  {parseISO(fecha).getDate()}
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {n ? `${n} ${n === 1 ? "turno" : "turnos"}` : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        {horas.map((hh) => (
+          <div
+            key={hh}
+            className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-primary/[0.08] last:border-b-0"
+          >
+            <div className="py-2 pr-2 text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
+              {hh}:00
+            </div>
+            {semana.map((fecha) => {
+              const ts = turnos
+                .filter((t) => t.fecha === fecha && t.hora.slice(0, 2) === hh)
+                .sort((a, b) => a.hora.localeCompare(b.hora));
+              const bloqueado = bloqueos.some(
+                (b) => b.fecha === fecha && `${hh}:00` >= slotDe(b.desde) && `${hh}:00` < b.hasta,
+              );
+              const futuro = fecha > hoy || (fecha === hoy && `${hh}:59` > horaActual());
+              return (
+                <div
+                  key={fecha}
+                  className={`group min-h-[52px] space-y-1 border-l border-primary/10 p-1 ${fecha === hoy ? "bg-primary/[0.025]" : ""} ${bloqueado ? "bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,rgba(124,58,237,0.06)_6px,rgba(124,58,237,0.06)_12px)]" : ""}`}
+                >
+                  {ts.map((t) => {
+                    const accent = ESTADO_ACCENT[t.estado];
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => onEditar(t)}
+                        title={`${t.hora} · ${t.paciente} · ${t.tratamiento}`}
+                        className={`relative w-full overflow-hidden rounded-lg border py-1 pl-2.5 pr-1.5 text-left transition hover:shadow-md ${accent.soft} ${t.estado === "Cancelada" ? "opacity-50 line-through" : ""}`}
+                      >
+                        <span className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
+                        <span className="block truncate text-[10.5px] font-bold">
+                          <span className="tabular-nums">{t.hora}</span> {t.paciente}
+                        </span>
+                        <span className="block truncate text-[10px] text-muted-foreground">
+                          {t.tratamiento}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {ts.length === 0 && !bloqueado && futuro && (
+                    <button
+                      type="button"
+                      onClick={() => onAgendar(fecha, `${hh}:00`)}
+                      aria-label={`Agendar el ${formatearFecha(fecha)} a las ${hh}:00`}
+                      className="grid h-full min-h-[42px] w-full place-items-center rounded-lg text-primary opacity-0 transition hover:bg-primary/[0.06] group-hover:opacity-100"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-                  <p className="mt-1 text-[10px] text-muted-foreground">{bloqueo.motivo}</p>
+/* ───────────── Vista de turnos: tabla con búsqueda y filtros ───────────── */
+
+const ESTADOS_TURNO: EstadoTurno[] = [
+  "Pendiente",
+  "Confirmada",
+  "Atendida",
+  "Ausente",
+  "Cancelada",
+];
+type RangoTurnos = "proximos" | "hoy" | "pasados" | "todos";
+
+function etiquetaDia(fecha: string, hoy: string) {
+  if (fecha === hoy) return "Hoy";
+  if (fecha === sumarDias(hoy, 1)) return "Mañana";
+  if (fecha === sumarDias(hoy, -1)) return "Ayer";
+  const d = parseISO(fecha);
+  return `${nombreDiaLargo(fecha)} ${d.getDate()} de ${new Intl.DateTimeFormat("es-AR", { month: "long" }).format(d)}`;
+}
+
+function TurnosTabla({
+  turnos,
+  hoy,
+  vacio,
+  onEditar,
+  onEstado,
+}: {
+  turnos: Turno[];
+  hoy: string;
+  vacio: string;
+  onEditar: (turno: Turno) => void;
+  onEstado: (turno: Turno, estado: EstadoTurno) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [estado, setEstado] = useState<EstadoTurno | "Todos">("Todos");
+  const [rango, setRango] = useState<RangoTurnos>("proximos");
+
+  const enRango = turnos.filter((t) =>
+    rango === "todos"
+      ? true
+      : rango === "hoy"
+        ? t.fecha === hoy
+        : rango === "proximos"
+          ? t.fecha >= hoy
+          : t.fecha < hoy,
+  );
+  const texto = q.trim().toLowerCase();
+  const buscados = enRango.filter(
+    (t) =>
+      !texto ||
+      `${t.paciente} ${t.tratamiento} ${t.odontologo} ${t.gabinete}`.toLowerCase().includes(texto),
+  );
+  const lista = buscados
+    .filter((t) => estado === "Todos" || t.estado === estado)
+    .sort((a, b) =>
+      rango === "pasados"
+        ? `${b.fecha} ${b.hora}`.localeCompare(`${a.fecha} ${a.hora}`)
+        : `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`),
+    );
+  const grupos = lista.reduce<{ fecha: string; turnos: Turno[] }[]>((acc, t) => {
+    const g = acc[acc.length - 1];
+    if (g?.fecha === t.fecha) g.turnos.push(t);
+    else acc.push({ fecha: t.fecha, turnos: [t] });
+    return acc;
+  }, []);
+
+  const RANGOS: [RangoTurnos, string][] = [
+    ["proximos", "Próximos"],
+    ["hoy", "Hoy"],
+    ["pasados", "Pasados"],
+    ["todos", "Todos"],
+  ];
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-[220px] flex-1">
+          <span className="sr-only">Buscar turnos</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar paciente, tratamiento u odontólogo"
+            className={`${INPUT_SM} pl-9`}
+          />
+        </label>
+        <div className="inline-flex rounded-xl border border-primary/15 bg-primary/[0.03] p-0.5">
+          {RANGOS.map(([id, l]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setRango(id)}
+              aria-pressed={rango === id}
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${rango === id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {(["Todos", ...ESTADOS_TURNO] as const).map((e) => {
+          const n = e === "Todos" ? buscados.length : buscados.filter((t) => t.estado === e).length;
+          const activo = estado === e;
+          return (
+            <button
+              key={e}
+              type="button"
+              onClick={() => setEstado(e)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition ${activo ? "border-primary bg-primary text-primary-foreground" : "border-primary/15 bg-card hover:border-primary/35"}`}
+            >
+              {e !== "Todos" && (
+                <span className={`size-1.5 rounded-full ${ESTADO_ACCENT[e].bar}`} />
+              )}
+              {e}
+              <span
+                className={`rounded-full px-1.5 text-[10px] tabular-nums ${activo ? "bg-white/25" : "bg-primary/10 text-primary"}`}
+              >
+                {n}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {lista.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
+          <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+            <CalendarCheck className="size-5" />
+          </div>
+          <p className="mt-3 text-sm font-semibold">No hay turnos para mostrar</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {texto || estado !== "Todos" ? "Probá con otra búsqueda o estado." : vacio}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-primary/15 bg-white/80 dark:bg-card/80">
+          <div className="hidden grid-cols-[72px_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px_96px] gap-3 border-b border-primary/12 bg-primary/[0.04] px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:grid">
+            <span>Hora</span>
+            <span>Paciente</span>
+            <span>Profesional</span>
+            <span>Lugar</span>
+            <span>Estado</span>
+            <span className="text-right">Acciones</span>
+          </div>
+          {grupos.map((g) => (
+            <div key={g.fecha}>
+              <div className="flex items-center justify-between gap-2 border-b border-primary/10 bg-gradient-to-r from-primary/[0.06] to-transparent px-4 py-2">
+                <p
+                  className={`text-xs font-bold capitalize ${g.fecha === hoy ? "text-primary" : "text-foreground"}`}
+                >
+                  {etiquetaDia(g.fecha, hoy)}
+                </p>
+                <span className="text-[10.5px] font-medium text-muted-foreground">
+                  {formatearFecha(g.fecha)} · {g.turnos.length}{" "}
+                  {g.turnos.length === 1 ? "turno" : "turnos"}
+                </span>
+              </div>
+              {g.turnos.map((t) => (
+                <div
+                  key={t.id}
+                  className="grid grid-cols-[60px_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/[0.07] px-4 py-2.5 transition-colors last:border-b-0 hover:bg-primary/[0.03] md:grid-cols-[72px_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px_96px]"
+                >
+                  <span className="text-sm font-bold tabular-nums">{t.hora}</span>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-[11px] font-bold text-primary">
+                      {iniciales(t.paciente)}
+                    </span>
+                    <div className="min-w-0">
+                      <p
+                        className={`truncate text-[13px] font-semibold ${t.estado === "Cancelada" ? "text-muted-foreground line-through" : ""}`}
+                      >
+                        {t.paciente}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">{t.tratamiento}</p>
+                    </div>
+                  </div>
+                  <span className="hidden min-w-0 items-center gap-1.5 truncate text-xs md:flex">
+                    <Stethoscope className="size-3.5 shrink-0 text-primary/70" />
+                    <span className="truncate">{t.odontologo}</span>
+                  </span>
+                  <span className="hidden min-w-0 text-xs text-muted-foreground md:block">
+                    <span className="block truncate">{t.sucursal}</span>
+                    <span className="block truncate text-[10.5px]">{t.gabinete}</span>
+                  </span>
+                  <span className="hidden md:block">
+                    <EstadoBadge estado={t.estado} />
+                  </span>
+                  <div className="flex items-center justify-end gap-1">
+                    {t.estado === "Pendiente" && (
+                      <button
+                        type="button"
+                        onClick={() => onEstado(t, "Confirmada")}
+                        title="Confirmar"
+                        aria-label={`Confirmar turno de ${t.paciente}`}
+                        className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition hover:-translate-y-0.5"
+                      >
+                        <Check className="size-3.5" />
+                      </button>
+                    )}
+                    {t.estado === "Confirmada" && (
+                      <button
+                        type="button"
+                        onClick={() => onEstado(t, "Atendida")}
+                        title="Marcar atendida"
+                        aria-label={`Marcar atendido a ${t.paciente}`}
+                        className="grid size-8 place-items-center rounded-xl bg-emerald-600 text-white shadow-sm transition hover:-translate-y-0.5"
+                      >
+                        <CalendarCheck className="size-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEditar(t)}
+                      title="Editar"
+                      aria-label={`Editar turno de ${t.paciente}`}
+                      className="grid size-8 place-items-center rounded-xl border border-primary/12 bg-white text-muted-foreground transition hover:border-primary/30 hover:text-primary dark:bg-card"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
-
-              {turnosDia.length === 0 && bloqueosDia.length === 0 && (
-                <div className="rounded-xl border border-dashed border-primary/10 px-2 py-5 text-center">
-                  <p className="text-[10px] text-muted-foreground">Sin turnos</p>
-                </div>
-              )}
             </div>
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────────── Mini calendario (columna derecha) ───────────── */
+
+function MiniCalendario({
+  fecha,
+  hoy,
+  turnos,
+  onElegir,
+}: {
+  fecha: string;
+  hoy: string;
+  turnos: Turno[];
+  onElegir: (fecha: string) => void;
+}) {
+  const [mes, setMes] = useState(fecha.slice(0, 7) + "-01");
+  useEffect(() => setMes(fecha.slice(0, 7) + "-01"), [fecha]);
+  const dias = obtenerDiasMes(mes);
+  const moverMes = (n: number) => {
+    const d = parseISO(mes);
+    d.setMonth(d.getMonth() + n);
+    setMes(toISO(d));
+  };
+  return (
+    <div className={CARD}>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold capitalize tracking-tight">{nombreMes(mes)}</p>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => moverMes(-1)}
+            aria-label="Mes anterior"
+            className="grid size-7 place-items-center rounded-full hover:bg-primary/10"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => moverMes(1)}
+            aria-label="Mes siguiente"
+            className="grid size-7 place-items-center rounded-full hover:bg-primary/10"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 text-center text-[10px] font-bold uppercase text-muted-foreground">
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+          <span key={i} className="py-1">
+            {d}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {dias.map((d, i) => {
+          if (!d) return <span key={`v-${i}`} />;
+          const n = turnos.filter((t) => t.fecha === d && t.estado !== "Cancelada").length;
+          const elegido = d === fecha;
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onElegir(d)}
+              className={`relative grid aspect-square place-items-center rounded-xl text-xs font-semibold tabular-nums transition ${
+                elegido
+                  ? "bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_rgba(124,58,237,0.8)]"
+                  : d === hoy
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-primary/[0.06]"
+              }`}
+            >
+              {parseISO(d).getDate()}
+              {n > 0 && (
+                <span
+                  className={`absolute bottom-1 size-1 rounded-full ${elegido ? "bg-white" : "bg-primary"}`}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1473,19 +1972,6 @@ function AgendaInner() {
 
   const bloqueosDia = bloqueos.filter((b) => b.fecha === fechaVista);
 
-  const itemsDia: ItemDia[] = [
-    ...turnosDia.map((t) => ({
-      tipo: "turno" as const,
-      hora: t.hora,
-      turno: t,
-    })),
-    ...bloqueosDia.map((b) => ({
-      tipo: "bloqueo" as const,
-      hora: b.desde,
-      bloqueo: b,
-    })),
-  ].sort((a, b) => a.hora.localeCompare(b.hora));
-
   const turnosLista = turnos
     .filter(pasaFiltros)
     .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
@@ -1652,6 +2138,18 @@ function AgendaInner() {
 
     show("Recordatorio eliminado");
   };
+
+  const abrirCitaEn = (fecha: string, hora: string) =>
+    setModal({
+      tipo: "cita",
+      prefill: {
+        fecha,
+        hora,
+        ...(filtros.odontologo ? { odontologo: filtros.odontologo } : {}),
+        ...(filtros.gabinete ? { gabinete: filtros.gabinete } : {}),
+        ...(filtros.sucursal ? { sucursal: filtros.sucursal } : {}),
+      },
+    });
 
   const modalCita = modal?.tipo === "cita" ? modal : null;
 
@@ -1849,126 +2347,37 @@ function AgendaInner() {
             <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
               {/* Columna principal */}
 
-              <div className={CARD}>
+              <div className={CARD_MAIN}>
                 {vista === "dia" && (
                   <>
                     <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
 
                     <div className="my-4 border-t border-primary/10" />
 
-                    {itemsDia.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
-                        <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
-                          <CalendarDays className="size-5" />
-                        </div>
-
-                        <p className="mt-3 text-sm font-semibold">No hay actividad para este día</p>
-
-                        <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-                          {mensajeVacio}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5">
-                        {itemsDia.map((item) =>
-                          item.tipo === "bloqueo" ? (
-                            <div
-                              key={`b-${item.bloqueo.id}`}
-                              className="group relative flex flex-wrap items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/[0.035] p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md"
-                            >
-                              <div className="flex w-20 shrink-0 flex-col items-center rounded-2xl border border-primary/15 bg-primary/10 py-2.5 text-primary">
-                                <span className="text-lg font-bold leading-none tabular-nums">
-                                  {item.bloqueo.desde}
-                                </span>
-
-                                <Lock className="mt-1 size-3.5 opacity-70" />
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-sm font-semibold">Horario bloqueado</p>
-
-                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                    Bloqueado
-                                  </span>
-                                </div>
-
-                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                  {item.bloqueo.desde} a {item.bloqueo.hasta} ·{" "}
-                                  {item.bloqueo.motivo}
-                                </p>
-                              </div>
-
-                              <BotonAccion
-                                label="Desbloquear"
-                                onClick={() => quitarBloqueo(item.bloqueo.id)}
-                              />
-                            </div>
-                          ) : (
-                            <TurnoCard
-                              key={`t-${item.turno.id}`}
-                              turno={item.turno}
-                              canalesActivos={canalesActivos}
-                              onEstado={cambiarEstado}
-                              onRecordar={recordarLlamada}
-                              onEditar={(turno) =>
-                                setModal({
-                                  tipo: "cita",
-                                  turno,
-                                })
-                              }
-                            />
-                          ),
-                        )}
-                      </div>
-                    )}
-
-                    {/* Horarios libres: tocás uno y se abre la cita con fecha y hora cargadas */}
-                    {fechaVista >= hoy && (
-                      <div className="mt-5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-3.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs font-semibold">
-                            Horarios libres
-                            {filtros.odontologo ? ` · ${filtros.odontologo}` : ""}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {horariosLibres.length} disponibles · tocá uno para agendar
-                          </p>
-                        </div>
-                        {horariosLibres.length === 0 ? (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            No quedan horarios libres para este día.
-                          </p>
-                        ) : (
-                          <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            {horariosLibres.map((hora) => (
-                              <button
-                                key={hora}
-                                type="button"
-                                onClick={() =>
-                                  setModal({
-                                    tipo: "cita",
-                                    prefill: {
-                                      fecha: fechaVista,
-                                      hora,
-                                      ...(filtros.odontologo
-                                        ? { odontologo: filtros.odontologo }
-                                        : {}),
-                                      ...(filtros.gabinete ? { gabinete: filtros.gabinete } : {}),
-                                      ...(filtros.sucursal ? { sucursal: filtros.sucursal } : {}),
-                                    },
-                                  })
-                                }
-                                className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-card px-2.5 py-1 text-[11px] font-semibold tabular-nums text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-                              >
-                                <Plus className="size-3" />
-                                {hora}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <DiaTimeline
+                      fecha={fechaVista}
+                      hoy={hoy}
+                      turnos={turnosDia}
+                      bloqueos={bloqueosDia}
+                      libres={horariosLibres}
+                      onDesbloquear={quitarBloqueo}
+                      onAgendar={(hora) => abrirCitaEn(fechaVista, hora)}
+                      renderTurno={(turno) => (
+                        <TurnoCard
+                          key={`t-${turno.id}`}
+                          turno={turno}
+                          canalesActivos={canalesActivos}
+                          onEstado={cambiarEstado}
+                          onRecordar={recordarLlamada}
+                          onEditar={(t) =>
+                            setModal({
+                              tipo: "cita",
+                              turno: t,
+                            })
+                          }
+                        />
+                      )}
+                    />
                   </>
                 )}
 
@@ -1978,10 +2387,12 @@ function AgendaInner() {
 
                     <div className="my-4 border-t border-primary/10" />
 
-                    <SemanaView
+                    <SemanaGrid
                       semana={semana}
+                      hoy={hoy}
                       turnos={turnosSemana}
                       bloqueos={bloqueos}
+                      onAgendar={abrirCitaEn}
                       onEditar={(turno) =>
                         setModal({
                           tipo: "cita",
@@ -2017,75 +2428,18 @@ function AgendaInner() {
 
                     <div className="my-4 border-t border-primary/10" />
 
-                    {turnosLista.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-4 py-10 text-center">
-                        <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
-                          <CalendarCheck className="size-5" />
-                        </div>
-
-                        <p className="mt-3 text-sm font-semibold">No hay turnos</p>
-
-                        <p className="mt-1 text-xs text-muted-foreground">{mensajeVacio}</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-2.5">
-                        {turnosLista.map((turno) => (
-                          <div
-                            key={turno.id}
-                            className="group rounded-2xl border border-primary/15 bg-card/75 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                          >
-                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                              <div className="flex shrink-0 items-center gap-2.5 md:w-[155px]">
-                                <div className="grid size-10 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
-                                  <CalendarDays className="size-4" />
-                                </div>
-
-                                <div>
-                                  <p className="text-xs font-bold tabular-nums">
-                                    {formatearFecha(turno.fecha)}
-                                  </p>
-
-                                  <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
-                                    {turno.hora}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-sm font-semibold">{turno.paciente}</p>
-
-                                  <EstadoBadge estado={turno.estado} />
-                                </div>
-
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {turno.tratamiento}
-                                </p>
-
-                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                                  <span>{turno.odontologo}</span>
-                                  <span>{turno.sucursal}</span>
-                                  <span>{turno.gabinete}</span>
-                                </div>
-                              </div>
-
-                              <button
-                                onClick={() =>
-                                  setModal({
-                                    tipo: "cita",
-                                    turno,
-                                  })
-                                }
-                                className="flex items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-card px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
-                              >
-                                <Pencil className="size-3.5" />
-                                Editar
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <TurnosTabla
+                      turnos={turnosLista}
+                      hoy={hoy}
+                      vacio={mensajeVacio}
+                      onEstado={cambiarEstado}
+                      onEditar={(turno) =>
+                        setModal({
+                          tipo: "cita",
+                          turno,
+                        })
+                      }
+                    />
                   </>
                 )}
               </div>
@@ -2093,6 +2447,16 @@ function AgendaInner() {
               {/* Columna derecha */}
 
               <div className="space-y-3">
+                <MiniCalendario
+                  fecha={fechaVista}
+                  hoy={hoy}
+                  turnos={turnosMes}
+                  onElegir={(f) => {
+                    setFechaVista(f);
+                    if (vista === "turnos" || vista === "mes") setVista("dia");
+                  }}
+                />
+
                 {/* Lista de espera */}
 
                 <div className={CARD}>

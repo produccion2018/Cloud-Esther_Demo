@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { registrarPlanDemo } from "@/lib/cloud-esther/demo-seguimiento";
 import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { modulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
@@ -497,6 +498,7 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
     if (planContratado) return;
     setPlanState(p);
     setStoredPlan(p);
+    registrarPlanDemo(PLANS[p].name);
   };
 
   return (

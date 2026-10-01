@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { capitalizarNombre } from "@/lib/utils";
+import { iniciarIngresoDemo, terminarIngresoDemo } from "@/lib/cloud-esther/demo-seguimiento";
 
 /* Ubicación: src/lib/cloud-esther/auth-store.ts
 
@@ -127,6 +128,7 @@ export function registrarCuenta(datos: {
 
   escribirJSON(KEY_CUENTAS, [...cuentas, sesion]);
   if (datos.passDemo) guardarCredencialDemo(email, datos.passDemo);
+  iniciarIngresoDemo(contactoDe(sesion), true);
   ponerSesion(sesion);
   return { ok: true, sesion };
 }
@@ -189,12 +191,19 @@ export function iniciarSesion(emailCrudo: string, pass?: string): Resultado {
     };
   }
   const sesion = normalizarSesion(cuenta) as Sesion;
+  // Cada ingreso de una cuenta de demo dura 30 minutos y queda registrado para el panel.
+  if (sesion.tipo === "demo") iniciarIngresoDemo(contactoDe(sesion));
   ponerSesion(sesion);
   return { ok: true, sesion };
 }
 
 export function cerrarSesion() {
+  terminarIngresoDemo("cierre");
   ponerSesion(null);
+}
+
+function contactoDe(s: Sesion) {
+  return { email: s.usuario.email, nombre: s.usuario.nombre, clinica: s.clinica.nombre };
 }
 
 /* ---------- acceso fuera de React ---------- */

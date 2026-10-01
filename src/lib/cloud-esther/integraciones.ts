@@ -3,10 +3,7 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 export type EstadoConector = "Conectado" | "Desconectado";
 
 export type CategoriaConector =
-  | "Comunicación"
-  | "Pagos y facturación"
-  | "Clínico"
-  | "Automatización";
+  "Comunicación" | "Pagos y facturación" | "Clínico" | "Automatización";
 
 export interface Conector {
   id: string;
@@ -15,6 +12,9 @@ export interface Conector {
   categoria: CategoriaConector;
   icon: string; // clave, se mapea a un ícono de lucide en el componente
   estado: EstadoConector;
+  /** Datos de conexión cargados en «Configurar» (por empresa). TODO backend: guardar cifrado. */
+  config?: Record<string, string>;
+  ultimaPrueba?: string;
 }
 
 /* De ejemplo quedan conectados n8n y WhatsApp Business (este último lo usa el módulo
@@ -89,14 +89,12 @@ const DATOS_INICIALES: Conector[] = [
 /* ───────────── Store a nivel módulo (mismo patrón que pacientes.ts / automatizaciones.ts) ───────────── */
 
 /* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
-const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES, { persistir: "integraciones" });
+const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES, {
+  persistir: "integraciones",
+});
 
-function setConectoresGlobal(
-  actualizar: Conector[] | ((prev: Conector[]) => Conector[]),
-) {
-  store.poner(
-    typeof actualizar === "function" ? actualizar(store.leer()) : actualizar,
-  );
+function setConectoresGlobal(actualizar: Conector[] | ((prev: Conector[]) => Conector[])) {
+  store.poner(typeof actualizar === "function" ? actualizar(store.leer()) : actualizar);
 }
 
 export function useIntegraciones() {

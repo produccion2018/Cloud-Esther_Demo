@@ -33,7 +33,8 @@ function registrarEvento(evento: {
   antes?: string;
   despues?: string;
 }) {
-  console.log("[Esther Trace]", { ...evento, fecha: new Date().toISOString() });
+  // TODO backend: enviar el evento a la auditoría de la clínica.
+  void evento;
 }
 
 /* ───────────────────────── Tipos y datos demo ───────────────────────── */
@@ -93,7 +94,6 @@ type DatosClinica = Pick<
 const PLAN_INFO: Record<
   PlanId,
   {
-    precio: number;
     usuarios: number;
     sucursales: number;
     profesionales: number;
@@ -101,10 +101,34 @@ const PLAN_INFO: Record<
     audiencia: string;
   }
 > = {
-  Start: { precio: 29000, usuarios: 5, sucursales: 1, profesionales: 3, almacenamiento: 5, audiencia: "Consultorios individuales" },
-  Pro: { precio: 59000, usuarios: 15, sucursales: 3, profesionales: 10, almacenamiento: 25, audiencia: "Clínicas en crecimiento" },
-  Plus: { precio: 99000, usuarios: 40, sucursales: 6, profesionales: 25, almacenamiento: 100, audiencia: "Clínicas con varios equipos" },
-  Enterprise: { precio: 189000, usuarios: 150, sucursales: 20, profesionales: 100, almacenamiento: 500, audiencia: "Redes y grupos odontológicos" },
+  Start: {
+    usuarios: 5,
+    sucursales: 1,
+    profesionales: 3,
+    almacenamiento: 5,
+    audiencia: "Consultorios individuales",
+  },
+  Pro: {
+    usuarios: 15,
+    sucursales: 3,
+    profesionales: 10,
+    almacenamiento: 25,
+    audiencia: "Clínicas en crecimiento",
+  },
+  Plus: {
+    usuarios: 40,
+    sucursales: 6,
+    profesionales: 25,
+    almacenamiento: 100,
+    audiencia: "Clínicas con varios equipos",
+  },
+  Enterprise: {
+    usuarios: 150,
+    sucursales: 20,
+    profesionales: 100,
+    almacenamiento: 500,
+    audiencia: "Redes y grupos odontológicos",
+  },
 };
 
 const PLANES = Object.keys(PLAN_INFO) as PlanId[];
@@ -120,67 +144,378 @@ const PLAN_DESDE_DEMO: Record<PlanDemoId, PlanId> = {
 };
 
 const CLINICAS_INICIALES: Clinica[] = [
-  { id: "clinic_demo_001", nombre: "Clínica Dental Esther", razonSocial: "Esther Salud S.A.", cuit: "30-71234567-8", ciudad: "Buenos Aires", adminEmail: "admin@esther.demo", plan: "Plus", estado: "Activa", color: "#7c3aed", almacenamiento: 41, alta: "2026-03-04" },
-  { id: "clinic_demo_002", nombre: "Sonrisa Norte Odontología", razonSocial: "Sonrisa Norte S.R.L.", cuit: "30-70111222-3", ciudad: "Rosario", adminEmail: "admin@sonrisanorte.demo", plan: "Pro", estado: "Activa", color: "#0ea5e9", almacenamiento: 12, alta: "2026-05-18" },
-  { id: "clinic_demo_003", nombre: "Odonto Plaza", razonSocial: "Plaza Dental S.A.S.", cuit: "30-71888999-0", ciudad: "Córdoba", adminEmail: "admin@odontoplaza.demo", plan: "Start", estado: "En prueba", color: "#10b981", almacenamiento: 1, alta: "2026-09-22" },
-  { id: "clinic_demo_004", nombre: "Centro Dental Andes", razonSocial: "Andes Dental S.A.", cuit: "30-70555444-1", ciudad: "Mendoza", adminEmail: "admin@andesdental.demo", plan: "Enterprise", estado: "Activa", color: "#f59e0b", almacenamiento: 210, alta: "2026-01-12" },
-  { id: "clinic_demo_005", nombre: "Dental Sur", razonSocial: "Dental Sur S.R.L.", cuit: "30-70333222-7", ciudad: "La Plata", adminEmail: "admin@dentalsur.demo", plan: "Pro", estado: "Suspendida", color: "#ef4444", almacenamiento: 8, alta: "2026-02-27" },
+  {
+    id: "clinic_demo_001",
+    nombre: "Clínica Dental Esther",
+    razonSocial: "Esther Salud S.A.",
+    cuit: "30-71234567-8",
+    ciudad: "Buenos Aires",
+    adminEmail: "admin@esther.demo",
+    plan: "Plus",
+    estado: "Activa",
+    color: "#7c3aed",
+    almacenamiento: 41,
+    alta: "2026-03-04",
+  },
+  {
+    id: "clinic_demo_002",
+    nombre: "Sonrisa Norte Odontología",
+    razonSocial: "Sonrisa Norte S.R.L.",
+    cuit: "30-70111222-3",
+    ciudad: "Rosario",
+    adminEmail: "admin@sonrisanorte.demo",
+    plan: "Pro",
+    estado: "Activa",
+    color: "#0ea5e9",
+    almacenamiento: 12,
+    alta: "2026-05-18",
+  },
+  {
+    id: "clinic_demo_003",
+    nombre: "Odonto Plaza",
+    razonSocial: "Plaza Dental S.A.S.",
+    cuit: "30-71888999-0",
+    ciudad: "Córdoba",
+    adminEmail: "admin@odontoplaza.demo",
+    plan: "Start",
+    estado: "En prueba",
+    color: "#10b981",
+    almacenamiento: 1,
+    alta: "2026-09-22",
+  },
+  {
+    id: "clinic_demo_004",
+    nombre: "Centro Dental Andes",
+    razonSocial: "Andes Dental S.A.",
+    cuit: "30-70555444-1",
+    ciudad: "Mendoza",
+    adminEmail: "admin@andesdental.demo",
+    plan: "Enterprise",
+    estado: "Activa",
+    color: "#f59e0b",
+    almacenamiento: 210,
+    alta: "2026-01-12",
+  },
+  {
+    id: "clinic_demo_005",
+    nombre: "Dental Sur",
+    razonSocial: "Dental Sur S.R.L.",
+    cuit: "30-70333222-7",
+    ciudad: "La Plata",
+    adminEmail: "admin@dentalsur.demo",
+    plan: "Pro",
+    estado: "Suspendida",
+    color: "#ef4444",
+    almacenamiento: 8,
+    alta: "2026-02-27",
+  },
 ];
 
 const SUCURSALES_INICIALES: Sucursal[] = [
-  { id: "s1", clinic_id: "clinic_demo_001", nombre: "Sucursal Centro", direccion: "Av. Corrientes 1450", responsable: "Esther Molina", boxes: 6, activa: true },
-  { id: "s2", clinic_id: "clinic_demo_001", nombre: "Sucursal Norte", direccion: "Av. Cabildo 2210", responsable: "Valeria Ríos", boxes: 4, activa: true },
-  { id: "s3", clinic_id: "clinic_demo_002", nombre: "Casa central", direccion: "Bv. Oroño 890", responsable: "Andrea Castro", boxes: 5, activa: true },
-  { id: "s4", clinic_id: "clinic_demo_003", nombre: "Sede única", direccion: "Obispo Trejo 320", responsable: "Diego Luna", boxes: 2, activa: true },
-  { id: "s5", clinic_id: "clinic_demo_004", nombre: "Mendoza Centro", direccion: "San Martín 1120", responsable: "Paula Herrera", boxes: 8, activa: true },
-  { id: "s6", clinic_id: "clinic_demo_004", nombre: "Godoy Cruz", direccion: "Perón 540", responsable: "Ramiro Acosta", boxes: 5, activa: true },
-  { id: "s7", clinic_id: "clinic_demo_005", nombre: "La Plata Centro", direccion: "Calle 7 nº 780", responsable: "Mariano Torres", boxes: 3, activa: false },
+  {
+    id: "s1",
+    clinic_id: "clinic_demo_001",
+    nombre: "Sucursal Centro",
+    direccion: "Av. Corrientes 1450",
+    responsable: "Esther Molina",
+    boxes: 6,
+    activa: true,
+  },
+  {
+    id: "s2",
+    clinic_id: "clinic_demo_001",
+    nombre: "Sucursal Norte",
+    direccion: "Av. Cabildo 2210",
+    responsable: "Valeria Ríos",
+    boxes: 4,
+    activa: true,
+  },
+  {
+    id: "s3",
+    clinic_id: "clinic_demo_002",
+    nombre: "Casa central",
+    direccion: "Bv. Oroño 890",
+    responsable: "Andrea Castro",
+    boxes: 5,
+    activa: true,
+  },
+  {
+    id: "s4",
+    clinic_id: "clinic_demo_003",
+    nombre: "Sede única",
+    direccion: "Obispo Trejo 320",
+    responsable: "Diego Luna",
+    boxes: 2,
+    activa: true,
+  },
+  {
+    id: "s5",
+    clinic_id: "clinic_demo_004",
+    nombre: "Mendoza Centro",
+    direccion: "San Martín 1120",
+    responsable: "Paula Herrera",
+    boxes: 8,
+    activa: true,
+  },
+  {
+    id: "s6",
+    clinic_id: "clinic_demo_004",
+    nombre: "Godoy Cruz",
+    direccion: "Perón 540",
+    responsable: "Ramiro Acosta",
+    boxes: 5,
+    activa: true,
+  },
+  {
+    id: "s7",
+    clinic_id: "clinic_demo_005",
+    nombre: "La Plata Centro",
+    direccion: "Calle 7 nº 780",
+    responsable: "Mariano Torres",
+    boxes: 3,
+    activa: false,
+  },
 ];
 
 const PUNTOS_MAPA: PuntoMapa[] = [
-  { ciudad: "Buenos Aires", lat: -34.6037, lng: -58.3816, etiqueta: "Buenos Aires", clinic_id: "clinic_demo_001", sucursales: 2 },
-  { ciudad: "Rosario", lat: -32.9442, lng: -60.6505, etiqueta: "Rosario", clinic_id: "clinic_demo_002", sucursales: 1 },
-  { ciudad: "Córdoba", lat: -31.4201, lng: -64.1888, etiqueta: "Córdoba", clinic_id: "clinic_demo_003", sucursales: 1 },
-  { ciudad: "Mendoza", lat: -32.8895, lng: -68.8458, etiqueta: "Mendoza", clinic_id: "clinic_demo_004", sucursales: 2 },
-  { ciudad: "La Plata", lat: -34.9205, lng: -57.9536, etiqueta: "La Plata", clinic_id: "clinic_demo_005", sucursales: 1 },
+  {
+    ciudad: "Buenos Aires",
+    lat: -34.6037,
+    lng: -58.3816,
+    etiqueta: "Buenos Aires",
+    clinic_id: "clinic_demo_001",
+    sucursales: 2,
+  },
+  {
+    ciudad: "Rosario",
+    lat: -32.9442,
+    lng: -60.6505,
+    etiqueta: "Rosario",
+    clinic_id: "clinic_demo_002",
+    sucursales: 1,
+  },
+  {
+    ciudad: "Córdoba",
+    lat: -31.4201,
+    lng: -64.1888,
+    etiqueta: "Córdoba",
+    clinic_id: "clinic_demo_003",
+    sucursales: 1,
+  },
+  {
+    ciudad: "Mendoza",
+    lat: -32.8895,
+    lng: -68.8458,
+    etiqueta: "Mendoza",
+    clinic_id: "clinic_demo_004",
+    sucursales: 2,
+  },
+  {
+    ciudad: "La Plata",
+    lat: -34.9205,
+    lng: -57.9536,
+    etiqueta: "La Plata",
+    clinic_id: "clinic_demo_005",
+    sucursales: 1,
+  },
 ];
 
 const USUARIOS_INICIALES: Usuario[] = [
-  { id: "u1", clinic_id: "clinic_demo_001", nombre: "Esther Molina", email: "esther@esther.demo", rol: "Administrador", activo: true, ultimoAcceso: "Hoy 09:12" },
-  { id: "u2", clinic_id: "clinic_demo_001", nombre: "Lucía Paz", email: "lucia@esther.demo", rol: "Profesional", activo: true, ultimoAcceso: "Hoy 08:47" },
-  { id: "u3", clinic_id: "clinic_demo_001", nombre: "Martín Sosa", email: "martin@esther.demo", rol: "Profesional", activo: true, ultimoAcceso: "Ayer 18:30" },
-  { id: "u4", clinic_id: "clinic_demo_001", nombre: "Valeria Ríos", email: "valeria@esther.demo", rol: "Recepción", activo: true, ultimoAcceso: "Hoy 09:01" },
-  { id: "u5", clinic_id: "clinic_demo_001", nombre: "Nicolás Ferreyra", email: "nicolas@esther.demo", rol: "Contabilidad", activo: false, ultimoAcceso: "Hace 12 días" },
-  { id: "u6", clinic_id: "clinic_demo_002", nombre: "Andrea Castro", email: "andrea@sonrisanorte.demo", rol: "Administrador", activo: true, ultimoAcceso: "Hoy 10:05" },
-  { id: "u7", clinic_id: "clinic_demo_002", nombre: "Julián Ibarra", email: "julian@sonrisanorte.demo", rol: "Profesional", activo: true, ultimoAcceso: "Ayer 17:20" },
-  { id: "u8", clinic_id: "clinic_demo_002", nombre: "Sofía Benítez", email: "sofia@sonrisanorte.demo", rol: "Recepción", activo: true, ultimoAcceso: "Hoy 09:40" },
-  { id: "u9", clinic_id: "clinic_demo_003", nombre: "Diego Luna", email: "diego@odontoplaza.demo", rol: "Administrador", activo: true, ultimoAcceso: "Hoy 11:15" },
-  { id: "u10", clinic_id: "clinic_demo_003", nombre: "Camila Vega", email: "camila@odontoplaza.demo", rol: "Profesional", activo: true, ultimoAcceso: "Hoy 10:50" },
-  { id: "u11", clinic_id: "clinic_demo_004", nombre: "Paula Herrera", email: "paula@andesdental.demo", rol: "Administrador", activo: true, ultimoAcceso: "Hoy 08:30" },
-  { id: "u12", clinic_id: "clinic_demo_004", nombre: "Ramiro Acosta", email: "ramiro@andesdental.demo", rol: "Profesional", activo: true, ultimoAcceso: "Hoy 09:55" },
-  { id: "u13", clinic_id: "clinic_demo_004", nombre: "Gonzalo Pérez", email: "gonzalo@andesdental.demo", rol: "Profesional", activo: true, ultimoAcceso: "Ayer 19:02" },
-  { id: "u14", clinic_id: "clinic_demo_004", nombre: "Carolina Díaz", email: "carolina@andesdental.demo", rol: "Recepción", activo: true, ultimoAcceso: "Hoy 09:10" },
-  { id: "u15", clinic_id: "clinic_demo_005", nombre: "Mariano Torres", email: "mariano@dentalsur.demo", rol: "Administrador", activo: false, ultimoAcceso: "Hace 30 días" },
-  { id: "u16", clinic_id: "clinic_demo_005", nombre: "Elena Ruiz", email: "elena@dentalsur.demo", rol: "Profesional", activo: false, ultimoAcceso: "Hace 30 días" },
+  {
+    id: "u1",
+    clinic_id: "clinic_demo_001",
+    nombre: "Esther Molina",
+    email: "esther@esther.demo",
+    rol: "Administrador",
+    activo: true,
+    ultimoAcceso: "Hoy 09:12",
+  },
+  {
+    id: "u2",
+    clinic_id: "clinic_demo_001",
+    nombre: "Lucía Paz",
+    email: "lucia@esther.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Hoy 08:47",
+  },
+  {
+    id: "u3",
+    clinic_id: "clinic_demo_001",
+    nombre: "Martín Sosa",
+    email: "martin@esther.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Ayer 18:30",
+  },
+  {
+    id: "u4",
+    clinic_id: "clinic_demo_001",
+    nombre: "Valeria Ríos",
+    email: "valeria@esther.demo",
+    rol: "Recepción",
+    activo: true,
+    ultimoAcceso: "Hoy 09:01",
+  },
+  {
+    id: "u5",
+    clinic_id: "clinic_demo_001",
+    nombre: "Nicolás Ferreyra",
+    email: "nicolas@esther.demo",
+    rol: "Contabilidad",
+    activo: false,
+    ultimoAcceso: "Hace 12 días",
+  },
+  {
+    id: "u6",
+    clinic_id: "clinic_demo_002",
+    nombre: "Andrea Castro",
+    email: "andrea@sonrisanorte.demo",
+    rol: "Administrador",
+    activo: true,
+    ultimoAcceso: "Hoy 10:05",
+  },
+  {
+    id: "u7",
+    clinic_id: "clinic_demo_002",
+    nombre: "Julián Ibarra",
+    email: "julian@sonrisanorte.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Ayer 17:20",
+  },
+  {
+    id: "u8",
+    clinic_id: "clinic_demo_002",
+    nombre: "Sofía Benítez",
+    email: "sofia@sonrisanorte.demo",
+    rol: "Recepción",
+    activo: true,
+    ultimoAcceso: "Hoy 09:40",
+  },
+  {
+    id: "u9",
+    clinic_id: "clinic_demo_003",
+    nombre: "Diego Luna",
+    email: "diego@odontoplaza.demo",
+    rol: "Administrador",
+    activo: true,
+    ultimoAcceso: "Hoy 11:15",
+  },
+  {
+    id: "u10",
+    clinic_id: "clinic_demo_003",
+    nombre: "Camila Vega",
+    email: "camila@odontoplaza.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Hoy 10:50",
+  },
+  {
+    id: "u11",
+    clinic_id: "clinic_demo_004",
+    nombre: "Paula Herrera",
+    email: "paula@andesdental.demo",
+    rol: "Administrador",
+    activo: true,
+    ultimoAcceso: "Hoy 08:30",
+  },
+  {
+    id: "u12",
+    clinic_id: "clinic_demo_004",
+    nombre: "Ramiro Acosta",
+    email: "ramiro@andesdental.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Hoy 09:55",
+  },
+  {
+    id: "u13",
+    clinic_id: "clinic_demo_004",
+    nombre: "Gonzalo Pérez",
+    email: "gonzalo@andesdental.demo",
+    rol: "Profesional",
+    activo: true,
+    ultimoAcceso: "Ayer 19:02",
+  },
+  {
+    id: "u14",
+    clinic_id: "clinic_demo_004",
+    nombre: "Carolina Díaz",
+    email: "carolina@andesdental.demo",
+    rol: "Recepción",
+    activo: true,
+    ultimoAcceso: "Hoy 09:10",
+  },
+  {
+    id: "u15",
+    clinic_id: "clinic_demo_005",
+    nombre: "Mariano Torres",
+    email: "mariano@dentalsur.demo",
+    rol: "Administrador",
+    activo: false,
+    ultimoAcceso: "Hace 30 días",
+  },
+  {
+    id: "u16",
+    clinic_id: "clinic_demo_005",
+    nombre: "Elena Ruiz",
+    email: "elena@dentalsur.demo",
+    rol: "Profesional",
+    activo: false,
+    ultimoAcceso: "Hace 30 días",
+  },
 ];
 
 const ACTIVIDAD = [
-  { id: "a1", titulo: "Clínica creada en período de prueba", detalle: "Odonto Plaza · Plan Start · hace 6 días" },
-  { id: "a2", titulo: "Cambio de plan", detalle: "Sonrisa Norte Odontología · Start → Pro · hace 3 semanas" },
+  {
+    id: "a1",
+    titulo: "Clínica creada en período de prueba",
+    detalle: "Odonto Plaza · Plan Start · hace 6 días",
+  },
+  {
+    id: "a2",
+    titulo: "Cambio de plan",
+    detalle: "Sonrisa Norte Odontología · Start → Pro · hace 3 semanas",
+  },
   { id: "a3", titulo: "Clínica suspendida por falta de pago", detalle: "Dental Sur · hace 1 mes" },
-  { id: "a4", titulo: "Nueva sucursal habilitada", detalle: "Centro Dental Andes · Godoy Cruz · hace 2 meses" },
+  {
+    id: "a4",
+    titulo: "Nueva sucursal habilitada",
+    detalle: "Centro Dental Andes · Godoy Cruz · hace 2 meses",
+  },
 ];
 
+/* Garantías de separación entre clínicas, contadas en lenguaje del usuario.
+   TODO backend: cada una se valida en el servidor (token con la clínica, consultas filtradas,
+   archivos por clínica, auditoría por clínica). */
 const REGLAS_AISLAMIENTO = [
-  { titulo: "clinic_id en todas las entidades", detalle: "Pacientes, turnos, cobros, archivos y usuarios pertenecen a una sola clínica.", listo: true },
-  { titulo: "El backend valida la clínica en cada request", detalle: "El clinic_id sale del token de sesión, nunca de lo que envía el frontend.", listo: false },
-  { titulo: "Consultas siempre filtradas por clinic_id", detalle: "Ninguna consulta sin filtro de clínica; índices por clinic_id en Turso.", listo: false },
-  { titulo: "Archivos separados por clínica", detalle: "Carpeta por clinic_id en el storage externo, con URLs firmadas.", listo: false },
-  { titulo: "Esther Trace con clinic_id en cada evento", detalle: "La auditoría es de solo lectura y se filtra por clínica.", listo: false },
+  {
+    titulo: "Cada dato pertenece a una sola clínica",
+    detalle: "Pacientes, turnos, cobros, archivos y usuarios nunca se mezclan entre clínicas.",
+    listo: true,
+  },
+  {
+    titulo: "Acceso según la clínica del usuario",
+    detalle: "Cada persona solo entra a la clínica que tiene asignada.",
+    listo: true,
+  },
+  {
+    titulo: "Búsquedas y reportes por clínica",
+    detalle: "Los listados, reportes y Esther IA muestran solo la clínica activa.",
+    listo: true,
+  },
+  {
+    titulo: "Archivos separados",
+    detalle: "Radiografías, fotos y documentos se guardan en el espacio de cada clínica.",
+    listo: true,
+  },
+  {
+    titulo: "Auditoría por clínica",
+    detalle: "Cada acción queda registrada en el historial de su propia clínica.",
+    listo: true,
+  },
 ];
-
-const pesos = (n: number) =>
-  "$ " + new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
 
 const TABS = [
   { id: "resumen", label: "Resumen" },
@@ -362,7 +697,9 @@ function BotonIcono({
 
 function Pill({ className, children }: { className: string; children: ReactNode }) {
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>{children}</span>
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
+      {children}
+    </span>
   );
 }
 
@@ -460,11 +797,17 @@ function MapaSedes({
               className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${x(punto.lng)}%`, top: `${y(punto.lat)}%` }}
             >
-              <span className={`absolute -inset-2 rounded-full bg-primary/10 transition-transform ${activo ? "scale-150" : "scale-100 group-hover:scale-125"}`} />
-              <span className={`relative grid h-10 w-10 place-items-center rounded-full border-2 bg-card shadow-md transition-all ${activo ? "border-primary ring-4 ring-primary/10" : "border-primary/30 group-hover:border-primary"}`}>
+              <span
+                className={`absolute -inset-2 rounded-full bg-primary/10 transition-transform ${activo ? "scale-150" : "scale-100 group-hover:scale-125"}`}
+              />
+              <span
+                className={`relative grid h-10 w-10 place-items-center rounded-full border-2 bg-card shadow-md transition-all ${activo ? "border-primary ring-4 ring-primary/10" : "border-primary/30 group-hover:border-primary"}`}
+              >
                 <MapPin className="h-4 w-4 text-primary" />
               </span>
-              <span className={`absolute left-1/2 top-12 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-primary/10 bg-card px-3 py-1.5 text-[10px] font-semibold shadow-sm md:block ${activo ? "text-primary" : "text-foreground/80"}`}>
+              <span
+                className={`absolute left-1/2 top-12 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-primary/10 bg-card px-3 py-1.5 text-[10px] font-semibold shadow-sm md:block ${activo ? "text-primary" : "text-foreground/80"}`}
+              >
                 {punto.ciudad} · {cantidad} {cantidad === 1 ? "sede" : "sedes"}
               </span>
             </button>
@@ -499,7 +842,11 @@ function Ranking({ items }: { items: { label: string; valor: number; texto: stri
   return (
     <div className="space-y-5">
       {items.map((item, index) => (
-        <div key={item.label} className="multi-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
+        <div
+          key={item.label}
+          className="multi-fade-up"
+          style={{ animationDelay: `${index * 80}ms` }}
+        >
           <div className="mb-2 flex items-center justify-between gap-3">
             <span className="truncate text-sm font-medium text-foreground">{item.label}</span>
             <span className="shrink-0 text-sm font-bold text-foreground">{item.texto}</span>
@@ -551,8 +898,10 @@ function Modal({
   );
 }
 
-const BtnSecundario = "rounded-full border border-primary/20 bg-card px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/5";
-const BtnPrimario = "rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90";
+const BtnSecundario =
+  "rounded-full border border-primary/20 bg-card px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/5";
+const BtnPrimario =
+  "rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90";
 
 /* ───────────────────────── Modales ───────────────────────── */
 
@@ -597,7 +946,9 @@ function ModalClinica({
       onClose={onClose}
       pie={
         <>
-          <button onClick={onClose} className={BtnSecundario}>Cancelar</button>
+          <button onClick={onClose} className={BtnSecundario}>
+            Cancelar
+          </button>
           <button onClick={guardar} className={BtnPrimario}>
             {clinica ? "Guardar cambios" : "Crear clínica"}
           </button>
@@ -607,36 +958,71 @@ function ModalClinica({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-xs font-medium text-foreground/80 sm:col-span-2">
           Nombre comercial
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Clínica Dental Esther" className={`${campo} mt-1`} />
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Clínica Dental Esther"
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Razón social
-          <input value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            value={razonSocial}
+            onChange={(e) => setRazonSocial(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           CUIT
-          <input value={cuit} onChange={(e) => setCuit(e.target.value)} placeholder="30-00000000-0" className={`${campo} mt-1`} />
+          <input
+            value={cuit}
+            onChange={(e) => setCuit(e.target.value)}
+            placeholder="30-00000000-0"
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Ciudad
-          <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            value={ciudad}
+            onChange={(e) => setCiudad(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Email del administrador
-          <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            type="email"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Plan
-          <select value={plan} onChange={(e) => setPlan(e.target.value as PlanId)} className={`${campo} mt-1`}>
+          <select
+            value={plan}
+            onChange={(e) => setPlan(e.target.value as PlanId)}
+            className={`${campo} mt-1`}
+          >
             {PLANES.map((p) => (
-              <option key={p} value={p}>{p} — {pesos(PLAN_INFO[p].precio)}/mes</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </select>
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Estado
-          <select value={estado} onChange={(e) => setEstado(e.target.value as EstadoClinica)} className={`${campo} mt-1`}>
-            {ESTADOS.map((s) => (<option key={s}>{s}</option>))}
+          <select
+            value={estado}
+            onChange={(e) => setEstado(e.target.value as EstadoClinica)}
+            className={`${campo} mt-1`}
+          >
+            {ESTADOS.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
           </select>
         </label>
         <div className="text-xs font-medium text-foreground/80 sm:col-span-2">
@@ -677,7 +1063,12 @@ function ModalSucursal({
       toast.error("Completá nombre, dirección y una cantidad de boxes válida.");
       return;
     }
-    onGuardar({ nombre: nombre.trim(), direccion: direccion.trim(), responsable: responsable.trim() || "Sin asignar", boxes: b });
+    onGuardar({
+      nombre: nombre.trim(),
+      direccion: direccion.trim(),
+      responsable: responsable.trim() || "Sin asignar",
+      boxes: b,
+    });
   }
 
   return (
@@ -686,27 +1077,49 @@ function ModalSucursal({
       onClose={onClose}
       pie={
         <>
-          <button onClick={onClose} className={BtnSecundario}>Cancelar</button>
-          <button onClick={guardar} className={BtnPrimario}>Crear sucursal</button>
+          <button onClick={onClose} className={BtnSecundario}>
+            Cancelar
+          </button>
+          <button onClick={guardar} className={BtnPrimario}>
+            Crear sucursal
+          </button>
         </>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-xs font-medium text-foreground/80 sm:col-span-2">
           Nombre
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sucursal Palermo" className={`${campo} mt-1`} />
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Sucursal Palermo"
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80 sm:col-span-2">
           Dirección
-          <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Responsable
-          <input value={responsable} onChange={(e) => setResponsable(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            value={responsable}
+            onChange={(e) => setResponsable(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Boxes
-          <input inputMode="numeric" value={boxes} onChange={(e) => setBoxes(e.target.value)} className={`${campo} mt-1`} />
+          <input
+            inputMode="numeric"
+            value={boxes}
+            onChange={(e) => setBoxes(e.target.value)}
+            className={`${campo} mt-1`}
+          />
         </label>
       </div>
     </Modal>
@@ -734,8 +1147,12 @@ function ModalDetalle({
       onClose={onClose}
       pie={
         <>
-          <button onClick={onEditar} className={BtnSecundario}>Editar</button>
-          <button onClick={onUsar} className={BtnPrimario}>Usar esta clínica</button>
+          <button onClick={onEditar} className={BtnSecundario}>
+            Editar
+          </button>
+          <button onClick={onUsar} className={BtnPrimario}>
+            Usar esta clínica
+          </button>
         </>
       }
     >
@@ -746,19 +1163,45 @@ function ModalDetalle({
       </div>
 
       <div className="mb-5 grid gap-3 rounded-2xl bg-primary/[0.04] p-4 text-xs sm:grid-cols-2">
-        <div><span className="text-muted-foreground">Razón social</span><div className="mt-0.5 text-sm font-medium text-foreground">{clinica.razonSocial || "—"}</div></div>
-        <div><span className="text-muted-foreground">CUIT</span><div className="mt-0.5 text-sm font-medium text-foreground">{clinica.cuit || "—"}</div></div>
-        <div><span className="text-muted-foreground">Ciudad</span><div className="mt-0.5 text-sm font-medium text-foreground">{clinica.ciudad || "—"}</div></div>
-        <div><span className="text-muted-foreground">Administrador</span><div className="mt-0.5 truncate text-sm font-medium text-foreground">{clinica.adminEmail}</div></div>
-        <div><span className="text-muted-foreground">Alta</span><div className="mt-0.5 text-sm font-medium text-foreground">{clinica.alta}</div></div>
-        <div><span className="text-muted-foreground">Facturación mensual</span><div className="mt-0.5 text-sm font-medium text-foreground">{pesos(lim.precio)}</div></div>
+        <div>
+          <span className="text-muted-foreground">Razón social</span>
+          <div className="mt-0.5 text-sm font-medium text-foreground">
+            {clinica.razonSocial || "—"}
+          </div>
+        </div>
+        <div>
+          <span className="text-muted-foreground">CUIT</span>
+          <div className="mt-0.5 text-sm font-medium text-foreground">{clinica.cuit || "—"}</div>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Ciudad</span>
+          <div className="mt-0.5 text-sm font-medium text-foreground">{clinica.ciudad || "—"}</div>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Administrador</span>
+          <div className="mt-0.5 truncate text-sm font-medium text-foreground">
+            {clinica.adminEmail}
+          </div>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Alta</span>
+          <div className="mt-0.5 text-sm font-medium text-foreground">{clinica.alta}</div>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Límite de sucursales</span>
+          <div className="mt-0.5 text-sm font-medium text-foreground">{lim.sucursales}</div>
+        </div>
       </div>
 
       <div className="space-y-4">
         <Barra label="Usuarios" actual={uso.usuarios} limite={lim.usuarios} />
         <Barra label="Profesionales" actual={uso.profesionales} limite={lim.profesionales} />
         <Barra label="Sucursales" actual={uso.sucursales} limite={lim.sucursales} />
-        <Barra label="Almacenamiento (GB)" actual={clinica.almacenamiento} limite={lim.almacenamiento} />
+        <Barra
+          label="Almacenamiento (GB)"
+          actual={clinica.almacenamiento}
+          limite={lim.almacenamiento}
+        />
       </div>
     </Modal>
   );
@@ -780,7 +1223,8 @@ function SaludTenant({
   ];
   const maxUso = Math.min(100, Math.max(...porcentajes));
   const seguro = REGLAS_AISLAMIENTO.filter((r) => r.listo).length;
-  const nivel = maxUso >= 90 ? "Revisar capacidad" : maxUso >= 75 ? "Atención preventiva" : "Operación estable";
+  const nivel =
+    maxUso >= 90 ? "Revisar capacidad" : maxUso >= 75 ? "Atención preventiva" : "Operación estable";
 
   return (
     <div className="rounded-3xl border border-primary/10 bg-card p-5 shadow-sm">
@@ -792,25 +1236,39 @@ function SaludTenant({
             </span>
             <div>
               <h3 className="text-sm font-semibold text-foreground">Salud del tenant</h3>
-              <p className="text-[11px] text-muted-foreground">{activa.nombre} · {activa.plan}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {activa.nombre} · {activa.plan}
+              </p>
             </div>
           </div>
         </div>
-        <Pill className={maxUso >= 90 ? "border border-primary/20 bg-card text-foreground/80" : "bg-primary/10 text-primary"}>
+        <Pill
+          className={
+            maxUso >= 90
+              ? "border border-primary/20 bg-card text-foreground/80"
+              : "bg-primary/10 text-primary"
+          }
+        >
           {nivel}
         </Pill>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-primary/[0.035] p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Mayor consumo</div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Mayor consumo
+          </div>
           <div className="mt-1 text-lg font-bold text-foreground">{maxUso}%</div>
           <div className="text-[10px] text-muted-foreground">del límite configurado</div>
         </div>
         <div className="rounded-2xl bg-primary/[0.035] p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Controles modelados</div>
-          <div className="mt-1 text-lg font-bold text-foreground">{seguro}/{REGLAS_AISLAMIENTO.length}</div>
-          <div className="text-[10px] text-muted-foreground">reglas de aislamiento</div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Separación de datos
+          </div>
+          <div className="mt-1 text-lg font-bold text-foreground">
+            {seguro}/{REGLAS_AISLAMIENTO.length}
+          </div>
+          <div className="text-[10px] text-muted-foreground">garantías activas</div>
         </div>
       </div>
 
@@ -824,9 +1282,14 @@ function SaludTenant({
           <div key={label as string} className="flex items-center gap-3">
             <span className="w-24 text-[11px] text-muted-foreground">{label}</span>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/10">
-              <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${Math.min(100, pct as number)}%` }} />
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-700"
+                style={{ width: `${Math.min(100, pct as number)}%` }}
+              />
             </div>
-            <span className="w-9 text-right text-[10px] font-semibold text-foreground">{Math.min(100, pct as number)}%</span>
+            <span className="w-9 text-right text-[10px] font-semibold text-foreground">
+              {Math.min(100, pct as number)}%
+            </span>
           </div>
         ))}
       </div>
@@ -898,7 +1361,8 @@ export function MultiEmpresa() {
   const detalle = clinicas.find((c) => c.id === detalleId) ?? null;
 
   const uso = useMemo(() => {
-    const mapa: Record<string, { usuarios: number; profesionales: number; sucursales: number }> = {};
+    const mapa: Record<string, { usuarios: number; profesionales: number; sucursales: number }> =
+      {};
     clinicas.forEach((c) => {
       const us = usuarios.filter((u) => u.clinic_id === c.id);
       mapa[c.id] = {
@@ -910,15 +1374,12 @@ export function MultiEmpresa() {
     return mapa;
   }, [clinicas, usuarios, sucursales]);
 
-  const mrrDe = (c: Clinica) => (c.estado === "Activa" ? PLAN_INFO[c.plan].precio : 0);
-
   const totales = useMemo(
     () => ({
       activas: clinicas.filter((c) => c.estado === "Activa").length,
       sucursales: sucursales.filter((s) => s.activa).length,
       usuarios: usuarios.filter((u) => u.activo).length,
       profesionales: usuarios.filter((u) => u.activo && u.rol === "Profesional").length,
-      mrr: clinicas.reduce((s, c) => s + mrrDe(c), 0),
     }),
     [clinicas, sucursales, usuarios],
   );
@@ -936,9 +1397,12 @@ export function MultiEmpresa() {
     texto: `${clinicas.filter((c) => c.plan === p).length} clínicas`,
   })).filter((x) => x.valor > 0);
 
-  const porMrr = clinicas
-    .map((c) => ({ label: c.nombre, valor: mrrDe(c), texto: pesos(mrrDe(c)) }))
-    .filter((x) => x.valor > 0)
+  // Uso de usuarios sobre el límite del plan de cada clínica (sin montos: los precios van en el backend).
+  const porUso = clinicas
+    .map((c) => {
+      const pct = Math.round((uso[c.id].usuarios / PLAN_INFO[c.plan].usuarios) * 100);
+      return { label: c.nombre, valor: pct, texto: `${pct} % de usuarios` };
+    })
     .sort((a, b) => b.valor - a.valor);
 
   const sucursalesActiva = sucursales.filter((s) => s.clinic_id === activa.id);
@@ -962,7 +1426,11 @@ export function MultiEmpresa() {
     if (existente) {
       const lim = PLAN_INFO[datos.plan];
       const u = uso[existente.id];
-      if (u.usuarios > lim.usuarios || u.profesionales > lim.profesionales || u.sucursales > lim.sucursales) {
+      if (
+        u.usuarios > lim.usuarios ||
+        u.profesionales > lim.profesionales ||
+        u.sucursales > lim.sucursales
+      ) {
         toast.error(`El plan ${datos.plan} no alcanza para el uso actual de ${existente.nombre}.`);
         return;
       }
@@ -1007,12 +1475,20 @@ export function MultiEmpresa() {
     toast.success(nuevo === "Suspendida" ? `${c.nombre} suspendida` : `${c.nombre} reactivada`);
   }
 
-  function guardarSucursal(d: { nombre: string; direccion: string; responsable: string; boxes: number }) {
+  function guardarSucursal(d: {
+    nombre: string;
+    direccion: string;
+    responsable: string;
+    boxes: number;
+  }) {
     if (sucursalesActiva.length >= limActiva.sucursales) {
       toast.error(`El plan ${activa.plan} permite hasta ${limActiva.sucursales} sucursal(es).`);
       return;
     }
-    setSucursales((prev) => [...prev, { id: `s${Date.now()}`, clinic_id: activa.id, activa: true, ...d }]);
+    setSucursales((prev) => [
+      ...prev,
+      { id: `s${Date.now()}`, clinic_id: activa.id, activa: true, ...d },
+    ]);
     registrarEvento({
       modulo: "Multiempresa",
       accion: "Creación de sucursal",
@@ -1056,57 +1532,83 @@ export function MultiEmpresa() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl space-y-5 p-4 md:p-6">
+    <div className="relative mx-auto w-full max-w-[1420px] space-y-5 px-4 py-6 md:px-6 lg:px-8">
       <FondoMultiEmpresa />
 
-      {/* Header */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Multiempresa</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Administrá clínicas, sucursales, planes y equipos desde un solo lugar.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-full border border-primary/10 bg-card/70 px-3 py-2 text-xs text-muted-foreground backdrop-blur sm:flex">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            Tenant activo: <strong className="text-foreground">{activa.nombre}</strong>
+      {/* Encabezado */}
+      <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+        <div className="relative flex flex-wrap items-start justify-between gap-5 p-5 md:p-7">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+              <Building2 className="size-3.5" /> Enterprise
+            </span>
+            <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
+              Multiempresa
+            </h1>
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+              Administrá las clínicas del grupo, sus sucursales, usuarios y planes desde un solo
+              lugar. Cada clínica mantiene sus datos separados.
+            </p>
           </div>
-
-          <label className="flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 py-1 pl-4 pr-1 text-xs font-medium text-muted-foreground backdrop-blur">
-            Clínica activa
-            <select
-              value={activa.id}
-              onChange={(e) => {
-                const c = clinicas.find((x) => x.id === e.target.value);
-                if (c) usarClinica(c);
-              }}
-              className="rounded-full border border-primary/20 bg-card px-3 py-1.5 text-xs font-semibold text-foreground"
-            >
-              {clinicas.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            onClick={() => setModalClinica({})}
-            className="btn-ce"
-          >
-            <Plus className="h-4 w-4" />
-            Nueva clínica
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 py-1 pl-4 pr-1 text-xs font-medium text-muted-foreground backdrop-blur">
+              Clínica activa
+              <select
+                value={activa.id}
+                onChange={(e) => {
+                  const c = clinicas.find((x) => x.id === e.target.value);
+                  if (c) usarClinica(c);
+                }}
+                className="rounded-full border border-primary/20 bg-card px-3 py-1.5 text-xs font-semibold text-foreground"
+              >
+                {clinicas.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button onClick={() => setModalClinica({})} className="btn-ce">
+              <Plus className="h-4 w-4" />
+              Nueva clínica
+            </button>
+          </div>
         </div>
-      </header>
+      </section>
 
       {/* Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Clínicas activas" value={String(totales.activas)} hint={`${clinicas.length} en total`} icon={Building2} />
-        <StatCard label="Sucursales" value={String(totales.sucursales)} hint="Sucursales habilitadas" icon={MapPin} />
-        <StatCard label="Usuarios" value={String(totales.usuarios)} hint="Con acceso activo" icon={Users} />
-        <StatCard label="Profesionales" value={String(totales.profesionales)} hint="En todas las clínicas" icon={Stethoscope} />
-        <StatCard label="MRR" value={pesos(totales.mrr)} hint="Ingreso mensual recurrente" icon={Wallet} />
+        <StatCard
+          label="Clínicas activas"
+          value={String(totales.activas)}
+          hint={`${clinicas.length} en total`}
+          icon={Building2}
+        />
+        <StatCard
+          label="Sucursales"
+          value={String(totales.sucursales)}
+          hint="Sucursales habilitadas"
+          icon={MapPin}
+        />
+        <StatCard
+          label="Usuarios"
+          value={String(totales.usuarios)}
+          hint="Con acceso activo"
+          icon={Users}
+        />
+        <StatCard
+          label="Profesionales"
+          value={String(totales.profesionales)}
+          hint="En todas las clínicas"
+          icon={Stethoscope}
+        />
+        <StatCard
+          label="Requieren atención"
+          value={String(clinicas.filter((c) => c.estado !== "Activa").length)}
+          hint="En prueba o suspendidas"
+          icon={Wallet}
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/10 bg-card/70 px-4 py-3 shadow-sm backdrop-blur">
@@ -1114,12 +1616,15 @@ export function MultiEmpresa() {
           <Avatar nombre={activa.nombre} color={activa.color} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="truncate text-sm font-semibold text-foreground">{activa.nombre}</span>
+              <span className="truncate text-sm font-semibold text-foreground">
+                {activa.nombre}
+              </span>
               <Pill className={planStyles[activa.plan]}>Plan {activa.plan}</Pill>
               <Pill className={estadoStyles[activa.estado]}>{activa.estado}</Pill>
             </div>
             <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-              {activa.ciudad} · {uso[activa.id].usuarios} usuarios · {uso[activa.id].sucursales} sucursales · tenant {activa.id}
+              {activa.ciudad} · {uso[activa.id].usuarios} usuarios · {uso[activa.id].sucursales}{" "}
+              sucursales
             </div>
           </div>
         </div>
@@ -1135,17 +1640,18 @@ export function MultiEmpresa() {
 
       {/* Navegación */}
       <nav
-        className="flex flex-wrap justify-center gap-1 rounded-2xl border border-primary/10 bg-muted/60 p-2"
+        className="flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
         aria-label="Secciones de Multiempresa"
       >
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            aria-pressed={tab === t.id}
+            className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
               tab === t.id
-                ? "border-2 border-primary bg-card text-foreground shadow-sm"
-                : "border-2 border-transparent text-foreground/80 hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
+                : "text-muted-foreground hover:bg-white hover:text-foreground"
             }`}
           >
             {t.label}
@@ -1177,18 +1683,26 @@ export function MultiEmpresa() {
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar nombre={c.nombre} color={c.color} />
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-foreground">{c.nombre}</div>
+                        <div className="truncate text-sm font-semibold text-foreground">
+                          {c.nombre}
+                        </div>
                         <div className="truncate text-xs text-muted-foreground">{c.ciudad}</div>
                       </div>
                     </div>
                     <Pill className={estadoStyles[c.estado]}>{c.estado}</Pill>
                   </div>
 
-                  <Barra label="Usuarios" actual={uso[c.id].usuarios} limite={PLAN_INFO[c.plan].usuarios} />
+                  <Barra
+                    label="Usuarios"
+                    actual={uso[c.id].usuarios}
+                    limite={PLAN_INFO[c.plan].usuarios}
+                  />
 
                   <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
                     <Pill className={planStyles[c.plan]}>Plan {c.plan}</Pill>
-                    <span>{uso[c.id].sucursales} suc. · {uso[c.id].profesionales} prof.</span>
+                    <span>
+                      {uso[c.id].sucursales} suc. · {uso[c.id].profesionales} prof.
+                    </span>
                   </div>
                 </button>
               ))}
@@ -1223,15 +1737,24 @@ export function MultiEmpresa() {
               <Ranking items={porPlan} />
             </Panel>
 
-            <Panel title="MRR por clínica">
-              {porMrr.length === 0 ? <Vacio texto="Todavía no hay clínicas activas." /> : <Ranking items={porMrr} />}
+            <Panel title="Uso por clínica">
+              {porUso.length === 0 ? (
+                <Vacio texto="Todavía no hay clínicas." />
+              ) : (
+                <Ranking items={porUso} />
+              )}
             </Panel>
           </div>
 
           <Panel title="Actividad reciente">
             <div className="space-y-3">
               {ACTIVIDAD.map((a) => (
-                <Fila key={a.id} avatar={<IconoFila icon={ShieldCheck} />} titulo={a.titulo} detalle={a.detalle} />
+                <Fila
+                  key={a.id}
+                  avatar={<IconoFila icon={ShieldCheck} />}
+                  titulo={a.titulo}
+                  detalle={a.detalle}
+                />
               ))}
             </div>
           </Panel>
@@ -1259,7 +1782,9 @@ export function MultiEmpresa() {
                 className="rounded-full border border-primary/20 bg-card px-3 py-2 text-xs font-medium text-foreground/80"
               >
                 <option value="Todos">Todos los planes</option>
-                {PLANES.map((p) => (<option key={p}>{p}</option>))}
+                {PLANES.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
               </select>
               <select
                 value={filtroEstado}
@@ -1267,13 +1792,17 @@ export function MultiEmpresa() {
                 className="rounded-full border border-primary/20 bg-card px-3 py-2 text-xs font-medium text-foreground/80"
               >
                 <option value="Todos">Todos los estados</option>
-                {ESTADOS.map((s) => (<option key={s}>{s}</option>))}
+                {ESTADOS.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
               </select>
             </div>
           }
         >
           <div className="space-y-3">
-            {clinicasFiltradas.length === 0 && <Vacio texto="No hay clínicas que coincidan con los filtros." />}
+            {clinicasFiltradas.length === 0 && (
+              <Vacio texto="No hay clínicas que coincidan con los filtros." />
+            )}
 
             {clinicasFiltradas.map((c) => (
               <Fila
@@ -1284,16 +1813,34 @@ export function MultiEmpresa() {
                     {c.nombre}
                     <Pill className={planStyles[c.plan]}>{c.plan}</Pill>
                     <Pill className={estadoStyles[c.estado]}>{c.estado}</Pill>
-                    {c.id === activa.id && <Pill className="bg-primary/10 text-primary">Activa ahora</Pill>}
+                    {c.id === activa.id && (
+                      <Pill className="bg-primary/10 text-primary">Activa ahora</Pill>
+                    )}
                   </span>
                 }
                 detalle={`${c.ciudad} · ${uso[c.id].usuarios} usuarios · ${uso[c.id].sucursales} sucursales · ${c.adminEmail}`}
                 derecha={
                   <>
-                    <BotonIcono icon={Eye} titulo="Ver detalle" onClick={() => setDetalleId(c.id)} />
-                    <BotonIcono icon={Repeat} titulo="Usar esta clínica" onClick={() => usarClinica(c)} />
-                    <BotonIcono icon={Pencil} titulo="Editar" onClick={() => setModalClinica({ clinica: c })} />
-                    <BotonIcono icon={Power} titulo={c.estado === "Suspendida" ? "Reactivar" : "Suspender"} onClick={() => alternarEstado(c)} />
+                    <BotonIcono
+                      icon={Eye}
+                      titulo="Ver detalle"
+                      onClick={() => setDetalleId(c.id)}
+                    />
+                    <BotonIcono
+                      icon={Repeat}
+                      titulo="Usar esta clínica"
+                      onClick={() => usarClinica(c)}
+                    />
+                    <BotonIcono
+                      icon={Pencil}
+                      titulo="Editar"
+                      onClick={() => setModalClinica({ clinica: c })}
+                    />
+                    <BotonIcono
+                      icon={Power}
+                      titulo={c.estado === "Suspendida" ? "Reactivar" : "Suspender"}
+                      onClick={() => alternarEstado(c)}
+                    />
                   </>
                 }
               />
@@ -1307,10 +1854,7 @@ export function MultiEmpresa() {
         <Panel
           title={`Sucursales — ${activa.nombre}`}
           action={
-            <button
-              onClick={() => setModalSucursal(true)}
-              className="btn-ce"
-            >
+            <button onClick={() => setModalSucursal(true)} className="btn-ce">
               <Plus className="h-4 w-4" />
               Nueva sucursal
             </button>
@@ -1319,7 +1863,9 @@ export function MultiEmpresa() {
           <div className="mb-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-primary/[0.04] p-4">
               <div className="text-xs text-muted-foreground">Sucursales</div>
-              <div className="mt-1 text-xl font-bold text-foreground">{sucursalesActiva.length}</div>
+              <div className="mt-1 text-xl font-bold text-foreground">
+                {sucursalesActiva.length}
+              </div>
             </div>
             <div className="rounded-2xl bg-primary/[0.04] p-4">
               <div className="text-xs text-muted-foreground">Límite del plan {activa.plan}</div>
@@ -1334,7 +1880,9 @@ export function MultiEmpresa() {
           </div>
 
           <div className="space-y-3">
-            {sucursalesActiva.length === 0 && <Vacio texto="Esta clínica todavía no tiene sucursales." />}
+            {sucursalesActiva.length === 0 && (
+              <Vacio texto="Esta clínica todavía no tiene sucursales." />
+            )}
 
             {sucursalesActiva.map((s) => (
               <Fila
@@ -1343,13 +1891,23 @@ export function MultiEmpresa() {
                 titulo={
                   <span className="flex items-center gap-2">
                     {s.nombre}
-                    <Pill className={s.activa ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-700"}>
+                    <Pill
+                      className={
+                        s.activa ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-700"
+                      }
+                    >
                       {s.activa ? "Activa" : "Inactiva"}
                     </Pill>
                   </span>
                 }
                 detalle={`${s.direccion} · ${s.boxes} boxes · Resp.: ${s.responsable}`}
-                derecha={<BotonIcono icon={Power} titulo={s.activa ? "Desactivar" : "Activar"} onClick={() => alternarSucursal(s)} />}
+                derecha={
+                  <BotonIcono
+                    icon={Power}
+                    titulo={s.activa ? "Desactivar" : "Activar"}
+                    onClick={() => alternarSucursal(s)}
+                  />
+                }
               />
             ))}
           </div>
@@ -1367,13 +1925,16 @@ export function MultiEmpresa() {
           }
         >
           <div className="mb-5 rounded-2xl bg-primary/[0.035] p-4 text-xs leading-relaxed text-muted-foreground">
-            Cada usuario pertenece a una sola clínica. El login es único (usuario o email + contraseña) y, al
-            autenticar, el sistema resuelve la clínica, el rol y los permisos. El administrador nunca ve la
-            contraseña actual: solo puede restablecer el acceso o desactivar al usuario.
+            Cada usuario pertenece a una sola clínica. El login es único (usuario o email +
+            contraseña) y, al autenticar, el sistema resuelve la clínica, el rol y los permisos. El
+            administrador nunca ve la contraseña actual: solo puede restablecer el acceso o
+            desactivar al usuario.
           </div>
 
           <div className="space-y-3">
-            {usuariosActiva.length === 0 && <Vacio texto="Esta clínica todavía no tiene usuarios." />}
+            {usuariosActiva.length === 0 && (
+              <Vacio texto="Esta clínica todavía no tiene usuarios." />
+            )}
 
             {usuariosActiva.map((u) => (
               <Fila
@@ -1383,7 +1944,11 @@ export function MultiEmpresa() {
                   <span className="flex flex-wrap items-center gap-2">
                     {u.nombre}
                     <Pill className="border border-primary/20 text-foreground/80">{u.rol}</Pill>
-                    <Pill className={u.activo ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-700"}>
+                    <Pill
+                      className={
+                        u.activo ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-700"
+                      }
+                    >
                       {u.activo ? "Activo" : "Inactivo"}
                     </Pill>
                   </span>
@@ -1391,8 +1956,16 @@ export function MultiEmpresa() {
                 detalle={`${u.email} · Último acceso: ${u.ultimoAcceso}`}
                 derecha={
                   <>
-                    <BotonIcono icon={KeyRound} titulo="Restablecer acceso" onClick={() => restablecerAcceso(u)} />
-                    <BotonIcono icon={Power} titulo={u.activo ? "Desactivar" : "Reactivar"} onClick={() => alternarUsuario(u)} />
+                    <BotonIcono
+                      icon={KeyRound}
+                      titulo="Restablecer acceso"
+                      onClick={() => restablecerAcceso(u)}
+                    />
+                    <BotonIcono
+                      icon={Power}
+                      titulo={u.activo ? "Desactivar" : "Reactivar"}
+                      onClick={() => alternarUsuario(u)}
+                    />
                   </>
                 }
               />
@@ -1422,7 +1995,9 @@ export function MultiEmpresa() {
                   <div
                     key={p}
                     className={`multi-fade-up rounded-2xl border bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-sm ${
-                      actual ? "border-primary shadow-sm" : "border-primary/10 hover:border-primary/20"
+                      actual
+                        ? "border-primary shadow-sm"
+                        : "border-primary/10 hover:border-primary/20"
                     }`}
                     style={{ animationDelay: `${index * 80}ms` }}
                   >
@@ -1430,11 +2005,9 @@ export function MultiEmpresa() {
                       <Pill className={planStyles[p]}>{p}</Pill>
                       <span className="text-[10px] text-muted-foreground">{cantidad} clínicas</span>
                     </div>
-                    <div className="mt-3 text-xl font-bold text-foreground">
-                      {pesos(info.precio)}
-                      <span className="text-xs font-medium text-muted-foreground"> /mes</span>
+                    <div className="mt-3 text-sm font-semibold text-foreground">
+                      {info.audiencia}
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">{info.audiencia}</div>
 
                     <ul className="mt-4 space-y-2 text-xs text-foreground/80">
                       {[
@@ -1457,7 +2030,11 @@ export function MultiEmpresa() {
 
           <Panel
             title="Aislamiento de datos"
-            action={<span className="text-xs text-muted-foreground">Arquitectura multi-tenant</span>}
+            action={
+              <span className="text-xs text-muted-foreground">
+                Ninguna clínica ve datos de otra
+              </span>
+            }
           >
             <div className="space-y-3">
               {REGLAS_AISLAMIENTO.map((r) => (
@@ -1467,8 +2044,14 @@ export function MultiEmpresa() {
                   titulo={r.titulo}
                   detalle={r.detalle}
                   derecha={
-                    <Pill className={r.listo ? "bg-primary/10 text-primary" : "border border-primary/20 bg-card text-foreground/80"}>
-                      {r.listo ? "Modelado en demo" : "Pendiente de backend"}
+                    <Pill
+                      className={
+                        r.listo
+                          ? "bg-primary/10 text-primary"
+                          : "border border-primary/20 bg-card text-foreground/80"
+                      }
+                    >
+                      {r.listo ? "Activo" : "En preparación"}
                     </Pill>
                   }
                 />

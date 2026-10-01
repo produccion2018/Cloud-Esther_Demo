@@ -9,6 +9,7 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
 import { registrarCuenta } from "@/lib/cloud-esther/auth-store";
+import { formatearPrecio, textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -35,6 +36,7 @@ function Registro() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(plan ?? "profesional");
   const [sent, setSent] = useState(false);
+  const config = useConfigPlanes();
   const [error, setError] = useState<string | null>(null);
   const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
   const [entrando, setEntrando] = useState(false);
@@ -155,7 +157,10 @@ function Registro() {
                         >
                           <span className="block text-sm font-semibold">{p.name}</span>
                           <span className="mt-1 block text-xs text-muted-foreground">
-                            {p.price} / mes
+                            {formatearPrecio(config[mapSitePlanToPlanId(p.id)].precioMensual)} / mes
+                          </span>
+                          <span className="mt-1.5 block text-[11px] leading-4 text-foreground/80">
+                            {textoLimites(config[mapSitePlanToPlanId(p.id)]).pacientes}
                           </span>
                         </motion.button>
                       ))}

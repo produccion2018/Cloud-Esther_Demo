@@ -6,7 +6,14 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
    páginas de acceso directo del sidebar (Historia, Recetas, Estudios…).
    TODO backend: reemplazar este store por las consultas a la API (GET /pacientes, etc.). */
 
-export type EstadoPaciente = "Activo" | "Inactivo";
+/** «Archivado»: se conserva con su Historia Clínica y se puede consultar, pero no cuenta para
+    el límite de pacientes activos del plan. */
+export type EstadoPaciente = "Activo" | "Inactivo" | "Archivado";
+
+/** Pacientes que consumen el límite del plan (los inactivos y archivados no cuentan). */
+export function contarPacientesActivos(lista: { estado: EstadoPaciente }[]) {
+  return lista.filter((p) => p.estado === "Activo").length;
+}
 
 export type Paciente = {
   id: number;

@@ -36,7 +36,6 @@ type PlanInfo = {
   name: string;
   level: number;
   audience: string;
-  price: string;
 };
 
 export const PLANS: Record<PlanId, PlanInfo> = {
@@ -45,28 +44,24 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     name: "Start",
     level: 1,
     audience: "Odontólogo independiente",
-    price: "$29.000",
   },
   profesional: {
     id: "profesional",
     name: "Pro",
     level: 2,
     audience: "Clínica en crecimiento",
-    price: "$59.000",
   },
   avanzada: {
     id: "avanzada",
     name: "Plus",
     level: 3,
     audience: "Clínica integral",
-    price: "$99.000",
   },
   grupo: {
     id: "grupo",
     name: "Enterprise",
     level: 4,
     audience: "Multi-sede",
-    price: "$179.000",
   },
 };
 
@@ -383,11 +378,12 @@ export function incluidoEnPlan(module: AppModule, plan: PlanId) {
 
 /** Módulos que el plan no incluye y se pueden comprar como adicionales (Start, Pro y Plus). */
 export function comprableEn(module: AppModule, plan: PlanId) {
+  // Los odontogramas no se compran: el plan define cuál se usa (2D en Start/Pro, 3D en Plus/Enterprise).
+  if (module.id === "odontograma" || module.id === "odontograma3d") return false;
   return planLevel(module.minPlan) > planLevel(plan);
 }
 
-/** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados.
-    El Odontograma 2D es de Start y Pro (aunque sumen el 3D como adicional, lo siguen viendo). */
+/** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados. */
 export function availableIn(module: AppModule, plan: PlanId) {
   const extras = modulosExtra();
   return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));

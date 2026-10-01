@@ -15,6 +15,24 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { plans, type Plan } from "@/lib/site-data";
+import type { PlanId } from "@/lib/cloud-esther/data";
+import {
+  formatearPrecio,
+  notaCapacidad,
+  precioAnual,
+  textoLimites,
+  useConfigPlanes,
+} from "@/lib/cloud-esther/planes-config";
+
+export type CicloPago = "mensual" | "anual";
+
+/** Planes del sitio → planes de la app (los límites y precios salen de la configuración). */
+const PLAN_ID: Record<string, PlanId> = {
+  esencial: "inicial",
+  profesional: "profesional",
+  avanzado: "avanzada",
+  enterprise: "grupo",
+};
 
 /**
  * Configuración visual de cada plan.
@@ -50,6 +68,7 @@ export function PlanCard({
   precio,
   notaPrecio,
   actual = false,
+  ciclo = "mensual",
 }: {
   plan: Plan;
   index: number;
@@ -60,7 +79,14 @@ export function PlanCard({
   notaPrecio?: string | undefined;
   /** Marca el plan que tiene contratado la clínica. */
   actual?: boolean | undefined;
+  /** Modalidad de pago para el precio mostrado (el anual tiene descuento). */
+  ciclo?: CicloPago | undefined;
 }) {
+  const planId = PLAN_ID[plan.id] ?? "inicial";
+  const config = useConfigPlanes()[planId];
+  const limites = textoLimites(config);
+  const anual = precioAnual(config);
+  const descuento = Math.round(config.descuentoAnual * 100);
   const isEnterprise = plan.id === "enterprise";
   const extras = EXTRAS_POR_PLAN[index] ?? EXTRAS_POR_PLAN[0];
   const [verTodas, setVerTodas] = useState(false);
@@ -119,33 +145,43 @@ export function PlanCard({
           {plan.tagline}
         </p>
 
-        {precio && (
-          <p className="relative mt-3 flex flex-wrap items-baseline gap-1">
-            <span className="font-display text-3xl font-bold tracking-tight text-primary">
-              {precio}
-            </span>
-            {notaPrecio && <span className="text-xs text-muted-foreground">{notaPrecio}</span>}
+        {/* Precio: lo define Cloud Esther desde el panel administrativo (backend). */}
+        <p className="relative mt-3 flex flex-wrap items-baseline gap-1">
+          <span className="font-display text-3xl font-bold tracking-tight text-primary">
+            {precio ?? formatearPrecio(ciclo === "anual" ? anual : config.precioMensual)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {precio ? notaPrecio : ciclo === "anual" ? "/ año" : "/ mes"}
+          </span>
+        </p>
+        {!precio && ciclo === "anual" && (
+          <p className="relative mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+            {descuento}% de descuento pagando anual
           </p>
         )}
+
+        {/* Capacidad incluida: siempre visible en la card, antes de contratar. */}
+        <div className="relative mt-4 rounded-xl border border-primary/20 bg-primary/[0.05] p-3">
+          <p className="flex items-center gap-2 text-[12px] font-semibold leading-5 text-foreground">
+            <Building2 className="size-3.5 shrink-0 text-primary" />
+            {limites.sucursales}
+          </p>
+          <p className="flex items-center gap-2 text-[12px] font-semibold leading-5 text-foreground">
+            <Users className="size-3.5 shrink-0 text-primary" />
+            {limites.usuarios}
+          </p>
+          <p className="flex items-center gap-2 text-[12px] font-semibold leading-5 text-foreground">
+            <UserRound className="size-3.5 shrink-0 text-primary" />
+            {limites.pacientes}
+          </p>
+          <p className="mt-1.5 text-[10.5px] leading-4 text-muted-foreground">
+            {notaCapacidad(planId)}
+          </p>
+        </div>
       </div>
 
       {/* Resumen del plan */}
       <div className="relative grid content-start gap-1.5 rounded-xl bg-muted/50 p-3.5">
-        <span className="flex items-center gap-2 text-[11px] font-medium leading-5 text-foreground/80">
-          <Building2 className="size-3.5 shrink-0 text-primary" />
-          {plan.branches}
-        </span>
-
-        <span className="flex items-center gap-2 text-[11px] font-medium leading-5 text-foreground/80">
-          <Users className="size-3.5 shrink-0 text-primary" />
-          {plan.users}
-        </span>
-
-        <span className="flex items-center gap-2 text-[11px] font-medium leading-5 text-foreground/80">
-          <UserRound className="size-3.5 shrink-0 text-primary" />
-          {plan.externalUsers}
-        </span>
-
         <span className="flex items-center gap-2 text-[11px] font-medium leading-5 text-foreground/80">
           <Headphones className="size-3.5 shrink-0 text-primary" />
           {plan.support}
@@ -222,13 +258,64 @@ export function PlanGrid({
   onSelect,
 }: {
   cta?: string | undefined;
-  onSelect?: ((plan: Plan) => void) | undefined;
+  onSelect?: ((plan: Plan, ciclo: CicloPago) => void) | undefined;
 }) {
+  const [ciclo, setCiclo] = useState<CicloPago>("mensual");
+  const descuento = Math.round(useConfigPlanes().inicial.descuentoAnual * 100);
   return (
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      {plans.map((plan, index) => (
-        <PlanCard key={plan.id} plan={plan} index={index} cta={cta} onSelect={onSelect} />
-      ))}
+    <div>
+      <div className="mb-8 flex justify-center">
+        <div
+          className="inline-flex items-center rounded-full border border-primary/20 bg-card p-1 shadow-sm"
+          role="radiogroup"
+          aria-label="Modalidad de pago"
+        >
+          {(
+            [
+              ["mensual", "Mensual"],
+              ["anual", "Anual"],
+            ] as const
+          ).map(([id, l]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={ciclo === id}
+              onClick={() => setCiclo(id)}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                ciclo === id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {l}
+              {id === "anual" && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    ciclo === id
+                      ? "bg-white/25 text-primary-foreground"
+                      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  }`}
+                >
+                  −{descuento}%
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {plans.map((plan, index) => (
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            index={index}
+            cta={cta}
+            ciclo={ciclo}
+            onSelect={onSelect ? (p) => onSelect(p, ciclo) : undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }

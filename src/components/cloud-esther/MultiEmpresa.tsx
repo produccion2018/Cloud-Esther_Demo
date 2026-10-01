@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
+import { leerConfigPlanes, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
@@ -102,29 +103,49 @@ const PLAN_INFO: Record<
   }
 > = {
   Start: {
-    usuarios: 5,
-    sucursales: 1,
+    // Límites del plan: salen de la configuración comercial (panel administrativo).
+    get usuarios() {
+      return leerConfigPlanes().inicial.usuariosInternos;
+    },
+    get sucursales() {
+      return leerConfigPlanes().inicial.sucursales;
+    },
     profesionales: 3,
     almacenamiento: 5,
     audiencia: "Consultorios individuales",
   },
   Pro: {
-    usuarios: 15,
-    sucursales: 3,
+    // Límites del plan: salen de la configuración comercial (panel administrativo).
+    get usuarios() {
+      return leerConfigPlanes().profesional.usuariosInternos;
+    },
+    get sucursales() {
+      return leerConfigPlanes().profesional.sucursales;
+    },
     profesionales: 10,
     almacenamiento: 25,
     audiencia: "Clínicas en crecimiento",
   },
   Plus: {
-    usuarios: 40,
-    sucursales: 6,
+    // Límites del plan: salen de la configuración comercial (panel administrativo).
+    get usuarios() {
+      return leerConfigPlanes().avanzada.usuariosInternos;
+    },
+    get sucursales() {
+      return leerConfigPlanes().avanzada.sucursales;
+    },
     profesionales: 25,
     almacenamiento: 100,
     audiencia: "Clínicas con varios equipos",
   },
   Enterprise: {
-    usuarios: 150,
-    sucursales: 20,
+    // Límites del plan: salen de la configuración comercial (panel administrativo).
+    get usuarios() {
+      return leerConfigPlanes().grupo.usuariosInternos;
+    },
+    get sucursales() {
+      return leerConfigPlanes().grupo.sucursales;
+    },
     profesionales: 100,
     almacenamiento: 500,
     audiencia: "Redes y grupos odontológicos",
@@ -1482,7 +1503,7 @@ export function MultiEmpresa() {
     boxes: number;
   }) {
     if (sucursalesActiva.length >= limActiva.sucursales) {
-      toast.error(`El plan ${activa.plan} permite hasta ${limActiva.sucursales} sucursal(es).`);
+      toast.error(MENSAJE_LIMITE.sucursales);
       return;
     }
     setSucursales((prev) => [
@@ -1511,6 +1532,10 @@ export function MultiEmpresa() {
   }
 
   function alternarUsuario(u: Usuario) {
+    if (!u.activo && usuariosActiva.filter((x) => x.activo).length >= limActiva.usuarios) {
+      toast.error(MENSAJE_LIMITE.usuarios);
+      return;
+    }
     setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, activo: !x.activo } : x)));
     registrarEvento({
       modulo: "Multiempresa",

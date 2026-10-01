@@ -18,7 +18,9 @@ import {
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
+import { contarPacientesActivos, leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
 
@@ -893,18 +895,25 @@ function CentroOperacionesBanner({
         <div className="flex flex-wrap gap-2.5">
           <button
             onClick={onNuevaCita}
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
             <CalendarPlus className="size-4" />
             Nueva cita
           </button>
           <button
             onClick={onNuevoPaciente}
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
             <UserPlus className="size-4" />
             Nuevo paciente
           </button>
+          <Link
+            to="/demo/agenda"
+            className="flex items-center gap-2 rounded-full border border-white/60 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white shadow-md backdrop-blur-sm dark:bg-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/20 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          >
+            <Clock className="size-4" />
+            Ver agenda y horarios
+          </Link>
         </div>
       </div>
     </div>
@@ -1030,6 +1039,7 @@ function AccesosRapidos({
 /* ───────────── Página ───────────── */
 
 function DashboardInner() {
+  const { plan } = useCloudEsther();
   const { usuario, clinica } = useSesion();
   const nombreUsuario = usuario?.nombre ?? "Invitado";
 
@@ -1097,6 +1107,11 @@ function DashboardInner() {
   };
 
   const agregarPaciente = (p: NuevoPaciente) => {
+    const activos = contarPacientesActivos(leerPacientes()) + pacientesNuevos.length;
+    if (!dentroDelLimite(plan, "pacientes", activos)) {
+      show(MENSAJE_LIMITE.pacientes);
+      return;
+    }
     const nombreCompleto = `${p.nombre} ${p.apellido}`;
     setPacientesNuevos((prev) => [...prev, { nombre: nombreCompleto, documento: p.documento }]);
     registrar(nombreUsuario, `Registró al paciente ${nombreCompleto}`);
@@ -1263,7 +1278,7 @@ function DashboardInner() {
                 <h2 className="font-semibold">Próximos turnos</h2>
                 <p className="text-xs text-muted-foreground">Agenda de hoy</p>
               </div>
-              <Link to="/demo/agenda" className="text-xs font-medium text-primary">Ver agenda →</Link>
+              <Link to="/demo/agenda" className="text-xs font-medium text-primary">Ver agenda y horarios →</Link>
             </div>
             {turnosFiltrados.length === 0 ? (
               <p className="py-4 text-sm text-muted-foreground">Sin turnos que coincidan con la búsqueda.</p>

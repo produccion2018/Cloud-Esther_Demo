@@ -31,10 +31,12 @@ import {
 } from "@/lib/odontograma2d/types";
 
 const WIDTH: Record<ToothDef["type"], string> = {
-  incisivo: "w-[7%] min-w-[34px]",
-  canino: "w-[8%] min-w-[38px]",
-  premolar: "w-[9%] min-w-[42px]",
-  molar: "w-[11%] min-w-[50px]",
+  // Ancho proporcional por tipo de pieza: las 16 piezas de cada arcada entran siempre en el
+  // ancho disponible (sin scroll horizontal) y conservan su proporción.
+  incisivo: "flex-[7]",
+  canino: "flex-[8]",
+  premolar: "flex-[9]",
+  molar: "flex-[11]",
 };
 
 const EMPTY: ToothState = { surfaces: {}, whole: [] };
@@ -311,11 +313,16 @@ export function Odontogram({
   }, [findings, state]);
 
   const renderArch = (teeth: ToothDef[], label: string, primary = false) => (
-    <div className="flex items-end justify-center gap-[0.35rem]" aria-label={label}>
-      {teeth.map((t) => (
+    <div
+      className={`mx-auto flex w-full items-end justify-center gap-[2px] sm:gap-1 md:gap-1.5 ${primary ? "max-w-[66%]" : "max-w-[1040px]"}`}
+      aria-label={label}
+    >
+      {teeth.map((t, i) => (
         <div
           key={t.fdi}
-          className={`${WIDTH[t.type]} ${primary ? "max-w-[46px]" : ""} flex flex-col items-center gap-1`}
+          className={`${WIDTH[t.type]} flex min-w-0 flex-col items-center gap-1 ${
+            i === teeth.length / 2 ? "ml-1 sm:ml-2 md:ml-3" : ""
+          }`}
         >
           {t.arch === "lower" && (
             <EtiquetaFdi
@@ -417,8 +424,8 @@ export function Odontogram({
       </div>
 
       {/* Odontograma */}
-      <div className="card-clinic overflow-x-auto p-4 sm:p-6">
-        <div className="min-w-[680px] space-y-5">
+      <div className="card-clinic p-3 sm:p-5 lg:p-6">
+        <div className="space-y-5">
           <ArchLabel>Arcada superior (Maxilar)</ArchLabel>
           {renderArch([...Q1, ...Q2], "Arcada superior permanente")}
           {completo && renderArch([...Q5, ...Q6], "Arcada superior temporal", true)}

@@ -101,5 +101,10 @@ export function useEquipo() {
   };
 }
 
+/** Usuarios internos que ocupan lugar en el plan: activos e invitaciones pendientes. */
+export function usuariosInternos(miembros: TeamMember[]) {
+  return miembros.filter((m) => m.status !== "inactivo").length;
+}
+
 /** Acceso directo al store (lectura/escritura fuera de componentes, ej. RRHH o Esther). */
 export const storeEquipo = store;

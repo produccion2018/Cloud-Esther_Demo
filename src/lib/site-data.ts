@@ -54,7 +54,7 @@ export const plans: Plan[] = [
     tagline: "Para clínicas que están comenzando.",
     branches: "1 sucursal",
     users: "Hasta 5 usuarios internos",
-    externalUsers: "Hasta 100 pacientes registrados",
+    externalUsers: "Hasta 500 pacientes activos",
     portalLimit: "",
     support: "Soporte por email",
     modules: "Módulos esenciales",
@@ -78,12 +78,13 @@ export const plans: Plan[] = [
     tagline: "Para clínicas en crecimiento.",
     branches: "Hasta 3 sucursales",
     users: "Hasta 15 usuarios internos",
-    externalUsers: "Hasta 500 pacientes registrados",
+    externalUsers: "Hasta 2.000 pacientes activos",
     portalLimit: "",
     support: "Soporte prioritario",
     modules: "Módulos esenciales + gestión",
     features: [
       "Todo lo del plan Start",
+      "Odontograma 2D",
       "Comunicación con pacientes",
       "Presupuestos",
       "Pagos y facturación avanzada",
@@ -104,7 +105,7 @@ export const plans: Plan[] = [
     tagline: "Para clínicas con mayor volumen.",
     branches: "Hasta 6 sucursales",
     users: "Hasta 40 usuarios internos",
-    externalUsers: "Hasta 2.000 pacientes registrados",
+    externalUsers: "Hasta 5.000 pacientes activos",
     portalLimit: "",
     support: "Soporte prioritario con atención ampliada",
     modules: "Módulos avanzados",
@@ -131,7 +132,7 @@ export const plans: Plan[] = [
     tagline: "Para grupos odontológicos y organizaciones.",
     branches: "Hasta 20 sucursales",
     users: "Hasta 150 usuarios internos",
-    externalUsers: "Hasta 10.000 pacientes registrados",
+    externalUsers: "Hasta 15.000 pacientes activos",
     portalLimit: "",
     support: "Soporte dedicado 24/7",
     modules: "Todos los módulos",
@@ -179,8 +180,8 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Pacientes registrados",
-    values: ["Hasta 100", "Hasta 500", "Hasta 2.000", "Hasta 10.000"],
+    feature: "Pacientes activos",
+    values: ["Hasta 500", "Hasta 2.000", "Hasta 5.000", "Hasta 15.000"],
   },
 
   {
@@ -200,7 +201,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Odontograma 2D", values: ["✓", "✓", "—", "—"] },
 
-  { feature: "Odontograma 3D", values: ["Adicional", "Adicional", "✓", "✓"] },
+  { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
 
   {
     feature: "Odontograma 3D avanzado",
@@ -337,12 +338,6 @@ export type AdditionalModule = {
 };
 
 export const additionalModules: AdditionalModule[] = [
-  {
-    id: "odontograma-3d",
-    name: "Odontograma 3D",
-    description:
-      "Visualización odontológica tridimensional para explorar piezas, tratamientos, estados y evolución clínica.",
-  },
   {
     id: "esther-ia",
     name: "Esther IA",

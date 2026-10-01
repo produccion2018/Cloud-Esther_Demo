@@ -1,24 +1,24 @@
-import { Link } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Box,
   Check,
   Download,
   FileHeart,
-  Grid2x2,
   ListChecks,
   Lock,
   RotateCcw,
   ScanSearch,
   Smile,
-  Sparkles,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { RayosXIA } from "@/components/cloud-esther/odontograma3d/RayosXIA";
 import { InformeIntegral } from "@/components/cloud-esther/odontograma3d/InformeIntegral";
 import { SimuladorSonrisa } from "@/components/cloud-esther/simulador/SimuladorSonrisa";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
-import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 // El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
 // así Pacientes e Historia cargan rápido en los planes con 2D.
@@ -40,8 +40,8 @@ import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
 import { EstherAIChat } from "@/components/odontogram/EstherAIChat";
 
-/** "2d" y "3d": páginas del sidebar (Odontograma 2D / Odontograma 3D).
- *  "ambos": ficha del paciente, con pestañas para cambiar entre las dos vistas. */
+/** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
+ *  siempre el plan, nunca la vista. */
 export type VistaOdontograma = "2d" | "3d" | "ambos";
 
 type Props = {
@@ -51,7 +51,6 @@ type Props = {
   vista?: VistaOdontograma | undefined;
 };
 
-const PLAN_MINIMO_3D: PlanId = "avanzada";
 /** "Odontograma 3D avanzado" (Enterprise): exportar el informe del odontograma. */
 const PLAN_INFORME_3D: PlanId = "grupo";
 /** Esther IA (chat clínico) está incluida desde Plus, igual que el módulo IA Esther. */
@@ -83,7 +82,7 @@ function chartDesdeRegistros(pacienteId: string): Record<number, ToothState> {
     Implante: "corona",
   };
   r.diagnosticos
-    .filter((d) => d.estado === "Activo" && /caries/i.test(`${d.titulo} ${d.descripcion}`))
+    .filter((d) => d.estado === "Activo" && /cari(es|osa)/i.test(`${d.titulo} ${d.descripcion}`))
     .forEach((d) => piezas(d.pieza).forEach((n) => (chart[n] = "caries")));
   r.tratamientos
     .filter((t) => ["En tratamiento", "Completado", "Finalizado"].includes(t.estado))
@@ -122,49 +121,102 @@ const TAB_INACTIVO =
 const BTN_ICONO =
   "inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive";
 
-const TITULO: Record<VistaOdontograma, string> = {
-  "2d": "Odontograma 2D",
-  "3d": "Odontograma 3D",
-  ambos: "Odontograma",
-};
+/** El plan decide el módulo: START y PRO → Odontograma 2D · PLUS y ENTERPRISE → Odontograma 3D.
+    Son dos módulos independientes: no hay selector, pestañas ni botón para cambiar entre ellos,
+    y al cambiar de plan se muestra solo el que corresponde. */
+export function OdontogramaGate(props: Props) {
+  const { plan } = useCloudEsther();
+  return odontogramaDelPlan(plan) === "3d" ? (
+    <Odontograma3DModulo {...props} />
+  ) : (
+    <Odontograma2DModulo {...props} />
+  );
+}
 
-export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "ambos" }: Props) {
-  // Plan elegido en el sidebar ("Plan activo") y clínica de la sesión (tenant).
+/* ───────────── Odontograma 2D (Start y Pro) ───────────── */
+
+function Odontograma2DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
+  const { plan: planId } = useCloudEsther();
+  const { clinicId } = useSesion();
+  const tenantId = clinicId ?? "demo";
+  const clavePaciente = odontogramKey(tenantId, pacienteId);
+  const [fdiSeleccionado, setFdiSeleccionado] = useState<number | null>(null);
+  const radiografiasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setFdiSeleccionado(null), [clavePaciente]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-bold tracking-tight text-foreground">Odontograma 2D</h2>
+        <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+          <Check className="size-3 text-emerald-500" />
+          Guardado automáticamente
+        </span>
+      </div>
+
+      <Odontograma2D
+        tenantId={tenantId}
+        patientId={pacienteId}
+        patientName={pacienteNombre ?? "este paciente"}
+        plan={planId}
+        onToast={onToast}
+        onSelectTooth={setFdiSeleccionado}
+      />
+
+      <ImagenesClinicas
+        pacienteId={clavePaciente}
+        fdi={fdiSeleccionado}
+        onVerTodas={() =>
+          radiografiasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      />
+
+      <div ref={radiografiasRef}>
+        <RadiografiasPanel
+          pacienteId={clavePaciente}
+          fdiSeleccionado={fdiSeleccionado}
+          onToast={onToast}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Odontograma 3D (Plus y Enterprise) ───────────── */
+
+function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
   const { plan: planId } = useCloudEsther();
   const { clinicId, usuario } = useSesion();
   const tenantId = clinicId ?? "demo";
   const clavePaciente = odontogramKey(tenantId, pacienteId);
-  const plan = PLANS[planId].name;
 
   const [chart, setChart] = useState<Record<number, ToothState>>(() =>
     cargarChart(clavePaciente, pacienteId),
   );
   const [fdiSeleccionado, setFdiSeleccionado] = useState<number | null>(null);
-  const radiografiasRef = useRef<HTMLDivElement>(null);
+  const [herramienta, setHerramienta] = useState<Herramienta3D>("odontograma");
+  // «Ampliar Odontograma 3D»: solo agranda el área de trabajo (mismo modelo, mismo estado).
+  const [ampliado, setAmpliado] = useState(false);
 
   useEffect(() => {
     setChart(cargarChart(clavePaciente, pacienteId));
     setFdiSeleccionado(null);
   }, [clavePaciente, pacienteId]);
 
-  // El 3D también se habilita si se compró como módulo adicional (lo mismo la IA).
+  useEffect(() => {
+    if (!ampliado) return;
+    const cerrar = (e: KeyboardEvent) => e.key === "Escape" && setAmpliado(false);
+    window.addEventListener("keydown", cerrar);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", cerrar);
+      document.body.style.overflow = overflow;
+    };
+  }, [ampliado]);
+
   const extras = storeModulosExtra.usar().activos.map((x) => x.id);
-  const tieneAcceso3D =
-    planLevel(planId) >= planLevel(PLAN_MINIMO_3D) || extras.includes("odontograma3d");
-  /* Regla comercial: Start y Pro usan el 2D (el 3D se suma como adicional); Plus y Enterprise
-     usan directamente el 3D y no ven el 2D. Ficha del paciente: en Start/Pro, pestañas 2D | 3D. */
-  const planCon3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
-  const [modoFicha, setModoFicha] = useState<"2d" | "3d">(tieneAcceso3D ? "3d" : "2d");
-  const modo: "2d" | "3d" = planCon3D
-    ? "3d"
-    : vista === "2d"
-      ? "2d"
-      : vista === "3d"
-        ? "3d"
-        : modoFicha;
-  // Herramientas del Odontograma 3D (pestañas dentro del módulo).
-  const [herramienta, setHerramienta] = useState<Herramienta3D>("odontograma");
-  const titulo = vista === "ambos" ? TITULO.ambos : modo === "3d" ? TITULO["3d"] : TITULO["2d"];
   const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA) || extras.includes("ia");
   const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
 
@@ -203,7 +255,7 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
     setChart(next);
     guardarChart(clavePaciente, next);
     registrarCambio(clavePaciente, fdi, anterior, state);
-    onToast(`Pieza ${fdi} actualizada a "${state}"`);
+    onToast(`Pieza ${fdi} actualizada a "${TOOTH_STATE_META[state].label}"`);
   };
 
   const reiniciar = () => {
@@ -216,84 +268,22 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
   const defSeleccionado = fdiSeleccionado ? (TEETH_BY_FDI[fdiSeleccionado] ?? null) : null;
   const estadoSeleccionado = fdiSeleccionado ? (chart[fdiSeleccionado] ?? "sano") : "sano";
 
-  const verRadiografias = () =>
-    radiografiasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  /* Paneles que comparten el 2D y el 3D: imágenes clínicas, Esther IA y radiografías. */
-  const panelesCompartidos = (
-    <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ImagenesClinicas
-          pacienteId={clavePaciente}
-          fdi={fdiSeleccionado}
-          onVerTodas={verRadiografias}
-        />
-        {tieneIA ? (
-          <EstherAIChat onToast={onToast} />
-        ) : (
-          <PanelBloqueado
-            titulo="Esther IA"
-            texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
-          />
-        )}
-      </div>
-
-      <div ref={radiografiasRef}>
-        <RadiografiasPanel
-          pacienteId={clavePaciente}
-          fdiSeleccionado={fdiSeleccionado}
-          onToast={onToast}
-        />
-      </div>
-    </>
-  );
-
-  const vista3DCompleta = modo === "3d" && tieneAcceso3D;
-
   return (
-    <div>
-      {!vista3DCompleta && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-bold tracking-tight text-foreground">{titulo}</h2>
-            {vista === "ambos" && !planCon3D && (
-              <div
-                className="flex rounded-xl border border-primary/15 bg-primary/[0.03] p-0.5"
-                role="tablist"
-                aria-label="Vista del odontograma"
-              >
-                {(
-                  [
-                    ["2d", "2D", Grid2x2],
-                    ["3d", "3D", Box],
-                  ] as const
-                ).map(([id, l, I]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={modo === id}
-                    onClick={() => setModoFicha(id)}
-                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${modo === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    <I className="size-3.5" />
-                    {l}
-                    {id === "3d" && !tieneAcceso3D && <Lock className="size-3" />}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {(modo === "2d" || tieneAcceso3D) && (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                <Check className="size-3 text-emerald-500" />
-                Guardado automáticamente
-              </span>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {modo === "3d" && tieneAcceso3D && herramienta === "odontograma" && (
+    <div className="space-y-4">
+      <Hero3D
+        chart={chart}
+        pacienteNombre={pacienteNombre}
+        titulo="Odontograma 3D"
+        herramienta={herramienta}
+        onHerramienta={setHerramienta}
+        tieneIA={tieneIA}
+        acciones={
+          herramienta === "odontograma" ? (
+            <>
+              <button type="button" onClick={() => setAmpliado(true)} className="btn-ce">
+                <Maximize2 className="size-3.5" />
+                Ampliar Odontograma 3D
+              </button>
               <button
                 type="button"
                 onClick={exportarInforme}
@@ -301,197 +291,161 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
                 className={tieneInforme ? TAB_INACTIVO : `${TAB_INACTIVO} opacity-60`}
               >
                 {tieneInforme ? <Download className="size-3.5" /> : <Lock className="size-3.5" />}
-                Exportar informe
+                Exportar
               </button>
-            )}
-
-            {modo === "3d" && tieneAcceso3D && herramienta === "odontograma" && (
               <button type="button" onClick={reiniciar} className={BTN_ICONO}>
                 <RotateCcw className="size-3.5" />
                 Reiniciar
               </button>
-            )}
-          </div>
-        </div>
-      )}
+            </>
+          ) : null
+        }
+      />
 
-      {modo === "3d" && !tieneAcceso3D ? (
-        <Aviso3D
-          planActual={plan}
-          onAgregar={() => {
-            agregarModuloExtra("odontograma3d", usuario?.nombre ?? "Administración");
-            onToast("Odontograma 3D agregado como módulo adicional");
-          }}
-          onVer2D={vista === "ambos" ? () => setModoFicha("2d") : undefined}
-        />
-      ) : modo === "3d" ? (
-        <div className="space-y-4">
-          <Hero3D
-            chart={chart}
-            pacienteNombre={pacienteNombre}
-            titulo={vista === "ambos" ? "Odontograma 3D" : TITULO["3d"]}
-            herramienta={herramienta}
-            onHerramienta={setHerramienta}
-            tieneIA={tieneIA}
-            acciones={
-              herramienta === "odontograma" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={exportarInforme}
-                    title={
-                      tieneInforme ? undefined : `Disponible en ${PLANS[PLAN_INFORME_3D].name}`
-                    }
-                    className={tieneInforme ? TAB_INACTIVO : `${TAB_INACTIVO} opacity-60`}
-                  >
-                    {tieneInforme ? (
-                      <Download className="size-3.5" />
-                    ) : (
-                      <Lock className="size-3.5" />
-                    )}
-                    Exportar
-                  </button>
-                  <button type="button" onClick={reiniciar} className={BTN_ICONO}>
-                    <RotateCcw className="size-3.5" />
-                    Reiniciar
-                  </button>
-                </>
-              ) : null
+      {herramienta === "rayosx" || herramienta === "sonrisa" ? (
+        !tieneIA ? (
+          <PanelBloqueado
+            titulo={herramienta === "rayosx" ? "Rayos X con IA" : "Simulador de sonrisa"}
+            texto={`Usa Esther IA, incluida desde el plan ${PLANS[PLAN_MINIMO_IA].name}. También podés sumar IA como módulo adicional.`}
+          />
+        ) : herramienta === "rayosx" ? (
+          <RayosXIA
+            pacienteId={Number(pacienteId)}
+            onToast={onToast}
+            onPasarOdontograma={(fdi, estado) =>
+              handleChange(fdi, estado, {
+                ...cargarChart(clavePaciente, pacienteId),
+                [fdi]: estado,
+              })
             }
           />
-
-          {herramienta === "rayosx" || herramienta === "sonrisa" ? (
-            !tieneIA ? (
-              <PanelBloqueado
-                titulo={herramienta === "rayosx" ? "Rayos X con IA" : "Simulador de sonrisa"}
-                texto={`Usa Esther IA, incluida desde el plan ${PLANS[PLAN_MINIMO_IA].name}. También podés sumar IA como módulo adicional.`}
-              />
-            ) : herramienta === "rayosx" ? (
-              <RayosXIA
-                pacienteId={Number(pacienteId)}
-                onToast={onToast}
-                onPasarOdontograma={(fdi, estado) =>
-                  handleChange(fdi, estado, {
-                    ...cargarChart(clavePaciente, pacienteId),
-                    [fdi]: estado,
-                  })
-                }
-              />
-            ) : (
-              <SimuladorSonrisa pacienteFijo={Number(pacienteId)} compacto />
-            )
-          ) : herramienta === "informe" ? (
-            <InformeIntegral
-              pacienteId={Number(pacienteId)}
-              clavePaciente={clavePaciente}
-              nombre={pacienteNombre ?? "el paciente"}
-              chart={chart}
-              profesional={usuario?.nombre ?? "Profesional"}
-            />
-          ) : (
-            <div className="space-y-4">
-              <div className="@container">
-                <div className="grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_370px] @6xl:grid-cols-[minmax(0,1fr)_410px]">
-                  <div className="rounded-[28px] bg-gradient-to-b from-primary/[0.08] via-primary/[0.025] to-transparent p-1">
-                    <div className="h-[calc(100vh-240px)] min-h-[600px] overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)]">
-                      <Suspense
-                        fallback={
-                          <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                            Cargando odontograma 3D…
-                          </div>
-                        }
-                      >
-                        <Odontogram3D
-                          key={clavePaciente}
-                          value={chart}
-                          onChange={handleChange}
-                          onSelectTooth={setFdiSeleccionado}
-                          selectedFdi={fdiSeleccionado}
-                          estadosEnPanel={false}
-                        />
-                      </Suspense>
-                    </div>
-                  </div>
-                  <div className="h-[640px] @4xl:h-[calc(100vh-232px)] @4xl:min-h-[608px]">
-                    <FichaPieza
-                      pacienteId={Number(pacienteId)}
-                      clavePaciente={clavePaciente}
-                      def={defSeleccionado}
-                      estado={estadoSeleccionado}
-                      chart={chart}
-                      profesional={usuario?.nombre ?? "Profesional"}
-                      tieneIA={tieneIA}
-                      onSetEstado={(fdi, estado) =>
-                        handleChange(fdi, estado, { ...chart, [fdi]: estado })
-                      }
-                      onElegirPieza={setFdiSeleccionado}
-                      onIrHerramienta={setHerramienta}
-                      onToast={onToast}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <ResumenHallazgos3D
-                chart={chart}
-                pacienteNombre={pacienteNombre}
-                fdiSeleccionado={fdiSeleccionado}
-                onElegir={setFdiSeleccionado}
-              />
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <HistorialEvolucion
-                  key={`${clavePaciente}-${chart === null ? 0 : Object.values(chart).join("")}`}
-                  pacienteId={clavePaciente}
-                  fdi={null}
-                />
-                {tieneIA ? (
-                  <EstherAIChat onToast={onToast} />
-                ) : (
-                  <PanelBloqueado
-                    titulo="Esther IA"
-                    texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        ) : (
+          <SimuladorSonrisa pacienteFijo={Number(pacienteId)} compacto />
+        )
+      ) : herramienta === "informe" ? (
+        <InformeIntegral
+          pacienteId={Number(pacienteId)}
+          clavePaciente={clavePaciente}
+          nombre={pacienteNombre ?? "el paciente"}
+          chart={chart}
+          profesional={usuario?.nombre ?? "Profesional"}
+        />
       ) : (
         <div className="space-y-4">
-          {!tieneAcceso3D && (
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/[0.06] via-card to-card px-4 py-3">
-              <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                <Box className="size-4" />
-              </span>
-              <p className="min-w-0 flex-1 text-sm">
-                <b>Odontograma 3D</b>{" "}
-                <span className="text-muted-foreground">
-                  disponible como módulo adicional para el plan {plan}.
-                </span>
-              </p>
-              <button
-                type="button"
-                className="btn-ce-outline"
-                onClick={() => {
-                  agregarModuloExtra("odontograma3d", usuario?.nombre ?? "Administración");
-                  onToast("Odontograma 3D agregado como módulo adicional");
-                }}
+          {/* Área de trabajo: modelo 3D + ficha de la pieza. Al ampliar, el mismo contenedor pasa
+              a ocupar la pantalla (no se vuelve a crear el modelo: se conservan zoom, rotación y
+              pieza seleccionada). */}
+          <div
+            className={
+              ampliado
+                ? "fixed inset-0 z-[70] flex flex-col gap-3 bg-background p-3 md:p-5"
+                : "@container"
+            }
+            role={ampliado ? "dialog" : undefined}
+            aria-modal={ampliado || undefined}
+            aria-label={ampliado ? "Odontograma 3D ampliado" : undefined}
+          >
+            {ampliado && (
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+                    <Box className="size-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Odontograma 3D ampliado</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {pacienteNombre ?? "Paciente"} · Esc para volver
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setAmpliado(false)} className="btn-ce-outline">
+                  <Minimize2 className="size-3.5" />
+                  Volver a la vista normal
+                </button>
+              </div>
+            )}
+            <div
+              className={
+                ampliado
+                  ? "grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_400px]"
+                  : "grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_370px] @6xl:grid-cols-[minmax(0,1fr)_410px]"
+              }
+            >
+              <div
+                className={`rounded-[28px] bg-gradient-to-b from-primary/[0.08] via-primary/[0.025] to-transparent p-1 ${ampliado ? "min-h-[55vh]" : ""}`}
               >
-                Agregar 3D
-              </button>
+                <div
+                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[calc(100vh-240px)] min-h-[600px]"}`}
+                >
+                  <Suspense
+                    fallback={
+                      <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                        Cargando odontograma 3D…
+                      </div>
+                    }
+                  >
+                    <Odontogram3D
+                      key={clavePaciente}
+                      value={chart}
+                      onChange={handleChange}
+                      onSelectTooth={setFdiSeleccionado}
+                      selectedFdi={fdiSeleccionado}
+                      estadosEnPanel={false}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+              <div
+                className={
+                  ampliado
+                    ? "min-h-[420px] lg:min-h-0"
+                    : "h-[640px] @4xl:h-[calc(100vh-232px)] @4xl:min-h-[608px]"
+                }
+              >
+                <FichaPieza
+                  pacienteId={Number(pacienteId)}
+                  clavePaciente={clavePaciente}
+                  def={defSeleccionado}
+                  estado={estadoSeleccionado}
+                  chart={chart}
+                  profesional={usuario?.nombre ?? "Profesional"}
+                  tieneIA={tieneIA}
+                  onSetEstado={(fdi, estado) =>
+                    handleChange(fdi, estado, { ...chart, [fdi]: estado })
+                  }
+                  onElegirPieza={setFdiSeleccionado}
+                  onIrHerramienta={(h) => {
+                    setAmpliado(false);
+                    setHerramienta(h);
+                  }}
+                  onToast={onToast}
+                />
+              </div>
             </div>
-          )}
-          <Odontograma2D
-            tenantId={tenantId}
-            patientId={pacienteId}
-            patientName={pacienteNombre ?? "este paciente"}
-            plan={planId}
-            onToast={onToast}
-            onSelectTooth={setFdiSeleccionado}
+          </div>
+
+          <ResumenHallazgos3D
+            chart={chart}
+            pacienteNombre={pacienteNombre}
+            fdiSeleccionado={fdiSeleccionado}
+            onElegir={setFdiSeleccionado}
           />
 
-          {panelesCompartidos}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <HistorialEvolucion
+              key={`${clavePaciente}-${Object.values(chart).join("")}`}
+              pacienteId={clavePaciente}
+              fdi={null}
+            />
+            {tieneIA ? (
+              <EstherAIChat onToast={onToast} />
+            ) : (
+              <PanelBloqueado
+                titulo="Esther IA"
+                texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -686,51 +640,6 @@ function PanelBloqueado({ titulo, texto }: { titulo: string; texto: string }) {
         <p className="mt-2 text-sm font-semibold text-foreground">{titulo}</p>
         <p className="mt-1 text-xs text-muted-foreground">{texto}</p>
         <ProbarPlan minPlan={PLAN_MINIMO_IA} />
-      </div>
-    </div>
-  );
-}
-
-/** Start y Pro: el 3D no está incluido, pero se puede sumar como módulo adicional
-    (o probar Plus en el demo). El 2D sigue disponible siempre. */
-function Aviso3D({
-  planActual,
-  onAgregar,
-  onVer2D,
-}: {
-  planActual: string;
-  onAgregar: () => void;
-  onVer2D?: (() => void) | undefined;
-}) {
-  const { planContratado } = useCloudEsther();
-  return (
-    <div className={`${CARD} grid min-h-64 place-items-center border-dashed text-center`}>
-      <div className="max-w-md">
-        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
-          <Sparkles className="size-5" />
-        </span>
-        <p className="mt-3 text-sm font-semibold text-foreground">
-          El Odontograma 3D es un módulo adicional en el plan {planActual}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Viene incluido desde {PLANS[PLAN_MINIMO_3D].name}. Podés sumarlo a tu plan actual; el
-          Odontograma 2D sigue disponible igual.
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <button type="button" className="btn-ce" onClick={onAgregar}>
-            {planContratado ? "Contratar Odontograma 3D" : "Agregar Odontograma 3D a mi plan"}
-          </button>
-          {onVer2D ? (
-            <button type="button" className="btn-ce-outline" onClick={onVer2D}>
-              Usar el Odontograma 2D
-            </button>
-          ) : (
-            <Link to={"/demo/odontograma" as never} className="btn-ce-outline">
-              Ir al Odontograma 2D
-            </Link>
-          )}
-        </div>
-        <ProbarPlan minPlan={PLAN_MINIMO_3D} />
       </div>
     </div>
   );

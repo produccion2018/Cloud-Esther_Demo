@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -526,10 +527,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       planLevel(x.minPlan) > planLevel(plan),
   );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
-  // Plus y Enterprise no usan el 2D: la página del 2D lleva directo al Odontograma 3D.
-  const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
-  const irAl3D =
-    bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
+  /* El plan define el odontograma: si se entra a la página del otro (por ejemplo, después de
+     cambiar de plan), se lleva directo al que corresponde. Nunca se muestran los dos. */
+  const irAl3D = bloqueado?.id === "odontograma" && odontogramaDelPlan(plan) === "3d";
+  const irAl2D = bloqueado?.id === "odontograma3d" && odontogramaDelPlan(plan) === "2d";
   const moduloIA = MODULES.find((m) => m.id === "ia");
   const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
 
@@ -570,6 +571,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1">
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
+          ) : irAl2D ? (
+            <Navigate to={"/demo/odontograma" as never} replace />
           ) : bloqueado ? (
             <ModuloNoIncluido
               label={bloqueado.label}

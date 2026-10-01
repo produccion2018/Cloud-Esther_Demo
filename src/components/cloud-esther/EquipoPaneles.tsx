@@ -31,6 +31,9 @@ import {
   type TeamRole,
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { capitalizarNombre } from "@/lib/utils";
+import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
+import { usuariosInternos } from "@/lib/cloud-esther/equipo-store";
 import {
   asegurarAcceso,
   setEquipoPortal,
@@ -609,6 +612,7 @@ const ROLES: { value: TeamRole; label: string }[] = [
 ];
 
 export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }) {
+  const { plan } = useCloudEsther();
   const { miembros, setMiembros, actualizarMiembro } = useEquipo();
   const pendientes = miembros.filter((m) => m.status === "pendiente");
   const [nombre, setNombre] = useState("");
@@ -622,6 +626,8 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) return setError("Ingresá un correo válido.");
     if (miembros.some((m) => m.email.toLowerCase() === limpio))
       return setError("Ese correo ya es parte del equipo.");
+    if (!dentroDelLimite(plan, "usuarios", usuariosInternos(miembros)))
+      return setError(MENSAJE_LIMITE.usuarios);
     const [firstName = "", ...resto] = capitalizarNombre(
       nombre.trim() || limpio.split("@")[0] || "",
     ).split(" ");

@@ -34,7 +34,12 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
+import {
+  dentroDelLimite,
+  leerConfigPlanes,
+  MENSAJE_LIMITE,
+} from "@/lib/cloud-esther/planes-config";
 import {
   SeccionPaciente,
   useRegistrosPacientes,
@@ -45,7 +50,7 @@ import type {
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
-import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { contarPacientesActivos, usePacientes } from "@/lib/cloud-esther/pacientes";
 import type {
   Paciente,
   EstadoPaciente,
@@ -129,7 +134,7 @@ const GENEROS = [
   "Prefiere no decir",
 ];
 
-const ESTADOS: EstadoPaciente[] = ["Activo", "Inactivo"];
+const ESTADOS: EstadoPaciente[] = ["Activo", "Inactivo", "Archivado"];
 
 /* ───────────── Utilidades ───────────── */
 
@@ -1169,6 +1174,7 @@ function CarpetaPaciente({
 /* ───────────── Página ───────────── */
 
 function PacientesInner() {
+  const { plan } = useCloudEsther();
   // Turnos de la agenda de la empresa (mismo store que "Agenda y turnos" y el Dashboard).
   const { turnos: turnosAgenda } = storeAgenda.usar();
   const hoyAgenda = hoyISO();
@@ -1272,6 +1278,14 @@ function PacientesInner() {
         d.apellido,
       ),
     };
+
+    // Límite de pacientes activos del plan: no se borra nada, solo no se suma uno más.
+    const activaUnoMas =
+      datosNormalizados.estado === "Activo" && (!editando || editando.estado !== "Activo");
+    if (activaUnoMas && !dentroDelLimite(plan, "pacientes", contarPacientesActivos(pacientes))) {
+      show(MENSAJE_LIMITE.pacientes);
+      return;
+    }
 
     if (editando) {
       setPacientes((prev) =>
@@ -1491,7 +1505,7 @@ function PacientesInner() {
                   icon={Users}
                   tone="primary"
                   trend={`${pacientes.filter((p) => p.estado === "Activo").length} activos`}
-                  detail={`${pacientes.filter((p) => p.estado !== "Activo").length} inactivos`}
+                  detail={`de ${leerConfigPlanes()[plan].pacientesActivos.toLocaleString("es-AR")} incluidos`}
                 />
 
                 <StatCard

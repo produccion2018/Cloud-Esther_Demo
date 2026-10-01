@@ -22,7 +22,9 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { storeEquipo, useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { storeEquipo, useEquipo, usuariosInternos } from "@/lib/cloud-esther/equipo-store";
+import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
 import {
   emptyMember,
   permsFor,
@@ -535,6 +537,7 @@ function AltaForm({
   onCancel: () => void;
   onListo: (m: string, id: string) => void;
 }) {
+  const { plan } = useCloudEsther();
   const { setMiembros } = useEquipo();
   const { legajos, flujos } = storeRRHH.usar();
   const [f, setF] = useState({
@@ -567,6 +570,8 @@ function AltaForm({
           return setError("Cargá un correo válido: lo usa para entrar al portal del equipo.");
         const errC = validarContrato(f);
         if (errC) return setError(errC);
+        if (!dentroDelLimite(plan, "usuarios", usuariosInternos(storeEquipo.leer().miembros)))
+          return setError(MENSAJE_LIMITE.usuarios);
         const contrato = contratoDe(f.contratoId, f.pais);
         const m: TeamMember = {
           ...emptyMember(),
@@ -1166,6 +1171,8 @@ function LegajoForm({
           return setError("El CUIL tiene que tener 11 números (ej. 20-12345678-9).");
         const errC = validarContrato(f);
         if (errC) return setError(errC);
+        if (!dentroDelLimite(plan, "usuarios", usuariosInternos(storeEquipo.leer().miembros)))
+          return setError(MENSAJE_LIMITE.usuarios);
         const dc = datosContrato(f, l.basico);
         const basico = dc.basico;
         const cambios: string[] = [];

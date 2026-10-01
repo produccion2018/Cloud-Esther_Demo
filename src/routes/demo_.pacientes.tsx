@@ -1856,162 +1856,140 @@ function PacientesInner() {
                 )}
               </div>
             ) : (
-              <ul className="space-y-3">
-                {filtrados.map((p) => {
-                  const abierto =
-                    abiertoId === p.id;
+              <div className="overflow-clip rounded-[26px] border border-primary/12 bg-white/90 shadow-[0_14px_36px_-28px_rgba(76,29,149,0.45)] backdrop-blur-sm">
+                {/* Encabezado de columnas (escritorio) */}
+                <div className="hidden grid-cols-[minmax(220px,1.6fr)_1.1fr_0.9fr_0.9fr_1fr_auto] items-center gap-4 border-b border-primary/10 bg-primary/[0.03] px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground lg:grid">
+                  <span>Paciente</span>
+                  <span>Contacto</span>
+                  <span>Cobertura</span>
+                  <span>Sucursal</span>
+                  <span>Próximo turno</span>
+                  <span className="w-[214px] text-right">Acciones</span>
+                </div>
+                <ul className="divide-y divide-primary/[0.08]">
+                  {filtrados.map((p) => {
+                    const abierto = abiertoId === p.id;
+                    const nombre = nombreCompleto(p);
+                    const proximo = turnosAgenda
+                      .filter(
+                        (t) =>
+                          t.paciente === nombre &&
+                          t.fecha >= hoyAgenda &&
+                          (t.estado === "Pendiente" || t.estado === "Confirmada"),
+                      )
+                      .sort((x, y) => (x.fecha + x.hora).localeCompare(y.fecha + y.hora))[0];
 
-                  const nombre = nombreCompleto(p);
-
-                  return (
-                    <li
-                      key={p.id}
-                      className={`overflow-clip rounded-[24px] border bg-white/90 shadow-[0_12px_32px_-25px_rgba(76,29,149,0.42)] backdrop-blur-sm transition-all duration-200 ${
-                        abierto
-                          ? "border-primary/40 shadow-[0_16px_38px_-24px_rgba(124,58,237,0.5)]"
-                          : "border-primary/10 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_38px_-24px_rgba(124,58,237,0.48)]"
-                      }`}
-                    >
-                      <div className="p-4 md:p-[18px]">
-                        <div className="flex flex-wrap items-center gap-4">
-                          <Avatar
-                            paciente={p}
-                            className="size-12 text-sm ring-4 ring-primary/[0.035]"
-                          />
-
-                          <div className="min-w-[180px] flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold leading-tight">
-                                {nombre}
-                              </p>
-
-                              <BadgeEstado
-                                estado={p.estado}
-                              />
+                    return (
+                      <li
+                        key={p.id}
+                        className={`transition-colors ${abierto ? "bg-primary/[0.03]" : "hover:bg-primary/[0.02]"}`}
+                      >
+                        <div className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 md:px-5 lg:grid-cols-[minmax(220px,1.6fr)_1.1fr_0.9fr_0.9fr_1fr_auto] lg:gap-4">
+                          {/* Paciente */}
+                          <div className="flex min-w-0 items-center gap-3">
+                            <Avatar paciente={p} className="size-11 text-sm ring-4 ring-primary/[0.035]" />
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold leading-tight">{nombre}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  DNI {formatearDocumento(p.documento)}
+                                </span>
+                                <BadgeEstado estado={p.estado} />
+                              </div>
                             </div>
+                          </div>
 
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              DNI{" "}
-                              {formatearDocumento(
-                                p.documento,
-                              )}
+                          {/* Contacto */}
+                          <div className="min-w-0 text-xs">
+                            <p className="flex items-center gap-1.5 font-medium text-foreground/85">
+                              <Phone className="size-3.5 shrink-0 text-primary/70" />
+                              <span className="truncate">{p.telefono || "—"}</span>
                             </p>
-
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              <BadgeOutline>
-                                {etiquetaObraSocial(
-                                  p.obraSocial,
-                                )}
-                              </BadgeOutline>
-                            </div>
+                            <p className="mt-1 flex items-center gap-1.5 text-muted-foreground">
+                              <Mail className="size-3.5 shrink-0 text-primary/50" />
+                              <span className="truncate">{p.email || "Sin correo"}</span>
+                            </p>
                           </div>
 
-                          <div className="grid min-w-[260px] flex-[2] grid-cols-1 gap-2 sm:grid-cols-3">
-                            <DatoMini
-                              label="Teléfono"
-                              value={p.telefono}
-                            />
-
-                            <DatoMini
-                              label="Obra social"
-                              value={etiquetaObraSocial(
-                                p.obraSocial,
-                              )}
-                            />
-
-                            <DatoMini
-                              label="Sucursal"
-                              value={p.sucursal}
-                            />
+                          {/* Cobertura */}
+                          <div className="min-w-0">
+                            <BadgeOutline>{etiquetaObraSocial(p.obraSocial)}</BadgeOutline>
                           </div>
 
-                          <div className="ml-auto flex items-center gap-2">
+                          {/* Sucursal */}
+                          <p className="truncate text-xs font-medium text-foreground/80">
+                            {p.sucursal || "—"}
+                          </p>
+
+                          {/* Próximo turno */}
+                          <div className="min-w-0 text-xs">
+                            {proximo ? (
+                              <>
+                                <p className="flex items-center gap-1.5 font-semibold text-foreground/85">
+                                  <CalendarDays className="size-3.5 shrink-0 text-primary/70" />
+                                  {proximo.fecha === hoyAgenda
+                                    ? "Hoy"
+                                    : proximo.fecha.slice(5).split("-").reverse().join("/")}{" "}
+                                  · {proximo.hora}
+                                </p>
+                                <p className="mt-1 truncate text-muted-foreground">
+                                  {proximo.tratamiento}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-muted-foreground">Sin turno agendado</p>
+                            )}
+                          </div>
+
+                          {/* Acciones */}
+                          <div className="flex items-center gap-2 lg:justify-end">
                             <button
-                              onClick={() =>
-                                setAbiertoId(
-                                  abierto
-                                    ? null
-                                    : p.id,
-                                )
-                              }
+                              onClick={() => setAbiertoId(abierto ? null : p.id)}
+                              aria-expanded={abierto}
                               className={`${BTN_PRIMARIO} whitespace-nowrap`}
                             >
                               <FolderOpen className="size-4" />
-
-                              {abierto
-                                ? "Cerrar carpeta"
-                                : "Abrir carpeta"}
-
+                              {abierto ? "Cerrar carpeta" : "Abrir carpeta"}
                               {abierto ? (
                                 <ChevronUp className="size-4" />
                               ) : (
                                 <ChevronDown className="size-4" />
                               )}
                             </button>
-
                             <button
-                              onClick={() =>
-                                setModal({
-                                  tipo: "form",
-                                  paciente: p,
-                                })
-                              }
+                              onClick={() => setModal({ tipo: "form", paciente: p })}
                               aria-label={`Editar a ${nombre}`}
                               className={BTN_ICONO}
                             >
                               <Pencil className="size-4" />
                             </button>
-
                             <button
-                              onClick={() =>
-                                setModal({
-                                  tipo: "eliminar",
-                                  paciente: p,
-                                })
-                              }
+                              onClick={() => setModal({ tipo: "eliminar", paciente: p })}
                               aria-label={`Eliminar a ${nombre}`}
-                              className={
-                                BTN_ICONO_PELIGRO
-                              }
+                              className={BTN_ICONO_PELIGRO}
                             >
                               <Trash2 className="size-4" />
                             </button>
                           </div>
                         </div>
-                      </div>
 
-                      {abierto && (
-                        <div className="border-t border-primary/10 bg-gradient-to-b from-primary/[0.018] to-white/70 px-3.5 pb-3.5 md:px-4 md:pb-4">
-                          <CarpetaPaciente
-                            key={p.id}
-                            paciente={p}
-                            datos={registros.de(
-                              p.id,
-                            )}
-                            cambiar={(
-                              clave,
-                              fn,
-                            ) =>
-                              registros.cambiar(
-                                p.id,
-                                clave,
-                                fn,
-                              )
-                            }
-                            onToast={show}
-                            onEditar={() =>
-                              setModal({
-                                tipo: "form",
-                                paciente: p,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                        {abierto && (
+                          <div className="border-t border-primary/10 bg-gradient-to-b from-primary/[0.018] to-white/70 px-3.5 pb-3.5 md:px-4 md:pb-4">
+                            <CarpetaPaciente
+                              key={p.id}
+                              paciente={p}
+                              datos={registros.de(p.id)}
+                              cambiar={(clave, fn) => registros.cambiar(p.id, clave, fn)}
+                              onToast={show}
+                              onEditar={() => setModal({ tipo: "form", paciente: p })}
+                            />
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
           </div>
         </div>

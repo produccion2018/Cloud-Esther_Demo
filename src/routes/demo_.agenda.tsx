@@ -25,6 +25,7 @@ import {
   Sunrise,
   Sunset,
   MapPin,
+  Stethoscope,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -315,9 +316,6 @@ const CARD =
 
 const ITEM =
   "rounded-2xl border border-primary/18 bg-card/90 bg-gradient-to-br from-white via-white to-primary/[0.06] shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/8";
-
-const STAT_CARD =
-  "group relative flex min-h-[108px] flex-col overflow-hidden rounded-3xl border border-primary/25 bg-white/95 bg-gradient-to-br from-white via-primary/[0.025] to-primary/[0.09] p-5 shadow-sm shadow-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/45 hover:shadow-lg hover:shadow-primary/12";
 
 const INPUT =
   "h-11 w-full rounded-2xl border border-primary/20 bg-white/90 px-3.5 text-sm shadow-sm shadow-primary/5 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15";
@@ -909,22 +907,30 @@ function StatCard({
   label,
   value,
   icon: Icon,
+  sub,
 }: {
   label: string;
   value: number;
   icon: LucideIcon;
+  sub?: string;
 }) {
   return (
-    <div className={STAT_CARD}>
-      <span className="pointer-events-none absolute -right-5 -top-5 size-20 rounded-full bg-primary/8 transition-colors duration-300 group-hover:bg-primary/12" />
-
-      <Icon className="absolute right-4 top-4 size-4 text-primary/60" />
-
-      <p className="relative pr-7 text-[10px] font-bold uppercase leading-4 tracking-[0.12em] text-muted-foreground">
-        {label}
-      </p>
-
-      <p className="relative mt-1 text-2xl font-bold leading-tight tabular-nums">{value}</p>
+    <div className="group relative min-h-[104px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all hover:-translate-y-0.5 hover:border-primary/45">
+      <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">
+            {label}
+          </p>
+          <p className="mt-2 text-[27px] font-bold leading-none tracking-tight text-primary tabular-nums">
+            {value}
+          </p>
+          {sub && <p className="mt-2 text-[11px] text-muted-foreground">{sub}</p>}
+        </div>
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
+          <Icon className="size-4" />
+        </span>
+      </div>
     </div>
   );
 }
@@ -952,110 +958,121 @@ function TurnoCard({
   onEditar: (turno: Turno) => void;
 }) {
   const accent = ESTADO_ACCENT[turno.estado];
+  const activo = turno.estado === "Pendiente" || turno.estado === "Confirmada";
+  const ICONO_BTN =
+    "grid size-8 place-items-center rounded-xl border border-primary/12 bg-white text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary";
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border bg-card/80 bg-gradient-to-r from-white via-white to-primary/[0.07] p-3.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
+      className={`group relative overflow-hidden rounded-2xl border bg-gradient-to-r from-white via-white to-primary/[0.05] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
     >
       <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
 
-      <div className="flex flex-col gap-3 pl-2 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 py-3 pl-4 pr-3 sm:flex-row sm:items-center">
+        {/* Hora y gabinete */}
         <div
-          className={`flex w-full shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 sm:w-[100px] sm:flex-col sm:items-center sm:gap-1 ${accent.tile}`}
+          className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2 sm:w-[92px] sm:flex-col sm:gap-0.5 ${accent.tile}`}
         >
-          <span className="text-lg font-bold leading-none tabular-nums">{turno.hora}</span>
-
-          <Clock className="size-3.5 opacity-60" />
-
-          <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
-            {turno.gabinete}
+          <span className="text-[17px] font-bold leading-none tabular-nums">{turno.hora}</span>
+          <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider opacity-75">
+            {turno.gabinete.replace("Gabinete", "Gab.")}
           </span>
         </div>
 
+        {/* Paciente y detalle */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold">{turno.paciente}</p>
+            <p className="text-[15px] font-semibold tracking-tight">{turno.paciente}</p>
             <EstadoBadge estado={turno.estado} />
           </div>
-
-          <p className="mt-1 text-[13px] font-medium text-muted-foreground">{turno.tratamiento}</p>
-
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span>{turno.odontologo}</span>
-            <span>{turno.sucursal}</span>
-          </div>
-
-          {turno.notas && (
-            <p className="mt-1.5 text-xs italic text-muted-foreground">{turno.notas}</p>
-          )}
-
-          {(turno.estado === "Pendiente" || turno.estado === "Confirmada") && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                <Bell className="size-3.5 text-primary" />
-                Avisos:
-              </span>
-
-              {canalesActivos.length > 0 ? (
-                canalesActivos.map((canal) => {
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">{turno.tratamiento}</span>
+            <span className="inline-flex items-center gap-1">
+              <Stethoscope className="size-3 text-primary/70" />
+              {turno.odontologo}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3 text-primary/70" />
+              {turno.sucursal}
+            </span>
+            {activo && canalesActivos.length > 0 && (
+              <span className="inline-flex items-center gap-1" title="Avisos automáticos activos">
+                <Bell className="size-3 text-primary/70" />
+                {canalesActivos.map((canal) => {
                   const { icon: CanalIcon, chip } = canalMeta(canal);
-
                   return (
                     <span
                       key={canal}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${chip}`}
+                      title={canal}
+                      className={`grid size-5 place-items-center rounded-full border ${chip}`}
                     >
-                      <CanalIcon className="size-3" />
-                      {canal}
+                      <CanalIcon className="size-2.5" />
                     </span>
                   );
-                })
-              ) : (
-                <span className="text-[11px] text-muted-foreground">Sin avisos automáticos</span>
-              )}
-            </div>
+                })}
+              </span>
+            )}
+          </div>
+          {turno.notas && (
+            <p className="mt-1 text-xs italic text-muted-foreground">{turno.notas}</p>
           )}
         </div>
 
-        <div className="flex flex-wrap justify-start gap-1.5 sm:justify-end">
+        {/* Acciones: la principal con texto, el resto como íconos */}
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          {turno.estado === "Pendiente" && (
+            <button
+              type="button"
+              onClick={() => onEstado(turno, "Confirmada")}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <Check className="size-3.5" /> Confirmar
+            </button>
+          )}
+          {turno.estado === "Confirmada" && (
+            <button
+              type="button"
+              onClick={() => onEstado(turno, "Atendida")}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <Check className="size-3.5" /> Atendida
+            </button>
+          )}
           {turno.estado === "Atendida" && (
             <BotonAccion label="Marcar ausente" onClick={() => onEstado(turno, "Ausente")} />
           )}
-
-          {turno.estado === "Confirmada" && (
-            <>
-              <BotonAccion
-                icon={Check}
-                label="Atendida"
-                onClick={() => onEstado(turno, "Atendida")}
-              />
-
-              <BotonAccion icon={Bell} label="Recordar" onClick={() => onRecordar(turno)} />
-
-              <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
-
-              <BotonAccion icon={X} label="Cancelar" onClick={() => onEstado(turno, "Cancelada")} />
-            </>
+          {activo && (
+            <button
+              type="button"
+              onClick={() => onRecordar(turno)}
+              className={ICONO_BTN}
+              aria-label="Enviar recordatorio"
+              title="Enviar recordatorio"
+            >
+              <Bell className="size-3.5" />
+            </button>
           )}
-
-          {turno.estado === "Pendiente" && (
-            <>
-              <BotonAccion
-                icon={Check}
-                label="Confirmar"
-                onClick={() => onEstado(turno, "Confirmada")}
-              />
-
-              <BotonAccion icon={Bell} label="Recordar" onClick={() => onRecordar(turno)} />
-
-              <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
-
-              <BotonAccion icon={X} label="Cancelar" onClick={() => onEstado(turno, "Cancelada")} />
-            </>
+          {turno.estado !== "Atendida" && (
+            <button
+              type="button"
+              onClick={() => onEditar(turno)}
+              className={ICONO_BTN}
+              aria-label="Editar turno"
+              title="Editar turno"
+            >
+              <Pencil className="size-3.5" />
+            </button>
           )}
-
-          {(turno.estado === "Ausente" || turno.estado === "Cancelada") && (
-            <BotonAccion icon={Pencil} label="Editar" onClick={() => onEditar(turno)} />
+          {activo && (
+            <button
+              type="button"
+              onClick={() => onEstado(turno, "Cancelada")}
+              className={`${ICONO_BTN} hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600`}
+              aria-label="Cancelar turno"
+              title="Cancelar turno"
+            >
+              <X className="size-3.5" />
+            </button>
           )}
         </div>
       </div>
@@ -1649,138 +1666,145 @@ function AgendaInner() {
           <FondoPacientes />
 
           <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 lg:px-8">
-            {/* Encabezado */}
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-card/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary shadow-sm backdrop-blur-sm">
-                  <CalendarDays className="size-3" />
-                  Agenda
-                </div>
-
-                <h1 className="text-2xl font-bold tracking-tight">Agenda y turnos</h1>
-
-                <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera desde
-                  una única agenda.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setModal({ tipo: "bloqueo" })}
-                  className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-card/80 px-3.5 py-1.5 text-xs font-semibold shadow-sm backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/5 hover:shadow-md"
-                >
-                  <Lock className="size-3.5" />
-                  Bloquear horario
-                </button>
-
-                <button onClick={() => setModal({ tipo: "cita" })} className="btn-ce">
-                  <Plus className="size-3.5" />
-                  Nueva cita
-                </button>
-              </div>
-            </div>
-
-            {/* Estadísticas */}
-
-            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-              <StatCard label="Turnos de hoy" value={turnosHoy.length} icon={CalendarDays} />
-
-              <StatCard label="Confirmados" value={contar("Confirmada")} icon={Check} />
-
-              <StatCard label="Pendientes" value={contar("Pendiente")} icon={Clock} />
-
-              <StatCard label="Atendidos" value={contar("Atendida")} icon={CalendarCheck} />
-            </div>
-
-            {/* Filtros */}
-
-            <div className={`${CARD} mt-3`}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <IconTile icon={CalendarCheck} />
-
-                  <div>
-                    <h2 className="text-sm font-semibold tracking-tight">Filtros de agenda</h2>
-
-                    <p className="hidden text-[11px] text-muted-foreground sm:block">
-                      Filtrá por sucursal, profesional, gabinete o tratamiento.
+            {/* Encabezado (mismo sistema visual que el resto de los módulos) */}
+            <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+              <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+              <div className="relative p-5 md:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-5">
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                      <CalendarDays className="size-3.5" />
+                      Agenda
+                    </span>
+                    <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
+                      Agenda y turnos
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+                      Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera
+                      desde una única agenda.
                     </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setModal({ tipo: "bloqueo" })}
+                      className="btn-ce-outline"
+                    >
+                      <Lock className="size-3.5" />
+                      Bloquear horario
+                    </button>
+                    <button onClick={() => setModal({ tipo: "cita" })} className="btn-ce">
+                      <Plus className="size-3.5" />
+                      Nueva cita
+                    </button>
                   </div>
                 </div>
 
-                {hayFiltros && (
-                  <button
-                    onClick={() =>
-                      setFiltros({
-                        sucursal: "",
-                        odontologo: "",
-                        gabinete: "",
-                        tratamiento: "",
-                      })
-                    }
-                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
-                  >
-                    Limpiar filtros
-                  </button>
-                )}
+                <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                  <StatCard
+                    label="Turnos de hoy"
+                    value={turnosHoy.length}
+                    icon={CalendarDays}
+                    sub="en la agenda"
+                  />
+                  <StatCard
+                    label="Confirmados"
+                    value={contar("Confirmada")}
+                    icon={Check}
+                    sub={`de ${turnosHoy.length} turnos`}
+                  />
+                  <StatCard
+                    label="Pendientes"
+                    value={contar("Pendiente")}
+                    icon={Clock}
+                    sub="por confirmar"
+                  />
+                  <StatCard
+                    label="Atendidos"
+                    value={contar("Atendida")}
+                    icon={CalendarCheck}
+                    sub="hasta ahora"
+                  />
+                </div>
+
+                {/* Filtros */}
+                <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.025] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3 px-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                      Filtros de agenda
+                    </p>
+                    {hayFiltros && (
+                      <button
+                        onClick={() =>
+                          setFiltros({
+                            sucursal: "",
+                            odontologo: "",
+                            gabinete: "",
+                            tratamiento: "",
+                          })
+                        }
+                        className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
+                      >
+                        Limpiar filtros
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                    <SelectField
+                      compact
+                      value={filtros.sucursal}
+                      onChange={(v) =>
+                        setFiltros((f) => ({
+                          ...f,
+                          sucursal: v,
+                        }))
+                      }
+                      options={SUCURSALES}
+                      placeholder="Todas las sucursales"
+                    />
+
+                    <SelectField
+                      compact
+                      value={filtros.odontologo}
+                      onChange={(v) =>
+                        setFiltros((f) => ({
+                          ...f,
+                          odontologo: v,
+                        }))
+                      }
+                      options={opcionesAgenda.odontologos}
+                      placeholder="Todos los odontólogos"
+                    />
+
+                    <SelectField
+                      compact
+                      value={filtros.gabinete}
+                      onChange={(v) =>
+                        setFiltros((f) => ({
+                          ...f,
+                          gabinete: v,
+                        }))
+                      }
+                      options={GABINETES}
+                      placeholder="Todos los gabinetes"
+                    />
+
+                    <SelectField
+                      compact
+                      value={filtros.tratamiento}
+                      onChange={(v) =>
+                        setFiltros((f) => ({
+                          ...f,
+                          tratamiento: v,
+                        }))
+                      }
+                      options={TRATAMIENTOS}
+                      placeholder="Todos los tratamientos"
+                    />
+                  </div>
+                </div>
               </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                <SelectField
-                  compact
-                  value={filtros.sucursal}
-                  onChange={(v) =>
-                    setFiltros((f) => ({
-                      ...f,
-                      sucursal: v,
-                    }))
-                  }
-                  options={SUCURSALES}
-                  placeholder="Todas las sucursales"
-                />
-
-                <SelectField
-                  compact
-                  value={filtros.odontologo}
-                  onChange={(v) =>
-                    setFiltros((f) => ({
-                      ...f,
-                      odontologo: v,
-                    }))
-                  }
-                  options={opcionesAgenda.odontologos}
-                  placeholder="Todos los odontólogos"
-                />
-
-                <SelectField
-                  compact
-                  value={filtros.gabinete}
-                  onChange={(v) =>
-                    setFiltros((f) => ({
-                      ...f,
-                      gabinete: v,
-                    }))
-                  }
-                  options={GABINETES}
-                  placeholder="Todos los gabinetes"
-                />
-
-                <SelectField
-                  compact
-                  value={filtros.tratamiento}
-                  onChange={(v) =>
-                    setFiltros((f) => ({
-                      ...f,
-                      tratamiento: v,
-                    }))
-                  }
-                  options={TRATAMIENTOS}
-                  placeholder="Todos los tratamientos"
-                />
-              </div>
-            </div>
+            </section>
 
             {/* Selector de vistas */}
 

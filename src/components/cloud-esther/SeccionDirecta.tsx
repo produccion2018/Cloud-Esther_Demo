@@ -1,11 +1,26 @@
 import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, X, UserPlus, Users, ChevronRight, Phone, Mail, Contact } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  ChevronRight,
+  ClipboardList,
+  Contact,
+  Mail,
+  Phone,
+  Search,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
-import { SeccionPaciente, useRegistrosPacientes } from "@/components/cloud-esther/PacienteSecciones";
-import type { SeccionRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import {
+  SeccionPaciente,
+  useRegistrosPacientes,
+} from "@/components/cloud-esther/PacienteSecciones";
+import type { Registros, SeccionRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
@@ -54,8 +69,7 @@ const BTN_PRIMARIO =
 const BTN_SECUNDARIO =
   "btn-ce-outline shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25";
 
-const CIRCULO_ICONO =
-  "grid shrink-0 place-items-center rounded-xl bg-primary/10 text-primary";
+const CIRCULO_ICONO = "grid shrink-0 place-items-center rounded-xl bg-primary/10 text-primary";
 
 /* ───────────── Utilidades ───────────── */
 
@@ -89,7 +103,11 @@ function Avatar({ paciente, className }: { paciente: Paciente; className: string
       className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 font-semibold text-primary ring-1 ring-primary/15 ${className}`}
     >
       {paciente.foto ? (
-        <img src={paciente.foto} alt={`${paciente.nombre} ${paciente.apellido}`} className="size-full object-cover" />
+        <img
+          src={paciente.foto}
+          alt={`${paciente.nombre} ${paciente.apellido}`}
+          className="size-full object-cover"
+        />
       ) : (
         iniciales(paciente)
       )}
@@ -106,7 +124,9 @@ function BadgeEstado({ estado }: { estado: Paciente["estado"] }) {
           : "bg-muted text-muted-foreground ring-1 ring-inset ring-border"
       }`}
     >
-      <span className={`size-1.5 rounded-full ${estado === "Activo" ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+      <span
+        className={`size-1.5 rounded-full ${estado === "Activo" ? "bg-emerald-500" : "bg-muted-foreground/50"}`}
+      />
       {estado}
     </span>
   );
@@ -119,6 +139,24 @@ function BadgeObraSocial({ paciente }: { paciente: Paciente }) {
     </span>
   );
 }
+
+/* Resumen de registros del paciente para la lista de selección (sin cambiar datos). */
+function ultimaConsulta(r: Registros) {
+  const fechas = [
+    ...r.notasClinicas.map((n) => ({ fecha: n.fecha, motivo: n.motivoConsulta || n.diagnostico })),
+    ...r.historia.map((e) => ({ fecha: e.fecha, motivo: e.motivo })),
+  ].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return fechas[0];
+}
+function alertasMedicas(r: Registros) {
+  return [...r.antecedentes.alergias.map((a) => `Alergia: ${a}`)];
+}
+function cantidadSeccion(r: Registros, seccion: SeccionDirectaId) {
+  if (seccion === "historia") return r.notasClinicas.length + r.historia.length;
+  const v = (r as Record<string, unknown>)[seccion];
+  return Array.isArray(v) ? v.length : 0;
+}
+const fechaCorta = (iso: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
 
 /* ───────────── Página ───────────── */
 
@@ -144,13 +182,74 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
       !q ||
       `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) ||
       `${p.apellido} ${p.nombre}`.toLowerCase().includes(q) ||
-      (qDigitos.length > 0 && (p.documento.includes(qDigitos) || p.telefono.replace(/\D/g, "").includes(qDigitos))),
+      (qDigitos.length > 0 &&
+        (p.documento.includes(qDigitos) || p.telefono.replace(/\D/g, "").includes(qDigitos))),
   );
 
   const elegir = (p: Paciente) => {
     setActivoId(p.id);
     setBusqueda("");
   };
+
+  const mes = new Date().toISOString().slice(0, 7);
+  const conRegistros = pacientes.filter((p) => cantidadSeccion(registros.de(p.id), seccion) > 0);
+  const consultasMes = pacientes.reduce(
+    (a, p) =>
+      a +
+      registros.de(p.id).notasClinicas.filter((n) => n.fecha.startsWith(mes)).length +
+      registros.de(p.id).historia.filter((e) => e.fecha.startsWith(mes)).length,
+    0,
+  );
+  const conAlertas = pacientes.filter((p) => alertasMedicas(registros.de(p.id)).length > 0);
+  const kpis: { l: string; v: number; s: string; i: LucideIcon }[] =
+    seccion === "historia"
+      ? [
+          {
+            l: "Pacientes",
+            v: pacientes.length,
+            s: `${pacientes.filter((p) => p.estado === "Activo").length} activos`,
+            i: Users,
+          },
+          {
+            l: "Con historia clínica",
+            v: conRegistros.length,
+            s: "con notas o evoluciones",
+            i: ClipboardList,
+          },
+          { l: "Consultas del mes", v: consultasMes, s: "notas y evoluciones", i: CalendarClock },
+          {
+            l: "Alertas médicas",
+            v: conAlertas.length,
+            s: "pacientes con alergias",
+            i: AlertTriangle,
+          },
+        ]
+      : [
+          {
+            l: "Pacientes",
+            v: pacientes.length,
+            s: `${pacientes.filter((p) => p.estado === "Activo").length} activos`,
+            i: Users,
+          },
+          {
+            l: `Con ${titulo.toLowerCase()}`,
+            v: conRegistros.length,
+            s: "pacientes con registros",
+            i: ClipboardList,
+          },
+          {
+            l: "Registros",
+            v: pacientes.reduce((a, p) => a + cantidadSeccion(registros.de(p.id), seccion), 0),
+            s: "en total",
+            i: CalendarClock,
+          },
+          {
+            l: "Alertas médicas",
+            v: conAlertas.length,
+            s: "pacientes con alergias",
+            i: AlertTriangle,
+          },
+        ];
 
   return (
     <AppShell>
@@ -162,47 +261,44 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
           {!activo ? (
             /* Acceso a Historia clínica: solo se mejora esta pantalla; la lógica queda intacta. */
             <>
-              <section className="overflow-hidden rounded-[28px] border border-primary/20 bg-white/95 shadow-[0_8px_30px_rgba(76,29,149,0.08)]">
-                <div className="relative px-6 pb-5 pt-6 sm:px-7 sm:pt-7">
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.045] via-transparent to-primary/[0.025]" />
-
-                  <div className="relative flex items-start gap-4">
-                    <span className="grid size-14 shrink-0 place-items-center rounded-[20px] border border-primary/15 bg-primary/10 text-primary shadow-sm">
-                      <Icon className="size-6" />
+              <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+                <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+                <div className="relative p-5 md:p-7">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                      <Icon className="size-3.5" />
+                      Espacio clínico
                     </span>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary/75">
-                          Espacio clínico
-                        </span>
-                        <span className="rounded-full border border-primary/15 bg-primary/[0.06] px-2.5 py-1 text-[10px] font-semibold text-primary">
-                          {pacientes.length} {pacientes.length === 1 ? "paciente" : "pacientes"}
-                        </span>
-                      </div>
-
-                      <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-foreground sm:text-[30px]">
-                        {titulo}
-                      </h1>
-
-                      <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                        {descripcion}
-                      </p>
-                    </div>
                   </div>
-
-                  <div className="relative mt-5 flex flex-wrap gap-2">
-                    {["Acceso rápido", "Nombre", "DNI", "Teléfono"].map((item, index) => (
-                      <span
-                        key={item}
-                        className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-                          index === 0
-                            ? "border-primary/20 bg-primary/[0.07] text-primary"
-                            : "border-border/70 bg-muted/40 text-muted-foreground"
-                        }`}
+                  <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
+                    {titulo}
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+                    {descripcion}
+                  </p>
+                  <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    {kpis.map((k) => (
+                      <div
+                        key={k.l}
+                        className="relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)]"
                       >
-                        {item}
-                      </span>
+                        <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
+                        <div className="relative flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">
+                              {k.l}
+                            </p>
+                            <p className="mt-2 text-[27px] font-bold leading-none tracking-tight text-primary tabular-nums">
+                              {k.v}
+                            </p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">{k.s}</p>
+                          </div>
+                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
+                            <k.i className="size-4" />
+                          </span>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -216,7 +312,8 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                         Seleccioná un paciente
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Buscá por nombre, documento o teléfono para entrar directamente a sus registros.
+                        Buscá por nombre, documento o teléfono para entrar directamente a sus
+                        registros.
                       </p>
                     </div>
 
@@ -260,9 +357,13 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     <div>
                       <Users className="mx-auto size-8 text-primary/35" />
                       <p className="mt-2 text-sm font-semibold text-foreground">
-                        {pacientes.length === 0 ? "Todavía no hay pacientes" : "No hay pacientes que coincidan"}
+                        {pacientes.length === 0
+                          ? "Todavía no hay pacientes"
+                          : "No hay pacientes que coincidan"}
                       </p>
-                      <p className="text-sm text-muted-foreground">Podés crear uno desde la sección Pacientes.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Podés crear uno desde la sección Pacientes.
+                      </p>
                       <Link to="/demo/pacientes" className={`${BTN_PRIMARIO} mt-4 inline-flex`}>
                         <UserPlus className="size-4" />
                         Ir a Pacientes
@@ -294,7 +395,47 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                             </p>
                           </div>
 
-                          <BadgeObraSocial paciente={p} />
+                          {(() => {
+                            const r = registros.de(p.id);
+                            const ult = ultimaConsulta(r);
+                            const alertas = alertasMedicas(r);
+                            const n = cantidadSeccion(r, seccion);
+                            return (
+                              <>
+                                {alertas[0] && (
+                                  <span className="hidden shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 md:inline-flex">
+                                    <AlertTriangle className="size-3" />
+                                    {alertas[0]}
+                                  </span>
+                                )}
+                                <span className="hidden w-[200px] shrink-0 text-right text-xs md:block">
+                                  {seccion === "historia" ? (
+                                    ult ? (
+                                      <>
+                                        <span className="block font-semibold text-foreground/85">
+                                          Última consulta {fechaCorta(ult.fecha)}
+                                        </span>
+                                        <span className="block truncate text-muted-foreground">
+                                          {ult.motivo || `${n} registros`}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        Sin consultas registradas
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      {n
+                                        ? `${n} ${n === 1 ? "registro" : "registros"}`
+                                        : "Sin registros"}
+                                    </span>
+                                  )}
+                                </span>
+                                <BadgeObraSocial paciente={p} />
+                              </>
+                            );
+                          })()}
 
                           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.045] text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
                             <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -345,7 +486,11 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     </div>
                   </div>
 
-                  <button type="button" onClick={() => setActivoId(null)} className={BTN_SECUNDARIO}>
+                  <button
+                    type="button"
+                    onClick={() => setActivoId(null)}
+                    className={BTN_SECUNDARIO}
+                  >
                     <Users className="size-3.5" />
                     Cambiar paciente
                   </button>

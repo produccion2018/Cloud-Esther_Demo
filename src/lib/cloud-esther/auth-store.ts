@@ -99,6 +99,8 @@ export function registrarCuenta(datos: {
   clinica: string;
   nombre: string;
   email: string;
+  /** Solo cuentas de demo: se guarda tal cual (con mayúsculas) para no tener que recordarla. */
+  passDemo?: string;
 }): Resultado {
   const email = normalizarEmail(datos.email);
   const cuentas = leerJSON<CuentaGuardada[]>(KEY_CUENTAS, []);
@@ -118,12 +120,48 @@ export function registrarCuenta(datos: {
   const sesion: Sesion = { usuario, clinica };
 
   escribirJSON(KEY_CUENTAS, [...cuentas, sesion]);
+  if (datos.passDemo) guardarCredencialDemo(email, datos.passDemo);
   ponerSesion(sesion);
   return { ok: true, sesion };
 }
 
+/* ---------- credenciales del demo ----------
+   Exclusivo del entorno de demostración: se recuerda la contraseña de prueba en este navegador
+   para que el usuario no tenga que volver a buscarla. Las cuentas reales NUNCA pasan por acá
+   (su contraseña la valida el backend y no se guarda en el navegador). */
+
+const KEY_DEMO = "cloud-esther:auth:demo-credenciales";
+export type CredencialDemo = { email: string; pass: string; clinica: string };
+
+function guardarCredencialDemo(email: string, pass: string) {
+  const lista = leerJSON<{ email: string; pass: string }[]>(KEY_DEMO, []).filter(
+    (c) => c.email !== email,
+  );
+  escribirJSON(KEY_DEMO, [{ email, pass }, ...lista].slice(0, 5));
+}
+
+/** Cuentas de demo creadas en este navegador, con su contraseña de prueba visible. */
+export function credencialesDemo(): CredencialDemo[] {
+  const cuentas = leerJSON<CuentaGuardada[]>(KEY_CUENTAS, []);
+  return leerJSON<{ email: string; pass: string }[]>(KEY_DEMO, [])
+    .map((c) => {
+      const cuenta = cuentas.find((x) => x.usuario.email === c.email);
+      return cuenta ? { ...c, clinica: capitalizarNombre(cuenta.clinica.nombre) } : null;
+    })
+    .filter((c): c is CredencialDemo => c !== null);
+}
+
+/** Recuperar contraseña. TODO backend: POST /auth/recuperar (envía el enlace por correo). */
+export async function solicitarRecuperacion(
+  emailCrudo: string,
+): Promise<{ demo: CredencialDemo | null }> {
+  await new Promise((r) => setTimeout(r, 650));
+  const email = normalizarEmail(emailCrudo);
+  return { demo: credencialesDemo().find((c) => c.email === email) ?? null };
+}
+
 /* Demo: se identifica por correo. La contraseña la valida el backend cuando se conecte. */
-export function iniciarSesion(emailCrudo: string): Resultado {
+export function iniciarSesion(emailCrudo: string, pass?: string): Resultado {
   const email = normalizarEmail(emailCrudo);
   const cuentas = leerJSON<CuentaGuardada[]>(KEY_CUENTAS, []);
   const cuenta = cuentas.find((c) => c.usuario.email === email);
@@ -132,6 +170,16 @@ export function iniciarSesion(emailCrudo: string): Resultado {
     return {
       ok: false,
       error: "No encontramos una cuenta con ese correo. Creá una cuenta primero.",
+    };
+  }
+  // Cuenta de demo con contraseña guardada: se respeta exactamente (mayúsculas incluidas).
+  const demo = leerJSON<{ email: string; pass: string }[]>(KEY_DEMO, []).find(
+    (c) => c.email === email,
+  );
+  if (demo && pass !== undefined && pass !== demo.pass) {
+    return {
+      ok: false,
+      error: "La contraseña no coincide. Revisá mayúsculas y minúsculas, o usá los datos del demo.",
     };
   }
   const sesion = normalizarSesion(cuenta) as Sesion;

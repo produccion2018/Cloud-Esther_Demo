@@ -38,11 +38,11 @@ function Faq() {
           <div className="card-premium mx-auto max-w-2xl p-8">
             <h2 className="text-2xl font-bold">¿Te quedó alguna duda?</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Coordinamos una demostración personalizada y respondemos todo sobre tu clínica.
+              Respondemos todo sobre tu clínica y te acompañamos en la contratación.
             </p>
             <Button asChild variant="hero" size="lg" className="mt-6">
               <Link to="/demostracion">
-                Solicitar demostración <ArrowRight className="size-4" />
+                Contratar servicio <ArrowRight className="size-4" />
               </Link>
             </Button>
           </div>

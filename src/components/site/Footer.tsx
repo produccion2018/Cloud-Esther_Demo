@@ -32,7 +32,7 @@ const columns: {
     links: [
       { label: "Preguntas frecuentes", to: "/preguntas-frecuentes" },
       { label: "Ayuda", to: "/preguntas-frecuentes" },
-      { label: "Solicitar demostración", to: "/demostracion" },
+      { label: "Contratar servicio", to: "/demostracion" },
     ],
   },
   {
@@ -292,7 +292,7 @@ export function Footer() {
               to="/demostracion"
               className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-violet-400/25 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/50 hover:bg-violet-500/20 hover:shadow-[0_10px_30px_rgba(139,92,246,0.18)]"
             >
-              Solicitar demostración
+              Contratar servicio
               <ArrowUpRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </div>

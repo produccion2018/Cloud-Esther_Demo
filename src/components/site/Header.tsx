@@ -318,7 +318,7 @@ export function Header() {
               size="sm"
               className="rounded-xl px-4 transition-all duration-200 hover:-translate-y-0.5"
             >
-              <Link to="/demostracion">Solicitar demostración</Link>
+              <Link to="/demostracion">Contratar servicio</Link>
             </Button>
 
             <Button
@@ -468,7 +468,7 @@ export function Header() {
                     className="w-full rounded-xl"
                   >
                     <Link to="/demostracion">
-                      Solicitar demostración
+                      Contratar servicio
                     </Link>
                   </Button>
 

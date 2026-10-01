@@ -619,7 +619,7 @@ function Planes() {
                     }
                     className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-primary shadow-lg shadow-black/10 transition-shadow hover:shadow-black/20"
                   >
-                    Solicitar demostración
+                    Contratar servicio
                     <ArrowRight className="size-4" />
                   </motion.button>
                 </div>

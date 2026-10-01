@@ -8,15 +8,11 @@ import {
   Building2,
   ShieldCheck,
   ArrowRight,
-  CheckCircle2,
-  ClipboardList,
-  CalendarClock,
-  UserX,
-  TrendingUp,
   Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { PanelEstherIA } from "@/components/site/PanelEstherIA";
 import {
   Reveal,
   StaggerGroup,
@@ -114,25 +110,6 @@ const titleLines = [
   "Todo el poder de tu clínica,",
   "en un solo lugar.",
 ] as const;
-
-const aiInsights = [
-  {
-    icon: ClipboardList,
-    text: "Resumen automático de la historia clínica de Laura Gómez",
-  },
-  {
-    icon: CalendarClock,
-    text: "Sugerencia: 3 huecos libres el jueves por la tarde",
-  },
-  {
-    icon: UserX,
-    text: "12 pacientes sin turno hace más de 8 meses",
-  },
-  {
-    icon: TrendingUp,
-    text: "Los tratamientos de ortodoncia crecieron 22% este trimestre",
-  },
-];
 
 function AnimatedLetters({
   text,
@@ -702,118 +679,8 @@ function Caracteristicas() {
                 </div>
               </div>
 
-              {/* Panel IA */}
-              <div className="relative">
-                <div className="absolute -top-5 right-3 z-10 flex items-center">
-                  {/* Anillos tipo radar detrás del badge */}
-                  <motion.span
-                    animate={{
-                      scale: [1, 2.1],
-                      opacity: [0.45, 0],
-                    }}
-                    transition={{
-                      duration: 2.2,
-                      repeat: Infinity,
-                      ease: "easeOut",
-                    }}
-                    className="absolute inset-0 rounded-full bg-brand"
-                  />
-                  <motion.span
-                    animate={{
-                      scale: [1, 2.1],
-                      opacity: [0.45, 0],
-                    }}
-                    transition={{
-                      duration: 2.2,
-                      repeat: Infinity,
-                      delay: 1.1,
-                      ease: "easeOut",
-                    }}
-                    className="absolute inset-0 rounded-full bg-brand"
-                  />
-
-                  <motion.span
-                    initial={{
-                      opacity: 0,
-                      scale: 0.6,
-                      y: -8,
-                    }}
-                    whileInView={{
-                      opacity: 1,
-                      scale: 1,
-                      y: 0,
-                    }}
-                    viewport={{
-                      once: true,
-                    }}
-                    animate={{
-                      boxShadow: [
-                        "0 0 0px rgba(124,58,237,0.35)",
-                        "0 0 20px rgba(124,58,237,0.6)",
-                        "0 0 0px rgba(124,58,237,0.35)",
-                      ],
-                    }}
-                    transition={{
-                      default: { duration: 0.5, type: "spring" },
-                      boxShadow: {
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      },
-                    }}
-                    className="relative inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-brand px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary-foreground"
-                  >
-                    <motion.span
-                      animate={{ opacity: [1, 0.25, 1] }}
-                      transition={{
-                        duration: 1.3,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="size-1.5 rounded-full bg-white"
-                    />
-                    En vivo
-                  </motion.span>
-                </div>
-
-                <div className="rounded-3xl border border-primary/15 bg-card/60 p-4 backdrop-blur-sm">
-                  {aiInsights.map((insight, index) => {
-                    const Icon = insight.icon;
-
-                    return (
-                      <motion.div
-                        key={insight.text}
-                        initial={{
-                          opacity: 0,
-                          x: 20,
-                        }}
-                        whileInView={{
-                          opacity: 1,
-                          x: 0,
-                        }}
-                        viewport={{
-                          once: true,
-                        }}
-                        transition={{
-                          duration: 0.5,
-                          delay: index * 0.12,
-                        }}
-                        className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_10px_30px_rgba(124,58,237,0.08)]"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand shadow-sm">
-                          <Icon className="size-4 text-primary-foreground" />
-                        </span>
-
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {insight.text}
-                        </p>
-
-                        <CheckCircle2 className="mt-0.5 ml-auto size-4 shrink-0 text-primary/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Panel IA (datos administrables desde el panel; hoy de prueba) */}
+              <PanelEstherIA />
             </div>
           </div>
         </Reveal>

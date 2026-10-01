@@ -669,7 +669,7 @@ function Nosotros() {
               >
                 <Button asChild variant="hero" size="xl">
                   <Link to="/demostracion">
-                    Solicitar demostración
+                    Contratar servicio
                     <ArrowRight className="size-4" />
                   </Link>
                 </Button>

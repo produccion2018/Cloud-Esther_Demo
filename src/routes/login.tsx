@@ -6,13 +6,14 @@ import {
   EyeOff,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { iniciarSesion } from "@/lib/cloud-esther/auth-store";
+import { RecuperarClave, TarjetaDemo, useCredencialesDemo } from "@/components/site/AccesoDemo";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -37,7 +38,24 @@ function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [recuperar, setRecuperar] = useState(false);
+  const demos = useCredencialesDemo();
+  const usarDemo = (c: { email: string; pass: string }) => {
+    setEmail(c.email);
+    setPass(c.pass);
+    setShowPassword(true);
+    setError(null);
+  };
+  // Demo: si hay una cuenta de prueba en este navegador, el ingreso ya viene completo.
+  const primeraDemo = demos[0];
+  useEffect(() => {
+    if (!primeraDemo) return;
+    setEmail((e) => e || primeraDemo.email);
+    setPass((p) => p || primeraDemo.pass);
+    setShowPassword(true);
+  }, [primeraDemo]);
 
   return (
     <PublicLayout>
@@ -283,12 +301,19 @@ function Login() {
                   </p>
                 </div>
 
+                {/* DATOS DEL DEMO (solo si se creó una cuenta de prueba en este navegador) */}
+                {demos.length > 0 && (
+                  <div className="mt-6">
+                    <TarjetaDemo credenciales={demos} onUsar={usarDemo} />
+                  </div>
+                )}
+
                 {/* FORMULARIO */}
                 <form
                   className="mt-7 space-y-4.5"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const res = iniciarSesion(email);
+                    const res = iniciarSesion(email, pass);
                     if (!res.ok) {
                       setError(res.error);
                       return;
@@ -341,6 +366,9 @@ function Login() {
                         id="pass"
                         type={showPassword ? "text" : "password"}
                         required
+                        value={pass}
+                        onChange={(e) => setPass(e.target.value)}
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         className="h-11 rounded-xl border-border/80 bg-background px-4 pr-12 text-sm transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
                       />
@@ -383,6 +411,7 @@ function Login() {
 
                     <button
                       type="button"
+                      onClick={() => setRecuperar(true)}
                       className="text-xs font-semibold text-primary transition-colors hover:text-primary/75 hover:underline sm:text-sm"
                     >
                       ¿Olvidaste tu contraseña?
@@ -461,6 +490,13 @@ function Login() {
           </motion.div>
         </div>
       </section>
+      {recuperar && (
+        <RecuperarClave
+          emailInicial={email}
+          onClose={() => setRecuperar(false)}
+          onUsarDemo={usarDemo}
+        />
+      )}
     </PublicLayout>
   );
 }

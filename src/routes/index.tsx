@@ -281,19 +281,24 @@ function CountUp({
   delay?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
+  // Sin "once": cada vez que la sección vuelve a entrar en pantalla, el contador arranca de 0.
+  const inView = useInView(ref, { margin: "-40px" });
   const reduceMotion = useReducedMotion();
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.round(latest));
 
   useEffect(() => {
-    if (!inView) return undefined;
+    if (!inView) {
+      count.set(0);
+      return undefined;
+    }
 
     if (reduceMotion) {
       count.set(to);
       return undefined;
     }
 
+    count.set(0);
     const controls = animate(count, to, {
       duration,
       delay,
@@ -567,7 +572,7 @@ function Home() {
                 </div>
 
                 <Button asChild variant="outlineBrand" size="xl">
-                  <Link to="/demostracion">Solicitar demostración</Link>
+                  <Link to="/demostracion">Contratar servicio</Link>
                 </Button>
               </motion.div>
 
@@ -900,8 +905,8 @@ function Home() {
                 </h2>
 
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/75 lg:text-base">
-                  Explorá la plataforma con datos de ejemplo o coordiná una
-                  demostración personalizada.
+                  Explorá la plataforma con datos de ejemplo o contratá el plan
+                  para tu clínica.
                 </p>
 
                 <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
@@ -922,7 +927,7 @@ function Home() {
                     variant="outline"
                     className="rounded-xl border-white/35 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                   >
-                    <Link to="/demostracion">Solicitar demostración</Link>
+                    <Link to="/demostracion">Contratar servicio</Link>
                   </Button>
                 </div>
               </div>

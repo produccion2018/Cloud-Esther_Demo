@@ -76,8 +76,9 @@ function Registro() {
                     const clinica = String(form.get("clinica") ?? "");
                     const nombre = String(form.get("contacto") ?? "");
                     const email = String(form.get("email") ?? "");
+                    const passDemo = String(form.get("pass") ?? "");
 
-                    const res = registrarCuenta({ clinica, nombre, email });
+                    const res = registrarCuenta({ clinica, nombre, email, passDemo });
                     if (!res.ok) {
                       setError(res.error);
                       return;
@@ -119,13 +120,21 @@ function Registro() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
+                      {/* Demo: la contraseña de prueba queda visible y se recuerda en el login. */}
                       <Input
                         id="pass"
                         name="pass"
-                        type="password"
+                        type="text"
                         required
-                        placeholder="••••••••"
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="Ej.: Demo2026"
+                        className="font-mono"
                       />
+                      <p className="text-[11px] text-muted-foreground">
+                        Es tu contraseña de prueba: la vas a ver tal cual (con mayúsculas) al volver
+                        a entrar al demo.
+                      </p>
                     </div>
                   </div>
 

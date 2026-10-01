@@ -46,6 +46,7 @@ import { Route as DemoPortalPacienteRouteImport } from './routes/demo_.portal-pa
 import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuestos'
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
+import { Route as DemoSimuladorSonrisaRouteImport } from './routes/demo_.simulador-sonrisa'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
 import { Route as DemoEquipoProfesionalEspecialidadesRouteImport } from './routes/demo_.equipo-profesional_.especialidades'
@@ -236,6 +237,11 @@ const DemoRrhhRoute = DemoRrhhRouteImport.update({
   path: '/demo/rrhh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoSimuladorSonrisaRoute = DemoSimuladorSonrisaRouteImport.update({
+  id: '/demo_/simulador-sonrisa',
+  path: '/demo/simulador-sonrisa',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   id: '/demo_/tratamientos',
   path: '/demo/tratamientos',
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
+  '/demo/simulador-sonrisa': typeof DemoSimuladorSonrisaRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
+  '/demo/simulador-sonrisa': typeof DemoSimuladorSonrisaRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/app': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   '/demo_/presupuestos': typeof DemoPresupuestosRoute
   '/demo_/recetas': typeof DemoRecetasRoute
   '/demo_/rrhh': typeof DemoRrhhRoute
+  '/demo_/simulador-sonrisa': typeof DemoSimuladorSonrisaRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/app/': typeof AppIndexRoute
   '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/rrhh'
+    | '/demo/simulador-sonrisa'
     | '/demo/tratamientos'
     | '/app/'
     | '/demo/equipo-profesional/agendas-horarios'
@@ -472,6 +482,7 @@ export interface FileRouteTypes {
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/rrhh'
+    | '/demo/simulador-sonrisa'
     | '/demo/tratamientos'
     | '/app'
     | '/demo/equipo-profesional/agendas-horarios'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
     | '/demo_/presupuestos'
     | '/demo_/recetas'
     | '/demo_/rrhh'
+    | '/demo_/simulador-sonrisa'
     | '/demo_/tratamientos'
     | '/app/'
     | '/demo_/equipo-profesional_/agendas-horarios'
@@ -559,6 +571,7 @@ export interface RootRouteChildren {
   DemoPresupuestosRoute: typeof DemoPresupuestosRoute
   DemoRecetasRoute: typeof DemoRecetasRoute
   DemoRrhhRoute: typeof DemoRrhhRoute
+  DemoSimuladorSonrisaRoute: typeof DemoSimuladorSonrisaRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   AppIndexRoute: typeof AppIndexRoute
   DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -827,6 +840,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoRrhhRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/simulador-sonrisa': {
+      id: '/demo_/simulador-sonrisa'
+      path: '/demo/simulador-sonrisa'
+      fullPath: '/demo/simulador-sonrisa'
+      preLoaderRoute: typeof DemoSimuladorSonrisaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/tratamientos': {
       id: '/demo_/tratamientos'
       path: '/demo/tratamientos'
@@ -895,6 +915,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoPresupuestosRoute: DemoPresupuestosRoute,
   DemoRecetasRoute: DemoRecetasRoute,
   DemoRrhhRoute: DemoRrhhRoute,
+  DemoSimuladorSonrisaRoute: DemoSimuladorSonrisaRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
   AppIndexRoute: AppIndexRoute,
   DemoEquipoProfesionalAgendasHorariosRoute:

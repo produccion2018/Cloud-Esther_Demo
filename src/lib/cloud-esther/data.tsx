@@ -14,6 +14,7 @@ import {
   Settings,
   Workflow,
   Sparkles,
+  Smile,
   Stethoscope,
   Pill,
   ScanLine,
@@ -198,6 +199,16 @@ export const MODULES: AppModule[] = [
     label: "Odontograma 3D",
     icon: "odontograma3d",
     path: "/demo/odontograma-3d",
+    group: "Clínico",
+    minPlan: "avanzada",
+  },
+  {
+    // Odontología digital: separado del odontograma. Incluido con IA (Plus y Enterprise);
+    // en Start y Pro se puede sumar como módulo adicional.
+    id: "simulador-sonrisa",
+    label: "Simulador de Sonrisa",
+    icon: "smile",
+    path: "/demo/simulador-sonrisa",
     group: "Clínico",
     minPlan: "avanzada",
   },
@@ -445,6 +456,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   settings: Settings,
   workflow: Workflow,
   sparkles: Sparkles,
+  smile: Smile,
   stethoscope: Stethoscope,
   pill: Pill,
   odontograma: ScanLine,

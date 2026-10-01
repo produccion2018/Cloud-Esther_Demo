@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { useEffect, useState } from "react";
 import {
@@ -1073,12 +1074,12 @@ function IntegracionesTab() {
                   {integration.status}
                 </span>
 
-                <button
-                  type="button"
+                <Link
+                  to={"/demo/integraciones" as never}
                   className="text-xs font-semibold text-primary hover:underline"
                 >
                   Configurar
-                </button>
+                </Link>
               </div>
             </div>
           );

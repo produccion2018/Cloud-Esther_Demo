@@ -16,6 +16,8 @@ import {
   type PrioridadNotif,
 } from "@/lib/cloud-esther/notificaciones-store";
 import { insightsRRHH, storeRRHH } from "@/lib/cloud-esther/rrhh-store";
+import { estadoComprobante, saldo, storeFacturacion } from "@/lib/cloud-esther/facturacion-store";
+import { storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 
 /* Ubicación: src/components/cloud-esther/useNotificaciones.ts
@@ -70,8 +72,10 @@ export function useNotificaciones() {
   storeRRHH.usar(); // recalcula las alertas de RRHH cuando cambian legajos o solicitudes
   const { conversaciones, recordatorios } = storeComunicacion.usar();
   const { pacientes } = usePacientes();
-  const { miembros } = useEquipo();
+  const { miembros, especialidades } = useEquipo();
   const registros = useTodosLosRegistros();
+  const { comprobantes } = storeFacturacion.usar();
+  const { cuentasPagar } = storeFinanzas.usar();
 
   const tiene = (moduloId: string) => {
     const m = MODULES.find((x) => x.id === moduloId);
@@ -289,6 +293,91 @@ export function useNotificaciones() {
       });
     }
   }
+
+  /* ── Facturación: facturas vencidas y por vencer (todos los planes) ── */
+  const facturas = comprobantes.filter((c) => c.clase === "Factura" && !c.anulada);
+  const vencidas = facturas.filter((c) => estadoComprobante(c) === "Vencida");
+  if (vencidas.length) {
+    const total = vencidas.reduce((a, c) => a + saldo(c), 0);
+    auto.push({
+      id: `fact-vencidas-${hoy}-${vencidas.length}`,
+      titulo: `${vencidas.length} ${vencidas.length === 1 ? "factura vencida" : "facturas vencidas"}`,
+      detalle: `Saldo pendiente de cobro: $ ${Math.round(total).toLocaleString("es-AR")}.`,
+      categoria: "Administración",
+      prioridad: "Alta",
+      fecha: `${hoy}T08:05:00`,
+      asignado: "Administración",
+      accion: { label: "Ver cobranzas", to: "/demo/facturacion" },
+    });
+  }
+  const en3 = sumarDias(hoy, 3);
+  const porVencer = facturas.filter(
+    (c) =>
+      estadoComprobante(c) !== "Vencida" &&
+      saldo(c) > 0 &&
+      c.vencimiento >= hoy &&
+      c.vencimiento <= en3,
+  );
+  if (porVencer.length)
+    auto.push({
+      id: `fact-por-vencer-${hoy}-${porVencer.length}`,
+      titulo: `${porVencer.length} ${porVencer.length === 1 ? "factura vence" : "facturas vencen"} en los próximos 3 días`,
+      detalle: "Conviene enviar el recordatorio de pago o el link de cobro.",
+      categoria: "Administración",
+      prioridad: "Normal",
+      fecha: `${hoy}T08:10:00`,
+      asignado: "Administración",
+      accion: { label: "Ver facturas", to: "/demo/facturacion" },
+    });
+
+  /* ── Finanzas: pagos a proveedores vencidos o próximos ── */
+  if (tiene("finanzas")) {
+    const pagar = cuentasPagar.filter((c) => c.estado === "Pendiente" && c.vence <= en3);
+    const vencidasPagar = pagar.filter((c) => c.vence < hoy);
+    if (pagar.length)
+      auto.push({
+        id: `fin-pagar-${hoy}-${pagar.length}`,
+        titulo: vencidasPagar.length
+          ? `${vencidasPagar.length} ${vencidasPagar.length === 1 ? "pago a proveedor vencido" : "pagos a proveedores vencidos"}`
+          : `${pagar.length} ${pagar.length === 1 ? "pago a proveedor vence" : "pagos a proveedores vencen"} pronto`,
+        detalle: `Total: $ ${Math.round(pagar.reduce((a, c) => a + c.monto, 0)).toLocaleString("es-AR")}.`,
+        categoria: "Administración",
+        prioridad: vencidasPagar.length ? "Alta" : "Normal",
+        fecha: `${hoy}T08:15:00`,
+        asignado: "Administración",
+        accion: { label: "Ver cuentas a pagar", to: "/demo/finanzas" },
+      });
+  }
+
+  /* ── Equipo: especialidades sin profesional y odontólogos sin horarios ── */
+  const activos = miembros.filter((m) => m.status !== "pendiente");
+  const sinProfesional = especialidades.filter(
+    (e) => !activos.some((m) => m.role === "odontologo" && (m.specialties ?? []).includes(e)),
+  );
+  if (sinProfesional.length)
+    auto.push({
+      id: `esp-sin-prof-${sinProfesional.join("|")}`,
+      titulo: `${sinProfesional.length} ${sinProfesional.length === 1 ? "especialidad sin profesional asignado" : "especialidades sin profesional asignado"}`,
+      detalle: `${sinProfesional.slice(0, 3).join(", ")}${sinProfesional.length > 3 ? "…" : ""}. No se pueden agendar turnos de esas especialidades.`,
+      categoria: "Equipo",
+      prioridad: "Baja",
+      fecha: `${hoy}T08:20:00`,
+      asignado: "Administración",
+      accion: { label: "Ver especialidades", to: "/demo/equipo-profesional/especialidades" },
+    });
+  for (const m of activos.filter(
+    (x) => x.role === "odontologo" && !x.schedule.some((d) => d.active),
+  ))
+    auto.push({
+      id: `equipo-sin-horario-${m.id}`,
+      titulo: `${m.firstName} ${m.lastName} no tiene horarios cargados`,
+      detalle: "Sin agenda configurada no aparece disponible para dar turnos.",
+      categoria: "Equipo",
+      prioridad: "Normal",
+      fecha: `${hoy}T08:25:00`,
+      asignado: "Administración",
+      accion: { label: "Configurar horarios", to: "/demo/equipo-profesional/agendas-horarios" },
+    });
 
   /* ── Pacientes: cumpleaños ── */
   const md = (iso: string) => iso.slice(5, 10);

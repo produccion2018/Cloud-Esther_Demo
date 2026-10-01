@@ -37,7 +37,7 @@ import {
   Sun,
 } from "lucide-react";
 
-import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
+import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 
 import {
   cargarSettings,
@@ -51,16 +51,13 @@ import {
 } from "@/lib/cloud-esther/settings-store";
 
 import { ToggleSwitch } from "./ToggleSwitch";
-import {
-  InicioSesionCorporativo,
-  RegistroAuditoria,
-} from "./InicioSesionCorporativo";
+import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
+import { InicioSesionCorporativo, RegistroAuditoria } from "./InicioSesionCorporativo";
 
 const CARD =
   "rounded-2xl border border-border/70 bg-card/95 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_14px_rgba(16,24,40,0.04)] backdrop-blur-sm";
 
-const INNER_CARD =
-  "rounded-xl border border-border/60 bg-background/70";
+const INNER_CARD = "rounded-xl border border-border/60 bg-background/70";
 
 type TabId =
   | "general"
@@ -77,7 +74,7 @@ const TABS: {
   id: TabId;
   label: string;
   icon: typeof Settings;
-  /** Nivel de plan mínimo: Start y Pro tienen la configuración básica. */
+  /** Nivel de plan mínimo: Start y Pro tienen la configuración básica; Plus y Enterprise, la avanzada. */
   min?: number;
 }[] = [
   { id: "general", label: "General", icon: Settings },
@@ -86,7 +83,7 @@ const TABS: {
   { id: "actividad", label: "Actividad", icon: Activity, min: 3 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
-  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 2 },
+  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 3 },
   { id: "seguridad", label: "Seguridad", icon: ShieldCheck, min: 3 },
   { id: "auditoria", label: "Auditoría", icon: FileClock, min: 3 },
 ];
@@ -124,9 +121,7 @@ const ALL_SIDEBAR_COLORS: ExtraSidebarColor[] = [
     label: color.label,
     hex: color.hex,
   })),
-  ...EXTRA_SIDEBAR_COLORS.filter(
-    (extra) => !SIDEBAR_COLORS.some((color) => color.id === extra.id),
-  ),
+  ...EXTRA_SIDEBAR_COLORS.filter((extra) => !SIDEBAR_COLORS.some((color) => color.id === extra.id)),
 ];
 
 const DIRECTORIO_ITEMS = [
@@ -225,10 +220,7 @@ export function ConfiguracionModule({ onToast }: Props) {
     setSettings(cargarSettings(clinic));
   }, [clinic, tenant]);
 
-  const actualizar = <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => {
+  const actualizar = <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => {
     const next = {
       ...settings,
       [key]: value,
@@ -238,76 +230,60 @@ export function ConfiguracionModule({ onToast }: Props) {
     guardarSettings(clinic, next);
   };
 
+  const avanzada = planLevel(plan) >= 3;
+  const visibles = TABS.filter((t) => !t.min || planLevel(plan) >= t.min);
+
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-border/60 bg-gradient-to-br from-primary/[0.07] via-background to-background p-3 sm:p-5">
-      <div className="pointer-events-none absolute -right-32 -top-32 size-96 rounded-full bg-primary/[0.07] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-24 size-80 rounded-full bg-primary/[0.045] blur-3xl" />
-
+    <div>
       <div className="relative">
-        <ConfiguracionHeader />
-
-        {/* PESTAÑAS EN UNA SOLA LÍNEA, SIN SCROLL */}
-        <div className="mt-5 w-full border-b border-border/70">
-          <div className="flex w-full items-stretch gap-0">
-            {TABS.filter((t) => !t.min || planLevel(plan) >= t.min).map((item) => {
-              const Icon = item.icon;
-              const activo = tab === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={`relative flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-t-xl px-1.5 py-2.5 text-[10px] font-semibold transition-all sm:gap-2 sm:px-2 sm:text-[11px] ${
-                    activo
-                      ? "bg-card text-primary"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-3 shrink-0 sm:size-3.5" />
-                  <span className="truncate">{item.label}</span>
-
-                  {activo && (
-                    <span className="absolute inset-x-1.5 -bottom-px h-0.5 rounded-full bg-primary sm:inset-x-2" />
-                  )}
-                </button>
-              );
-            })}
+        <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+          <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
+          <div className="relative p-5 md:p-7">
+            <ConfiguracionHeader avanzada={avanzada} planNombre={PLANS[plan].name} />
+            <nav
+              className="mt-5 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
+              aria-label="Secciones de configuración"
+            >
+              {visibles.map((item) => {
+                const Icon = item.icon;
+                const activo = tab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setTab(item.id)}
+                    aria-pressed={activo}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                      activo
+                        ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
+                        : "text-muted-foreground hover:bg-white hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="size-3.5" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
-        </div>
+        </section>
 
         <div className="mt-5">
           {tab === "general" && (
-            <GeneralTab
-              settings={settings}
-              actualizar={actualizar}
-              onToast={onToast}
-            />
+            <GeneralTab settings={settings} actualizar={actualizar} onToast={onToast} />
           )}
 
-          {tab === "profesionales" && (
-            <ProfesionalesTab onToast={onToast} />
-          )}
+          {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
 
-          {tab === "directorio" && (
-            <DirectorioTab onToast={onToast} />
-          )}
+          {tab === "directorio" && <DirectorioTab onToast={onToast} />}
 
           {tab === "actividad" && <ActividadTab />}
 
-          {tab === "apariencia" && (
-            <AparienciaTab
-              settings={settings}
-              actualizar={actualizar}
-            />
-          )}
+          {tab === "apariencia" && <AparienciaTab settings={settings} actualizar={actualizar} />}
 
           {tab === "notificaciones" && (
-            <NotificacionesTab
-              settings={settings}
-              actualizar={actualizar}
-              onToast={onToast}
-            />
+            <NotificacionesTab settings={settings} actualizar={actualizar} onToast={onToast} />
           )}
 
           {tab === "integraciones" && <IntegracionesTab />}
@@ -321,12 +297,7 @@ export function ConfiguracionModule({ onToast }: Props) {
             />
           )}
 
-          {tab === "auditoria" && (
-            <AuditoriaTab
-              settings={settings}
-              actualizar={actualizar}
-            />
-          )}
+          {tab === "auditoria" && <AuditoriaTab settings={settings} actualizar={actualizar} />}
         </div>
       </div>
     </div>
@@ -337,29 +308,36 @@ export function ConfiguracionModule({ onToast }: Props) {
 /*                               HEADER                                       */
 /* -------------------------------------------------------------------------- */
 
-function ConfiguracionHeader() {
+function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; planNombre: string }) {
+  const { setPlan, planContratado } = useCloudEsther();
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
-          <Settings className="size-5" />
-        </span>
-
-        <div>
-          <h1 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            Configuración
-          </h1>
-
-          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
-            Personalizá tu experiencia, gestioná tu clínica y controlá los accesos.
-          </p>
+    <div className="flex flex-wrap items-start justify-between gap-5">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+            <Settings className="size-3.5" />
+            Sistema
+          </span>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${avanzada ? "border-primary/20 bg-primary/10 text-primary" : "border-sky-200 bg-sky-50 text-sky-700"}`}
+          >
+            {avanzada ? "Configuración avanzada" : "Configuración básica"} · Plan {planNombre}
+          </span>
         </div>
+        <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
+          Configuración
+        </h1>
+        <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+          {avanzada
+            ? "Datos de la clínica, profesionales, apariencia, notificaciones, integraciones, seguridad, actividad y auditoría."
+            : "Datos de la clínica, profesionales, apariencia y notificaciones. La configuración avanzada (seguridad, auditoría, actividad, directorio e integraciones) viene con Plus y Enterprise."}
+        </p>
       </div>
-
-      <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
-        <span className="size-2 rounded-full bg-emerald-500" />
-        Configuración activa
-      </div>
+      {!avanzada && !planContratado && (
+        <button type="button" className="btn-ce-outline" onClick={() => setPlan("avanzada")}>
+          Probar la configuración avanzada (Plus)
+        </button>
+      )}
     </div>
   );
 }
@@ -374,10 +352,7 @@ function GeneralTab({
   onToast,
 }: {
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
 }) {
   return (
@@ -390,37 +365,18 @@ function GeneralTab({
         />
 
         <div className="mt-5 space-y-3">
-          <InputVisual
-            label="Nombre de la clínica"
-            value="Centro Odontológico Esthetic"
-          />
+          <InputVisual label="Nombre de la clínica" value="Centro Odontológico Esthetic" />
 
-          <InputVisual
-            label="RUC / CUIT"
-            value="30-12345678-9"
-          />
+          <InputVisual label="RUC / CUIT" value="30-12345678-9" />
 
-          <InputVisual
-            label="Dirección"
-            value="Av. Siempre Viva 123, CABA"
-          />
+          <InputVisual label="Dirección" value="Av. Siempre Viva 123, CABA" />
 
-          <InputVisual
-            label="Teléfono"
-            value="+54 11 1234-5678"
-          />
+          <InputVisual label="Teléfono" value="+54 11 1234-5678" />
 
-          <InputVisual
-            label="Email de contacto"
-            value="info@cloudesther.com"
-          />
+          <InputVisual label="Email de contacto" value="info@cloudesther.com" />
         </div>
 
-        <button
-          type="button"
-          onClick={() => onToast("Cambios guardados")}
-          className="btn-ce mt-4"
-        >
+        <button type="button" onClick={() => onToast("Cambios guardados")} className="btn-ce mt-4">
           <CheckCircle2 className="size-4" />
           Guardar cambios
         </button>
@@ -439,9 +395,7 @@ function GeneralTab({
             titulo="Modo oscuro"
             descripcion="Activa el modo oscuro para toda la aplicación."
             checked={settings.darkModePage}
-            onChange={(value) =>
-              actualizar("darkModePage", value)
-            }
+            onChange={(value) => actualizar("darkModePage", value)}
           />
 
           <FilaSwitch
@@ -451,11 +405,7 @@ function GeneralTab({
             checked={settings.aiEnabled}
             onChange={(value) => {
               actualizar("aiEnabled", value);
-              onToast(
-                value
-                  ? "Esther AI activada"
-                  : "Esther AI desactivada",
-              );
+              onToast(value ? "Esther AI activada" : "Esther AI desactivada");
             }}
           />
 
@@ -464,17 +414,12 @@ function GeneralTab({
             titulo="Notificaciones"
             descripcion="Avisos de turnos, vencimientos y novedades."
             checked={settings.notificationsEnabled}
-            onChange={(value) =>
-              actualizar("notificationsEnabled", value)
-            }
+            onChange={(value) => actualizar("notificationsEnabled", value)}
           />
         </div>
       </div>
 
-      <PreviewSidebar
-        settings={settings}
-        actualizar={actualizar}
-      />
+      <PreviewSidebar settings={settings} actualizar={actualizar} />
     </div>
   );
 }
@@ -483,11 +428,7 @@ function GeneralTab({
 /*                              PROFESIONALES                                 */
 /* -------------------------------------------------------------------------- */
 
-function ProfesionalesTab({
-  onToast,
-}: {
-  onToast: (msg: string) => void;
-}) {
+function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
   const profesionales = [
     {
       initials: "LM",
@@ -532,23 +473,11 @@ function ProfesionalesTab({
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard
-            icon={Users}
-            label="Profesionales"
-            value="3"
-          />
+          <StatCard icon={Users} label="Profesionales" value="3" />
 
-          <StatCard
-            icon={CheckCircle2}
-            label="Activos"
-            value="2"
-          />
+          <StatCard icon={CheckCircle2} label="Activos" value="2" />
 
-          <StatCard
-            icon={Clock3}
-            label="Pendientes"
-            value="1"
-          />
+          <StatCard icon={Clock3} label="Pendientes" value="1" />
         </div>
 
         <div className="relative mt-5">
@@ -563,10 +492,7 @@ function ProfesionalesTab({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {profesionales.map((profesional, index) => (
-          <div
-            key={`${profesional.initials}-${index}`}
-            className={`${CARD} p-5`}
-          >
+          <div key={`${profesional.initials}-${index}`} className={`${CARD} p-5`}>
             <div className="flex items-center gap-3">
               <div className="grid size-11 place-items-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
                 {profesional.initials}
@@ -585,21 +511,15 @@ function ProfesionalesTab({
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {profesional.specialty}
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{profesional.specialty}</p>
               </div>
             </div>
 
             <div className="mt-4 border-t border-border/60 pt-4">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
-                  Agenda
-                </span>
+                <span className="text-muted-foreground">Agenda</span>
 
-                <span className="font-semibold text-foreground">
-                  Disponible
-                </span>
+                <span className="font-semibold text-foreground">Disponible</span>
               </div>
             </div>
           </div>
@@ -620,11 +540,7 @@ function ProfesionalesTab({
 /*                                DIRECTORIO                                  */
 /* -------------------------------------------------------------------------- */
 
-function DirectorioTab({
-  onToast,
-}: {
-  onToast: (msg: string) => void;
-}) {
+function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
   return (
     <div className="space-y-4">
       <div className={`${CARD} p-5`}>
@@ -650,8 +566,7 @@ function DirectorioTab({
             <FolderOpen className="mt-0.5 size-4 shrink-0 text-primary" />
 
             <p className="text-xs leading-relaxed text-muted-foreground">
-              El directorio centraliza los documentos y recursos
-              asociados a tu clínica.
+              El directorio centraliza los documentos y recursos asociados a tu clínica.
             </p>
           </div>
         </div>
@@ -674,13 +589,9 @@ function DirectorioTab({
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-sm font-bold text-foreground">
-                    {item.title}
-                  </p>
+                  <p className="font-display text-sm font-bold text-foreground">{item.title}</p>
 
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {item.description}
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
                 </div>
 
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
@@ -712,29 +623,13 @@ function ActividadTab() {
         />
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard
-            icon={CalendarDays}
-            label="Turnos hoy"
-            value="20"
-          />
+          <StatCard icon={CalendarDays} label="Turnos hoy" value="20" />
 
-          <StatCard
-            icon={Users}
-            label="Profesionales"
-            value="3"
-          />
+          <StatCard icon={Users} label="Profesionales" value="3" />
 
-          <StatCard
-            icon={FolderOpen}
-            label="Documentos"
-            value="12"
-          />
+          <StatCard icon={FolderOpen} label="Documentos" value="12" />
 
-          <StatCard
-            icon={Shield}
-            label="Eventos"
-            value="0"
-          />
+          <StatCard icon={Shield} label="Eventos" value="0" />
         </div>
 
         <div className="mt-5 divide-y divide-border/60">
@@ -770,9 +665,7 @@ function ActividadTab() {
             <Activity className="size-5" />
           </span>
 
-          <p className="mt-3 text-sm font-semibold text-foreground">
-            Sin actividad registrada
-          </p>
+          <p className="mt-3 text-sm font-semibold text-foreground">Sin actividad registrada</p>
 
           <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
             El historial se conectará posteriormente con los datos reales del sistema.
@@ -792,10 +685,7 @@ function AparienciaTab({
   actualizar,
 }: {
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_340px]">
@@ -807,9 +697,7 @@ function AparienciaTab({
         />
 
         <div className="mt-5">
-          <p className="text-xs font-bold text-foreground">
-            Color del sidebar
-          </p>
+          <p className="text-xs font-bold text-foreground">Color del sidebar</p>
 
           <p className="mt-1 text-[11px] text-muted-foreground">
             Elegí el color principal del menú lateral.
@@ -817,8 +705,7 @@ function AparienciaTab({
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {ALL_SIDEBAR_COLORS.map((color) => {
-              const activo =
-                settings.sidebarColor === color.id;
+              const activo = settings.sidebarColor === color.id;
 
               return (
                 <ColorOption
@@ -826,12 +713,7 @@ function AparienciaTab({
                   label={color.label}
                   hex={color.hex}
                   activo={activo}
-                  onClick={() =>
-                    actualizar(
-                      "sidebarColor",
-                      color.id as SidebarColor,
-                    )
-                  }
+                  onClick={() => actualizar("sidebarColor", color.id as SidebarColor)}
                 />
               );
             })}
@@ -841,9 +723,7 @@ function AparienciaTab({
         <div className="mt-6 border-t border-border/60 pt-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-foreground">
-                Modo oscuro
-              </p>
+              <p className="text-sm font-bold text-foreground">Modo oscuro</p>
 
               <p className="mt-1 text-xs text-muted-foreground">
                 Activá el tema oscuro de la plataforma.
@@ -852,9 +732,7 @@ function AparienciaTab({
 
             <ToggleSwitch
               checked={settings.darkModePage}
-              onChange={(value) =>
-                actualizar("darkModePage", value)
-              }
+              onChange={(value) => actualizar("darkModePage", value)}
               label="Modo oscuro"
             />
           </div>
@@ -863,29 +741,23 @@ function AparienciaTab({
         <div className="mt-4 border-t border-border/60 pt-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-foreground">
-                Sidebar oscuro
-              </p>
+              <p className="text-sm font-bold text-foreground">Sidebar oscuro</p>
 
               <p className="mt-1 text-xs text-muted-foreground">
-                Oscurece el color elegido del menú lateral. Blanco y negro no cambian.
+                Oscurece el color elegido del menú lateral. El negro siempre se ve oscuro.
               </p>
             </div>
 
             <ToggleSwitch
               checked={settings.darkModeSidebar}
-              onChange={(value) =>
-                actualizar("darkModeSidebar", value)
-              }
+              onChange={(value) => actualizar("darkModeSidebar", value)}
               label="Sidebar oscuro"
             />
           </div>
         </div>
 
         <div className="mt-5 border-t border-border/60 pt-5">
-          <p className="text-xs font-bold text-foreground">
-            Tamaño de letra
-          </p>
+          <p className="text-xs font-bold text-foreground">Tamaño de letra</p>
 
           <p className="mt-1 text-[11px] text-muted-foreground">
             Ajustá el tamaño del texto en toda la plataforma.
@@ -893,19 +765,13 @@ function AparienciaTab({
 
           <div className="mt-3 flex flex-wrap gap-2">
             {FONT_SIZES.map((font) => {
-              const activo =
-                settings.fontSize === font.id;
+              const activo = settings.fontSize === font.id;
 
               return (
                 <button
                   key={font.id}
                   type="button"
-                  onClick={() =>
-                    actualizar(
-                      "fontSize",
-                      font.id as FontSize,
-                    )
-                  }
+                  onClick={() => actualizar("fontSize", font.id as FontSize)}
                   className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
                     activo
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
@@ -921,10 +787,7 @@ function AparienciaTab({
         </div>
       </div>
 
-      <PreviewSidebar
-        settings={settings}
-        actualizar={actualizar}
-      />
+      <PreviewSidebar settings={settings} actualizar={actualizar} />
     </div>
   );
 }
@@ -939,10 +802,7 @@ function NotificacionesTab({
   onToast,
 }: {
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
 }) {
   return (
@@ -960,9 +820,7 @@ function NotificacionesTab({
             titulo="Notificaciones generales"
             descripcion="Avisos de turnos, vencimientos y novedades."
             checked={settings.notificationsEnabled}
-            onChange={(value) =>
-              actualizar("notificationsEnabled", value)
-            }
+            onChange={(value) => actualizar("notificationsEnabled", value)}
           />
 
           <FilaVisual
@@ -1039,10 +897,7 @@ function IntegracionesTab() {
           const Icon = integration.icon;
 
           return (
-            <div
-              key={integration.name}
-              className={`${CARD} p-5`}
-            >
+            <div key={integration.name} className={`${CARD} p-5`}>
               <div className="flex items-start gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="size-5" />
@@ -1061,9 +916,7 @@ function IntegracionesTab() {
                     )}
                   </div>
 
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {integration.description}
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{integration.description}</p>
                 </div>
               </div>
 
@@ -1099,12 +952,9 @@ function SeguridadTab({
   actualizar,
   onToast,
 }: {
-  plan: string;
+  plan: PlanId;
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
 }) {
   return (
@@ -1161,10 +1011,7 @@ function AuditoriaTab({
   actualizar,
 }: {
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_340px]">
@@ -1176,22 +1023,17 @@ function AuditoriaTab({
         />
 
         <div className="mt-5">
-          <RegistroAuditoria
-            settings={settings}
-            actualizar={actualizar}
-          />
+          <RegistroAuditoria settings={settings} actualizar={actualizar} />
         </div>
 
         <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/20 p-7 text-center">
           <FileClock className="mx-auto size-7 text-muted-foreground" />
 
-          <p className="mt-3 text-sm font-semibold text-foreground">
-            Historial de auditoría
-          </p>
+          <p className="mt-3 text-sm font-semibold text-foreground">Historial de auditoría</p>
 
           <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-            La estructura visual queda preparada para mostrar los eventos,
-            cambios y acciones cuando conectes el registro definitivo.
+            La estructura visual queda preparada para mostrar los eventos, cambios y acciones cuando
+            conectes el registro definitivo.
           </p>
         </div>
       </div>
@@ -1216,14 +1058,10 @@ function AuditoriaTab({
             </span>
 
             <div>
-              <p className="text-sm font-bold text-foreground">
-                Registro de auditoría
-              </p>
+              <p className="text-sm font-bold text-foreground">Registro de auditoría</p>
 
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {settings.auditLogEnabled
-                  ? "Actualmente activado"
-                  : "Actualmente desactivado"}
+                {settings.auditLogEnabled ? "Actualmente activado" : "Actualmente desactivado"}
               </p>
             </div>
           </div>
@@ -1253,13 +1091,9 @@ function SectionHeader({
       </span>
 
       <div className="min-w-0">
-        <h2 className="font-display text-base font-bold tracking-tight text-foreground">
-          {title}
-        </h2>
+        <h2 className="font-display text-base font-bold tracking-tight text-foreground">{title}</h2>
 
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {description}
-        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -1286,21 +1120,13 @@ function FilaSwitch({
         </span>
 
         <div className="min-w-0">
-          <p className="font-display text-sm font-semibold text-foreground">
-            {titulo}
-          </p>
+          <p className="font-display text-sm font-semibold text-foreground">{titulo}</p>
 
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            {descripcion}
-          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{descripcion}</p>
         </div>
       </div>
 
-      <ToggleSwitch
-        checked={checked}
-        onChange={onChange}
-        label={titulo}
-      />
+      <ToggleSwitch checked={checked} onChange={onChange} label={titulo} />
     </div>
   );
 }
@@ -1328,13 +1154,9 @@ function FilaVisual({
         </span>
 
         <div>
-          <p className="text-sm font-semibold text-foreground">
-            {title}
-          </p>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
 
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </div>
 
@@ -1343,13 +1165,7 @@ function FilaVisual({
   );
 }
 
-function InputVisual({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InputVisual({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -1379,14 +1195,10 @@ function StatCard({
           <Icon className="size-4" />
         </span>
 
-        <span className="text-[11px] font-medium text-muted-foreground">
-          {label}
-        </span>
+        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
       </div>
 
-      <p className="mt-3 font-display text-2xl font-bold tracking-tight text-foreground">
-        {value}
-      </p>
+      <p className="mt-3 font-display text-2xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   );
 }
@@ -1407,13 +1219,9 @@ function ActividadRow({
       </span>
 
       <div>
-        <p className="text-sm font-semibold text-foreground">
-          {title}
-        </p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
 
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {description}
-        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -1435,13 +1243,9 @@ function PreferenceBox({
       </span>
 
       <div>
-        <p className="text-xs font-bold text-foreground">
-          {title}
-        </p>
+        <p className="text-xs font-bold text-foreground">{title}</p>
 
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {description}
-        </p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -1466,13 +1270,9 @@ function InfoBanner({
         </span>
 
         <div>
-          <p className="text-xs font-bold text-foreground">
-            {title}
-          </p>
+          <p className="text-xs font-bold text-foreground">{title}</p>
 
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </div>
 
@@ -1510,9 +1310,7 @@ function ColorOption({
     >
       <span
         className={`relative block h-12 rounded-lg border ${
-          label === "Blanco"
-            ? "border-border"
-            : "border-transparent"
+          label === "Blanco" ? "border-border" : "border-transparent"
         }`}
         style={{ backgroundColor: hex }}
       >
@@ -1523,9 +1321,7 @@ function ColorOption({
         )}
       </span>
 
-      <span className="mt-2 block text-[10px] font-bold text-foreground">
-        {label}
-      </span>
+      <span className="mt-2 block text-[10px] font-bold text-foreground">{label}</span>
     </button>
   );
 }
@@ -1535,31 +1331,13 @@ function PreviewSidebar({
   actualizar,
 }: {
   settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(
-    key: K,
-    value: ClinicSettings[K],
-  ) => void;
+  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
 }) {
   const selectedColor =
-    ALL_SIDEBAR_COLORS.find(
-      (color) => color.id === settings.sidebarColor,
-    )?.hex ?? "#7c3aed";
+    ALL_SIDEBAR_COLORS.find((color) => color.id === settings.sidebarColor)?.hex ?? "#7c3aed";
 
-  const esBlanco = settings.sidebarColor === "blanco";
-  const esNegro = settings.sidebarColor === "negro";
-
-  // El color elegido manda. El interruptor "Sidebar oscuro" solo oscurece
-  // los colores intermedios: blanco sigue blanco y negro sigue negro.
-  const oscurecer = settings.darkModeSidebar && !esBlanco && !esNegro;
-
-  const fondo = oscurecer
-    ? `color-mix(in oklab, ${selectedColor} 45%, black)`
-    : selectedColor;
-
-  // Texto oscuro sobre fondos claros (blanco y amarillo sin oscurecer).
-  const esClaro =
-    esBlanco || (settings.sidebarColor === "amarillo" && !oscurecer);
-
+  // Misma paleta que el sidebar real (claro / oscuro y casos blanco y negro).
+  const paleta = buildSidebarPalette(selectedColor, settings.darkModeSidebar);
   return (
     <div className={`${CARD} p-4`}>
       <div className="flex items-center gap-2">
@@ -1568,92 +1346,79 @@ function PreviewSidebar({
         </span>
 
         <div>
-          <p className="text-sm font-bold text-foreground">
-            Vista previa
-          </p>
+          <p className="text-sm font-bold text-foreground">Vista previa</p>
 
-          <p className="text-[10px] text-muted-foreground">
-            Así se verá tu sidebar.
-          </p>
+          <p className="text-[10px] text-muted-foreground">Así se verá tu sidebar.</p>
         </div>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border/60 shadow-sm">
         <div
           className="p-3"
-          style={{
-            backgroundColor: fondo,
-          }}
+          style={{ ...paleta, background: "var(--sidebar)", color: "var(--sidebar-foreground)" }}
         >
-          <div
-            className={`flex items-center gap-2 ${
-              esClaro ? "text-gray-900" : "text-white"
-            }`}
-          >
+          <div className="flex items-center gap-2">
             <span
-              className={`grid size-7 place-items-center rounded-lg ${
-                esClaro ? "bg-gray-900/10" : "bg-white/15"
-              }`}
+              className="grid size-7 place-items-center rounded-lg text-white"
+              style={{ background: "linear-gradient(135deg,#b463f0,#4c1d95)" }}
             >
               <Settings className="size-3.5" />
             </span>
-
             <div>
-              <p className="text-[10px] font-bold">
-                Cloud Esther
-              </p>
-
-              <p
-                className={`text-[7px] ${
-                  esClaro ? "text-gray-500" : "text-white/70"
-                }`}
-              >
-                Tu clínica, en la nube
-              </p>
+              <p className="text-[10px] font-bold">Cloud Esther</p>
+              <p className="text-[7px] opacity-60">Dental Suite</p>
             </div>
           </div>
-
           <div className="mt-4 space-y-1">
             {[
-              "Inicio",
+              "Dashboard",
+              "Agenda y turnos",
               "Pacientes",
-              "Agenda",
               "Historia clínica",
               "Odontograma",
-              "Presupuestos",
               "Facturación",
               "Configuración",
             ].map((item) => (
               <div
                 key={item}
-                className={`rounded-lg px-2.5 py-1.5 text-[8px] ${
+                className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[8px]"
+                style={
                   item === "Configuración"
-                    ? esClaro
-                      ? "bg-gray-900/10 font-bold text-gray-900"
-                      : "bg-white/20 font-bold text-white"
-                    : esClaro
-                      ? "text-gray-600"
-                      : "text-white/80"
-                }`}
+                    ? { background: "var(--sidebar-accent)", fontWeight: 700 }
+                    : { opacity: 0.85 }
+                }
               >
                 {item}
+                {item === "Agenda y turnos" && (
+                  <span
+                    className="rounded-full px-1.5 text-[7px] font-bold"
+                    style={{
+                      background: "var(--sidebar-primary)",
+                      color: "var(--sidebar-primary-foreground)",
+                    }}
+                  >
+                    3
+                  </span>
+                )}
               </div>
             ))}
+          </div>
+          <div
+            className="mt-3 rounded-lg border px-2.5 py-2 text-[8px]"
+            style={{ background: "var(--sidebar-accent)", borderColor: "var(--sidebar-border)" }}
+          >
+            Plan del demo
           </div>
         </div>
       </div>
 
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-muted-foreground">
-            Modo oscuro
-          </span>
+          <span className="text-muted-foreground">Modo oscuro</span>
 
           <ToggleSwitch
             checked={settings.darkModeSidebar}
-            onChange={(value) =>
-              actualizar("darkModeSidebar", value)
-            }
+            onChange={(value) => actualizar("darkModeSidebar", value)}
             label="Modo oscuro del sidebar"
           />
         </div>
@@ -1665,7 +1430,6 @@ function PreviewSidebar({
               backgroundColor: selectedColor,
             }}
           />
-
           Sidebar seleccionado
         </div>
       </div>

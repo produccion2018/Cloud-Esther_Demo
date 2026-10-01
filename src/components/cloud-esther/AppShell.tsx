@@ -19,6 +19,7 @@ import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulo
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
+import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 
 const GROUPS = [
@@ -440,62 +441,6 @@ function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
       <Logo compact />
     </header>
   );
-}
-
-function hexToRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  const bigint = parseInt(clean, 16);
-  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (v: number) =>
-    Math.round(Math.max(0, Math.min(255, v)))
-      .toString(16)
-      .padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function mix(hex: string, target: "white" | "black", amount: number) {
-  const { r, g, b } = hexToRgb(hex);
-  const t = target === "white" ? 255 : 0;
-  return rgbToHex(r + (t - r) * amount, g + (t - g) * amount, b + (t - b) * amount);
-}
-
-function luminance(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  const [rl, gl, bl] = [r, g, b].map((v) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
-}
-
-function buildSidebarPalette(baseHex: string, dark: boolean): React.CSSProperties {
-  const background = dark ? mix(baseHex, "black", 0.86) : mix(baseHex, "white", 0.87);
-
-  const foreground = dark ? mix(baseHex, "white", 0.82) : mix(baseHex, "black", 0.72);
-  const accent = dark ? mix(baseHex, "black", 0.72) : mix(baseHex, "white", 0.72);
-  const accentForeground = foreground;
-  const border = dark ? mix(baseHex, "black", 0.68) : mix(baseHex, "white", 0.62);
-  const primary = dark ? mix(baseHex, "white", 0.28) : mix(baseHex, "black", 0.12);
-  const primaryForeground = "#ffffff";
-
-  const vars: Record<string, string> = {
-    "--sidebar": background,
-    "--sidebar-foreground": foreground,
-    "--sidebar-accent": accent,
-    "--sidebar-accent-foreground": accentForeground,
-    "--sidebar-border": border,
-    "--sidebar-primary": primary,
-    "--sidebar-primary-foreground": primaryForeground,
-  };
-
-  for (const [k, v] of Object.entries({ ...vars })) {
-    vars[k.replace("--sidebar", "--color-sidebar")] = v;
-  }
-
-  return vars as React.CSSProperties;
 }
 
 /** Módulo al que pertenece la ruta actual (el de path más largo que coincide). */

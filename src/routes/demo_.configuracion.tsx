@@ -24,7 +24,6 @@ function ConfiguracionInner() {
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6 lg:px-8">
-        <h1 className="mb-4 text-2xl font-bold tracking-tight text-foreground">Configuración</h1>
         <ConfiguracionModule onToast={mostrarToast} />
       </div>
 

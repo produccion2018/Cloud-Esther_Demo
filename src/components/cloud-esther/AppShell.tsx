@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -373,7 +373,9 @@ function PlanFooter() {
           </div>
         )}
         <p className="mt-1.5 text-[11px] text-sidebar-foreground/55">
-          {planContratado ? PLANS[plan].audience : "Probá cada plan antes de elegir"}
+          {planContratado
+            ? PLANS[plan].audience
+            : `${MODULES.filter((m) => availableIn(m, plan)).length} módulos del plan ${PLANS[plan].name} en el menú`}
         </p>
       </div>
       <Link
@@ -579,6 +581,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       planLevel(x.minPlan) > planLevel(plan),
   );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
+  // Plus y Enterprise no usan el 2D: la página del 2D lleva directo al Odontograma 3D.
+  const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
+  const irAl3D =
+    bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
   const moduloIA = MODULES.find((m) => m.id === "ia");
   const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
 
@@ -617,7 +623,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader sidebarStyle={sidebarStyle} />
         <main className="min-w-0 flex-1">
-          {bloqueado ? (
+          {irAl3D ? (
+            <Navigate to={"/demo/odontograma-3d" as never} replace />
+          ) : bloqueado ? (
             <ModuloNoIncluido
               label={bloqueado.label}
               minPlan={bloqueado.minPlan}

@@ -1,4 +1,5 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { cargar, reducir } from "@/components/cloud-esther/esther-ai/imagenes";
 
 /* Ubicación: src/lib/cloud-esther/simulador-sonrisa.ts
    Simulador de Sonrisa con IA (odontología digital).
@@ -53,14 +54,27 @@ export const TRATAMIENTOS_ESTETICOS: Record<
   },
 };
 
-export type Propuesta = { tratamientos: TratamientoEstetico[]; titulo: string; url: string };
+export type Propuesta = {
+  tratamientos: TratamientoEstetico[];
+  titulo: string;
+  url: string;
+  /** true: vista previa local de color (no generada por IA). */
+  aproximada?: boolean;
+};
+
+/** Zona de la sonrisa sobre la foto (en % de la imagen). */
+export type ZonaSonrisa = { x: number; y: number; w: number; h: number };
+export const ZONA_INICIAL: ZonaSonrisa = { x: 50, y: 58, w: 62, h: 34 };
+
+/** Tratamientos que se pueden previsualizar localmente sobre una foto real (solo color). */
+export const SOLO_COLOR: TratamientoEstetico[] = ["blanqueamiento", "carillas", "diseno"];
 
 export type OrigenFoto = "demo" | "paciente";
 
 export class ServicioIANoDisponible extends Error {
   constructor() {
     super(
-      "El servicio de IA Esther para simulaciones todavía no está conectado. La foto se puede guardar en la historia clínica y la simulación se generará cuando el servicio esté activo.",
+      "Alineación, forma y restauraciones necesitan el servicio de IA Esther, que todavía no está conectado. Sobre fotos reales ya podés previsualizar blanqueamiento, carillas o diseño de sonrisa (color), o guardar la foto en la historia.",
     );
     this.name = "ServicioIANoDisponible";
   }
@@ -189,14 +203,71 @@ export function fotoCasoDemo(): string {
 
 /* ───────────── Generación ───────────── */
 
-/** Genera las propuestas: una por tratamiento elegido y, si hay más de uno, la combinada. */
+/* Vista previa local sobre fotos reales: aclara y empareja el tono de los dientes dentro de la
+   zona de la sonrisa (píxeles claros y poco saturados). Solo color: no cambia forma ni
+   alineación. Se muestra siempre como «Vista previa aproximada», nunca como resultado de IA. */
+async function previsualizarColor(src: string, trat: TratamientoEstetico, zona: ZonaSonrisa) {
+  const img = await cargar(src);
+  const c = document.createElement("canvas");
+  c.width = img.width;
+  c.height = img.height;
+  const g = c.getContext("2d");
+  if (!g) return src;
+  g.drawImage(img, 0, 0);
+  const datos = g.getImageData(0, 0, c.width, c.height);
+  const d = datos.data;
+  const cx = (zona.x / 100) * c.width;
+  const cy = (zona.y / 100) * c.height;
+  const rx = (zona.w / 200) * c.width;
+  const ry = (zona.h / 200) * c.height;
+  const fuerza = trat === "blanqueamiento" ? 0.55 : trat === "carillas" ? 0.85 : 0.7;
+  const objetivo = trat === "blanqueamiento" ? [246, 244, 236] : [250, 250, 246];
+  for (let y = Math.max(0, Math.floor(cy - ry)); y < Math.min(c.height, cy + ry); y++)
+    for (let x = Math.max(0, Math.floor(cx - rx)); x < Math.min(c.width, cx + rx); x++) {
+      const e = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+      if (e > 1) continue;
+      const i = (y * c.width + x) * 4;
+      const r = d[i] ?? 0;
+      const gg = d[i + 1] ?? 0;
+      const b = d[i + 2] ?? 0;
+      const max = Math.max(r, gg, b);
+      const min = Math.min(r, gg, b);
+      const lum = (max + min) / 2 / 255;
+      const sat = max === min ? 0 : (max - min) / (255 - Math.abs(max + min - 255));
+      if (lum < 0.42 || sat > 0.55 || r - b > 90) continue;
+      const borde = Math.min(1, (1 - e) * 4);
+      const a = fuerza * borde * Math.min(1, (lum - 0.42) * 3);
+      d[i] = r + ((objetivo[0] ?? 250) - r) * a;
+      d[i + 1] = gg + ((objetivo[1] ?? 250) - gg) * a;
+      d[i + 2] = b + ((objetivo[2] ?? 245) - b) * a;
+    }
+  g.putImageData(datos, 0, 0);
+  return reducir(c, 900, 0.86);
+}
+
+/** Genera las propuestas: una por tratamiento elegido y, si hay más de uno, la combinada.
+    Con fotos reales y sin IA conectada: solo vista previa de color y se informan los omitidos. */
 export async function generarSimulacion(opciones: {
   origen: OrigenFoto;
   foto: string;
   tratamientos: TratamientoEstetico[];
-}): Promise<Propuesta[]> {
+  zona?: ZonaSonrisa;
+}): Promise<{ propuestas: Propuesta[]; omitidos: TratamientoEstetico[] }> {
   await new Promise((r) => setTimeout(r, 1400));
-  if (opciones.origen === "paciente" && !SERVICIO_IA_CONECTADO) throw new ServicioIANoDisponible();
+  if (opciones.origen === "paciente" && !SERVICIO_IA_CONECTADO) {
+    const posibles = opciones.tratamientos.filter((t) => SOLO_COLOR.includes(t));
+    const omitidos = opciones.tratamientos.filter((t) => !SOLO_COLOR.includes(t));
+    if (!posibles.length) throw new ServicioIANoDisponible();
+    const propuestas: Propuesta[] = [];
+    for (const t of posibles)
+      propuestas.push({
+        tratamientos: [t],
+        titulo: TRATAMIENTOS_ESTETICOS[t].nombre,
+        url: await previsualizarColor(opciones.foto, t, opciones.zona ?? ZONA_INICIAL),
+        aproximada: true,
+      });
+    return { propuestas, omitidos };
+  }
   // TODO backend: con SERVICIO_IA_CONECTADO, enviar la foto al servicio y devolver sus imágenes.
   const lista: Propuesta[] = opciones.tratamientos.map((t) => ({
     tratamientos: [t],
@@ -209,7 +280,7 @@ export async function generarSimulacion(opciones: {
       titulo: "Propuesta combinada",
       url: dibujarCaso(correccionesDe(opciones.tratamientos)),
     });
-  return lista;
+  return { propuestas: lista, omitidos: [] };
 }
 
 /* ───────────── Historial por empresa ───────────── */
@@ -221,6 +292,8 @@ export type SimulacionGuardada = {
   profesional: string;
   origen: OrigenFoto;
   foto: string;
+  /** Foto de frente del rostro (opcional), para mostrar la sonrisa en contexto. */
+  rostro?: string;
   propuestas: Propuesta[];
   estado: "Guardada" | "Presentada al paciente";
   consentimiento: boolean;

@@ -85,10 +85,9 @@ export function Tooth3D({
     ];
 
     const geometry = new THREE.LatheGeometry(
-      points.map((point) => new THREE.Vector2(
-        Math.max(0.025, point.x + shape.width * 0.22),
-        point.y,
-      )),
+      points.map(
+        (point) => new THREE.Vector2(Math.max(0.025, point.x + shape.width * 0.22), point.y),
+      ),
       12,
     );
 
@@ -107,12 +106,7 @@ export function Tooth3D({
           }}
         >
           <torusGeometry args={[0.23, 0.035, 8, 24]} />
-          <meshStandardMaterial
-            color="#ef4444"
-            transparent
-            opacity={0.75}
-            roughness={0.5}
-          />
+          <meshStandardMaterial color="#ef4444" transparent opacity={0.75} roughness={0.5} />
         </mesh>
       </group>
     );
@@ -133,59 +127,30 @@ export function Tooth3D({
       {selected && (
         <mesh scale={[1.18, 1.12, 1.18]}>
           <sphereGeometry args={[0.34, 20, 20]} />
-          <meshBasicMaterial
-            color="#8b5cf6"
-            transparent
-            opacity={0.24}
-          />
+          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.24} />
         </mesh>
       )}
 
-      <mesh
-        geometry={geometry}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial
-          color={color}
-          roughness={0.24}
-          metalness={0.02}
-        />
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial color={color} roughness={0.24} metalness={0.02} />
       </mesh>
 
       <mesh position={[0, shape.height * 0.34, 0]} scale={[1, 0.55, 1]}>
         <sphereGeometry args={[shape.cusp, 12, 8]} />
-        <meshStandardMaterial
-          color={color}
-          roughness={0.22}
-        />
+        <meshStandardMaterial color={color} roughness={0.22} />
       </mesh>
 
       {estado === "caries" && (
         <mesh position={[0, 0.12, shape.depth * 0.65]}>
           <sphereGeometry args={[0.075, 12, 8]} />
-          <meshStandardMaterial
-            color="#7c2d12"
-            roughness={0.7}
-          />
+          <meshStandardMaterial color="#7c2d12" roughness={0.7} />
         </mesh>
       )}
 
       {estado === "corona" && (
         <mesh scale={[1.06, 1.02, 1.06]}>
-          <torusGeometry
-            args={[
-              Math.max(shape.width * 0.32, 0.12),
-              0.018,
-              8,
-              20,
-            ]}
-          />
-          <meshStandardMaterial
-            color="#d4af37"
-            metalness={0.7}
-            roughness={0.2}
-          />
+          <torusGeometry args={[Math.max(shape.width * 0.32, 0.12), 0.018, 8, 20]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
         </mesh>
       )}
     </group>

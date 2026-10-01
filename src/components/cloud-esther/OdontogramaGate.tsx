@@ -1,6 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Lock, Sparkles, RotateCcw, Check, ListChecks, Download, Grid2x2 } from "lucide-react";
+import {
+  Box,
+  Check,
+  Download,
+  FileHeart,
+  Grid2x2,
+  ListChecks,
+  Lock,
+  RotateCcw,
+  ScanSearch,
+  Smile,
+  Sparkles,
+} from "lucide-react";
+import { RayosXIA } from "@/components/cloud-esther/odontograma3d/RayosXIA";
+import { InformeIntegral } from "@/components/cloud-esther/odontograma3d/InformeIntegral";
+import { SimuladorSonrisa } from "@/components/cloud-esther/simulador/SimuladorSonrisa";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
@@ -102,10 +117,21 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
   const extras = storeModulosExtra.usar().activos.map((x) => x.id);
   const tieneAcceso3D =
     planLevel(planId) >= planLevel(PLAN_MINIMO_3D) || extras.includes("odontograma3d");
-  /* Regla comercial: el 2D está disponible en los 4 planes; el 3D, desde Plus o como adicional.
-     Páginas del sidebar: cada una muestra su vista. Ficha del paciente: pestañas 2D | 3D. */
+  /* Regla comercial: Start y Pro usan el 2D (el 3D se suma como adicional); Plus y Enterprise
+     usan directamente el 3D y no ven el 2D. Ficha del paciente: en Start/Pro, pestañas 2D | 3D. */
+  const planCon3D = planLevel(planId) >= planLevel(PLAN_MINIMO_3D);
   const [modoFicha, setModoFicha] = useState<"2d" | "3d">(tieneAcceso3D ? "3d" : "2d");
-  const modo: "2d" | "3d" = vista === "2d" ? "2d" : vista === "3d" ? "3d" : modoFicha;
+  const modo: "2d" | "3d" = planCon3D
+    ? "3d"
+    : vista === "2d"
+      ? "2d"
+      : vista === "3d"
+        ? "3d"
+        : modoFicha;
+  // Herramientas del Odontograma 3D (pestañas dentro del módulo).
+  const [herramienta, setHerramienta] = useState<"odontograma" | "rayosx" | "sonrisa" | "informe">(
+    "odontograma",
+  );
   const titulo = vista === "ambos" ? TITULO.ambos : modo === "3d" ? TITULO["3d"] : TITULO["2d"];
   const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA) || extras.includes("ia");
   const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
@@ -195,7 +221,7 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-base font-bold tracking-tight text-foreground">{titulo}</h2>
-          {vista === "ambos" && (
+          {vista === "ambos" && !planCon3D && (
             <div
               className="flex rounded-xl border border-primary/15 bg-primary/[0.03] p-0.5"
               role="tablist"
@@ -232,7 +258,7 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
         </div>
 
         <div className="flex gap-2">
-          {modo === "3d" && tieneAcceso3D && (
+          {modo === "3d" && tieneAcceso3D && herramienta === "odontograma" && (
             <button
               type="button"
               onClick={exportarInforme}
@@ -244,7 +270,7 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
             </button>
           )}
 
-          {modo === "3d" && tieneAcceso3D && (
+          {modo === "3d" && tieneAcceso3D && herramienta === "odontograma" && (
             <button type="button" onClick={reiniciar} className={BTN_ICONO}>
               <RotateCcw className="size-3.5" />
               Reiniciar
@@ -264,42 +290,101 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
         />
       ) : modo === "3d" ? (
         <div className="space-y-4">
-          <div className="rounded-[28px] bg-gradient-to-b from-primary/[0.07] via-primary/[0.02] to-transparent p-1">
-            <div className="h-[calc(100vh-240px)] min-h-[600px] overflow-hidden rounded-[24px] border border-border/70">
-              <Suspense
-                fallback={
-                  <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                    Cargando odontograma 3D…
-                  </div>
-                }
+          <div
+            className="flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
+            role="tablist"
+            aria-label="Herramientas del odontograma 3D"
+          >
+            {(
+              [
+                ["odontograma", "Odontograma 3D", Box, false],
+                ["rayosx", "Rayos X con IA", ScanSearch, true],
+                ["sonrisa", "Simulador de sonrisa", Smile, true],
+                ["informe", "Informe integral", FileHeart, false],
+              ] as const
+            ).map(([id, l, I, ia]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={herramienta === id}
+                onClick={() => setHerramienta(id)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${herramienta === id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
               >
-                <Odontogram3D
-                  key={clavePaciente}
-                  value={chart}
-                  onChange={handleChange}
-                  onSelectTooth={setFdiSeleccionado}
-                />
-              </Suspense>
-            </div>
+                <I className="size-3.5" />
+                {l}
+                {ia && !tieneIA && <Lock className="size-3" />}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ToothDetailPanel
-              pacienteId={clavePaciente}
-              def={defSeleccionado}
-              estado={estadoSeleccionado}
-              onSetEstado={(fdi, estado) => handleChange(fdi, estado, { ...chart, [fdi]: estado })}
+          {herramienta === "rayosx" || herramienta === "sonrisa" ? (
+            !tieneIA ? (
+              <PanelBloqueado
+                titulo={herramienta === "rayosx" ? "Rayos X con IA" : "Simulador de sonrisa"}
+                texto={`Usa Esther IA, incluida desde el plan ${PLANS[PLAN_MINIMO_IA].name}. También podés sumar IA como módulo adicional.`}
+              />
+            ) : herramienta === "rayosx" ? (
+              <RayosXIA
+                pacienteId={Number(pacienteId)}
+                onToast={onToast}
+                onPasarOdontograma={(fdi, estado) =>
+                  handleChange(fdi, estado, { ...cargarChart(clavePaciente), [fdi]: estado })
+                }
+              />
+            ) : (
+              <SimuladorSonrisa pacienteFijo={Number(pacienteId)} compacto />
+            )
+          ) : herramienta === "informe" ? (
+            <InformeIntegral
+              pacienteId={Number(pacienteId)}
+              clavePaciente={clavePaciente}
+              nombre={pacienteNombre ?? "el paciente"}
+              chart={chart}
+              profesional={usuario?.nombre ?? "Profesional"}
             />
-            <HistorialEvolucion pacienteId={clavePaciente} fdi={fdiSeleccionado} />
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-[28px] bg-gradient-to-b from-primary/[0.07] via-primary/[0.02] to-transparent p-1">
+                <div className="h-[calc(100vh-240px)] min-h-[600px] overflow-hidden rounded-[24px] border border-border/70">
+                  <Suspense
+                    fallback={
+                      <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                        Cargando odontograma 3D…
+                      </div>
+                    }
+                  >
+                    <Odontogram3D
+                      key={clavePaciente}
+                      value={chart}
+                      onChange={handleChange}
+                      onSelectTooth={setFdiSeleccionado}
+                    />
+                  </Suspense>
+                </div>
+              </div>
 
-          <ResumenHallazgos3D
-            chart={chart}
-            pacienteNombre={pacienteNombre}
-            fdiSeleccionado={fdiSeleccionado}
-          />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <ToothDetailPanel
+                  pacienteId={clavePaciente}
+                  def={defSeleccionado}
+                  estado={estadoSeleccionado}
+                  onSetEstado={(fdi, estado) =>
+                    handleChange(fdi, estado, { ...chart, [fdi]: estado })
+                  }
+                />
+                <HistorialEvolucion pacienteId={clavePaciente} fdi={fdiSeleccionado} />
+              </div>
 
-          {panelesCompartidos}
+              <ResumenHallazgos3D
+                chart={chart}
+                pacienteNombre={pacienteNombre}
+                fdiSeleccionado={fdiSeleccionado}
+              />
+
+              {panelesCompartidos}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

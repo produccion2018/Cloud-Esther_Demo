@@ -44,6 +44,8 @@ import {
   type Propuesta,
   type SimulacionGuardada,
   type TratamientoEstetico,
+  type ZonaSonrisa,
+  ZONA_INICIAL,
 } from "@/lib/cloud-esther/simulador-sonrisa";
 
 /* Ubicación: src/components/cloud-esther/simulador/SimuladorSonrisa.tsx
@@ -140,12 +142,31 @@ function Comparador({ antes, despues }: { antes: string; despues: string }) {
 
 /* ───────────── Página ───────────── */
 
-export function SimuladorSonrisa() {
+export function SimuladorSonrisa({
+  pacienteFijo,
+  compacto = false,
+}: {
+  /** Paciente ya elegido (pestaña dentro del Odontograma 3D o ventana de Esther IA). */
+  pacienteFijo?: number | undefined;
+  compacto?: boolean;
+} = {}) {
   const { pacientes, activoId } = usePacientes();
   const { usuario } = useSesion();
   const historial = storeSimulador.usar().simulaciones;
-  const [pacienteId, setPacienteId] = useState<number | undefined>(activoId ?? undefined);
-  const [foto, setFoto] = useState("");
+  const [pacienteId, setPacienteId] = useState<number | undefined>(
+    pacienteFijo ?? activoId ?? undefined,
+  );
+  // Dos fotos: la sonrisa (se simula) y el rostro de frente (contexto para el paciente).
+  const [slot, setSlot] = useState<"sonrisa" | "rostro">("sonrisa");
+  const [fotos, setFotos] = useState<{ sonrisa: string; rostro: string }>({
+    sonrisa: "",
+    rostro: "",
+  });
+  const foto = fotos.sonrisa;
+  const fotoVisible = fotos[slot];
+  const setFoto = (v: string) => setFotos((f) => ({ ...f, [slot]: v }));
+  const [zona, setZona] = useState<ZonaSonrisa>(ZONA_INICIAL);
+  const [omitidos, setOmitidos] = useState<TratamientoEstetico[]>([]);
   const [archivo, setArchivo] = useState("");
   const [origen, setOrigen] = useState<OrigenFoto>("paciente");
   const [aviso, setAviso] = useState("");
@@ -163,8 +184,9 @@ export function SimuladorSonrisa() {
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (pacienteId === undefined && pacientes[0]) setPacienteId(activoId ?? pacientes[0].id);
-  }, [pacientes, activoId, pacienteId]);
+    if (pacienteFijo !== undefined) setPacienteId(pacienteFijo);
+    else if (pacienteId === undefined && pacientes[0]) setPacienteId(activoId ?? pacientes[0].id);
+  }, [pacientes, activoId, pacienteId, pacienteFijo]);
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(""), 3000);
@@ -209,6 +231,7 @@ export function SimuladorSonrisa() {
           "Sugerencia: una foto horizontal, de frente y con la sonrisa completa da mejores resultados.",
         );
       setFoto(reducir(img, 900, 0.85));
+      if (slot === "rostro") return;
       setArchivo(f.name);
       setOrigen("paciente");
       setEstado("lista");
@@ -219,7 +242,8 @@ export function SimuladorSonrisa() {
   };
 
   const usarDemo = () => {
-    setFoto(fotoCasoDemo());
+    setSlot("sonrisa");
+    setFotos((f) => ({ ...f, sonrisa: fotoCasoDemo() }));
     setArchivo("caso-demostracion.jpg");
     setOrigen("demo");
     setAviso("");
@@ -229,6 +253,7 @@ export function SimuladorSonrisa() {
 
   const quitarFoto = () => {
     setFoto("");
+    if (slot === "rostro") return;
     setArchivo("");
     setEstado("vacio");
     reiniciarResultado();
@@ -242,8 +267,9 @@ export function SimuladorSonrisa() {
     setEstado("procesando");
     reiniciarResultado();
     try {
-      const r = await generarSimulacion({ origen, foto, tratamientos });
-      setPropuestas(r);
+      const r = await generarSimulacion({ origen, foto, tratamientos, zona });
+      setPropuestas(r.propuestas);
+      setOmitidos(r.omitidos);
       setEstado("resultado");
     } catch (e) {
       setError(
@@ -266,6 +292,7 @@ export function SimuladorSonrisa() {
       profesional: usuario?.nombre ?? "Profesional",
       origen,
       foto,
+      ...(fotos.rostro ? { rostro: fotos.rostro } : {}),
       propuestas,
       estado: "Guardada",
       consentimiento,
@@ -364,7 +391,8 @@ export function SimuladorSonrisa() {
 
   const abrirGuardada = (s: SimulacionGuardada) => {
     setPacienteId(s.pacienteId);
-    setFoto(s.foto);
+    setFotos({ sonrisa: s.foto, rostro: s.rostro ?? "" });
+    setSlot("sonrisa");
     setOrigen(s.origen);
     setArchivo("");
     setPropuestas(s.propuestas);
@@ -376,70 +404,79 @@ export function SimuladorSonrisa() {
   };
 
   return (
-    <div className="relative min-h-full overflow-clip bg-[#faf9ff]">
+    <div className={compacto ? "relative" : "relative min-h-full overflow-clip bg-[#faf9ff]"}>
       <div
+        hidden={compacto}
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(236,72,153,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
       />
-      <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
+      <div
+        className={
+          compacto ? "relative" : "relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8"
+        }
+      >
         {/* Encabezado */}
-        <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
-          <div className="relative flex flex-wrap items-start justify-between gap-5 p-5 md:p-7">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                  <Smile className="size-3.5" />
-                  Odontología digital
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${SERVICIO_IA_CONECTADO ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
-                >
-                  <PlugZap className="size-3.5" />
-                  {SERVICIO_IA_CONECTADO ? "IA Esther conectada" : "IA de simulación: próximamente"}
-                </span>
-              </div>
-              <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
-                Simulador de Sonrisa con IA
-              </h1>
-              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                Cargá una foto de la sonrisa del paciente, elegí los tratamientos estéticos y
-                mostrale propuestas de antes y después. Es independiente del odontograma 2D y 3D y
-                queda guardado en su historia clínica.
-              </p>
-            </div>
-            <div className="w-full max-w-xs">
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                  Paciente
-                </span>
-                <span className="relative block">
-                  <select
-                    aria-label="Paciente"
-                    value={pacienteId ?? ""}
-                    onChange={(e) => {
-                      setPacienteId(Number(e.target.value));
-                      setGuardadaId(null);
-                    }}
-                    className="h-10 w-full appearance-none rounded-xl border border-primary/15 bg-card pl-3 pr-8 text-sm font-medium outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+        {!compacto && (
+          <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+            <div className="relative flex flex-wrap items-start justify-between gap-5 p-5 md:p-7">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                    <Smile className="size-3.5" />
+                    Odontología digital
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${SERVICIO_IA_CONECTADO ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
                   >
-                    {pacientes.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre} {p.apellido}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                </span>
-              </label>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                {delPaciente.length
-                  ? `${delPaciente.length} ${delPaciente.length === 1 ? "simulación guardada" : "simulaciones guardadas"}`
-                  : "Sin simulaciones guardadas"}
-              </p>
+                    <PlugZap className="size-3.5" />
+                    {SERVICIO_IA_CONECTADO
+                      ? "IA Esther conectada"
+                      : "IA de simulación: próximamente"}
+                  </span>
+                </div>
+                <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
+                  Simulador de Sonrisa con IA
+                </h1>
+                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
+                  Cargá una foto de la sonrisa del paciente, elegí los tratamientos estéticos y
+                  mostrale propuestas de antes y después. Es independiente del odontograma 2D y 3D y
+                  queda guardado en su historia clínica.
+                </p>
+              </div>
+              <div className="w-full max-w-xs">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                    Paciente
+                  </span>
+                  <span className="relative block">
+                    <select
+                      aria-label="Paciente"
+                      value={pacienteId ?? ""}
+                      onChange={(e) => {
+                        setPacienteId(Number(e.target.value));
+                        setGuardadaId(null);
+                      }}
+                      className="h-10 w-full appearance-none rounded-xl border border-primary/15 bg-card pl-3 pr-8 text-sm font-medium outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+                    >
+                      {pacientes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre} {p.apellido}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  </span>
+                </label>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  {delPaciente.length
+                    ? `${delPaciente.length} ${delPaciente.length === 1 ? "simulación guardada" : "simulaciones guardadas"}`
+                    : "Sin simulaciones guardadas"}
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <p className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-[12.5px] text-amber-900">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
@@ -450,7 +487,36 @@ export function SimuladorSonrisa() {
         <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_380px]">
           {/* Imagen principal */}
           <div className="card-grad min-w-0 p-4">
-            {!foto ? (
+            <div
+              className="mb-3 flex flex-wrap items-center gap-1.5"
+              role="tablist"
+              aria-label="Fotos"
+            >
+              {(
+                [
+                  ["sonrisa", "Sonrisa"],
+                  ["rostro", "Rostro de frente"],
+                ] as const
+              ).map(([id, l]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={slot === id}
+                  onClick={() => setSlot(id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${slot === id ? "bg-primary text-primary-foreground" : "border border-primary/15 bg-white text-muted-foreground hover:text-foreground"}`}
+                >
+                  {fotos[id] && <Check className="size-3" />}
+                  {l}
+                </button>
+              ))}
+              <span className="text-[11px] text-muted-foreground">
+                {slot === "sonrisa"
+                  ? "Primer plano de la sonrisa: es la que se simula."
+                  : "Foto de frente del paciente, para mostrar la propuesta en contexto."}
+              </span>
+            </div>
+            {!fotoVisible ? (
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -468,7 +534,11 @@ export function SimuladorSonrisa() {
                   <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
                     <ImagePlus className="size-6" />
                   </span>
-                  <p className="mt-3 text-base font-semibold">Cargá la foto de la sonrisa</p>
+                  <p className="mt-3 text-base font-semibold">
+                    {slot === "sonrisa"
+                      ? "Cargá la foto de la sonrisa"
+                      : "Cargá la foto de frente del paciente"}
+                  </p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Foto de frente, con buena luz y la sonrisa completa. JPG, PNG o WEBP, hasta{" "}
                     {MAX_MB} MB.
@@ -528,7 +598,7 @@ export function SimuladorSonrisa() {
                   </p>
                 )}
 
-                {estado === "resultado" && propuesta ? (
+                {estado === "resultado" && propuesta && slot === "sonrisa" ? (
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -564,7 +634,22 @@ export function SimuladorSonrisa() {
                       )}
                     </div>
                     {vistaComparar === "deslizador" ? (
-                      <Comparador antes={foto} despues={propuesta.url} />
+                      <>
+                        <Comparador antes={foto} despues={propuesta.url} />
+                        {propuesta.aproximada && (
+                          <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-[11.5px] text-muted-foreground">
+                            <b className="text-foreground">Vista previa aproximada:</b> ajuste de
+                            color hecho en el navegador sobre la zona marcada. No es una imagen
+                            generada por IA.
+                          </p>
+                        )}
+                        {omitidos.length > 0 && (
+                          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800">
+                            {omitidos.map((t) => TRATAMIENTOS_ESTETICOS[t].nombre).join(", ")}: se
+                            generan con el servicio de IA Esther cuando esté conectado.
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
                         <figure className="overflow-hidden rounded-2xl border border-primary/10 bg-white">
@@ -602,10 +687,22 @@ export function SimuladorSonrisa() {
                 ) : (
                   <div className="relative overflow-hidden rounded-2xl">
                     <img
-                      src={foto}
-                      alt="Foto original"
+                      src={fotoVisible}
+                      alt={slot === "sonrisa" ? "Foto de la sonrisa" : "Foto de frente"}
                       className="aspect-[19/13] w-full rounded-2xl object-cover"
                     />
+                    {slot === "sonrisa" && origen === "paciente" && estado !== "procesando" && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute rounded-[50%] border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.18)]"
+                        style={{
+                          left: `${zona.x - zona.w / 2}%`,
+                          top: `${zona.y - zona.h / 2}%`,
+                          width: `${zona.w}%`,
+                          height: `${zona.h}%`,
+                        }}
+                      />
+                    )}
                     {estado === "procesando" && (
                       <div className="absolute inset-0 grid place-items-center bg-primary/25 backdrop-blur-[2px]">
                         <div className="rounded-2xl bg-white/95 px-5 py-4 text-center shadow-xl">
@@ -666,6 +763,39 @@ export function SimuladorSonrisa() {
 
           {/* Panel de tratamientos y acciones */}
           <div className="space-y-4">
+            {foto && origen === "paciente" && slot === "sonrisa" && estado !== "resultado" && (
+              <div className="card-grad p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  Zona de la sonrisa
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Ajustá el óvalo para que cubra solo los dientes.
+                </p>
+                {(
+                  [
+                    ["x", "Horizontal", 20, 80],
+                    ["y", "Vertical", 20, 85],
+                    ["w", "Ancho", 20, 95],
+                    ["h", "Alto", 10, 70],
+                  ] as const
+                ).map(([k, l, min, max]) => (
+                  <label
+                    key={k}
+                    className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground"
+                  >
+                    <span className="w-16 shrink-0">{l}</span>
+                    <input
+                      type="range"
+                      min={min}
+                      max={max}
+                      value={zona[k]}
+                      onChange={(e) => setZona((z) => ({ ...z, [k]: Number(e.target.value) }))}
+                      className="w-full accent-[var(--primary)]"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
             <div className="card-grad p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                 Tratamientos a simular

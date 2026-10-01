@@ -24,8 +24,8 @@ import { conexionesEsther, hallazgosEsther } from "@/lib/cloud-esther/esther-con
 import { ROL_IA_LABEL } from "@/lib/cloud-esther/esther-motor";
 import type { RolIA } from "@/lib/cloud-esther/ia-store";
 import { Modal } from "@/components/cloud-esther/rrhh/ui";
-import { EstherImagen } from "./EstherImagen";
-import { EstherSonrisa } from "./EstherSonrisa";
+import { RayosXIA } from "@/components/cloud-esther/odontograma3d/RayosXIA";
+import { SimuladorSonrisa } from "@/components/cloud-esther/simulador/SimuladorSonrisa";
 import { ContactCenter } from "./ContactCenter";
 import type { EstherContext, EstherQuickAction } from "@/lib/cloud-esther/esther-ai";
 import { EstherCharacter } from "./EstherCharacter";
@@ -527,22 +527,18 @@ export function EstherAI({
         createPortal(
           <Modal
             modulo="Cloud Esther IA"
-            titulo={herramienta === "imagen" ? "Analizar imagen" : "Simulador de sonrisa"}
+            titulo={
+              herramienta === "imagen"
+                ? "Rayos X con IA"
+                : `Simulador de sonrisa${paciente ? ` · ${paciente.nombre} ${paciente.apellido}` : ""}`
+            }
             onClose={() => setHerramienta(null)}
             ancho="max-w-5xl"
           >
             {herramienta === "imagen" ? (
-              <EstherImagen
-                pacienteInicial={pacienteId}
-                usuario={nombreUsuario}
-                onToast={setAviso}
-              />
+              <RayosXIA pacienteId={pacienteId} onToast={setAviso} />
             ) : (
-              <EstherSonrisa
-                pacienteInicial={pacienteId}
-                usuario={nombreUsuario}
-                onToast={setAviso}
-              />
+              <SimuladorSonrisa pacienteFijo={pacienteId ?? pacientes[0]?.id} compacto />
             )}
           </Modal>,
           document.body,

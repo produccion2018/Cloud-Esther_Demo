@@ -1,11 +1,6 @@
 import { Suspense, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import {
-  ContactShadows,
-  Environment,
-  OrbitControls,
-  PerspectiveCamera,
-} from "@react-three/drei";
+import { ContactShadows, Environment, OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { DentalMouth3D } from "./DentalMouth3D";
@@ -21,11 +16,7 @@ type Props = {
   onSelect?: (fdi: number) => void;
 };
 
-export function Odontograma3DViewer({
-  dientes = [],
-  selectedFdi = 16,
-  onSelect,
-}: Props) {
+export function Odontograma3DViewer({ dientes = [], selectedFdi = 16, onSelect }: Props) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
   return (
@@ -38,16 +29,9 @@ export function Odontograma3DViewer({
           alpha: false,
         }}
       >
-        <PerspectiveCamera
-          makeDefault
-          position={[0, 0.1, 9.5]}
-          fov={38}
-        />
+        <PerspectiveCamera makeDefault position={[0, 0.1, 9.5]} fov={38} />
 
-        <color
-          attach="background"
-          args={["#110d2b"]}
-        />
+        <color attach="background" args={["#110d2b"]} />
 
         {/* LUZ GENERAL */}
         <ambientLight intensity={1.6} />
@@ -62,34 +46,17 @@ export function Odontograma3DViewer({
         />
 
         {/* LUZ LATERAL */}
-        <directionalLight
-          position={[-5, 2, 4]}
-          intensity={2}
-        />
+        <directionalLight position={[-5, 2, 4]} intensity={2} />
 
         {/* LUZ FRONTAL */}
-        <pointLight
-          position={[0, 1, 6]}
-          intensity={2.5}
-          distance={15}
-        />
+        <pointLight position={[0, 1, 6]} intensity={2.5} distance={15} />
 
         <Suspense fallback={null}>
-          <DentalMouth3D
-            dientes={dientes}
-            selectedFdi={selectedFdi}
-            onSelect={onSelect}
-          />
+          <DentalMouth3D dientes={dientes} selectedFdi={selectedFdi} onSelect={onSelect} />
 
           <Environment preset="studio" />
 
-          <ContactShadows
-            position={[0, -1.7, 0]}
-            opacity={0.28}
-            scale={10}
-            blur={2.8}
-            far={5}
-          />
+          <ContactShadows position={[0, -1.7, 0]} opacity={0.28} scale={10} blur={2.8} far={5} />
         </Suspense>
 
         <OrbitControls
@@ -113,9 +80,7 @@ export function Odontograma3DViewer({
             Pieza seleccionada
           </div>
 
-          <div className="mt-0.5 text-2xl font-bold">
-            {selectedFdi}
-          </div>
+          <div className="mt-0.5 text-2xl font-bold">{selectedFdi}</div>
         </div>
       )}
 

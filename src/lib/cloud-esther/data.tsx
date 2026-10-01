@@ -14,7 +14,6 @@ import {
   Settings,
   Workflow,
   Sparkles,
-  Smile,
   Stethoscope,
   Pill,
   ScanLine,
@@ -191,8 +190,9 @@ export const MODULES: AppModule[] = [
     icon: "odontograma",
     path: "/demo/odontograma",
     group: "Clínico",
-    // Regla comercial: el 2D está incluido en los 4 planes (y el 3D desde Plus o como adicional).
+    // Regla comercial: el 2D es de Start y Pro; Plus y Enterprise usan directamente el 3D.
     minPlan: "inicial",
+    maxPlan: "profesional",
   },
   {
     id: "odontograma3d",
@@ -202,16 +202,7 @@ export const MODULES: AppModule[] = [
     group: "Clínico",
     minPlan: "avanzada",
   },
-  {
-    // Odontología digital: separado del odontograma. Incluido con IA (Plus y Enterprise);
-    // en Start y Pro se puede sumar como módulo adicional.
-    id: "simulador-sonrisa",
-    label: "Simulador de Sonrisa",
-    icon: "smile",
-    path: "/demo/simulador-sonrisa",
-    group: "Clínico",
-    minPlan: "avanzada",
-  },
+
   {
     id: "recetas",
     label: "Recetas",
@@ -396,7 +387,7 @@ export function comprableEn(module: AppModule, plan: PlanId) {
 }
 
 /** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados.
-    El Odontograma 2D está siempre disponible; el 3D se suma desde Plus o como adicional. */
+    El Odontograma 2D es de Start y Pro (aunque sumen el 3D como adicional, lo siguen viendo). */
 export function availableIn(module: AppModule, plan: PlanId) {
   const extras = modulosExtra();
   return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));
@@ -427,7 +418,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   ],
   avanzada: [
     "Todo lo anterior",
-    "Odontograma 3D (además del 2D)",
+    "Odontograma 3D con rayos X y simulador de sonrisa",
     "Marketing y captación",
     "Inventario",
     "Equipo y RRHH",
@@ -456,7 +447,6 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   settings: Settings,
   workflow: Workflow,
   sparkles: Sparkles,
-  smile: Smile,
   stethoscope: Stethoscope,
   pill: Pill,
   odontograma: ScanLine,

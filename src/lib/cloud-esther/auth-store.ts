@@ -10,7 +10,10 @@ import { capitalizarNombre } from "@/lib/utils";
 
 export type Clinica = { id: string; nombre: string };
 export type Usuario = { id: string; nombre: string; email: string; clinicId: string };
-export type Sesion = { usuario: Usuario; clinica: Clinica };
+/** "demo": cuenta de prueba creada desde «Probar demo» (puede recorrer los 4 planes).
+ *  "cliente": empresa con contratación real (la crea el backend; el plan queda fijo). */
+export type TipoCuenta = "demo" | "cliente";
+export type Sesion = { usuario: Usuario; clinica: Clinica; tipo?: TipoCuenta };
 
 type Resultado = { ok: true; sesion: Sesion } | { ok: false; error: string };
 
@@ -68,6 +71,8 @@ function normalizarSesion(s: Sesion | null): Sesion | null {
   return {
     usuario: { ...s.usuario, nombre: capitalizarNombre(s.usuario.nombre) },
     clinica: { ...s.clinica, nombre: capitalizarNombre(s.clinica.nombre) },
+    // Cuentas guardadas antes de existir el tipo: todas salieron de «Probar demo».
+    tipo: s.tipo ?? "demo",
   };
 }
 
@@ -117,7 +122,8 @@ export function registrarCuenta(datos: {
     email,
     clinicId: clinica.id,
   };
-  const sesion: Sesion = { usuario, clinica };
+  // Las cuentas creadas desde «Probar demo» son de prueba: los planes no se bloquean.
+  const sesion: Sesion = { usuario, clinica, tipo: "demo" };
 
   escribirJSON(KEY_CUENTAS, [...cuentas, sesion]);
   if (datos.passDemo) guardarCredencialDemo(email, datos.passDemo);

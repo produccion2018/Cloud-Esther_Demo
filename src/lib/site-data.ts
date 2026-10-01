@@ -110,7 +110,7 @@ export const plans: Plan[] = [
     modules: "Módulos avanzados",
     features: [
       "Todo lo del plan Pro",
-      "Odontograma 3D",
+      "Odontograma 3D incluido (además del 2D)",
       "Estudios y diagnóstico avanzado",
       "Comunicación avanzada con pacientes",
       "Marketing y captación",
@@ -198,9 +198,9 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Historia clínica", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma 2D", values: ["✓", "✓", "—", "—"] },
+  { feature: "Odontograma 2D", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
+  { feature: "Odontograma 3D", values: ["Adicional", "Adicional", "✓", "✓"] },
 
   {
     feature: "Odontograma 3D avanzado",
@@ -415,7 +415,7 @@ export const modulesOfInterest = [
   "Gestión de pacientes",
   "Gestión clínica",
   "Historia clínica",
-  "Odontograma básico",
+  "Odontograma 2D",
   "Odontograma 3D",
   "Recetas y tratamientos",
   "Estudios y diagnóstico",

@@ -40,10 +40,9 @@ const WIDTH: Record<ToothDef["type"], string> = {
 const EMPTY: ToothState = { surfaces: {}, whole: [] };
 
 /* ───────── Funciones según el plan ─────────
-   Start (inicial): odontograma básico, solo dentición permanente y los hallazgos
-   más comunes. Desde Pro (profesional): todos los hallazgos y dentición temporal.
-   El 3D se habilita aparte, desde Plus (ver OdontogramaGate). */
-const PLAN_COMPLETO: PlanId = "profesional";
+   Regla comercial: el Odontograma 2D está completo y sin bloqueos en los 4 planes.
+   El 3D se habilita aparte, desde Plus o como módulo adicional (ver OdontogramaGate). */
+const PLAN_COMPLETO: PlanId = "inicial";
 const HERRAMIENTAS_BASICAS: Tool[] = ["caries", "obturacion", "extraccion", "ausente", "borrar"];
 
 function herramientaHabilitada(plan: PlanId, tool: Tool) {

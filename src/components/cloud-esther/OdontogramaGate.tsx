@@ -1,8 +1,9 @@
+import { Link } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { Lock, Sparkles, RotateCcw, Check, ListChecks, Download } from "lucide-react";
+import { Box, Lock, Sparkles, RotateCcw, Check, ListChecks, Download, Grid2x2 } from "lucide-react";
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
-import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 // El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
 // así Pacientes e Historia cargan rápido en los planes con 2D.
@@ -83,7 +84,7 @@ const TITULO: Record<VistaOdontograma, string> = {
 export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "ambos" }: Props) {
   // Plan elegido en el sidebar ("Plan activo") y clínica de la sesión (tenant).
   const { plan: planId } = useCloudEsther();
-  const { clinicId } = useSesion();
+  const { clinicId, usuario } = useSesion();
   const tenantId = clinicId ?? "demo";
   const clavePaciente = odontogramKey(tenantId, pacienteId);
   const plan = PLANS[planId].name;
@@ -101,9 +102,10 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
   const extras = storeModulosExtra.usar().activos.map((x) => x.id);
   const tieneAcceso3D =
     planLevel(planId) >= planLevel(PLAN_MINIMO_3D) || extras.includes("odontograma3d");
-  /* Un solo odontograma según el plan: si el plan incluye 3D se usa el 3D (el 2D ya no
-     tiene sentido); si no, el 2D. La página "Odontograma 3D" en un plan sin 3D muestra el aviso. */
-  const modo: "2d" | "3d" = tieneAcceso3D || vista === "3d" ? "3d" : "2d";
+  /* Regla comercial: el 2D está disponible en los 4 planes; el 3D, desde Plus o como adicional.
+     Páginas del sidebar: cada una muestra su vista. Ficha del paciente: pestañas 2D | 3D. */
+  const [modoFicha, setModoFicha] = useState<"2d" | "3d">(tieneAcceso3D ? "3d" : "2d");
+  const modo: "2d" | "3d" = vista === "2d" ? "2d" : vista === "3d" ? "3d" : modoFicha;
   const titulo = vista === "ambos" ? TITULO.ambos : modo === "3d" ? TITULO["3d"] : TITULO["2d"];
   const tieneIA = planLevel(planId) >= planLevel(PLAN_MINIMO_IA) || extras.includes("ia");
   const tieneInforme = planLevel(planId) >= planLevel(PLAN_INFORME_3D);
@@ -191,8 +193,35 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-base font-bold tracking-tight text-foreground">{titulo}</h2>
+          {vista === "ambos" && (
+            <div
+              className="flex rounded-xl border border-primary/15 bg-primary/[0.03] p-0.5"
+              role="tablist"
+              aria-label="Vista del odontograma"
+            >
+              {(
+                [
+                  ["2d", "2D", Grid2x2],
+                  ["3d", "3D", Box],
+                ] as const
+              ).map(([id, l, I]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={modo === id}
+                  onClick={() => setModoFicha(id)}
+                  className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${modo === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <I className="size-3.5" />
+                  {l}
+                  {id === "3d" && !tieneAcceso3D && <Lock className="size-3" />}
+                </button>
+              ))}
+            </div>
+          )}
 
           {(modo === "2d" || tieneAcceso3D) && (
             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -225,7 +254,14 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
       </div>
 
       {modo === "3d" && !tieneAcceso3D ? (
-        <UpgradeAviso planActual={plan} />
+        <Aviso3D
+          planActual={plan}
+          onAgregar={() => {
+            agregarModuloExtra("odontograma3d", usuario?.nombre ?? "Administración");
+            onToast("Odontograma 3D agregado como módulo adicional");
+          }}
+          onVer2D={vista === "ambos" ? () => setModoFicha("2d") : undefined}
+        />
       ) : modo === "3d" ? (
         <div className="space-y-4">
           <div className="rounded-[28px] bg-gradient-to-b from-primary/[0.07] via-primary/[0.02] to-transparent p-1">
@@ -267,6 +303,29 @@ export function OdontogramaGate({ pacienteId, pacienteNombre, onToast, vista = "
         </div>
       ) : (
         <div className="space-y-4">
+          {!tieneAcceso3D && (
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/[0.06] via-card to-card px-4 py-3">
+              <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Box className="size-4" />
+              </span>
+              <p className="min-w-0 flex-1 text-sm">
+                <b>Odontograma 3D</b>{" "}
+                <span className="text-muted-foreground">
+                  disponible como módulo adicional para el plan {plan}.
+                </span>
+              </p>
+              <button
+                type="button"
+                className="btn-ce-outline"
+                onClick={() => {
+                  agregarModuloExtra("odontograma3d", usuario?.nombre ?? "Administración");
+                  onToast("Odontograma 3D agregado como módulo adicional");
+                }}
+              >
+                Agregar 3D
+              </button>
+            </div>
+          )}
           <Odontograma2D
             tenantId={tenantId}
             patientId={pacienteId}
@@ -402,22 +461,45 @@ function PanelBloqueado({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
-function UpgradeAviso({ planActual }: { planActual: string }) {
+/** Start y Pro: el 3D no está incluido, pero se puede sumar como módulo adicional
+    (o probar Plus en el demo). El 2D sigue disponible siempre. */
+function Aviso3D({
+  planActual,
+  onAgregar,
+  onVer2D,
+}: {
+  planActual: string;
+  onAgregar: () => void;
+  onVer2D?: (() => void) | undefined;
+}) {
+  const { planContratado } = useCloudEsther();
   return (
     <div className={`${CARD} grid min-h-64 place-items-center border-dashed text-center`}>
-      <div>
+      <div className="max-w-md">
         <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
           <Sparkles className="size-5" />
         </span>
-
         <p className="mt-3 text-sm font-semibold text-foreground">
-          El Odontograma 3D no está incluido en tu plan
+          El Odontograma 3D es un módulo adicional en el plan {planActual}
         </p>
-
         <p className="mt-1 text-sm text-muted-foreground">
-          Plan actual: {planActual}. Necesitás {PLANS[PLAN_MINIMO_3D].name} o superior para
-          activarlo.
+          Viene incluido desde {PLANS[PLAN_MINIMO_3D].name}. Podés sumarlo a tu plan actual; el
+          Odontograma 2D sigue disponible igual.
         </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <button type="button" className="btn-ce" onClick={onAgregar}>
+            {planContratado ? "Contratar Odontograma 3D" : "Agregar Odontograma 3D a mi plan"}
+          </button>
+          {onVer2D ? (
+            <button type="button" className="btn-ce-outline" onClick={onVer2D}>
+              Usar el Odontograma 2D
+            </button>
+          ) : (
+            <Link to={"/demo/odontograma" as never} className="btn-ce-outline">
+              Ir al Odontograma 2D
+            </Link>
+          )}
+        </div>
         <ProbarPlan minPlan={PLAN_MINIMO_3D} />
       </div>
     </div>

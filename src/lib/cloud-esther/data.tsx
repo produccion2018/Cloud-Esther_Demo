@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { modulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -189,8 +190,8 @@ export const MODULES: AppModule[] = [
     icon: "odontograma",
     path: "/demo/odontograma",
     group: "Clínico",
+    // Regla comercial: el 2D está incluido en los 4 planes (y el 3D desde Plus o como adicional).
     minPlan: "inicial",
-    maxPlan: "profesional",
   },
   {
     id: "odontograma3d",
@@ -384,10 +385,9 @@ export function comprableEn(module: AppModule, plan: PlanId) {
 }
 
 /** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados.
-    Si se compró el Odontograma 3D, el 2D deja de mostrarse (igual que en los planes con 3D). */
+    El Odontograma 2D está siempre disponible; el 3D se suma desde Plus o como adicional. */
 export function availableIn(module: AppModule, plan: PlanId) {
   const extras = modulosExtra();
-  if (module.id === "odontograma" && extras.includes("odontograma3d")) return false;
   return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));
 }
 
@@ -396,7 +396,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "Agenda",
     "Pacientes",
     "Historia clínica",
-    "Odontograma 2D (básico)",
+    "Odontograma 2D",
     "Recetas",
     "Estudios y diagnóstico",
     "Tratamientos",
@@ -407,7 +407,6 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   ],
   profesional: [
     "Todo lo anterior",
-    "Odontograma 2D completo",
     "Comunicación",
     "Presupuestos",
     "Laboratorio",
@@ -417,14 +416,19 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   ],
   avanzada: [
     "Todo lo anterior",
-    "Odontograma 3D",
+    "Odontograma 3D (además del 2D)",
     "Marketing y captación",
     "Inventario",
     "Equipo y RRHH",
     "IA Esther",
-    "Automatizaciones",
   ],
-  grupo: ["Todo lo anterior", "Odontograma 3D avanzado", "Multi-clínica", "Multiempresa"],
+  grupo: [
+    "Todo lo anterior",
+    "Odontograma 3D avanzado",
+    "Automatizaciones con n8n",
+    "Multi-clínica",
+    "Multiempresa",
+  ],
 };
 
 const ICONS: Record<string, typeof LayoutDashboard> = {
@@ -487,9 +491,10 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
   const [role] = useState("admin");
   const [disabled] = useState<string[]>([]);
 
-  // Demo (sin sesión): se puede cambiar de plan para conocerlos.
-  // Empresa registrada: el plan es el contratado y no se cambia desde la app.
-  const planContratado = tenant !== TENANT_DEMO;
+  // Demo (sin sesión o cuenta creada desde «Probar demo»): se recorren los 4 planes libremente.
+  // Solo una empresa con contratación real (tipo "cliente", la crea el backend) tiene el plan fijo.
+  const { sesion } = useSesion();
+  const planContratado = tenant !== TENANT_DEMO && sesion?.tipo === "cliente";
   const setPlan = (p: PlanId) => {
     if (planContratado) return;
     setPlanState(p);

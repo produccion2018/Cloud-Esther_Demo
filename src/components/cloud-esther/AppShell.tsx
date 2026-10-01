@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Link, Navigate, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -579,12 +579,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       planLevel(x.minPlan) > planLevel(plan),
   );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
-  const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
   const moduloIA = MODULES.find((m) => m.id === "ia");
   const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
-  // Con un plan que ya tiene 3D, el 2D no tiene sentido: se va directo al 3D.
-  const irAl3D =
-    bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
@@ -621,9 +617,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader sidebarStyle={sidebarStyle} />
         <main className="min-w-0 flex-1">
-          {irAl3D ? (
-            <Navigate to={"/demo/odontograma-3d" as never} replace />
-          ) : bloqueado ? (
+          {bloqueado ? (
             <ModuloNoIncluido
               label={bloqueado.label}
               minPlan={bloqueado.minPlan}

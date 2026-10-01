@@ -19,6 +19,7 @@ import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulo
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
+import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 
 const GROUPS = [
   "Clínico",
@@ -579,6 +580,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
   const odontograma3d = MODULES.find((m) => m.id === "odontograma3d");
+  const moduloIA = MODULES.find((m) => m.id === "ia");
+  const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
   // Con un plan que ya tiene 3D, el 2D no tiene sentido: se va directo al 3D.
   const irAl3D =
     bloqueado?.id === "odontograma" && !!odontograma3d && availableIn(odontograma3d, plan);
@@ -633,6 +636,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
+      {/* Esther a mano en todos los módulos, solo en planes con IA (Plus y Enterprise). */}
+      {iaDisponible &&
+        !bloqueado &&
+        !pathname.startsWith("/demo/ia") &&
+        // RRHH ya tiene su propia Esther (especializada en el equipo) en el mismo lugar.
+        !pathname.startsWith("/demo/rrhh") && (
+          <EstherFlotante
+            moduloId={modulo?.id ?? "dashboard"}
+            modulo={modulo?.label ?? "el inicio"}
+          />
+        )}
     </div>
   );
 }

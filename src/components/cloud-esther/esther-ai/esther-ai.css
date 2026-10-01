@@ -1,7 +1,7 @@
 /*
  * Estilos de Esther AI.
- * Todo queda encerrado dentro de la clase .esther-ai, así el módulo conserva
- * su look oscuro (violeta + celeste) sin tocar los colores del resto de Cloud Esther.
+ * Usa los colores de Cloud Esther (violeta + blanco, y el modo oscuro de la app). Acá solo
+ * se definen el degradé de marca de Esther, los paneles y las animaciones del personaje.
  */
 
 @keyframes esther-breathe {
@@ -10,7 +10,7 @@
     transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(0, -0.6%, 0) scale(1.012);
+    transform: translate3d(0, -0.8%, 0) scale(1.01);
   }
 }
 
@@ -25,51 +25,57 @@
   }
 }
 
+@keyframes esther-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes esther-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 .esther-ai {
-  color-scheme: dark;
+  --violet-core: var(--primary);
+  --violet-soft: color-mix(in oklab, var(--primary) 55%, white);
+  --cyan-core: oklch(0.66 0.22 330);
+  --cyan-soft: color-mix(in oklab, oklch(0.66 0.22 330) 40%, white);
+  --accent-esther: var(--primary);
 
-  --violet-core: oklch(0.55 0.21 295);
-  --violet-soft: oklch(0.72 0.14 300);
-  --cyan-core: oklch(0.78 0.13 215);
-  --cyan-soft: oklch(0.88 0.07 215);
+  --glass: color-mix(in oklab, var(--card) 82%, transparent);
+  --glass-border: color-mix(in oklab, var(--primary) 16%, transparent);
 
-  --background: oklch(0.19 0.045 288);
-  --foreground: oklch(0.97 0.008 290);
-  --primary: oklch(0.6 0.2 296);
-  --primary-foreground: oklch(0.99 0.005 290);
-  --muted-foreground: oklch(0.76 0.035 290);
-  --accent: oklch(0.78 0.13 215);
-  --accent-foreground: oklch(0.2 0.05 288);
-  --border: oklch(1 0 0 / 12%);
-  --ring: oklch(0.72 0.14 300);
-
-  --glass: oklch(1 0 0 / 6%);
-  --glass-border: oklch(1 0 0 / 14%);
-
-  --gradient-esther: linear-gradient(135deg, var(--violet-core), var(--cyan-core));
+  --gradient-esther: linear-gradient(135deg, var(--primary), oklch(0.66 0.22 330));
   --gradient-halo: radial-gradient(
     circle at 50% 45%,
-    color-mix(in oklab, var(--violet-soft) 55%, transparent) 0%,
-    color-mix(in oklab, var(--cyan-core) 22%, transparent) 42%,
+    color-mix(in oklab, var(--primary) 30%, transparent) 0%,
+    color-mix(in oklab, oklch(0.66 0.22 330) 14%, transparent) 42%,
     transparent 72%
   );
-  --gradient-canvas:
+  --gradient-stage:
     radial-gradient(
-      120% 80% at 50% 0%,
-      color-mix(in oklab, var(--violet-core) 26%, transparent),
+      90% 70% at 50% 35%,
+      color-mix(in oklab, var(--primary) 16%, transparent),
       transparent 70%
     ),
-    radial-gradient(
-      80% 60% at 85% 100%,
-      color-mix(in oklab, var(--cyan-core) 16%, transparent),
-      transparent 70%
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--card) 96%, var(--primary)) 0%,
+      color-mix(in oklab, var(--card) 86%, var(--primary)) 100%
     );
-  --shadow-glass: 0 24px 60px -24px oklch(0.1 0.05 288 / 70%);
-  --shadow-glow: 0 0 60px -10px color-mix(in oklab, var(--violet-soft) 45%, transparent);
+  --shadow-glass: 0 18px 44px -30px color-mix(in oklab, var(--primary) 60%, transparent);
+  --shadow-glow: 0 10px 28px -12px color-mix(in oklab, var(--primary) 70%, transparent);
   --ease-organic: cubic-bezier(0.22, 0.61, 0.36, 1);
-
-  background-color: var(--background);
-  color: var(--foreground);
 }
 
 @layer components {
@@ -77,7 +83,7 @@
   .esther-ai.glass-panel {
     background: var(--glass);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(130%);
     box-shadow: var(--shadow-glass);
   }
 

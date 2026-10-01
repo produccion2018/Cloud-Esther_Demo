@@ -184,10 +184,10 @@ export function ContactCenter({
                   <button
                     type="button"
                     onClick={() => setActiva(c.id)}
-                    className={`w-full rounded-2xl px-3 py-2.5 text-left transition ${activa === c.id ? "bg-primary/25 ring-1 ring-primary/50" : "hover:bg-white/5"}`}
+                    className={`w-full rounded-2xl px-3 py-2.5 text-left transition ${activa === c.id ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-primary/5"}`}
                   >
                     <span className="flex items-center gap-2">
-                      <I className="size-3.5 shrink-0 text-accent" />
+                      <I className="size-3.5 shrink-0 text-primary" />
                       <b className="min-w-0 flex-1 truncate text-[13px] text-foreground">
                         {c.contacto}
                       </b>
@@ -274,7 +274,7 @@ export function ContactCenter({
                     <div
                       className={
                         m.de === "paciente"
-                          ? "max-w-[80%] rounded-2xl rounded-bl-sm bg-white/10 px-3.5 py-2 text-sm text-foreground"
+                          ? "max-w-[80%] rounded-2xl rounded-bl-sm bg-primary/[0.06] px-3.5 py-2 text-sm text-foreground"
                           : m.de === "humano"
                             ? "max-w-[80%] rounded-2xl rounded-br-sm bg-amber-500/20 px-3.5 py-2 text-sm text-foreground"
                             : "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground"

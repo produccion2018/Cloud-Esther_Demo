@@ -12,6 +12,8 @@ export type EstherContext = {
   sede?: string;
   usuario?: string;
   pacienteId?: number | undefined;
+  /** n8n (solo Enterprise o con el módulo adicional): ofrece automatizar lo consultado. */
+  n8n?: boolean;
 };
 
 export type EstherSection =
@@ -21,6 +23,17 @@ export type EstherReply = {
   text: string;
   needsRealData: boolean;
   bloques?: Bloque[];
+  modulo?: string;
+  resultado?: "Respondida" | "Sin permiso" | "Fuera del plan" | "Sin datos";
+};
+
+/** Consultas que tienen una automatización natural en n8n (Enterprise). */
+const AUTOMATIZABLE: Record<string, string> = {
+  presupuestos: "Automatizar el seguimiento con n8n",
+  agenda: "Automatizar recordatorios con n8n",
+  facturacion: "Automatizar la cobranza con n8n",
+  inventario: "Automatizar la reposición con n8n",
+  pacientes: "Automatizar la reactivación con n8n",
 };
 
 export const contextProgress: Record<EstherSection, string> = {
@@ -145,11 +158,18 @@ export async function askEsther(
       return {
         text: "La información de Recursos humanos solo la puede consultar un administrador.",
         needsRealData: false,
+        modulo: "rrhh",
+        resultado: "Sin permiso",
       };
     }
     const pregunta = /pendientes de rrhh/i.test(message) ? "¿Qué tengo que resolver?" : message;
     auditarConsulta({ ...base, pregunta: message, modulo: "rrhh", resultado: "Respondida" });
-    return { text: responderRRHH(pregunta), needsRealData: false };
+    return {
+      text: responderRRHH(pregunta),
+      needsRealData: false,
+      modulo: "rrhh",
+      resultado: "Respondida",
+    };
   }
   const r = responder(message, {
     plan: context.plan ?? "avanzada",
@@ -160,5 +180,18 @@ export async function askEsther(
     seccion: section,
   });
   auditarConsulta({ ...base, pregunta: message, modulo: r.modulo, resultado: r.resultado });
-  return { text: r.texto, needsRealData: false, ...(r.bloques ? { bloques: r.bloques } : {}) };
+  let bloques = r.bloques;
+  const auto = AUTOMATIZABLE[r.modulo];
+  if (context.n8n && auto && r.resultado === "Respondida")
+    bloques = [
+      ...(bloques ?? []),
+      { tipo: "acciones", items: [{ label: auto, to: "/demo/automatizaciones" }] },
+    ];
+  return {
+    text: r.texto,
+    needsRealData: false,
+    modulo: r.modulo,
+    resultado: r.resultado,
+    ...(bloques ? { bloques } : {}),
+  };
 }

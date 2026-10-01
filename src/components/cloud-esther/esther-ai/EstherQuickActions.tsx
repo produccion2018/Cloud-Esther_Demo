@@ -1,5 +1,18 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import {
+  BarChart3,
+  CalendarDays,
+  ClipboardList,
+  FileText,
+  ScanLine,
+  Search,
+  Smile,
+  Stethoscope,
+  UserRoundSearch,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { estherQuickActions, type EstherQuickAction } from "@/lib/cloud-esther/esther-ai";
 
 type Props = {
@@ -9,31 +22,46 @@ type Props = {
   visibles?: number;
 };
 
+const ICONOS: Record<string, LucideIcon> = {
+  "analizar-paciente": UserRoundSearch,
+  "resumir-historia": FileText,
+  "revisar-odontograma": Stethoscope,
+  "preparar-informe": ClipboardList,
+  "buscar-informacion": Search,
+  "analizar-registros": BarChart3,
+  "analizar-radiografia": ScanLine,
+  "simular-sonrisa": Smile,
+  "analizar-tratamientos": Stethoscope,
+  "revisar-presupuestos": Wallet,
+  "analizar-agenda": CalendarDays,
+  "pacientes-inactivos": Users,
+  "consultar-datos": BarChart3,
+};
+
 export function EstherQuickActions({ disabled, onAction, visibles = 9 }: Props) {
   const [todas, setTodas] = useState(false);
   const lista = todas ? estherQuickActions : estherQuickActions.slice(0, visibles);
   const ocultas = estherQuickActions.length - visibles;
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
-        {lista.map((action) => (
-          <motion.button
-            key={action.id}
-            type="button"
-            disabled={disabled === true}
-            onClick={() => onAction(action)}
-            whileHover={disabled ? {} : { y: -3 }}
-            whileTap={disabled ? {} : { scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
-            className="glass-panel group rounded-xl px-3 py-3 text-left text-sm font-medium text-foreground transition-colors hover:border-ring/60 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="block">{action.label}</span>
-            <span
-              className="mt-2 block h-px w-8 opacity-40 transition-all duration-300 group-hover:w-full group-hover:opacity-90"
-              style={{ background: "var(--gradient-esther)" }}
-            />
-          </motion.button>
-        ))}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {lista.map((action) => {
+          const Icon = ICONOS[action.id] ?? Users;
+          return (
+            <button
+              key={action.id}
+              type="button"
+              disabled={disabled === true}
+              onClick={() => onAction(action)}
+              className="group flex items-center gap-2.5 rounded-2xl border border-primary/12 bg-gradient-to-br from-card via-card to-primary/[0.06] px-3 py-2.5 text-left text-[13px] font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[var(--shadow-glow)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:text-primary-foreground group-hover:[background:var(--gradient-esther)]">
+                <Icon className="size-4" />
+              </span>
+              <span className="min-w-0 leading-tight">{action.label}</span>
+            </button>
+          );
+        })}
       </div>
       {ocultas > 0 && (
         <button

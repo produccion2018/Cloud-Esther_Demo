@@ -1,104 +1,51 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, MicOff } from "lucide-react";
+import { Lock, Mic, MicOff, SendHorizontal } from "lucide-react";
 import type { ChatMessage } from "./useEstherAI";
+import type { Microfono } from "./microfono";
 import { EstherBloques } from "./EstherBloques";
+import { estherPoses } from "./esther-states";
 
 type Props = {
   messages: ChatMessage[];
   isBusy: boolean;
   onSend: (text: string) => void;
   onTyping: () => void;
-  /** Entrada por voz (desde Plus). */
-  voz?: boolean;
+  /** Micrófono compartido con el escenario (desde Plus). */
+  microfono?: Microfono;
+  /** Sugerencias que aparecen arriba del campo de texto. */
+  sugerencias?: string[];
+  compacto?: boolean;
 };
 
-/* Dictado del navegador (Web Speech API). TODO backend: transcripción del servidor para
-   navegadores sin soporte y para audios largos. */
-type Reconocedor = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult:
-    | ((e: {
-        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
-      }) => void)
-    | null;
-  onend: (() => void) | null;
-  onerror: ((e: { error: string }) => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-function crearReconocedor(): Reconocedor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => Reconocedor;
-    webkitSpeechRecognition?: new () => Reconocedor;
-  };
-  const C = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  return C ? new C() : null;
-}
-
-export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = false }: Props) {
+export function EstherConversation({
+  messages,
+  isBusy,
+  onSend,
+  onTyping,
+  microfono,
+  sugerencias = [],
+  compacto = false,
+}: Props) {
   const [draft, setDraft] = useState("");
-  const [escuchando, setEscuchando] = useState(false);
-  const [avisoVoz, setAvisoVoz] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
-  const rec = useRef<Reconocedor | null>(null);
-  const texto = useRef("");
-
-  const microfono = () => {
-    if (escuchando) {
-      rec.current?.stop();
-      return;
-    }
-    const r = crearReconocedor();
-    if (!r) {
-      setAvisoVoz(
-        "Tu navegador no permite dictar. Probá con Chrome o Edge, o escribí la consulta.",
-      );
-      return;
-    }
-    setAvisoVoz("");
-    texto.current = "";
-    r.lang = "es-AR";
-    r.interimResults = true;
-    r.continuous = false;
-    r.onresult = (e) => {
-      const partes = Array.from(e.results).map((x) => x[0]?.transcript ?? "");
-      texto.current = partes.join(" ").trim();
-      setDraft(texto.current);
-    };
-    r.onerror = (e) => {
-      setAvisoVoz(
-        e.error === "not-allowed"
-          ? "Habilitá el micrófono en el navegador para hablarle a Esther."
-          : "No te escuché bien, probá de nuevo.",
-      );
-    };
-    r.onend = () => {
-      setEscuchando(false);
-      const final = texto.current.replace(/^\s*esther[,:]?\s*/i, "").trim();
-      if (final) {
-        onSend(final);
-        setDraft("");
-      }
-    };
-    rec.current = r;
-    setEscuchando(true);
-    onTyping();
-    r.start();
-  };
+  const escuchando = microfono?.escuchando ?? false;
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, isBusy]);
 
+  const enviar = (t: string) => {
+    if (!t.trim()) return;
+    onSend(t);
+    setDraft("");
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div
         ref={scroller}
-        className="min-h-[180px] flex-1 space-y-3 overflow-y-auto pr-1"
+        className={`scroll-sutil min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 ${compacto ? "min-h-[220px]" : "min-h-[260px]"}`}
         role="log"
         aria-live="polite"
       >
@@ -106,21 +53,42 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = f
           {messages.map((m) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
-              className={m.author === "user" ? "flex justify-end" : "flex justify-start"}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 0.61, 0.36, 1] }}
+              className={m.author === "user" ? "flex justify-end" : "flex items-start gap-2"}
             >
+              {m.author === "esther" && (
+                <span
+                  aria-hidden
+                  className="mt-0.5 size-8 shrink-0 rounded-full border border-primary/15 bg-gradient-to-b from-primary/10 to-primary/25 bg-no-repeat"
+                  style={{
+                    backgroundImage: `url(${estherPoses.resting.url})`,
+                    backgroundSize: "auto 440%",
+                    backgroundPosition: "50% 3%",
+                  }}
+                />
+              )}
               <div
                 className={
                   m.author === "user"
-                    ? "max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2.5 text-sm text-primary-foreground shadow-[var(--shadow-glow)]"
-                    : `glass-panel whitespace-pre-line rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground ${m.bloques?.length ? "w-full max-w-full" : "max-w-[90%]"}`
+                    ? "max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm text-primary-foreground shadow-[var(--shadow-glow)]"
+                    : `whitespace-pre-line rounded-2xl rounded-tl-md border px-3.5 py-2.5 text-sm leading-relaxed text-foreground ${
+                        m.resultado === "Sin permiso" || m.resultado === "Fuera del plan"
+                          ? "border-amber-200 bg-amber-50/80"
+                          : "border-primary/12 bg-card"
+                      } ${m.bloques?.length ? "min-w-0 flex-1" : "max-w-[88%]"}`
                 }
+                style={m.author === "user" ? { background: "var(--gradient-esther)" } : {}}
               >
                 {m.author === "esther" && (
-                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                  <span className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
                     Esther
+                    {(m.resultado === "Sin permiso" || m.resultado === "Fuera del plan") && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-px text-[9px] tracking-normal text-amber-700">
+                        <Lock className="size-2.5" /> {m.resultado}
+                      </span>
+                    )}
                   </span>
                 )}
                 {m.text}
@@ -133,11 +101,11 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = f
         </AnimatePresence>
 
         {isBusy && (
-          <div className="flex items-center gap-1.5 pl-1" aria-label="Esther está trabajando">
+          <div className="flex items-center gap-1.5 pl-10" aria-label="Esther está trabajando">
             {[0, 1, 2].map((i) => (
               <motion.span
                 key={i}
-                className="h-1.5 w-1.5 rounded-full bg-accent"
+                className="h-1.5 w-1.5 rounded-full bg-primary"
                 animate={{ opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
                 transition={{ duration: 1.1, delay: i * 0.15, repeat: Infinity }}
               />
@@ -146,13 +114,27 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = f
         )}
       </div>
 
+      {sugerencias.length > 0 && !isBusy && (
+        <div className="scroll-sutil -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+          {sugerencias.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => enviar(s)}
+              className="shrink-0 rounded-full border border-primary/15 bg-primary/[0.04] px-3 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/10"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          onSend(draft);
-          setDraft("");
+          enviar(draft);
         }}
-        className="glass-panel flex items-end gap-2 rounded-2xl p-2"
+        className={`flex items-end gap-2 rounded-2xl border bg-card p-2 transition ${escuchando ? "border-primary/50 ring-4 ring-primary/10" : "border-primary/15 focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10"}`}
       >
         <label htmlFor="esther-input" className="sr-only">
           Escribile a Esther
@@ -160,13 +142,14 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = f
         <textarea
           id="esther-input"
           rows={1}
-          value={draft}
+          value={escuchando ? microfono?.parcial || "" : draft}
+          readOnly={escuchando}
           placeholder={
             escuchando
               ? "Te escucho…"
-              : voz
-                ? "Escribile o hablale a Esther..."
-                : "Escribile a Esther..."
+              : microfono
+                ? "Escribile o hablale a Esther…"
+                : "Escribile a Esther…"
           }
           onChange={(event) => {
             setDraft(event.target.value);
@@ -175,45 +158,48 @@ export function EstherConversation({ messages, isBusy, onSend, onTyping, voz = f
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              onSend(draft);
-              setDraft("");
+              enviar(draft);
             }
           }}
           className="max-h-28 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
-        {voz && (
+        {microfono && (
           <motion.button
             type="button"
-            onClick={microfono}
+            onClick={microfono.alternar}
             disabled={isBusy}
             whileTap={{ scale: 0.94 }}
             aria-label={escuchando ? "Dejar de escuchar" : "Hablarle a Esther"}
             title={escuchando ? "Dejar de escuchar" : "Hablarle a Esther"}
-            className={`grid size-9 shrink-0 place-items-center rounded-xl border transition-colors disabled:opacity-40 ${escuchando ? "border-transparent text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
-            style={
-              escuchando
-                ? {
-                    background: "var(--gradient-esther)",
-                    animation: "esther-wave 1.4s ease-out infinite",
-                  }
-                : {}
-            }
+            className={`relative grid size-9 shrink-0 place-items-center rounded-xl border transition-colors disabled:opacity-40 ${escuchando ? "border-transparent text-primary-foreground" : "border-primary/15 text-primary hover:bg-primary/10"}`}
+            style={escuchando ? { background: "var(--gradient-esther)" } : {}}
           >
-            {escuchando ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+            {escuchando && (
+              <span
+                className="absolute inset-0 rounded-xl"
+                style={{
+                  background: "var(--gradient-esther)",
+                  animation: "esther-wave 1.4s ease-out infinite",
+                }}
+              />
+            )}
+            {escuchando ? <MicOff className="relative size-4" /> : <Mic className="size-4" />}
           </motion.button>
         )}
         <motion.button
           type="submit"
           disabled={isBusy || draft.trim().length === 0}
-          whileHover={{ y: -2 }}
           whileTap={{ scale: 0.96 }}
-          className="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-opacity disabled:opacity-40"
+          aria-label="Enviar"
+          className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground shadow-[var(--shadow-glow)] transition-opacity disabled:opacity-40"
           style={{ background: "var(--gradient-esther)" }}
         >
-          Enviar
+          <SendHorizontal className="size-4" />
         </motion.button>
       </form>
-      {avisoVoz && <p className="px-1 text-[11px] text-muted-foreground">{avisoVoz}</p>}
+      {compacto && microfono?.aviso && (
+        <p className="px-1 text-[11px] text-amber-700">{microfono.aviso}</p>
+      )}
     </div>
   );
 }

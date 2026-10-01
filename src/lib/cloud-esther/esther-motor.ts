@@ -309,7 +309,7 @@ function analizarPaciente(p: Paciente, q: string, ctx: ContextoIA): RespuestaEst
   const e = edad(p.fechaNacimiento);
   const quiereHistoria =
     /historia|evolucion|resum/.test(q) && !/antes|previo|pre ?consulta|despues|post/.test(q);
-  const quiereOdonto = /odontograma|piezas?|dientes?|3d/.test(q);
+  const quiereOdonto = /odontograma|\bpiezas?\b|\bdientes?\b|\b3d\b/.test(q);
   const quierePend = /pendiente|tratamientos?/.test(q) && !quiereOdonto && !quiereHistoria;
   const quierePres = /presupuesto/.test(q);
   const post = /despues|post|posterior/.test(q);
@@ -431,6 +431,8 @@ function analizarPaciente(p: Paciente, q: string, ctx: ContextoIA): RespuestaEst
   }
 
   if (quierePend) {
+    const bt = verificar("tratamientos", ctx);
+    if (bt) return bt;
     return {
       texto: pendientes.length
         ? `${nombreCompleto(p)} tiene ${pendientes.length} tratamiento${pendientes.length === 1 ? "" : "s"} pendiente${pendientes.length === 1 ? "" : "s"}${presPend.length ? ` y ${presPend.length} presupuesto${presPend.length === 1 ? "" : "s"} sin respuesta` : ""}.`
@@ -1364,6 +1366,30 @@ export function responder(pregunta: string, ctx: ContextoIA, interno = false): R
       modulo: "pacientes",
       resultado: "Sin datos",
     };
+  if (
+    /^(hola|buen(os|as)?\b|gracias|muchas gracias|chau|adios|que tal|como estas|esther$)/.test(q)
+  ) {
+    const despedida = /^(gracias|muchas gracias|chau|adios)/.test(q);
+    return {
+      texto: despedida
+        ? "¡De nada! Cuando necesites algo, acá estoy."
+        : `¡Hola${ctx.usuario ? ` ${ctx.usuario.split(" ")[0]}` : ""}! ¿Qué necesitás? Puedo revisar la agenda, analizar un paciente, preparar un informe o consultar presupuestos y facturación.`,
+      bloques: despedida
+        ? []
+        : [
+            {
+              tipo: "acciones",
+              items: [
+                { label: "Turnos de hoy", pregunta: "¿Qué turnos hay hoy?" },
+                { label: "Revisar pendientes", pregunta: "Revisar pendientes" },
+                { label: "¿Qué puedo consultarte?", pregunta: "¿Qué puedo consultarte?" },
+              ],
+            },
+          ],
+      modulo: "ayuda",
+      resultado: "Respondida",
+    };
+  }
   if (/que puedo|ayuda|que sabes|que podes/.test(q)) return ayuda(ctx, pregunta, true);
   if (!pac && /informe|reporte/.test(q))
     return {

@@ -44,6 +44,7 @@ import type {
   Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
+import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type {
   Paciente,
@@ -98,7 +99,7 @@ const SECCIONES: {
   { id: "odontograma", label: "Odontograma", icon: Activity },
   { id: "documentos", label: "Documentos", icon: FolderOpen },
   { id: "recetas", label: "Receta digital", icon: Pill },
-  { id: "estudios", label: "Estudios y diagnósticos", icon: FileText },
+  { id: "estudios", label: "Estudios", icon: FileText },
   { id: "laboratorio", label: "Laboratorio", icon: FlaskConical },
   { id: "presupuestos", label: "Presupuestos", icon: ReceiptText },
   { id: "turnos", label: "Turnos", icon: CalendarDays },
@@ -1122,252 +1123,24 @@ function CarpetaPaciente({
 
   return (
     <div className="mt-3 overflow-clip rounded-2xl border border-primary/20 bg-card">
-      <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 md:grid-cols-[230px_minmax(0,1fr)]">
         {/* Navegación: queda fija al bajar, así la columna nunca se ve vacía */}
 
-        <nav className="border-b border-primary/10 bg-gradient-to-b from-primary/[0.06] via-primary/[0.03] to-primary/[0.06] p-3 md:border-b-0 md:border-r">
-          <div className="md:sticky md:top-4">
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Carpeta del paciente
-          </p>
-
-          <div className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-            {SECCIONES.map((s) => {
-              const Icon = s.icon;
-              const activa = s.id === seccion;
-
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setSeccion(s.id)}
-                  className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all duration-200 ${
-                    activa
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-4 shrink-0" />
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-          </div>
-        </nav>
+        <NavCarpeta items={SECCIONES} activa={seccion} datos={datos} onElegir={setSeccion} />
 
         {/* Contenido */}
 
         <div className="min-w-0 p-4">
           {seccion === "resumen" ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-lg font-semibold">
-                    Resumen del paciente
-                  </h4>
-
-                  <p className="text-sm text-muted-foreground">
-                    Información general y estado actual de{" "}
-                    {normalizarNombre(paciente.nombre)}.
-                  </p>
-                </div>
-
-                <button
-                  onClick={onEditar}
-                  className={BTN_SECUNDARIO}
-                >
-                  <Pencil className="size-4" />
-                  Editar paciente
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]">
-                <Dato
-                  label="Documento"
-                  value={formatearDocumento(
-                    paciente.documento,
-                  )}
-                  icon={FileText}
-                />
-
-                <Dato
-                  label="Correo"
-                  value={paciente.email}
-                  icon={Mail}
-                  cortar
-                />
-
-                <Dato
-                  label="Obra social"
-                  value={etiquetaObraSocial(
-                    paciente.obraSocial,
-                  )}
-                  icon={ShieldCheck}
-                />
-
-                <Dato
-                  label="Afiliado"
-                  value={paciente.afiliado}
-                  icon={Hash}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Dato
-                  label="Fecha de nacimiento"
-                  value={nacimiento}
-                  icon={CalendarDays}
-                />
-
-                <Dato
-                  label="Sexo / género"
-                  value={paciente.genero}
-                  icon={Users}
-                />
-
-                <Dato
-                  label="Sucursal"
-                  value={paciente.sucursal}
-                  icon={HeartPulse}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className={DATO_CARD}>
-                  <IconoCirculo icon={Stethoscope} />
-
-                  <h5 className="relative text-sm font-semibold">
-                    Tratamiento actual
-                  </h5>
-
-                  {tratamientoActual ? (
-                    <div className="relative mt-2 space-y-1 text-sm">
-                      <p className="font-semibold">
-                        {tratamientoActual.nombre}
-                      </p>
-
-                      <p className="text-muted-foreground">
-                        {[
-                          tratamientoActual.pieza &&
-                            `Pieza ${tratamientoActual.pieza}`,
-                          tratamientoActual.estado,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-
-                      {tratamientoActual.profesional && (
-                        <p className="text-muted-foreground">
-                          Profesional:{" "}
-                          {
-                            tratamientoActual.profesional
-                          }
-                        </p>
-                      )}
-
-                      {tratamientosEnCurso.length >
-                        1 && (
-                        <p className="text-xs text-muted-foreground">
-                          y{" "}
-                          {tratamientosEnCurso.length -
-                            1}{" "}
-                          más en curso
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="relative mt-2 text-sm text-muted-foreground">
-                      Sin tratamiento en curso.
-                    </p>
-                  )}
-                </div>
-
-                <div className={DATO_CARD}>
-                  <IconoCirculo icon={CalendarDays} />
-
-                  <h5 className="relative text-sm font-semibold">
-                    Próximo turno
-                  </h5>
-
-                  {proximoTurno ? (
-                    <div className="relative mt-2 space-y-1 text-sm">
-                      <p className="font-semibold">
-                        {fechaCorta(
-                          proximoTurno.fecha,
-                        )}{" "}
-                        · {proximoTurno.hora} hs
-                      </p>
-
-                      <p className="text-muted-foreground">
-                        {proximoTurno.motivo}
-                      </p>
-
-                      {proximoTurno.profesional && (
-                        <p className="text-muted-foreground">
-                          {
-                            proximoTurno.profesional
-                          }
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="relative mt-2 text-sm text-muted-foreground">
-                      Sin turnos programados.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className={DATO_CARD}>
-                <IconoCirculo icon={Phone} />
-
-                <h5 className="relative text-sm font-semibold">
-                  Información de contacto
-                </h5>
-
-                <dl className="relative mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="inline font-semibold">
-                      Teléfono:{" "}
-                    </dt>
-
-                    <dd className="inline text-muted-foreground">
-                      {paciente.telefono || "—"}
-                    </dd>
-                  </div>
-
-                  <div className="min-w-0">
-                    <dt className="inline font-semibold">
-                      Email:{" "}
-                    </dt>
-
-                    <dd className="inline break-all text-muted-foreground">
-                      {paciente.email || "—"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt className="inline font-semibold">
-                      Dirección:{" "}
-                    </dt>
-
-                    <dd className="inline text-muted-foreground">
-                      {paciente.direccion || "—"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt className="inline font-semibold">
-                      Nota de interés:{" "}
-                    </dt>
-
-                    <dd className="inline text-muted-foreground">
-                      {paciente.nota || "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
+            <ResumenPaciente
+              paciente={paciente}
+              datos={datos}
+              proximoTurno={proximoTurno}
+              obraSocial={etiquetaObraSocial(paciente.obraSocial)}
+              documento={formatearDocumento(paciente.documento)}
+              onEditar={onEditar}
+              onIr={setSeccion}
+            />
           ) : seccion === "odontograma" ? (
             <OdontogramaGate
               key={paciente.id}

@@ -1,6 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { capitalizarNombre } from "@/lib/utils";
-import { iniciarIngresoDemo, terminarIngresoDemo } from "@/lib/cloud-esther/demo-seguimiento";
+import {
+  esperaDemoHasta,
+  iniciarIngresoDemo,
+  terminarIngresoDemo,
+} from "@/lib/cloud-esther/demo-seguimiento";
+import {
+  abrirSesionAuditoria,
+  cerrarSesionAuditoria,
+  registrarEventoAuditoria,
+} from "@/lib/cloud-esther/auditoria-store";
 
 /* Ubicación: src/lib/cloud-esther/auth-store.ts
 
@@ -129,6 +138,7 @@ export function registrarCuenta(datos: {
   escribirJSON(KEY_CUENTAS, [...cuentas, sesion]);
   if (datos.passDemo) guardarCredencialDemo(email, datos.passDemo);
   iniciarIngresoDemo(contactoDe(sesion), true);
+  abrirSesionAuditoria(clinica.id, quienDe(sesion));
   ponerSesion(sesion);
   return { ok: true, sesion };
 }
@@ -185,21 +195,48 @@ export function iniciarSesion(emailCrudo: string, pass?: string): Resultado {
     (c) => c.email === email,
   );
   if (demo && pass !== undefined && pass !== demo.pass) {
+    registrarEventoAuditoria(cuenta.clinica.id, {
+      ...quienDe(cuenta),
+      tipo: "Intento fallido",
+      accion: "Contraseña incorrecta al ingresar",
+      modulo: "Acceso",
+      resultado: "Fallido",
+    });
     return {
       ok: false,
       error: "La contraseña no coincide. Revisá mayúsculas y minúsculas, o usá los datos del demo.",
     };
   }
   const sesion = normalizarSesion(cuenta) as Sesion;
+  // Período de espera después de usar los 30 minutos de prueba.
+  const espera = sesion.tipo === "demo" ? esperaDemoHasta(email) : null;
+  if (espera) {
+    const hora = new Date(espera).toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return {
+      ok: false,
+      error: `Ya usaste los 30 minutos de prueba. Podés volver a entrar a partir de las ${hora.replace(/\.$/, "")}, o pedir información comercial para seguir.`,
+    };
+  }
   // Cada ingreso de una cuenta de demo dura 30 minutos y queda registrado para el panel.
   if (sesion.tipo === "demo") iniciarIngresoDemo(contactoDe(sesion));
+  abrirSesionAuditoria(sesion.clinica.id, quienDe(sesion));
   ponerSesion(sesion);
   return { ok: true, sesion };
 }
 
-export function cerrarSesion() {
+export function cerrarSesion(motivo: "Manual" | "Vencida" = "Manual") {
   terminarIngresoDemo("cierre");
+  const actual = leer();
+  if (actual) cerrarSesionAuditoria(actual.clinica.id, motivo);
   ponerSesion(null);
+}
+
+/* Quien crea la cuenta es el propietario de la clínica. TODO backend: rol real del usuario. */
+function quienDe(s: Sesion) {
+  return { usuario: s.usuario.nombre, email: s.usuario.email, rol: "Propietario" };
 }
 
 function contactoDe(s: Sesion) {
@@ -211,6 +248,11 @@ function contactoDe(s: Sesion) {
 /** Clínica (empresa) de la sesión actual, o null si no hay sesión. En el servidor siempre es null. */
 export function clinicaActualId(): string | null {
   return leer()?.clinica.id ?? null;
+}
+
+/** Sesión actual (fuera de React). */
+export function leerSesionActual(): Sesion | null {
+  return leer();
 }
 
 /** Avisa cada vez que cambia la sesión (login, registro o logout). */

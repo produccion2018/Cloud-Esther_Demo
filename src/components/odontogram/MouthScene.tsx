@@ -26,20 +26,36 @@ interface MouthSceneProps {
   onHover: (fdi: number | null) => void;
 }
 
+/* Texturas y tejidos se generan una sola vez y se reutilizan en cada montaje del 3D. */
+let recursos: {
+  enamelMap: THREE.Texture;
+  gumMap: THREE.Texture;
+  tongueMap: THREE.Texture;
+  upperGum: THREE.BufferGeometry;
+  lowerGum: THREE.BufferGeometry;
+  palate: THREE.BufferGeometry;
+  tongue: THREE.BufferGeometry;
+} | null = null;
+function recursosEscena() {
+  recursos ??= {
+    enamelMap: createEnamelTexture(),
+    gumMap: createTissueTexture("#c9526a", "#8f2f45"),
+    tongueMap: createTissueTexture("#c25a68", "#93313f", 4200),
+    upperGum: buildGumGeometry(UPPER_ARCH.rx, UPPER_ARCH.rz),
+    lowerGum: buildGumGeometry(LOWER_ARCH.rx, LOWER_ARCH.rz),
+    palate: buildPalateGeometry(UPPER_ARCH.rx, UPPER_ARCH.rz),
+    tongue: buildTongueGeometry(),
+  };
+  return recursos;
+}
+
 /** Vertical separation of the arches — the mouth is held wide open. */
 const OPEN_GAP = 1.95;
 const UPPER_TILT = -0.5;
 const LOWER_TILT = 0.5;
 
 export function MouthScene({ chart, selected, hovered, onSelect, onHover }: MouthSceneProps) {
-  const enamelMap = useMemo(() => createEnamelTexture(), []);
-  const gumMap = useMemo(() => createTissueTexture("#c9526a", "#8f2f45"), []);
-  const tongueMap = useMemo(() => createTissueTexture("#c25a68", "#93313f", 4200), []);
-
-  const upperGum = useMemo(() => buildGumGeometry(UPPER_ARCH.rx, UPPER_ARCH.rz), []);
-  const lowerGum = useMemo(() => buildGumGeometry(LOWER_ARCH.rx, LOWER_ARCH.rz), []);
-  const palate = useMemo(() => buildPalateGeometry(UPPER_ARCH.rx, UPPER_ARCH.rz), []);
-  const tongue = useMemo(() => buildTongueGeometry(), []);
+  const { enamelMap, gumMap, tongueMap, upperGum, lowerGum, palate, tongue } = recursosEscena();
 
   const upperPlacements = useMemo(() => computePlacements("upper"), []);
   const lowerPlacements = useMemo(() => computePlacements("lower"), []);
@@ -59,32 +75,32 @@ export function MouthScene({ chart, selected, hovered, onSelect, onHover }: Mout
           {/* The upper arch is mirrored front-to-back by the rotation above,
               so its soft tissue is rotated to match the tooth placements. */}
           <group rotation={[0, isUpper ? Math.PI : 0, 0]}>
-          <mesh geometry={gumGeo} castShadow receiveShadow>
-            <meshPhysicalMaterial
-              map={gumMap}
-              color="#d0616f"
-              side={THREE.DoubleSide}
-              roughness={0.45}
-              clearcoat={0.55}
-              clearcoatRoughness={0.4}
-              sheen={0.8}
-              sheenColor="#ff9aa6"
-            />
-          </mesh>
-
-          {isUpper && (
-            <mesh geometry={palate} receiveShadow>
+            <mesh geometry={gumGeo} castShadow receiveShadow>
               <meshPhysicalMaterial
                 map={gumMap}
-                color="#c8606d"
+                color="#d0616f"
                 side={THREE.DoubleSide}
-                roughness={0.55}
-                clearcoat={0.4}
-                sheen={0.6}
+                roughness={0.45}
+                clearcoat={0.55}
+                clearcoatRoughness={0.4}
+                sheen={0.8}
                 sheenColor="#ff9aa6"
               />
             </mesh>
-          )}
+
+            {isUpper && (
+              <mesh geometry={palate} receiveShadow>
+                <meshPhysicalMaterial
+                  map={gumMap}
+                  color="#c8606d"
+                  side={THREE.DoubleSide}
+                  roughness={0.55}
+                  clearcoat={0.4}
+                  sheen={0.6}
+                  sheenColor="#ff9aa6"
+                />
+              </mesh>
+            )}
           </group>
 
           {placements.map((p) => {

@@ -22,9 +22,10 @@ import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 // El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
 // así Pacientes e Historia cargan rápido en los planes con 2D.
-const Odontogram3D = lazy(() =>
-  import("@/components/odontogram/Odontogram3D").then((m) => ({ default: m.Odontogram3D })),
-);
+const cargarOdontograma3D = () =>
+  lazy(() =>
+    import("@/components/odontogram/Odontogram3D").then((m) => ({ default: m.Odontogram3D })),
+  );
 import {
   defaultChart,
   TEETH_BY_FDI,
@@ -36,9 +37,10 @@ import { cargarTratamientos, registrarCambio } from "@/lib/odontogram/historial"
 import { RadiografiasPanel } from "./RadiografiasPanel";
 import { leerRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { FichaPieza } from "@/components/cloud-esther/odontograma3d/FichaPieza";
+import { Cargando3D, Limite3D } from "@/components/odontogram/Carga3D";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
-import { EstherAIChat } from "@/components/odontogram/EstherAIChat";
+import { EstherOdontograma } from "@/components/cloud-esther/odontograma3d/EstherOdontograma";
 
 /** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
  *  siempre el plan, nunca la vista. */
@@ -196,6 +198,10 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
   );
   const [fdiSeleccionado, setFdiSeleccionado] = useState<number | null>(null);
   const [herramienta, setHerramienta] = useState<Herramienta3D>("odontograma");
+  // Reintento: si la descarga del 3D falla, se crea una carga nueva (lazy guarda el error).
+  const [intento3D, setIntento3D] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const Odontogram3D = useMemo(() => cargarOdontograma3D(), [intento3D]);
   // «Ampliar Odontograma 3D»: solo agranda el área de trabajo (mismo modelo, mismo estado).
   const [ampliado, setAmpliado] = useState(false);
 
@@ -377,22 +383,18 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
                 <div
                   className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[calc(100vh-240px)] min-h-[600px]"}`}
                 >
-                  <Suspense
-                    fallback={
-                      <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                        Cargando odontograma 3D…
-                      </div>
-                    }
-                  >
-                    <Odontogram3D
-                      key={clavePaciente}
-                      value={chart}
-                      onChange={handleChange}
-                      onSelectTooth={setFdiSeleccionado}
-                      selectedFdi={fdiSeleccionado}
-                      estadosEnPanel={false}
-                    />
-                  </Suspense>
+                  <Limite3D onReintentar={() => setIntento3D((n) => n + 1)}>
+                    <Suspense fallback={<Cargando3D />}>
+                      <Odontogram3D
+                        key={clavePaciente}
+                        value={chart}
+                        onChange={handleChange}
+                        onSelectTooth={setFdiSeleccionado}
+                        selectedFdi={fdiSeleccionado}
+                        estadosEnPanel={false}
+                      />
+                    </Suspense>
+                  </Limite3D>
                 </div>
               </div>
               <div
@@ -431,21 +433,31 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
             onElegir={setFdiSeleccionado}
           />
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <HistorialEvolucion
-              key={`${clavePaciente}-${Object.values(chart).join("")}`}
-              pacienteId={clavePaciente}
-              fdi={null}
+          {tieneIA ? (
+            <EstherOdontograma
+              pacienteId={Number(pacienteId)}
+              fdi={fdiSeleccionado}
+              chart={chart}
+              plan={planId}
+              profesional={usuario?.nombre ?? "Profesional"}
+              onToast={onToast}
+              onIrHerramienta={(h) => {
+                setAmpliado(false);
+                setHerramienta(h);
+              }}
             />
-            {tieneIA ? (
-              <EstherAIChat onToast={onToast} />
-            ) : (
-              <PanelBloqueado
-                titulo="Esther IA"
-                texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
-              />
-            )}
-          </div>
+          ) : (
+            <PanelBloqueado
+              titulo="Esther IA"
+              texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
+            />
+          )}
+
+          <HistorialEvolucion
+            key={`${clavePaciente}-${Object.values(chart).join("")}`}
+            pacienteId={clavePaciente}
+            fdi={null}
+          />
         </div>
       )}
     </div>

@@ -1931,6 +1931,30 @@ function AgendaInner() {
     pacientes: nombresPacientes,
   };
 
+  /* Odontólogos que atienden en esa fecha y hora según su horario cargado en Equipo.
+     Si alguien no tiene horario cargado, se lo considera disponible (para no ocultar turnos). */
+  const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const odontologosQueAtienden = (fecha: string, hora: string) => {
+    const dia = DIAS_SEMANA[parseISO(fecha).getDay()];
+    const aMin = (h?: string) => {
+      const [x = 0, y = 0] = (h ?? "").split(":").map(Number);
+      return x * 60 + y;
+    };
+    const t = aMin(hora);
+    const delEquipo = miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
+    if (!delEquipo.length) return opcionesAgenda.odontologos;
+    return delEquipo
+      .filter((m) => {
+        if (!m.schedule?.length) return true;
+        const d = m.schedule.find((x) => x.day === dia);
+        if (!d?.active) return false;
+        const enPausa =
+          d.breakStart && d.breakEnd && t >= aMin(d.breakStart) && t < aMin(d.breakEnd);
+        return t >= aMin(d.start) && t < aMin(d.end) && !enPausa;
+      })
+      .map((m) => `${m.firstName} ${m.lastName}`.trim());
+  };
+
   /* Horarios libres del día visto (según filtros de odontólogo/gabinete si hay). */
   const horariosLibres = HORARIOS_DEL_DIA.filter((hora) => {
     const bloqueado = bloqueos.some(
@@ -1945,10 +1969,13 @@ function AgendaInner() {
         (!filtros.odontologo || t.odontologo === filtros.odontologo) &&
         (!filtros.gabinete || t.gabinete === filtros.gabinete),
     );
-    // Sin filtro: el horario está libre si queda algún odontólogo sin turno a esa hora.
+    // Solo cuenta a los odontólogos que atienden ese día y a esa hora (Equipo → Agendas y horarios).
+    const disponibles = odontologosQueAtienden(fechaVista, hora);
+    if (filtros.odontologo && !disponibles.includes(filtros.odontologo)) return false;
+    // Sin filtro: el horario está libre si queda algún odontólogo que atiende sin turno a esa hora.
     return filtros.odontologo || filtros.gabinete
       ? ocupados.length === 0
-      : ocupados.length < opcionesAgenda.odontologos.length;
+      : disponibles.filter((o) => !ocupados.some((t) => t.odontologo === o)).length > 0;
   }).filter(
     (hora) =>
       fechaVista > hoy || (fechaVista === hoy && hora > new Date().toTimeString().slice(0, 5)),

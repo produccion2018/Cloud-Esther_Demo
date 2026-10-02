@@ -177,6 +177,12 @@ function Registro() {
                     Crear cuenta y entrar al panel <ArrowRight className="size-4" />
                   </Button>
 
+                  <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+                    Cada ingreso al demo dura 30 minutos. Para el seguimiento comercial registramos
+                    cuándo entrás, cuánto tiempo usás el demo y qué módulos visitás. No registramos
+                    datos de pacientes.
+                  </p>
+
                   <p className="text-center text-xs text-muted-foreground">
                     ¿Ya tenés una cuenta?{" "}
                     <Link to="/login" className="font-medium text-primary hover:underline">

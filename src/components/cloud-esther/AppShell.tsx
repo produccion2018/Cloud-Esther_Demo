@@ -17,6 +17,7 @@ import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-est
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/ControlDemo";
 import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
+import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
 import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -384,7 +385,7 @@ function PlanFooter() {
       </div>
       <Link
         to={"/" as never}
-        onClick={cerrarSesion}
+        onClick={() => cerrarSesion()}
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
@@ -537,9 +538,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const moduloIA = MODULES.find((m) => m.id === "ia");
   // Módulos que recorre una cuenta de demo (para medir el interés desde el panel admin).
   const etiquetaModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
+  const { clinicId } = useSesion();
+  const auditarModulos = settings.auditLogEnabled;
   useEffect(() => {
-    if (etiquetaModulo) registrarModuloDemo(etiquetaModulo);
-  }, [etiquetaModulo]);
+    if (!etiquetaModulo) return;
+    registrarModuloDemo(etiquetaModulo);
+    // Auditoría de la clínica: actividad de la sesión y (si está activado) accesos a módulos.
+    if (clinicId) registrarActividadAuditoria(clinicId, etiquetaModulo, auditarModulos);
+  }, [etiquetaModulo, clinicId, auditarModulos]);
+
+  // El motor 3D pesa: en los planes con Odontograma 3D se descarga en segundo plano apenas
+  // el navegador está libre, así el odontograma aparece rápido cuando se abre.
+  useEffect(() => {
+    if (odontogramaDelPlan(plan) !== "3d") return;
+    const precargar = () => void import("@/components/odontogram/Odontogram3D").catch(() => {});
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+    };
+    if (w.requestIdleCallback) w.requestIdleCallback(precargar, { timeout: 4000 });
+    else window.setTimeout(precargar, 2500);
+  }, [plan]);
   const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
 
   useEffect(() => {

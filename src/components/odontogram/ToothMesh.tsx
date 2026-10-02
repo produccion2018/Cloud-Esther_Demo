@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { memo, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -28,7 +28,26 @@ interface ToothMeshProps {
   onHover: (fdi: number | null) => void;
 }
 
-export function ToothMesh({
+/* Las geometrías son procedurales y costosas de generar: se crean una sola vez por pieza y se
+   reutilizan (al cambiar de paciente, ampliar el 3D o volver al módulo no se recalculan). */
+const GEOMETRIAS = new Map<number, THREE.BufferGeometry>();
+function geometriaDe(def: ToothDef) {
+  let g = GEOMETRIAS.get(def.fdi);
+  if (!g) {
+    g = buildToothGeometry(def.kind, {
+      width: def.width,
+      depth: def.depth,
+      crownHeight: def.crownHeight,
+      rootLength: def.rootLength,
+    });
+    GEOMETRIAS.set(def.fdi, g);
+  }
+  return g;
+}
+
+/* memo: al pasar el mouse o seleccionar una pieza solo se vuelven a dibujar las piezas que
+   cambian, no las 32. */
+export const ToothMesh = memo(function ToothMesh({
   def,
   state,
   selected,
@@ -37,16 +56,7 @@ export function ToothMesh({
   onSelect,
   onHover,
 }: ToothMeshProps) {
-  const geometry = useMemo(
-    () =>
-      buildToothGeometry(def.kind, {
-        width: def.width,
-        depth: def.depth,
-        crownHeight: def.crownHeight,
-        rootLength: def.rootLength,
-      }),
-    [def],
-  );
+  const geometry = useMemo(() => geometriaDe(def), [def]);
 
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
@@ -115,4 +125,4 @@ export function ToothMesh({
       </mesh>
     </group>
   );
-}
+});

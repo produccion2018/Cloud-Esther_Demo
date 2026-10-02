@@ -52,7 +52,9 @@ import {
 
 import { ToggleSwitch } from "./ToggleSwitch";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
-import { InicioSesionCorporativo, RegistroAuditoria } from "./InicioSesionCorporativo";
+import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
 const CARD =
   "rounded-2xl border border-border/70 bg-card/95 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_14px_rgba(16,24,40,0.04)] backdrop-blur-sm";
@@ -63,12 +65,10 @@ type TabId =
   | "general"
   | "profesionales"
   | "directorio"
-  | "actividad"
   | "apariencia"
   | "notificaciones"
   | "integraciones"
-  | "seguridad"
-  | "auditoria";
+  | "seguridad";
 
 const TABS: {
   id: TabId;
@@ -80,13 +80,24 @@ const TABS: {
   { id: "general", label: "General", icon: Settings },
   { id: "profesionales", label: "Profesionales", icon: Users },
   { id: "directorio", label: "Directorio", icon: FolderOpen, min: 3 },
-  { id: "actividad", label: "Actividad", icon: Activity, min: 3 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
   { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 3 },
-  { id: "seguridad", label: "Seguridad", icon: ShieldCheck, min: 3 },
-  { id: "auditoria", label: "Auditoría", icon: FileClock, min: 3 },
+  { id: "seguridad", label: "Seguridad y auditoría", icon: ShieldCheck, min: 3 },
 ];
+
+/** Nombres legibles de los ajustes (para el registro de auditoría). */
+const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
+  darkModePage: "Modo oscuro",
+  darkModeSidebar: "Menú lateral oscuro",
+  sidebarColor: "Color del menú lateral",
+  fontSize: "Tamaño de letra",
+  aiEnabled: "Esther IA",
+  notificationsEnabled: "Notificaciones",
+  advancedSecurityEnabled: "Seguridad avanzada",
+  auditLogEnabled: "Registrar accesos a módulos",
+  auditRetentionDays: "Conservación de registros de auditoría",
+};
 
 type Props = {
   onToast: (msg: string) => void;
@@ -213,6 +224,7 @@ export function ConfiguracionModule({ onToast }: Props) {
   }, [plan, tab]);
 
   const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
+  const { clinicId, sesion } = useSesion();
   // Ajustes de la empresa de la sesión (se recargan si cambia la sesión).
   const tenant = useTenantActual();
 
@@ -228,6 +240,16 @@ export function ConfiguracionModule({ onToast }: Props) {
 
     setSettings(next);
     guardarSettings(clinic, next);
+    // Auditoría: los cambios de configuración se registran siempre.
+    if (clinicId && sesion)
+      registrarEventoAuditoria(clinicId, {
+        usuario: sesion.usuario.nombre,
+        email: sesion.usuario.email,
+        rol: "Propietario",
+        tipo: "Configuración",
+        accion: `Cambió «${ETIQUETA_AJUSTE[key] ?? String(key)}»`,
+        modulo: "Configuración",
+      });
   };
 
   const avanzada = planLevel(plan) >= 3;
@@ -278,8 +300,6 @@ export function ConfiguracionModule({ onToast }: Props) {
 
           {tab === "directorio" && <DirectorioTab onToast={onToast} />}
 
-          {tab === "actividad" && <ActividadTab />}
-
           {tab === "apariencia" && <AparienciaTab settings={settings} actualizar={actualizar} />}
 
           {tab === "notificaciones" && (
@@ -289,15 +309,13 @@ export function ConfiguracionModule({ onToast }: Props) {
           {tab === "integraciones" && <IntegracionesTab />}
 
           {tab === "seguridad" && (
-            <SeguridadTab
+            <SeguridadAuditoria
               plan={plan}
               settings={settings}
               actualizar={actualizar}
               onToast={onToast}
             />
           )}
-
-          {tab === "auditoria" && <AuditoriaTab settings={settings} actualizar={actualizar} />}
         </div>
       </div>
     </div>
@@ -329,8 +347,8 @@ function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; plan
         </h1>
         <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
           {avanzada
-            ? "Datos de la clínica, profesionales, apariencia, notificaciones, integraciones, seguridad, actividad y auditoría."
-            : "Datos de la clínica, profesionales, apariencia y notificaciones. La configuración avanzada (seguridad, auditoría, actividad, directorio e integraciones) viene con Plus y Enterprise."}
+            ? "Datos de la clínica, profesionales, apariencia, notificaciones, integraciones y seguridad y auditoría."
+            : "Datos de la clínica, profesionales, apariencia y notificaciones. La configuración avanzada (seguridad y auditoría, directorio e integraciones) viene con Plus y Enterprise."}
         </p>
       </div>
       {!avanzada && !planContratado && (
@@ -609,74 +627,6 @@ function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                 ACTIVIDAD                                  */
-/* -------------------------------------------------------------------------- */
-
-function ActividadTab() {
-  return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px]">
-      <div className={`${CARD} p-5`}>
-        <SectionHeader
-          icon={Activity}
-          title="Actividad"
-          description="Resumen de actividad reciente de la clínica."
-        />
-
-        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard icon={CalendarDays} label="Turnos hoy" value="20" />
-
-          <StatCard icon={Users} label="Profesionales" value="3" />
-
-          <StatCard icon={FolderOpen} label="Documentos" value="12" />
-
-          <StatCard icon={Shield} label="Eventos" value="0" />
-        </div>
-
-        <div className="mt-5 divide-y divide-border/60">
-          <ActividadRow
-            icon={CalendarCheck}
-            title="Agenda"
-            description="La agenda está preparada para mostrar actividad y movimientos recientes."
-          />
-
-          <ActividadRow
-            icon={Users}
-            title="Profesionales"
-            description="La actividad del equipo se mostrará en este espacio."
-          />
-
-          <ActividadRow
-            icon={FolderOpen}
-            title="Directorio"
-            description="Los movimientos sobre documentos quedarán centralizados aquí."
-          />
-        </div>
-      </div>
-
-      <div className={`${CARD} p-5`}>
-        <SectionHeader
-          icon={Clock3}
-          title="Actividad reciente"
-          description="Últimos eventos del sistema."
-        />
-
-        <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/20 p-7 text-center">
-          <span className="mx-auto grid size-11 place-items-center rounded-xl bg-background text-muted-foreground shadow-sm">
-            <Activity className="size-5" />
-          </span>
-
-          <p className="mt-3 text-sm font-semibold text-foreground">Sin actividad registrada</p>
-
-          <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-            El historial se conectará posteriormente con los datos reales del sistema.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
 /*                                APARIENCIA                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -937,135 +887,6 @@ function IntegracionesTab() {
             </div>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                SEGURIDAD                                   */
-/* -------------------------------------------------------------------------- */
-
-function SeguridadTab({
-  plan,
-  settings,
-  actualizar,
-  onToast,
-}: {
-  plan: PlanId;
-  settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
-  onToast: (msg: string) => void;
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <div className={`${CARD} p-5`}>
-        <SectionHeader
-          icon={ShieldCheck}
-          title="Seguridad"
-          description="Protegé tu información y controlá los accesos."
-        />
-
-        <div className="mt-4 divide-y divide-border/60">
-          <FilaVisual
-            icon={LockKeyhole}
-            title="Autenticación de dos factores"
-            description="Agregá una capa adicional de protección."
-            onToast={onToast}
-          />
-
-          <FilaVisual
-            icon={Users}
-            title="Bloquear usuarios inactivos"
-            description="Controlá automáticamente las cuentas inactivas."
-            onToast={onToast}
-          />
-
-          <FilaVisual
-            icon={Shield}
-            title="Control de acceso"
-            description="Gestioná permisos y accesos según el rol."
-            onToast={onToast}
-          />
-        </div>
-      </div>
-
-      <div className={`${CARD} p-5`}>
-        <InicioSesionCorporativo
-          plan={plan}
-          settings={settings}
-          actualizar={actualizar}
-          onToast={onToast}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                AUDITORÍA                                   */
-/* -------------------------------------------------------------------------- */
-
-function AuditoriaTab({
-  settings,
-  actualizar,
-}: {
-  settings: ClinicSettings;
-  actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_340px]">
-      <div className={`${CARD} p-5`}>
-        <SectionHeader
-          icon={FileClock}
-          title="Auditoría"
-          description="Visualizá y controlá el registro de actividad del sistema."
-        />
-
-        <div className="mt-5">
-          <RegistroAuditoria settings={settings} actualizar={actualizar} />
-        </div>
-
-        <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/20 p-7 text-center">
-          <FileClock className="mx-auto size-7 text-muted-foreground" />
-
-          <p className="mt-3 text-sm font-semibold text-foreground">Historial de auditoría</p>
-
-          <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-            La estructura visual queda preparada para mostrar los eventos, cambios y acciones cuando
-            conectes el registro definitivo.
-          </p>
-        </div>
-      </div>
-
-      <div className={`${CARD} p-5`}>
-        <SectionHeader
-          icon={Shield}
-          title="Estado de auditoría"
-          description="Configuración actual del registro."
-        />
-
-        <div className="mt-5 rounded-xl border border-border/60 bg-muted/20 p-4">
-          <div className="flex items-center gap-3">
-            <span
-              className={`grid size-9 place-items-center rounded-xl ${
-                settings.auditLogEnabled
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              <FileClock className="size-4" />
-            </span>
-
-            <div>
-              <p className="text-sm font-bold text-foreground">Registro de auditoría</p>
-
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {settings.auditLogEnabled ? "Actualmente activado" : "Actualmente desactivado"}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

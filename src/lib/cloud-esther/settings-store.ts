@@ -49,6 +49,8 @@ export interface ClinicSettings {
   notificationsEnabled: boolean;
   advancedSecurityEnabled: boolean;
   auditLogEnabled: boolean;
+  /** Días que se conservan los registros de auditoría. */
+  auditRetentionDays: number;
 }
 
 export const DEFAULT_SETTINGS: ClinicSettings = {
@@ -60,6 +62,7 @@ export const DEFAULT_SETTINGS: ClinicSettings = {
   notificationsEnabled: true,
   advancedSecurityEnabled: false,
   auditLogEnabled: true,
+  auditRetentionDays: 365,
 };
 
 /* Los ajustes (colores, modo oscuro, etc.) se guardan por empresa de la sesión:

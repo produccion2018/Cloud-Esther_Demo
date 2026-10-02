@@ -35,6 +35,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
+import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
+import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import {
   dentroDelLimite,
   leerConfigPlanes,
@@ -1173,6 +1175,21 @@ function CarpetaPaciente({
 
 /* ───────────── Página ───────────── */
 
+/** Auditoría de la clínica: solo la referencia del paciente, nunca sus datos clínicos. */
+function auditarPaciente(tipo: "Alta" | "Baja" | "Modificación", accion: string, registro?: string) {
+  const sesion = leerSesionActual();
+  if (!sesion) return;
+  registrarEventoAuditoria(sesion.clinica.id, {
+    usuario: sesion.usuario.nombre,
+    email: sesion.usuario.email,
+    rol: "Propietario",
+    tipo,
+    accion,
+    modulo: "Pacientes",
+    ...(registro ? { registro } : {}),
+  });
+}
+
 function PacientesInner() {
   const { plan } = useCloudEsther();
   // Turnos de la agenda de la empresa (mismo store que "Agenda y turnos" y el Dashboard).
@@ -1300,6 +1317,7 @@ function PacientesInner() {
       );
 
       show("Paciente actualizado");
+      auditarPaciente("Modificación", "Editó los datos de un paciente", `Paciente #${editando.id}`);
     } else {
       setPacientes((prev) => [
         ...prev,
@@ -1310,6 +1328,7 @@ function PacientesInner() {
       ]);
 
       show("Paciente creado");
+      auditarPaciente("Alta", `Registró un paciente nuevo`);
     }
 
     cerrarModal();
@@ -1325,6 +1344,7 @@ function PacientesInner() {
     );
 
     registros.quitar(p.id);
+    auditarPaciente("Baja", "Eliminó un paciente", `Paciente #${p.id}`);
 
     if (abiertoId === p.id) {
       setAbiertoId(null);

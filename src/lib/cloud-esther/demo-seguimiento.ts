@@ -16,8 +16,19 @@ import { useEffect, useState } from "react";
 export const DURACION_DEMO_MS = 30 * 60 * 1000;
 /** Aviso antes del cierre. */
 export const AVISO_DEMO_MS = 5 * 60 * 1000;
+/** Espera antes de que la misma identidad de prueba (cuenta o navegador) pueda volver a entrar.
+    TODO backend: el servidor aplica la espera (en el navegador se puede saltear borrando datos). */
+export const ESPERA_DEMO_MS = 60 * 60 * 1000;
 
-export type TipoEventoDemo = "registro" | "ingreso" | "modulo" | "plan" | "cierre" | "expiracion";
+export type TipoEventoDemo =
+  | "registro"
+  | "ingreso"
+  | "modulo"
+  | "plan"
+  | "cierre"
+  | "expiracion"
+  /** Pidió información comercial o quiso contratar desde el demo. */
+  | "solicitud";
 
 export type EventoDemo = {
   id: string;
@@ -37,6 +48,9 @@ type IngresoActual = Contacto & { id: string; inicio: number; expira: number };
 
 const KEY_EVENTOS = "cloud-esther:demo:eventos";
 const KEY_INGRESO = "cloud-esther:demo:ingreso";
+const KEY_ESPERA = "cloud-esther:demo:espera";
+const KEY_VISITANTE = "cloud-esther:demo:visitante";
+const KEY_ULTIMO = "cloud-esther:demo:ultimo-contacto";
 
 const enNavegador = () => typeof window !== "undefined";
 
@@ -98,6 +112,7 @@ function registrar(tipo: TipoEventoDemo, c: Contacto, detalle?: string) {
 /** Se llama al crear la cuenta de demo y en cada inicio de sesión de demo. */
 export function iniciarIngresoDemo(c: Contacto, esRegistro = false) {
   const ahora = Date.now();
+  escribir(KEY_ULTIMO, c);
   escribir(KEY_INGRESO, { ...c, id: nuevoId(), inicio: ahora, expira: ahora + DURACION_DEMO_MS });
   if (esRegistro) registrar("registro", c);
   registrar("ingreso", c);
@@ -110,6 +125,15 @@ export function terminarIngresoDemo(motivo: "cierre" | "expiracion") {
   if (!ingreso) return;
   const minutos = Math.max(1, Math.round((Date.now() - ingreso.inicio) / 60000));
   registrar(motivo, ingreso, `${minutos} min`);
+  if (motivo === "expiracion") {
+    // Período de espera para esa cuenta y para este navegador.
+    const hasta = Date.now() + ESPERA_DEMO_MS;
+    escribir(KEY_ESPERA, {
+      ...leer<Record<string, number>>(KEY_ESPERA, {}),
+      [ingreso.email]: hasta,
+      [identidadVisitante()]: hasta,
+    });
+  }
   escribir(KEY_INGRESO, null);
   oyentes.forEach((o) => o());
 }
@@ -127,6 +151,35 @@ export function registrarPlanDemo(plan: string) {
 /** ¿Hay un ingreso de demo en curso? (se lee del almacenamiento, no del estado de React). */
 export function hayIngresoDemo() {
   return leer<IngresoActual | null>(KEY_INGRESO, null) !== null;
+}
+
+/** Identidad de prueba del navegador para quien recorre el demo sin cuenta (no es un dato personal). */
+export function identidadVisitante() {
+  let id = leer<string | null>(KEY_VISITANTE, null);
+  if (!id) {
+    id = `visitante-${nuevoId()}`;
+    escribir(KEY_VISITANTE, id);
+  }
+  return id;
+}
+
+export function contactoVisitante(): Contacto {
+  return { email: identidadVisitante(), nombre: "Visitante sin cuenta", clinica: "Sin registrar" };
+}
+
+/** Hasta cuándo tiene que esperar esa identidad para volver a entrar (null si puede entrar). */
+export function esperaDemoHasta(identidad: string): number | null {
+  const hasta = leer<Record<string, number>>(KEY_ESPERA, {})[identidad];
+  return hasta && hasta > Date.now() ? hasta : null;
+}
+
+/** Pedido de información comercial o de contratación desde el demo. */
+export function registrarSolicitudDemo(tipo: "Información comercial" | "Contratación") {
+  const c =
+    leer<IngresoActual | null>(KEY_INGRESO, null) ??
+    leer<Contacto | null>(KEY_ULTIMO, null) ??
+    contactoVisitante();
+  registrar("solicitud", c, tipo);
 }
 
 export function leerEventosDemo(): EventoDemo[] {

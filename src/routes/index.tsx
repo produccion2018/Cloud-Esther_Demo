@@ -221,14 +221,20 @@ function AnimatedLine({
             delay: delay + index * 0.08,
             ease: EASE,
           }}
-          style={
-            shimmer ? { animationDelay: `${index * 0.45}s` } : undefined
-          }
           className={`inline-block text-[3.8rem] font-bold leading-[0.92] tracking-[-0.055em] sm:text-6xl lg:text-[4.7rem] ${
             index < words.length - 1 ? "mr-[0.22em]" : ""
-          } ${className}`}
+          }`}
         >
-          {word}
+          <span
+            className={`inline-block ${className}`}
+            style={
+              shimmer
+                ? { animationDelay: `${(index * 0.45).toFixed(2)}s` }
+                : undefined
+            }
+          >
+            {word}
+          </span>
         </motion.span>
       ))}
     </span>

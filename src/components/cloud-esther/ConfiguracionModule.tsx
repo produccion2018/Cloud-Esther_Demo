@@ -30,12 +30,11 @@ import {
   CalendarDays,
   Mail,
   Smartphone,
-  Bot,
   Workflow,
   CalendarCheck,
-  BriefcaseBusiness,
   Sun,
 } from "lucide-react";
+import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 
@@ -135,83 +134,53 @@ const ALL_SIDEBAR_COLORS: ExtraSidebarColor[] = [
   ...EXTRA_SIDEBAR_COLORS.filter((extra) => !SIDEBAR_COLORS.some((color) => color.id === extra.id)),
 ];
 
+/* Cada carpeta lleva al módulo donde hoy viven esos documentos.
+   TODO backend: almacenamiento de archivos con conteo real por carpeta. */
 const DIRECTORIO_ITEMS = [
   {
     title: "Documentos clínicos",
     description: "Historias, consentimientos y formularios.",
-    count: "12 archivos",
+    modulo: "Historia clínica",
+    to: "/demo/historia",
     icon: FolderOpen,
   },
   {
     title: "Imágenes",
     description: "Fotos, radiografías y estudios visuales.",
-    count: "45 archivos",
+    modulo: "Estudios",
+    to: "/demo/estudios",
     icon: Image,
   },
   {
     title: "Recetas y estudios",
     description: "Recetas, órdenes y estudios complementarios.",
-    count: "28 archivos",
+    modulo: "Recetas",
+    to: "/demo/recetas",
     icon: ClipboardList,
   },
   {
     title: "Facturación",
     description: "Comprobantes, facturas y presupuestos.",
-    count: "16 archivos",
+    modulo: "Facturación",
+    to: "/demo/facturacion",
     icon: Receipt,
   },
   {
     title: "RRHH",
     description: "Legajos, contratos y capacitaciones.",
-    count: "8 archivos",
+    modulo: "RRHH",
+    to: "/demo/rrhh",
     icon: UserRound,
   },
 ];
 
-const INTEGRACIONES = [
-  {
-    name: "n8n",
-    description: "Automatizaciones y flujos",
-    icon: Workflow,
-    status: "Disponible",
-    statusClass: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    name: "OpenAI / IA Esther",
-    description: "Asistente inteligente",
-    icon: Bot,
-    status: "Disponible",
-    statusClass: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    name: "Microsoft 365",
-    description: "Correo y calendario",
-    icon: BriefcaseBusiness,
-    status: "Conectado",
-    statusClass: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    name: "Google Calendar",
-    description: "Agenda y eventos",
-    icon: CalendarCheck,
-    status: "Conectado",
-    statusClass: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    name: "Turno",
-    description: "Base de datos opcional",
-    icon: Database,
-    status: "Disponible",
-    statusClass: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    name: "Otras integraciones",
-    description: "APIs y webhooks",
-    icon: PlugZap,
-    status: "En desarrollo",
-    statusClass: "bg-muted text-muted-foreground",
-  },
-];
+/* Íconos de los conectores de Integraciones (el estado real sale de integraciones.ts). */
+const ICONO_CONECTOR: Record<string, typeof PlugZap> = {
+  n8n: Workflow,
+  "google-calendar": CalendarCheck,
+  webhooks: PlugZap,
+  dicom: Database,
+};
 
 export function ConfiguracionModule({ onToast }: Props) {
   const { clinic, plan } = useCloudEsther();
@@ -298,7 +267,7 @@ export function ConfiguracionModule({ onToast }: Props) {
 
           {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
 
-          {tab === "directorio" && <DirectorioTab onToast={onToast} />}
+          {tab === "directorio" && <DirectorioTab />}
 
           {tab === "apariencia" && <AparienciaTab settings={settings} actualizar={actualizar} />}
 
@@ -558,7 +527,7 @@ function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
 /*                                DIRECTORIO                                  */
 /* -------------------------------------------------------------------------- */
 
-function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
+function DirectorioTab() {
   return (
     <div className="space-y-4">
       <div className={`${CARD} p-5`}>
@@ -568,15 +537,6 @@ function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
             title="Directorio"
             description="Gestioná los archivos y documentos de tu clínica."
           />
-
-          <button
-            type="button"
-            onClick={() => onToast("Directorio")}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-bold text-foreground transition hover:bg-muted/60"
-          >
-            <FolderOpen className="size-3.5" />
-            Abrir directorio
-          </button>
         </div>
 
         <div className="mt-4 rounded-xl border border-primary/10 bg-primary/[0.045] p-3">
@@ -584,7 +544,9 @@ function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
             <FolderOpen className="mt-0.5 size-4 shrink-0 text-primary" />
 
             <p className="text-xs leading-relaxed text-muted-foreground">
-              El directorio centraliza los documentos y recursos asociados a tu clínica.
+              El directorio agrupa los documentos de tu clínica por tipo. Tocá una carpeta para ir
+              al módulo donde están. El almacenamiento centralizado de archivos (con espacio usado y
+              cantidad por carpeta) se habilita cuando se conecte el servidor.
             </p>
           </div>
         </div>
@@ -595,11 +557,10 @@ function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
           const Icon = item.icon;
 
           return (
-            <button
+            <Link
               key={item.title}
-              type="button"
-              onClick={() => onToast(item.title)}
-              className={`${CARD} group p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/30`}
+              to={item.to as never}
+              className={`${CARD} group block p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/30`}
             >
               <div className="flex items-center gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -616,9 +577,9 @@ function DirectorioTab({ onToast }: { onToast: (msg: string) => void }) {
               </div>
 
               <div className="mt-4 border-t border-border/60 pt-3 text-[11px] font-medium text-muted-foreground">
-                {item.count}
+                Están en <span className="font-semibold text-primary">{item.modulo}</span>
               </div>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -832,22 +793,24 @@ function NotificacionesTab({
 /* -------------------------------------------------------------------------- */
 
 function IntegracionesTab() {
+  const { conectores } = useIntegraciones();
   return (
     <div className="space-y-4">
       <div className={`${CARD} p-5`}>
         <SectionHeader
           icon={PlugZap}
           title="Integraciones"
-          description="Conectá Cloud Esther con tus herramientas favoritas."
+          description="Estado real de los conectores de tu clínica. Se conectan y prueban desde el módulo Integraciones."
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {INTEGRACIONES.map((integration) => {
-          const Icon = integration.icon;
+        {conectores.map((c) => {
+          const Icon = ICONO_CONECTOR[c.id] ?? PlugZap;
+          const conectado = c.estado === "Conectado";
 
           return (
-            <div key={integration.name} className={`${CARD} p-5`}>
+            <div key={c.id} className={`${CARD} p-5`}>
               <div className="flex items-start gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="size-5" />
@@ -855,33 +818,29 @@ function IntegracionesTab() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-display text-sm font-bold text-foreground">
-                      {integration.name}
-                    </p>
-
-                    {integration.name === "n8n" && (
-                      <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold text-primary">
-                        Pro
-                      </span>
-                    )}
+                    <p className="font-display text-sm font-bold text-foreground">{c.nombre}</p>
                   </div>
 
-                  <p className="mt-1 text-xs text-muted-foreground">{integration.description}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{c.descripcion}</p>
                 </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${integration.statusClass}`}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    conectado
+                      ? "bg-emerald-500/10 text-emerald-600"
+                      : "bg-muted text-muted-foreground"
+                  }`}
                 >
-                  {integration.status}
+                  {c.estado}
                 </span>
 
                 <Link
                   to={"/demo/integraciones" as never}
                   className="text-xs font-semibold text-primary hover:underline"
                 >
-                  Configurar
+                  {conectado ? "Configurar" : "Conectar"}
                 </Link>
               </div>
             </div>

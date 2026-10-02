@@ -30,8 +30,10 @@ export type ConfigDemo = {
   exentos: string[];
 };
 
+/* Mientras no haya backend el límite queda APAGADO: nadie ve contador ni corte.
+   Se enciende desde el panel del dueño cuando el servidor esté conectado. */
 export const CONFIG_DEMO_INICIAL: ConfigDemo = {
-  limiteActivo: true,
+  limiteActivo: false,
   minutos: 30,
   esperaMinutos: 60,
   avisoMinutos: 5,
@@ -307,7 +309,7 @@ export function useTiempoDemo() {
     const calcular = () => {
       const ingreso = leer<IngresoActual | null>(KEY_INGRESO, null);
       setRestante(
-        ingreso && ingreso.expira !== null && !esModoDueno()
+        ingreso && ingreso.expira !== null && !esModoDueno() && configDemo().limiteActivo
           ? Math.max(0, ingreso.expira - Date.now())
           : null,
       );

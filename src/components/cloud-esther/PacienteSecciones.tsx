@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import {
   SUCURSALES as SUCURSALES_AGENDA,
@@ -6882,6 +6883,9 @@ type TabEstudios =
   "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
+  // mediciones, vínculo con tratamientos y diagnóstico.
+  const conDiagnostico = useNivel("estudios").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [tab, setTab] = useState<TabEstudios>("galeria");
   const [visorId, setVisorId] = useState<number | null>(null);
@@ -6893,26 +6897,34 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const informados = datos.estudios.filter((s) => s.estadoInforme === "Informado").length;
   const activos = datos.diagnosticos.filter((d) => d.estado === "Activo").length;
 
-  const TABS: { id: TabEstudios; label: string; icon: LucideIcon }[] = [
+  const TODAS: { id: TabEstudios; label: string; icon: LucideIcon; avanzado?: boolean }[] = [
     { id: "galeria", label: "Galería", icon: Images },
     { id: "fotografias", label: "Fotografías", icon: Camera },
-    { id: "comparar", label: "Comparar", icon: GitCompare },
-    { id: "anotaciones", label: "Mediciones", icon: Ruler },
-    { id: "vinculados", label: "Tratamiento", icon: Link2 },
-    { id: "diagnostico", label: "Diagnóstico", icon: Activity },
+    { id: "comparar", label: "Comparar", icon: GitCompare, avanzado: true },
+    { id: "anotaciones", label: "Mediciones", icon: Ruler, avanzado: true },
+    { id: "vinculados", label: "Tratamiento", icon: Link2, avanzado: true },
+    { id: "diagnostico", label: "Diagnóstico", icon: Activity, avanzado: true },
   ];
+  const TABS = TODAS.filter((t) => conDiagnostico || !t.avanzado);
+  const tabVisible = TABS.some((t) => t.id === tab) ? tab : "galeria";
 
   return (
     <div className="space-y-3">
       <Encabezado
         icon={Images}
-        titulo="Estudios y diagnóstico por imagen"
-        descripcion="Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+        titulo={conDiagnostico ? "Estudios y diagnóstico por imagen" : "Estudios clínicos"}
+        descripcion={
+          conDiagnostico
+            ? "Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+            : "Radiografías, tomografías y fotografías clínicas del paciente, ordenadas por fecha."
+        }
         etiquetaBoton="Cargar estudio"
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
+      <div
+        className={`grid grid-cols-2 gap-2.5 ${conDiagnostico ? "md:grid-cols-5" : "md:grid-cols-3"}`}
+      >
         <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
         <ResumenCuenta
           etiqueta="Informados"
@@ -6926,23 +6938,27 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={Clock3}
           tono={datos.estudios.length - informados > 0 ? "text-amber-600" : ""}
         />
-        <ResumenCuenta
-          etiqueta="Mediciones"
-          valor={String(datos.anotaciones.length)}
-          icon={Ruler}
-        />
-        <ResumenCuenta
-          etiqueta="Diagnósticos activos"
-          valor={String(activos)}
-          icon={Activity}
-          tono="text-primary"
-        />
+        {conDiagnostico && (
+          <>
+            <ResumenCuenta
+              etiqueta="Mediciones"
+              valor={String(datos.anotaciones.length)}
+              icon={Ruler}
+            />
+            <ResumenCuenta
+              etiqueta="Diagnósticos activos"
+              valor={String(activos)}
+              icon={Activity}
+              tono="text-primary"
+            />
+          </>
+        )}
       </div>
 
       <div className="card-grad p-1">
-        <div className="grid grid-cols-2 gap-1 md:grid-cols-6">
+        <div className={`grid grid-cols-2 gap-1 ${conDiagnostico ? "md:grid-cols-6" : ""}`}>
           {TABS.map((t) => {
-            const activa = tab === t.id;
+            const activa = tabVisible === t.id;
             return (
               <button
                 key={t.id}
@@ -6962,7 +6978,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         </div>
       </div>
 
-      {tab === "galeria" && (
+      {tabVisible === "galeria" && (
         <GaleriaTab
           estudios={lista}
           onVer={setVisorId}
@@ -6975,15 +6991,15 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           }}
         />
       )}
-      {tab === "fotografias" && (
+      {tabVisible === "fotografias" && (
         <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />
       )}
-      {tab === "comparar" && <CompararTab estudios={datos.estudios} />}
-      {tab === "anotaciones" && (
+      {tabVisible === "comparar" && <CompararTab estudios={datos.estudios} />}
+      {tabVisible === "anotaciones" && (
         <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />
       )}
-      {tab === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
-      {tab === "diagnostico" && (
+      {tabVisible === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
+      {tabVisible === "diagnostico" && (
         <DiagnosticoTab datos={datos} cambiar={cambiar} onToast={onToast} />
       )}
 
@@ -8149,6 +8165,9 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
 }
 
 function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: registrar trabajos y su estado. Pro en adelante: seguimiento por pasos, avisos de
+  // demora, costos, filtros y orden imprimible para el laboratorio.
+  const conSeguimiento = useNivel("laboratorio").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
@@ -8206,7 +8225,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-2.5 ${conSeguimiento ? "md:grid-cols-4" : ""}`}>
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(enProceso)}
@@ -8219,20 +8238,24 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={PackageCheck}
           tono="text-emerald-600"
         />
-        <ResumenCuenta
-          etiqueta="Demorados"
-          valor={String(demorados)}
-          icon={Clock3}
-          tono={demorados ? "text-destructive" : ""}
-        />
-        <ResumenCuenta
-          etiqueta="Costo total"
-          valor={formatearMonto(costoTotal)}
-          icon={CircleDollarSign}
-        />
+        {conSeguimiento && (
+          <>
+            <ResumenCuenta
+              etiqueta="Demorados"
+              valor={String(demorados)}
+              icon={Clock3}
+              tono={demorados ? "text-destructive" : ""}
+            />
+            <ResumenCuenta
+              etiqueta="Costo total"
+              valor={formatearMonto(costoTotal)}
+              icon={CircleDollarSign}
+            />
+          </>
+        )}
       </div>
 
-      {todos.length > 0 && (
+      {conSeguimiento && todos.length > 0 && (
         <div className="card-grad flex flex-wrap gap-1.5 p-2">
           {FILTROS.map((f) => (
             <button
@@ -8282,7 +8305,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                         </Badge>
                       )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
-                      {aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                      {conSeguimiento && aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       {t.material && <span>{t.material}</span>}
@@ -8294,12 +8317,12 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                     </p>
                   </div>
-                  {t.costo > 0 && (
+                  {conSeguimiento && t.costo > 0 && (
                     <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>
                   )}
                 </div>
 
-                <PasosLaboratorio trabajo={t} />
+                {conSeguimiento && <PasosLaboratorio trabajo={t} />}
 
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -8329,14 +8352,16 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       onClick={() => cambiarEstado(t, "Entregado")}
                     />
                   )}
-                  <BotonMini
-                    icon={Printer}
-                    label="Orden"
-                    onClick={() => {
-                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
-                        onToast("Permití las ventanas emergentes para imprimir");
-                    }}
-                  />
+                  {conSeguimiento && (
+                    <BotonMini
+                      icon={Printer}
+                      label="Orden"
+                      onClick={() => {
+                        if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
+                          onToast("Permití las ventanas emergentes para imprimir");
+                      }}
+                    />
+                  )}
                   <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
                   <BotonBorrar
                     etiqueta="Eliminar trabajo de laboratorio"

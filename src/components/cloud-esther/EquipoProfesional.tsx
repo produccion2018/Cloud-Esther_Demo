@@ -340,6 +340,9 @@ export function EquipoProfesional() {
   const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
   const { turnos } = storeAgenda.usar()
   const [vista, setVista] = useState<VistaEquipo>("integrantes")
+  // El portal del profesional es exclusivo de Enterprise.
+  const { plan: planEquipo } = useCloudEsther()
+  const vistas = VISTAS.filter((v) => v.id !== "portal" || planEquipo === "grupo")
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<FilterKey>("todos")
   const [selected, setSelected] = useState<TeamMember | null>(null)
@@ -597,7 +600,7 @@ export function EquipoProfesional() {
           </div>
 
           <nav className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5" aria-label="Vistas del equipo">
-            {VISTAS.map((v) => (
+            {vistas.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setVista(v.id)}
@@ -621,7 +624,7 @@ export function EquipoProfesional() {
         {vista === "desempeno" && <DesempenoEquipo />}
         {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
         {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}
-        {vista === "portal" && <PortalEquipoMonitor onToast={showToast} />}
+        {vista === "portal" && planEquipo === "grupo" && <PortalEquipoMonitor onToast={showToast} />}
         {vista === "integrantes" && (
           <div className="space-y-3">
             <div className="card-grad flex flex-col gap-2.5 p-2.5 lg:flex-row lg:items-center">

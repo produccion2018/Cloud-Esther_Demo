@@ -36,6 +36,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { useNivel } from "@/lib/cloud-esther/niveles";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import {
@@ -410,6 +411,7 @@ function NotificacionesInner() {
   const { historial } = storeNotificaciones.usar();
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("bandeja");
+  const nivelNotif = useNivel("notificaciones");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("pendientes");
   const [filtroCategoria, setFiltroCategoria] = useState<"" | CategoriaNotif>("");
   const [filtroPrioridad, setFiltroPrioridad] = useState<"" | "altas">("");
@@ -434,12 +436,29 @@ function NotificacionesInner() {
     (n) => n.estado.completada?.slice(0, 10) === hoy,
   ).length;
 
-  const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; contador?: number }[] = [
+  // Start: bandeja e historial. Pro en adelante: filtros por área y prioridad, avisos
+  // pospuestos y preferencias (qué se avisa, a quién y el resumen diario).
+  const conReglas = nivelNotif.desde("avanzado");
+  const TODAS: {
+    id: Seccion;
+    label: string;
+    icon: LucideIcon;
+    contador?: number;
+    reglas?: boolean;
+  }[] = [
     { id: "bandeja", label: "Bandeja", icon: Bell, contador: sinLeer },
-    { id: "pospuestas", label: "Pospuestas", icon: AlarmClock, contador: pospuestas.length },
-    { id: "preferencias", label: "Preferencias", icon: Settings2 },
+    {
+      id: "pospuestas",
+      label: "Pospuestas",
+      icon: AlarmClock,
+      contador: pospuestas.length,
+      reglas: true,
+    },
+    { id: "preferencias", label: "Preferencias", icon: Settings2, reglas: true },
     { id: "historial", label: "Historial", icon: History },
   ];
+  const SECCIONES = TODAS.filter((x) => conReglas || !x.reglas);
+  const seccionVisible: Seccion = SECCIONES.some((x) => x.id === seccion) ? seccion : "bandeja";
 
   const nueva = () => setFormulario({ inicial: null });
 
@@ -479,10 +498,12 @@ function NotificacionesInner() {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <button className={BTN_SECUNDARIO} onClick={() => setSeccion("preferencias")}>
-                    <Settings2 className="size-4" />
-                    Preferencias
-                  </button>
+                  {conReglas && (
+                    <button className={BTN_SECUNDARIO} onClick={() => setSeccion("preferencias")}>
+                      <Settings2 className="size-4" />
+                      Preferencias
+                    </button>
+                  )}
                   <button className={BTN_PRIMARIO} onClick={nueva}>
                     <Plus className="size-4" />
                     Nuevo aviso
@@ -548,9 +569,9 @@ function NotificacionesInner() {
                   <button
                     key={s.id}
                     onClick={() => setSeccion(s.id)}
-                    aria-pressed={seccion === s.id}
+                    aria-pressed={seccionVisible === s.id}
                     className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                      seccion === s.id
+                      seccionVisible === s.id
                         ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
                         : "text-muted-foreground hover:bg-white hover:text-foreground"
                     }`}
@@ -560,7 +581,9 @@ function NotificacionesInner() {
                     {montado && !!s.contador && (
                       <span
                         className={`grid min-w-4 place-items-center rounded-full px-1 text-[10px] ${
-                          seccion === s.id ? "bg-white/25" : "bg-primary text-primary-foreground"
+                          seccionVisible === s.id
+                            ? "bg-white/25"
+                            : "bg-primary text-primary-foreground"
                         }`}
                       >
                         {s.contador}
@@ -575,8 +598,9 @@ function NotificacionesInner() {
           <div className="mt-5">
             {!montado ? (
               <div className="card-grad h-[520px] animate-pulse" />
-            ) : seccion === "bandeja" ? (
+            ) : seccionVisible === "bandeja" ? (
               <Bandeja
+                conFiltros={conReglas}
                 notificaciones={notificaciones}
                 usuario={usuario}
                 onToast={onToast}
@@ -589,9 +613,9 @@ function NotificacionesInner() {
                 filtroPrioridad={filtroPrioridad}
                 setFiltroPrioridad={setFiltroPrioridad}
               />
-            ) : seccion === "pospuestas" ? (
+            ) : seccionVisible === "pospuestas" ? (
               <Pospuestas pospuestas={pospuestas} usuario={usuario} onToast={onToast} />
-            ) : seccion === "preferencias" ? (
+            ) : seccionVisible === "preferencias" ? (
               <PreferenciasSec onToast={onToast} />
             ) : (
               <Historial onToast={onToast} />
@@ -666,7 +690,9 @@ function Bandeja({
   setFiltroCategoria,
   filtroPrioridad,
   setFiltroPrioridad,
+  conFiltros,
 }: {
+  conFiltros: boolean;
   notificaciones: Notif[];
   usuario: string;
   onToast: (m: string) => void;
@@ -794,52 +820,54 @@ function Bandeja({
               ]}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => setFiltroPrioridad(filtroPrioridad ? "" : "altas")}
-              aria-pressed={!!filtroPrioridad}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                filtroPrioridad
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-border bg-white text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <CircleAlert className="size-3" />
-              Solo urgentes y altas
-            </button>
-            {CATEGORIAS_NOTIF.map((c) => {
-              const Icon = CATEGORIA_ESTILO[c].icon;
-              const activa = filtroCategoria === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setFiltroCategoria(activa ? "" : c)}
-                  aria-pressed={activa}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                    activa
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-border bg-white text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-3" />
-                  {c}
-                </button>
-              );
-            })}
-            {hayFiltros && (
+          {conFiltros && (
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
-                onClick={() => {
-                  setFiltroCategoria("");
-                  setFiltroPrioridad("");
-                  setAsignado("");
-                  setBusqueda("");
-                }}
-                className="ml-auto text-[11px] font-semibold text-primary hover:underline"
+                onClick={() => setFiltroPrioridad(filtroPrioridad ? "" : "altas")}
+                aria-pressed={!!filtroPrioridad}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  filtroPrioridad
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-border bg-white text-muted-foreground hover:text-foreground"
+                }`}
               >
-                Limpiar filtros
+                <CircleAlert className="size-3" />
+                Solo urgentes y altas
               </button>
-            )}
-          </div>
+              {CATEGORIAS_NOTIF.map((c) => {
+                const Icon = CATEGORIA_ESTILO[c].icon;
+                const activa = filtroCategoria === c;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setFiltroCategoria(activa ? "" : c)}
+                    aria-pressed={activa}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      activa
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border bg-white text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="size-3" />
+                    {c}
+                  </button>
+                );
+              })}
+              {hayFiltros && (
+                <button
+                  onClick={() => {
+                    setFiltroCategoria("");
+                    setFiltroPrioridad("");
+                    setAsignado("");
+                    setBusqueda("");
+                  }}
+                  className="ml-auto text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {sinLeerVisibles.length > 1 && (

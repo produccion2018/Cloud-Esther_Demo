@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   MODULES,
   availableIn,
+  etiquetaModulo,
   incluidoEnPlan,
   planLevel,
   ModuleIcon,
@@ -13,6 +14,7 @@ import {
   useCloudEsther,
   type PlanId,
 } from "@/lib/cloud-esther/data";
+import { nivelModulo } from "@/lib/cloud-esther/niveles";
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/ControlDemo";
@@ -201,7 +203,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                     <li key={m.id}>
                       <div className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-sidebar-foreground/35">
                         <ModuleIcon name={m.icon} className="size-4 shrink-0" />
-                        <span className="truncate">{m.label}</span>
+                        <span className="truncate">{etiquetaModulo(m, plan)}</span>
                         <Lock className="ml-auto size-3" />
                       </div>
                     </li>
@@ -230,7 +232,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                             name={m.icon}
                             className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
                           />
-                          <span className="truncate">{m.label}</span>
+                          <span className="truncate">{etiquetaModulo(m, plan)}</span>
                           {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
                             <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
                               Adicional
@@ -242,7 +244,11 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                         </Link>
                         <button
                           type="button"
-                          aria-label={isOpen ? `Contraer ${m.label}` : `Desplegar ${m.label}`}
+                          aria-label={
+                            isOpen
+                              ? `Contraer ${etiquetaModulo(m, plan)}`
+                              : `Desplegar ${etiquetaModulo(m, plan)}`
+                          }
                           aria-expanded={isOpen}
                           onClick={() => toggle(m.id, isOpen)}
                           className={cn(
@@ -290,7 +296,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                         name={m.icon}
                         className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
                       />
-                      <span className="truncate">{m.label}</span>
+                      <span className="truncate">{etiquetaModulo(m, plan)}</span>
                       {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
                         <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
                           Adicional
@@ -537,15 +543,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const irAl2D = bloqueado?.id === "odontograma3d" && odontogramaDelPlan(plan) === "2d";
   const moduloIA = MODULES.find((m) => m.id === "ia");
   // Módulos que recorre una cuenta de demo (para medir el interés desde el panel admin).
-  const etiquetaModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
+  const nombreModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
   const { clinicId } = useSesion();
   const auditarModulos = settings.auditLogEnabled;
   useEffect(() => {
-    if (!etiquetaModulo) return;
-    registrarModuloDemo(etiquetaModulo);
+    if (!nombreModulo) return;
+    registrarModuloDemo(nombreModulo);
     // Auditoría de la clínica: actividad de la sesión y (si está activado) accesos a módulos.
-    if (clinicId) registrarActividadAuditoria(clinicId, etiquetaModulo, auditarModulos);
-  }, [etiquetaModulo, clinicId, auditarModulos]);
+    if (clinicId) registrarActividadAuditoria(clinicId, nombreModulo, auditarModulos);
+  }, [nombreModulo, clinicId, auditarModulos]);
 
   // El motor 3D pesa: en los planes con Odontograma 3D se descarga en segundo plano apenas
   // el navegador está libre, así el odontograma aparece rápido cuando se abre.
@@ -573,10 +579,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [settings.darkModePage, settings.fontSize]);
 
-  const colorHex = SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed";
+  // El color del menú lateral se elige desde Pro; en Start se usa el violeta de la marca.
+  const conColorMenu = nivelModulo("configuracion", plan) !== "basico";
+  const colorHex = conColorMenu
+    ? (SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed")
+    : "#7c3aed";
   const sidebarStyle = buildSidebarPalette(
     colorHex,
-    settings.darkModeSidebar || settings.darkModePage,
+    (conColorMenu && settings.darkModeSidebar) || settings.darkModePage,
   );
 
   return (
@@ -617,6 +627,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {iaDisponible &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
+        // El Odontograma 2D (Start y Pro) no lleva IA ni audio: eso es del 3D.
+        modulo?.id !== "odontograma" &&
         // RRHH ya tiene su propia Esther (especializada en el equipo) en el mismo lugar.
         !pathname.startsWith("/demo/rrhh") && (
           <EstherFlotante

@@ -1,3 +1,4 @@
+import { useNivel } from "@/lib/cloud-esther/niveles";
 import { createFileRoute } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -1907,6 +1908,16 @@ function AgendaInner() {
     .filter(Boolean);
 
   const [vista, setVista] = useState<Vista>("dia");
+  // Start: agenda del día y la semana, lista de turnos y filtro por odontólogo.
+  // Pro: vista mensual, bloqueos, todos los filtros, lista de espera y recordatorios.
+  // Plus y Enterprise: además, recordatorios automáticos por WhatsApp, SMS o correo.
+  const nivelAgenda = useNivel("agenda");
+  const agendaAvanzada = nivelAgenda.desde("avanzado");
+  const agendaCompleta = nivelAgenda.desde("completo");
+  const vistas = VISTAS.filter((v) => agendaAvanzada || v.id !== "mes");
+  useEffect(() => {
+    if (!agendaAvanzada && vista === "mes") setVista("dia");
+  }, [agendaAvanzada, vista]);
   const [modal, setModal] = useState<ModalActivo>(null);
 
   const [filtros, setFiltros] = useState({
@@ -2206,11 +2217,13 @@ function AgendaInner() {
                       Agenda y turnos
                     </h1>
                     <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                      Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera
-                      desde una única agenda.
+                      {agendaAvanzada
+                        ? "Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera desde una única agenda."
+                        : "Organizá los turnos del día y de la semana de cada profesional."}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {agendaAvanzada && (
                     <button
                       onClick={() => setModal({ tipo: "bloqueo" })}
                       className="btn-ce-outline"
@@ -2218,6 +2231,7 @@ function AgendaInner() {
                       <Lock className="size-3.5" />
                       Bloquear horario
                     </button>
+                    )}
                     <button onClick={() => setModal({ tipo: "cita" })} className="btn-ce">
                       <Plus className="size-3.5" />
                       Nueva cita
@@ -2274,7 +2288,8 @@ function AgendaInner() {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className={`grid grid-cols-1 gap-2.5 ${agendaAvanzada ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:max-w-xs"}`}>
+                    {agendaAvanzada && (
                     <SelectField
                       compact
                       value={filtros.sucursal}
@@ -2287,6 +2302,7 @@ function AgendaInner() {
                       options={SUCURSALES}
                       placeholder="Todas las sucursales"
                     />
+                    )}
 
                     <SelectField
                       compact
@@ -2301,6 +2317,8 @@ function AgendaInner() {
                       placeholder="Todos los odontólogos"
                     />
 
+                    {agendaAvanzada && (
+                    <>
                     <SelectField
                       compact
                       value={filtros.gabinete}
@@ -2326,6 +2344,8 @@ function AgendaInner() {
                       options={TRATAMIENTOS}
                       placeholder="Todos los tratamientos"
                     />
+                    </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2335,7 +2355,7 @@ function AgendaInner() {
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="inline-flex rounded-full border border-primary/20 bg-card/75 p-1 shadow-sm backdrop-blur-sm">
-                {VISTAS.map((v) => {
+                {vistas.map((v) => {
                   const Icon = v.icon;
                   const activa = vista === v.id;
 
@@ -2484,8 +2504,9 @@ function AgendaInner() {
                   }}
                 />
 
-                {/* Lista de espera */}
+                {/* Lista de espera (desde Pro) */}
 
+                {agendaAvanzada && (
                 <div className={CARD}>
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -2588,9 +2609,11 @@ function AgendaInner() {
                     </ul>
                   )}
                 </div>
+                )}
 
-                {/* Recordatorios y tareas */}
+                {/* Recordatorios y tareas (desde Pro) */}
 
+                {agendaAvanzada && (
                 <div className={CARD}>
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -2725,9 +2748,11 @@ function AgendaInner() {
                     </ul>
                   )}
                 </div>
+                )}
 
-                {/* Recordatorios automáticos */}
+                {/* Recordatorios automáticos (Plus y Enterprise) */}
 
+                {agendaCompleta && (
                 <div className={CARD}>
                   <div className="flex items-center gap-2">
                     <IconTile icon={BellRing} />
@@ -2795,6 +2820,7 @@ function AgendaInner() {
                     })}
                   </ul>
                 </div>
+                )}
               </div>
             </div>
           </div>

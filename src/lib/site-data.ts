@@ -66,9 +66,12 @@ export const plans: Plan[] = [
       "Historia clínica",
       "Odontograma 2D",
       "Recetas y tratamientos",
+      "Equipo: integrantes, especialidades y horarios",
       "Estudios clínicos",
-      "Finanzas y facturación básica",
-      "Notificaciones y recordatorios básicos",
+      "Laboratorio básico",
+      "Comunicación básica",
+      "Configuración con modo oscuro",
+      "Notificaciones",
     ],
   },
 
@@ -89,12 +92,12 @@ export const plans: Plan[] = [
       "Presupuestos",
       "Pagos y facturación avanzada",
       "Estudios y diagnóstico",
-      "Laboratorio",
+      "Laboratorio avanzado",
       "Analítica y reportes",
       "Documentos",
       "Notificaciones avanzadas",
       "Integraciones básicas",
-      "Configuración básica",
+      "Configuración: modo oscuro y color del menú",
     ],
     featured: true,
   },
@@ -138,6 +141,8 @@ export const plans: Plan[] = [
     modules: "Todos los módulos",
     features: [
       "Todo lo del plan Plus",
+      "Portal del paciente",
+      "Portal del profesional",
       "Hasta 5 empresas por cuenta corporativa",
       "Administración multiempresa",
       "Gestión centralizada de sucursales",
@@ -218,13 +223,13 @@ export const comparison: { feature: string; values: string[] }[] = [
     values: ["—", "—", "✓", "✓"],
   },
 
-  { feature: "Laboratorio", values: ["—", "✓", "✓", "✓"] },
+  { feature: "Laboratorio", values: ["Básico", "Avanzado", "Avanzado", "Avanzado"] },
 
-  { feature: "Finanzas", values: ["Básicas", "✓", "✓", "✓"] },
+  { feature: "Finanzas", values: ["—", "—", "✓", "✓"] },
 
   {
     feature: "Facturación y pagos",
-    values: ["Básica", "Avanzada", "Avanzada", "Avanzada"],
+    values: ["—", "Avanzada", "Avanzada", "Avanzada"],
   },
 
   { feature: "Presupuestos", values: ["—", "✓", "✓", "✓"] },
@@ -241,7 +246,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Comunicación",
-    values: ["—", "✓", "Avanzada", "Avanzada"],
+    values: ["Básica", "Con pacientes", "Avanzada", "Avanzada"],
   },
 
   {
@@ -286,7 +291,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Configuración",
-    values: ["Básica", "Básica", "Avanzada", "Avanzada"],
+    values: ["Modo oscuro", "Modo oscuro y menú", "Avanzada", "Avanzada"],
   },
 
   {
@@ -305,8 +310,13 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Portal de pacientes",
-    values: ["—", "—", "—", "—"],
+    feature: "Portal del paciente",
+    values: ["—", "—", "—", "✓"],
+  },
+
+  {
+    feature: "Portal del profesional",
+    values: ["—", "—", "—", "✓"],
   },
 
   {

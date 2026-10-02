@@ -35,6 +35,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
+import { nivelModulo, type NivelModulo } from "@/lib/cloud-esther/niveles";
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 
@@ -73,15 +74,15 @@ const TABS: {
   id: TabId;
   label: string;
   icon: typeof Settings;
-  /** Nivel de plan mínimo: Start y Pro tienen la configuración básica; Plus y Enterprise, la avanzada. */
+  /** Nivel de plan mínimo para ver la pestaña (1 Start, 2 Pro, 3 Plus, 4 Enterprise). */
   min?: number;
 }[] = [
   { id: "general", label: "General", icon: Settings },
   { id: "profesionales", label: "Profesionales", icon: Users },
-  { id: "directorio", label: "Directorio", icon: FolderOpen, min: 3 },
+  { id: "directorio", label: "Documentos", icon: FolderOpen, min: 2 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
-  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 3 },
+  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 2 },
   { id: "seguridad", label: "Seguridad y auditoría", icon: ShieldCheck, min: 3 },
 ];
 
@@ -231,7 +232,11 @@ export function ConfiguracionModule({ onToast }: Props) {
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
           <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
           <div className="relative p-5 md:p-7">
-            <ConfiguracionHeader avanzada={avanzada} planNombre={PLANS[plan].name} />
+            <ConfiguracionHeader
+              conPro={planLevel(plan) >= 2}
+              avanzada={avanzada}
+              planNombre={PLANS[plan].name}
+            />
             <nav
               className="mt-5 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
               aria-label="Secciones de configuración"
@@ -269,7 +274,13 @@ export function ConfiguracionModule({ onToast }: Props) {
 
           {tab === "directorio" && <DirectorioTab />}
 
-          {tab === "apariencia" && <AparienciaTab settings={settings} actualizar={actualizar} />}
+          {tab === "apariencia" && (
+            <AparienciaTab
+              settings={settings}
+              actualizar={actualizar}
+              nivel={nivelModulo("configuracion", plan)}
+            />
+          )}
 
           {tab === "notificaciones" && (
             <NotificacionesTab settings={settings} actualizar={actualizar} onToast={onToast} />
@@ -295,7 +306,15 @@ export function ConfiguracionModule({ onToast }: Props) {
 /*                               HEADER                                       */
 /* -------------------------------------------------------------------------- */
 
-function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; planNombre: string }) {
+function ConfiguracionHeader({
+  avanzada,
+  planNombre,
+  conPro,
+}: {
+  avanzada: boolean;
+  planNombre: string;
+  conPro: boolean;
+}) {
   const { setPlan, planContratado } = useCloudEsther();
   return (
     <div className="flex flex-wrap items-start justify-between gap-5">
@@ -308,7 +327,7 @@ function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; plan
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${avanzada ? "border-primary/20 bg-primary/10 text-primary" : "border-sky-200 bg-sky-50 text-sky-700"}`}
           >
-            {avanzada ? "Configuración avanzada" : "Configuración básica"} · Plan {planNombre}
+            Plan {planNombre}
           </span>
         </div>
         <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
@@ -316,13 +335,15 @@ function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; plan
         </h1>
         <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
           {avanzada
-            ? "Datos de la clínica, profesionales, apariencia, notificaciones, integraciones y seguridad y auditoría."
-            : "Datos de la clínica, profesionales, apariencia y notificaciones. La configuración avanzada (seguridad y auditoría, directorio e integraciones) viene con Plus y Enterprise."}
+            ? "Datos de la clínica, profesionales, apariencia, documentos, notificaciones, integraciones y seguridad y auditoría."
+            : conPro
+              ? "Datos de la clínica, profesionales, apariencia, documentos, notificaciones e integraciones. Seguridad y auditoría vienen con Plus y Enterprise."
+              : "Datos de la clínica, profesionales, modo oscuro y notificaciones. Documentos, integraciones y más opciones de apariencia vienen con Pro."}
         </p>
       </div>
       {!avanzada && !planContratado && (
         <button type="button" className="btn-ce-outline" onClick={() => setPlan("avanzada")}>
-          Probar la configuración avanzada (Plus)
+          Probar Seguridad y auditoría (Plus)
         </button>
       )}
     </div>
@@ -594,10 +615,42 @@ function DirectorioTab() {
 function AparienciaTab({
   settings,
   actualizar,
+  nivel,
 }: {
   settings: ClinicSettings;
   actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
+  nivel: NivelModulo;
 }) {
+  // Start: solo modo oscuro. Pro: modo oscuro y menú lateral. Plus y Enterprise: todo.
+  const conMenu = nivel !== "basico";
+  const conLetra = nivel === "completo";
+  const modoOscuro = (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-bold text-foreground">Modo oscuro</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Activá el tema oscuro de la plataforma.
+        </p>
+      </div>
+      <ToggleSwitch
+        checked={settings.darkModePage}
+        onChange={(value) => actualizar("darkModePage", value)}
+        label="Modo oscuro"
+      />
+    </div>
+  );
+  if (!conMenu) {
+    return (
+      <div className={`${CARD} max-w-2xl p-5`}>
+        <SectionHeader
+          icon={Palette}
+          title="Apariencia"
+          description="Elegí entre el tema claro y el oscuro."
+        />
+        <div className="mt-5">{modoOscuro}</div>
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_340px]">
       <div className={`${CARD} p-5`}>
@@ -631,23 +684,7 @@ function AparienciaTab({
           </div>
         </div>
 
-        <div className="mt-6 border-t border-border/60 pt-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-foreground">Modo oscuro</p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Activá el tema oscuro de la plataforma.
-              </p>
-            </div>
-
-            <ToggleSwitch
-              checked={settings.darkModePage}
-              onChange={(value) => actualizar("darkModePage", value)}
-              label="Modo oscuro"
-            />
-          </div>
-        </div>
+        <div className="mt-6 border-t border-border/60 pt-5">{modoOscuro}</div>
 
         <div className="mt-4 border-t border-border/60 pt-5">
           <div className="flex items-center justify-between gap-4">
@@ -667,35 +704,37 @@ function AparienciaTab({
           </div>
         </div>
 
-        <div className="mt-5 border-t border-border/60 pt-5">
-          <p className="text-xs font-bold text-foreground">Tamaño de letra</p>
+        {conLetra && (
+          <div className="mt-5 border-t border-border/60 pt-5">
+            <p className="text-xs font-bold text-foreground">Tamaño de letra</p>
 
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Ajustá el tamaño del texto en toda la plataforma.
-          </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Ajustá el tamaño del texto en toda la plataforma.
+            </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {FONT_SIZES.map((font) => {
-              const activo = settings.fontSize === font.id;
+            <div className="mt-3 flex flex-wrap gap-2">
+              {FONT_SIZES.map((font) => {
+                const activo = settings.fontSize === font.id;
 
-              return (
-                <button
-                  key={font.id}
-                  type="button"
-                  onClick={() => actualizar("fontSize", font.id as FontSize)}
-                  className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
-                    activo
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  <Type className="mr-1.5 inline-block size-3.5" />
-                  {font.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={font.id}
+                    type="button"
+                    onClick={() => actualizar("fontSize", font.id as FontSize)}
+                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
+                      activo
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-background text-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    <Type className="mr-1.5 inline-block size-3.5" />
+                    {font.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <PreviewSidebar settings={settings} actualizar={actualizar} />

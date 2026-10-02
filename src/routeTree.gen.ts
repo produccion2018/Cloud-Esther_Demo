@@ -23,7 +23,25 @@ import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frecuentes'
 import { Route as RegistroRouteImport } from './routes/registro'
-import { Route as AdminSplatRouteImport } from './routes/admin.$'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAccesosRouteImport } from './routes/admin.accesos'
+import { Route as AdminActividadRouteImport } from './routes/admin.actividad'
+import { Route as AdminAuditoriaRouteImport } from './routes/admin.auditoria'
+import { Route as AdminClinicasRouteImport } from './routes/admin.clinicas'
+import { Route as AdminCuentaRouteImport } from './routes/admin.cuenta'
+import { Route as AdminDemosRouteImport } from './routes/admin.demos'
+import { Route as AdminGastosRouteImport } from './routes/admin.gastos'
+import { Route as AdminIaRouteImport } from './routes/admin.ia'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminNominaRouteImport } from './routes/admin.nomina'
+import { Route as AdminNotificacionesRouteImport } from './routes/admin.notificaciones'
+import { Route as AdminPagosRouteImport } from './routes/admin.pagos'
+import { Route as AdminPersonalRouteImport } from './routes/admin.personal'
+import { Route as AdminPlanesRouteImport } from './routes/admin.planes'
+import { Route as AdminRecuperarRouteImport } from './routes/admin.recuperar'
+import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
+import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer'
+import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
@@ -124,9 +142,99 @@ const RegistroRoute = RegistroRouteImport.update({
   path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminSplatRoute = AdminSplatRouteImport.update({
-  id: '/$',
-  path: '/$',
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAccesosRoute = AdminAccesosRouteImport.update({
+  id: '/accesos',
+  path: '/accesos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminActividadRoute = AdminActividadRouteImport.update({
+  id: '/actividad',
+  path: '/actividad',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditoriaRoute = AdminAuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClinicasRoute = AdminClinicasRouteImport.update({
+  id: '/clinicas',
+  path: '/clinicas',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCuentaRoute = AdminCuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDemosRoute = AdminDemosRouteImport.update({
+  id: '/demos',
+  path: '/demos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGastosRoute = AdminGastosRouteImport.update({
+  id: '/gastos',
+  path: '/gastos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminIaRoute = AdminIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNominaRoute = AdminNominaRouteImport.update({
+  id: '/nomina',
+  path: '/nomina',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificacionesRoute = AdminNotificacionesRouteImport.update({
+  id: '/notificaciones',
+  path: '/notificaciones',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPagosRoute = AdminPagosRouteImport.update({
+  id: '/pagos',
+  path: '/pagos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPersonalRoute = AdminPersonalRouteImport.update({
+  id: '/personal',
+  path: '/personal',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlanesRoute = AdminPlanesRouteImport.update({
+  id: '/planes',
+  path: '/planes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRecuperarRoute = AdminRecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportesRoute = AdminReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRestablecerRoute = AdminRestablecerRouteImport.update({
+  id: '/restablecer',
+  path: '/restablecer',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSoporteRoute = AdminSoporteRouteImport.update({
+  id: '/soporte',
+  path: '/soporte',
   getParentRoute: () => AdminRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -293,7 +401,24 @@ export interface FileRoutesByFullPath {
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
-  '/admin/$': typeof AdminSplatRoute
+  '/admin/accesos': typeof AdminAccesosRoute
+  '/admin/actividad': typeof AdminActividadRoute
+  '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/clinicas': typeof AdminClinicasRoute
+  '/admin/cuenta': typeof AdminCuentaRoute
+  '/admin/demos': typeof AdminDemosRoute
+  '/admin/gastos': typeof AdminGastosRoute
+  '/admin/ia': typeof AdminIaRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/nomina': typeof AdminNominaRoute
+  '/admin/notificaciones': typeof AdminNotificacionesRoute
+  '/admin/pagos': typeof AdminPagosRoute
+  '/admin/personal': typeof AdminPersonalRoute
+  '/admin/planes': typeof AdminPlanesRoute
+  '/admin/recuperar': typeof AdminRecuperarRoute
+  '/admin/reportes': typeof AdminReportesRoute
+  '/admin/restablecer': typeof AdminRestablecerRoute
+  '/admin/soporte': typeof AdminSoporteRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
@@ -319,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -326,7 +452,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
@@ -339,7 +464,24 @@ export interface FileRoutesByTo {
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
-  '/admin/$': typeof AdminSplatRoute
+  '/admin/accesos': typeof AdminAccesosRoute
+  '/admin/actividad': typeof AdminActividadRoute
+  '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/clinicas': typeof AdminClinicasRoute
+  '/admin/cuenta': typeof AdminCuentaRoute
+  '/admin/demos': typeof AdminDemosRoute
+  '/admin/gastos': typeof AdminGastosRoute
+  '/admin/ia': typeof AdminIaRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/nomina': typeof AdminNominaRoute
+  '/admin/notificaciones': typeof AdminNotificacionesRoute
+  '/admin/pagos': typeof AdminPagosRoute
+  '/admin/personal': typeof AdminPersonalRoute
+  '/admin/planes': typeof AdminPlanesRoute
+  '/admin/recuperar': typeof AdminRecuperarRoute
+  '/admin/reportes': typeof AdminReportesRoute
+  '/admin/restablecer': typeof AdminRestablecerRoute
+  '/admin/soporte': typeof AdminSoporteRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
@@ -365,6 +507,7 @@ export interface FileRoutesByTo {
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -386,7 +529,24 @@ export interface FileRoutesById {
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
   '/registro': typeof RegistroRoute
-  '/admin/$': typeof AdminSplatRoute
+  '/admin/accesos': typeof AdminAccesosRoute
+  '/admin/actividad': typeof AdminActividadRoute
+  '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/clinicas': typeof AdminClinicasRoute
+  '/admin/cuenta': typeof AdminCuentaRoute
+  '/admin/demos': typeof AdminDemosRoute
+  '/admin/gastos': typeof AdminGastosRoute
+  '/admin/ia': typeof AdminIaRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/nomina': typeof AdminNominaRoute
+  '/admin/notificaciones': typeof AdminNotificacionesRoute
+  '/admin/pagos': typeof AdminPagosRoute
+  '/admin/personal': typeof AdminPersonalRoute
+  '/admin/planes': typeof AdminPlanesRoute
+  '/admin/recuperar': typeof AdminRecuperarRoute
+  '/admin/reportes': typeof AdminReportesRoute
+  '/admin/restablecer': typeof AdminRestablecerRoute
+  '/admin/soporte': typeof AdminSoporteRoute
   '/demo_/agenda': typeof DemoAgendaRoute
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
@@ -412,6 +572,7 @@ export interface FileRoutesById {
   '/demo_/recetas': typeof DemoRecetasRoute
   '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo_/equipo-profesional_/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -434,7 +595,24 @@ export interface FileRouteTypes {
     | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
-    | '/admin/$'
+    | '/admin/accesos'
+    | '/admin/actividad'
+    | '/admin/auditoria'
+    | '/admin/clinicas'
+    | '/admin/cuenta'
+    | '/admin/demos'
+    | '/admin/gastos'
+    | '/admin/ia'
+    | '/admin/login'
+    | '/admin/nomina'
+    | '/admin/notificaciones'
+    | '/admin/pagos'
+    | '/admin/personal'
+    | '/admin/planes'
+    | '/admin/recuperar'
+    | '/admin/reportes'
+    | '/admin/restablecer'
+    | '/admin/soporte'
     | '/demo/agenda'
     | '/demo/automatizaciones'
     | '/demo/bi'
@@ -460,6 +638,7 @@ export interface FileRouteTypes {
     | '/demo/recetas'
     | '/demo/rrhh'
     | '/demo/tratamientos'
+    | '/admin/'
     | '/app/'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
@@ -467,7 +646,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
@@ -480,7 +658,24 @@ export interface FileRouteTypes {
     | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
-    | '/admin/$'
+    | '/admin/accesos'
+    | '/admin/actividad'
+    | '/admin/auditoria'
+    | '/admin/clinicas'
+    | '/admin/cuenta'
+    | '/admin/demos'
+    | '/admin/gastos'
+    | '/admin/ia'
+    | '/admin/login'
+    | '/admin/nomina'
+    | '/admin/notificaciones'
+    | '/admin/pagos'
+    | '/admin/personal'
+    | '/admin/planes'
+    | '/admin/recuperar'
+    | '/admin/reportes'
+    | '/admin/restablecer'
+    | '/admin/soporte'
     | '/demo/agenda'
     | '/demo/automatizaciones'
     | '/demo/bi'
@@ -506,6 +701,7 @@ export interface FileRouteTypes {
     | '/demo/recetas'
     | '/demo/rrhh'
     | '/demo/tratamientos'
+    | '/admin'
     | '/app'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
@@ -526,7 +722,24 @@ export interface FileRouteTypes {
     | '/portal'
     | '/preguntas-frecuentes'
     | '/registro'
-    | '/admin/$'
+    | '/admin/accesos'
+    | '/admin/actividad'
+    | '/admin/auditoria'
+    | '/admin/clinicas'
+    | '/admin/cuenta'
+    | '/admin/demos'
+    | '/admin/gastos'
+    | '/admin/ia'
+    | '/admin/login'
+    | '/admin/nomina'
+    | '/admin/notificaciones'
+    | '/admin/pagos'
+    | '/admin/personal'
+    | '/admin/planes'
+    | '/admin/recuperar'
+    | '/admin/reportes'
+    | '/admin/restablecer'
+    | '/admin/soporte'
     | '/demo_/agenda'
     | '/demo_/automatizaciones'
     | '/demo_/bi'
@@ -552,6 +765,7 @@ export interface FileRouteTypes {
     | '/demo_/recetas'
     | '/demo_/rrhh'
     | '/demo_/tratamientos'
+    | '/admin/'
     | '/app/'
     | '/demo_/equipo-profesional_/agendas-horarios'
     | '/demo_/equipo-profesional_/especialidades'
@@ -704,11 +918,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/$': {
-      id: '/admin/$'
-      path: '/$'
-      fullPath: '/admin/$'
-      preLoaderRoute: typeof AdminSplatRouteImport
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/accesos': {
+      id: '/admin/accesos'
+      path: '/accesos'
+      fullPath: '/admin/accesos'
+      preLoaderRoute: typeof AdminAccesosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/actividad': {
+      id: '/admin/actividad'
+      path: '/actividad'
+      fullPath: '/admin/actividad'
+      preLoaderRoute: typeof AdminActividadRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/auditoria': {
+      id: '/admin/auditoria'
+      path: '/auditoria'
+      fullPath: '/admin/auditoria'
+      preLoaderRoute: typeof AdminAuditoriaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clinicas': {
+      id: '/admin/clinicas'
+      path: '/clinicas'
+      fullPath: '/admin/clinicas'
+      preLoaderRoute: typeof AdminClinicasRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cuenta': {
+      id: '/admin/cuenta'
+      path: '/cuenta'
+      fullPath: '/admin/cuenta'
+      preLoaderRoute: typeof AdminCuentaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/demos': {
+      id: '/admin/demos'
+      path: '/demos'
+      fullPath: '/admin/demos'
+      preLoaderRoute: typeof AdminDemosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/gastos': {
+      id: '/admin/gastos'
+      path: '/gastos'
+      fullPath: '/admin/gastos'
+      preLoaderRoute: typeof AdminGastosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ia': {
+      id: '/admin/ia'
+      path: '/ia'
+      fullPath: '/admin/ia'
+      preLoaderRoute: typeof AdminIaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/nomina': {
+      id: '/admin/nomina'
+      path: '/nomina'
+      fullPath: '/admin/nomina'
+      preLoaderRoute: typeof AdminNominaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notificaciones': {
+      id: '/admin/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/admin/notificaciones'
+      preLoaderRoute: typeof AdminNotificacionesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/pagos': {
+      id: '/admin/pagos'
+      path: '/pagos'
+      fullPath: '/admin/pagos'
+      preLoaderRoute: typeof AdminPagosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/personal': {
+      id: '/admin/personal'
+      path: '/personal'
+      fullPath: '/admin/personal'
+      preLoaderRoute: typeof AdminPersonalRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/planes': {
+      id: '/admin/planes'
+      path: '/planes'
+      fullPath: '/admin/planes'
+      preLoaderRoute: typeof AdminPlanesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/recuperar': {
+      id: '/admin/recuperar'
+      path: '/recuperar'
+      fullPath: '/admin/recuperar'
+      preLoaderRoute: typeof AdminRecuperarRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reportes': {
+      id: '/admin/reportes'
+      path: '/reportes'
+      fullPath: '/admin/reportes'
+      preLoaderRoute: typeof AdminReportesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/restablecer': {
+      id: '/admin/restablecer'
+      path: '/restablecer'
+      fullPath: '/admin/restablecer'
+      preLoaderRoute: typeof AdminRestablecerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/soporte': {
+      id: '/admin/soporte'
+      path: '/soporte'
+      fullPath: '/admin/soporte'
+      preLoaderRoute: typeof AdminSoporteRouteImport
       parentRoute: typeof AdminRoute
     }
     '/app/': {
@@ -918,11 +1258,47 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminSplatRoute: typeof AdminSplatRoute
+  AdminAccesosRoute: typeof AdminAccesosRoute
+  AdminActividadRoute: typeof AdminActividadRoute
+  AdminAuditoriaRoute: typeof AdminAuditoriaRoute
+  AdminClinicasRoute: typeof AdminClinicasRoute
+  AdminCuentaRoute: typeof AdminCuentaRoute
+  AdminDemosRoute: typeof AdminDemosRoute
+  AdminGastosRoute: typeof AdminGastosRoute
+  AdminIaRoute: typeof AdminIaRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminNominaRoute: typeof AdminNominaRoute
+  AdminNotificacionesRoute: typeof AdminNotificacionesRoute
+  AdminPagosRoute: typeof AdminPagosRoute
+  AdminPersonalRoute: typeof AdminPersonalRoute
+  AdminPlanesRoute: typeof AdminPlanesRoute
+  AdminRecuperarRoute: typeof AdminRecuperarRoute
+  AdminReportesRoute: typeof AdminReportesRoute
+  AdminRestablecerRoute: typeof AdminRestablecerRoute
+  AdminSoporteRoute: typeof AdminSoporteRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminSplatRoute: AdminSplatRoute,
+  AdminAccesosRoute: AdminAccesosRoute,
+  AdminActividadRoute: AdminActividadRoute,
+  AdminAuditoriaRoute: AdminAuditoriaRoute,
+  AdminClinicasRoute: AdminClinicasRoute,
+  AdminCuentaRoute: AdminCuentaRoute,
+  AdminDemosRoute: AdminDemosRoute,
+  AdminGastosRoute: AdminGastosRoute,
+  AdminIaRoute: AdminIaRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminNominaRoute: AdminNominaRoute,
+  AdminNotificacionesRoute: AdminNotificacionesRoute,
+  AdminPagosRoute: AdminPagosRoute,
+  AdminPersonalRoute: AdminPersonalRoute,
+  AdminPlanesRoute: AdminPlanesRoute,
+  AdminRecuperarRoute: AdminRecuperarRoute,
+  AdminReportesRoute: AdminReportesRoute,
+  AdminRestablecerRoute: AdminRestablecerRoute,
+  AdminSoporteRoute: AdminSoporteRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

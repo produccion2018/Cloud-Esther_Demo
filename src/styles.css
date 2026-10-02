@@ -58,6 +58,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-primary-deep: var(--primary-deep);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -1155,4 +1161,122 @@
   [class~="divide-stone-300"]
 ) > :not(:last-child) {
   border-color: var(--border);
+}
+
+/* ═════════════ Panel del dueño (/admin) ═════════════
+   Paleta propia del panel. Solo se aplica mientras el panel está abierto
+   (admin.tsx pone data-app="panel" en <html>), así no cambia nada del SaaS. */
+html[data-app="panel"] {
+  --radius: 0.875rem;
+  --background: oklch(0.985 0.005 300);
+  --foreground: oklch(0.22 0.05 295);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.05 295);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.05 295);
+  --primary: oklch(0.52 0.22 295);
+  --primary-foreground: oklch(0.99 0.005 300);
+  --primary-glow: oklch(0.68 0.19 305);
+  --primary-deep: oklch(0.34 0.16 291);
+  --secondary: oklch(0.955 0.018 300);
+  --secondary-foreground: oklch(0.34 0.16 291);
+  --muted: oklch(0.962 0.012 300);
+  --muted-foreground: oklch(0.55 0.04 292);
+  --accent: oklch(0.94 0.035 300);
+  --accent-foreground: oklch(0.34 0.16 291);
+  --destructive: oklch(0.58 0.22 22);
+  --destructive-foreground: oklch(0.99 0.005 300);
+  --success: oklch(0.62 0.16 156);
+  --success-foreground: oklch(0.99 0.005 300);
+  --warning: oklch(0.79 0.16 82);
+  --warning-foreground: oklch(0.28 0.07 60);
+  --border: oklch(0.91 0.018 300);
+  --input: oklch(0.91 0.018 300);
+  --ring: oklch(0.52 0.22 295);
+  --chart-1: oklch(0.52 0.22 295);
+  --chart-2: oklch(0.68 0.19 305);
+  --chart-3: oklch(0.62 0.16 156);
+  --chart-4: oklch(0.79 0.16 82);
+  --chart-5: oklch(0.58 0.22 22);
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--primary-deep),
+    var(--primary) 55%,
+    var(--primary-glow)
+  );
+  --gradient-surface: linear-gradient(160deg, oklch(0.99 0.008 300), oklch(0.96 0.02 300));
+  --shadow-card:
+    0 1px 2px oklch(0.34 0.16 291 / 0.06), 0 12px 32px -18px oklch(0.34 0.16 291 / 0.35);
+  --shadow-elegant: 0 20px 60px -24px oklch(0.34 0.16 291 / 0.45);
+  --sidebar: oklch(0.26 0.09 291);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.68 0.19 305);
+  --sidebar-primary-foreground: oklch(0.18 0.06 291);
+  --sidebar-accent: oklch(0.33 0.11 293);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.68 0.19 305);
+}
+html[data-app="panel"].dark {
+  --background: oklch(0.16 0.03 292);
+  --foreground: oklch(0.95 0.012 300);
+  --card: oklch(0.21 0.04 292);
+  --card-foreground: oklch(0.95 0.012 300);
+  --popover: oklch(0.22 0.04 292);
+  --popover-foreground: oklch(0.95 0.012 300);
+  --primary: oklch(0.7 0.17 300);
+  --primary-foreground: oklch(0.16 0.05 292);
+  --primary-glow: oklch(0.76 0.15 308);
+  --primary-deep: oklch(0.5 0.2 292);
+  --secondary: oklch(0.27 0.045 292);
+  --secondary-foreground: oklch(0.95 0.012 300);
+  --muted: oklch(0.26 0.04 292);
+  --muted-foreground: oklch(0.72 0.035 295);
+  --accent: oklch(0.3 0.06 295);
+  --accent-foreground: oklch(0.95 0.012 300);
+  --destructive: oklch(0.68 0.19 22);
+  --destructive-foreground: oklch(0.98 0.005 300);
+  --success: oklch(0.72 0.15 156);
+  --success-foreground: oklch(0.16 0.04 156);
+  --warning: oklch(0.8 0.15 82);
+  --warning-foreground: oklch(0.86 0.12 85);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.7 0.17 300);
+  --chart-1: oklch(0.7 0.17 300);
+  --chart-2: oklch(0.76 0.15 308);
+  --chart-3: oklch(0.72 0.15 156);
+  --chart-4: oklch(0.8 0.15 82);
+  --chart-5: oklch(0.68 0.19 22);
+  --gradient-surface: linear-gradient(160deg, oklch(0.21 0.04 292), oklch(0.18 0.035 292));
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 12px 32px -18px oklch(0 0 0 / 0.6);
+  --shadow-elegant: 0 20px 60px -24px oklch(0 0 0 / 0.7);
+  --sidebar: oklch(0.13 0.03 292);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.7 0.17 300);
+  --sidebar-primary-foreground: oklch(0.16 0.05 292);
+  --sidebar-accent: oklch(0.22 0.05 292);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.7 0.17 300);
+}
+html[data-app="panel"][data-lateral="medianoche"] {
+  --sidebar: oklch(0.2 0.04 270);
+  --sidebar-accent: oklch(0.28 0.06 270);
+}
+html[data-app="panel"][data-lateral="grafito"] {
+  --sidebar: oklch(0.22 0.01 290);
+  --sidebar-accent: oklch(0.3 0.015 290);
+}
+html[data-app="panel"][data-lateral="ciruela"] {
+  --sidebar: oklch(0.28 0.1 335);
+  --sidebar-accent: oklch(0.35 0.12 335);
+}
+html[data-app="panel"][data-lateral="claro"] {
+  --sidebar: oklch(0.975 0.012 300);
+  --sidebar-foreground: oklch(0.3 0.08 292);
+  --sidebar-primary: oklch(0.52 0.22 295);
+  --sidebar-primary-foreground: oklch(0.99 0.005 300);
+  --sidebar-accent: oklch(0.93 0.03 300);
+  --sidebar-border: oklch(0.9 0.02 300);
 }

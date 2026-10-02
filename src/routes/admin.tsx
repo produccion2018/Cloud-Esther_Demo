@@ -1,58 +1,97 @@
-import { createFileRoute, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { Navigate, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
-/* Ubicación: src/routes/admin.tsx
-   Acceso directo al panel interno: escribir /admin en la web de Cloud Esther lleva al panel de
-   administración (es otra aplicación, otro repositorio). También funciona con subrutas:
-   /admin/demos → {panel}/admin/demos.
-   - VITE_PANEL_URL: dirección publicada del panel (ej. https://admin.cloudesther.com).
-   - En desarrollo, si no está configurada, usa el panel local en http://localhost:5174.
-   La web pública no tiene ningún enlace visible a esta ruta. */
+import { RoleProvider } from "@/components/admin/role";
+import { Toaster } from "@/components/ui/sonner";
+import { marcarActividadSesion, registrarSalida } from "@/lib/admin/api";
+import { aplicarPreferencias, leerPreferencias } from "@/lib/admin/preferencias";
+import {
+  INACTIVIDAD_MS,
+  cerrarSesionAdmin,
+  inactivoDesde,
+  marcarActividad,
+  useSesionAdmin,
+} from "@/lib/admin/sesion";
 
-const PANEL_URL =
-  (import.meta.env["VITE_PANEL_URL"] as string | undefined)?.replace(/\/$/, "") ??
-  (import.meta.env.DEV ? "http://localhost:5174" : undefined);
-
+/* Panel del dueño de Cloud Esther, dentro de la misma aplicación del SaaS: tusitio.com/admin.
+   No hay enlaces desde la web pública; se entra con usuario y contraseña del panel. */
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Panel de administración | Cloud Esther" },
+      { title: "Panel del dueño | Cloud Esther" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: IrAlPanel,
+  component: AdminLayout,
 });
 
-function IrAlPanel() {
-  const { pathname, searchStr } = useRouterState({
-    select: (s) => ({ pathname: s.location.pathname, searchStr: s.location.searchStr }),
-  });
-  const destino = PANEL_URL ? `${PANEL_URL}${pathname}${searchStr}` : null;
+/** Pantallas que se ven sin sesión. */
+const PUBLICAS = ["/admin/login", "/admin/recuperar", "/admin/restablecer"];
 
+function AdminLayout() {
+  const sesion = useSesionAdmin();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const publica = PUBLICAS.some((p) => pathname.startsWith(p));
+  // La sesión vive en el navegador: hasta montar no se sabe si hay una.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+
+  // Paleta y apariencia propias del panel (claro/oscuro y color del menú). Al salir del panel
+  // se devuelve todo como estaba, para no tocar el diseño del SaaS.
   useEffect(() => {
-    if (destino) window.location.replace(destino);
-  }, [destino]);
+    const raiz = document.documentElement;
+    const teniaOscuro = raiz.classList.contains("dark");
+    raiz.dataset["app"] = "panel";
+    aplicarPreferencias();
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const cambio = () => leerPreferencias().tema === "sistema" && aplicarPreferencias();
+    mq.addEventListener("change", cambio);
+    return () => {
+      mq.removeEventListener("change", cambio);
+      delete raiz.dataset["app"];
+      delete raiz.dataset["lateral"];
+      raiz.classList.toggle("dark", teniaOscuro);
+    };
+  }, []);
+
+  // Cierre por inactividad (30 minutos sin usar el panel).
+  useEffect(() => {
+    if (!sesion) return;
+    let ultimo = 0;
+    let ultimoAuditoria = 0;
+    const actividad = () => {
+      const ahora = Date.now();
+      if (ahora - ultimo > 15_000) {
+        ultimo = ahora;
+        marcarActividad();
+      }
+      // Última actividad de la sesión para la auditoría (cada minuto como máximo).
+      if (ahora - ultimoAuditoria > 60_000) {
+        ultimoAuditoria = ahora;
+        void marcarActividadSesion();
+      }
+    };
+    const eventos = ["pointerdown", "keydown", "scroll", "mousemove"] as const;
+    eventos.forEach((e) => window.addEventListener(e, actividad, { passive: true }));
+    const t = window.setInterval(() => {
+      if (Date.now() - inactivoDesde() > INACTIVIDAD_MS) {
+        void registrarSalida("Inactividad").finally(() => cerrarSesionAdmin("inactividad"));
+      }
+    }, 30_000);
+    return () => {
+      eventos.forEach((e) => window.removeEventListener(e, actividad));
+      window.clearInterval(t);
+    };
+  }, [sesion]);
+
+  if (!montado) return <div className="min-h-screen bg-background" />;
+  if (!sesion && !publica) return <Navigate to="/admin/login" replace />;
+  if (sesion && pathname.startsWith("/admin/login")) return <Navigate to="/admin" replace />;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background p-6 text-center">
-      <div className="max-w-md space-y-3">
-        <p className="text-lg font-bold text-foreground">
-          {destino ? "Abriendo el panel de administración…" : "Panel no configurado"}
-        </p>
-        {destino ? (
-          <p className="text-sm text-muted-foreground">
-            Si no se abre solo,{" "}
-            <a href={destino} className="font-semibold text-primary underline">
-              entrá desde acá
-            </a>
-            .
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Falta indicar la dirección del panel en la variable VITE_PANEL_URL.
-          </p>
-        )}
-      </div>
-    </main>
+    <RoleProvider>
+      <Outlet />
+      <Toaster position="top-right" richColors closeButton />
+    </RoleProvider>
   );
 }

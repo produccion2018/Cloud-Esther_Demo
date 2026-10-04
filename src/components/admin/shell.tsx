@@ -1,11 +1,15 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
+  Briefcase,
   Building2,
+  ChevronDown,
   CreditCard,
   Database,
   Eye,
   FileBarChart,
+  Globe2,
+  Headset,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -18,12 +22,13 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Sun,
   Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { BrandMark } from "./logo";
 import { Campana } from "./notificaciones";
@@ -36,47 +41,83 @@ import { cn } from "@/lib/utils";
 
 // El acceso por rol de cada ítem se define en role.tsx (sectionAccess).
 type NavItem = { to: string; label: string; icon: LucideIcon };
+type NavGrupo = { id: string; section: string; icon: LucideIcon; items: NavItem[] };
 
-const nav: { section: string; items: NavItem[] }[] = [
+/* Jerarquía del panel del dueño:
+   1. Resumen (la vista general, siempre arriba).
+   2. Grupos por área de trabajo, de lo comercial a lo administrativo y la configuración. */
+const inicio: NavItem = { to: "/admin", label: "Resumen", icon: LayoutDashboard };
+
+const nav: NavGrupo[] = [
   {
-    section: "Negocio",
+    id: "comercial",
+    section: "Comercial",
+    icon: TrendingUp,
     items: [
-      { to: "/admin", label: "Resumen", icon: LayoutDashboard },
       { to: "/admin/demos", label: "Demos e interesados", icon: MonitorPlay },
       { to: "/admin/clinicas", label: "Clínicas clientes", icon: Building2 },
-      { to: "/admin/pagos", label: "Pagos y cobranza", icon: CreditCard },
+      { to: "/admin/paises", label: "Países", icon: Globe2 },
       { to: "/admin/planes", label: "Planes y precios", icon: Package },
+    ],
+  },
+  {
+    id: "finanzas",
+    section: "Finanzas",
+    icon: CreditCard,
+    items: [
+      { to: "/admin/pagos", label: "Pagos y cobranza", icon: CreditCard },
+      { to: "/admin/gastos", label: "Gastos y proveedores", icon: Receipt },
       { to: "/admin/ia", label: "Consumo de IA", icon: Sparkles },
     ],
   },
   {
-    section: "Empresa",
+    id: "empresa",
+    section: "Mi empresa",
+    icon: Briefcase,
     items: [
       { to: "/admin/personal", label: "Personal", icon: Users },
       { to: "/admin/nomina", label: "Nómina y pagos", icon: Wallet },
-      { to: "/admin/gastos", label: "Gastos y proveedores", icon: Receipt },
     ],
   },
   {
-    section: "Operaciones",
-    items: [{ to: "/admin/soporte", label: "Soporte técnico", icon: LifeBuoy }],
-  },
-  {
-    section: "Control",
+    id: "atencion",
+    section: "Atención",
+    icon: Headset,
     items: [
-      { to: "/admin/auditoria", label: "Auditoría", icon: ScrollText },
-      { to: "/admin/reportes", label: "Reportes", icon: FileBarChart },
+      { to: "/admin/soporte", label: "Soporte técnico", icon: LifeBuoy },
       { to: "/admin/notificaciones", label: "Notificaciones", icon: Bell },
     ],
   },
   {
-    section: "Cuenta",
+    id: "control",
+    section: "Control",
+    icon: ScrollText,
+    items: [
+      { to: "/admin/reportes", label: "Reportes", icon: FileBarChart },
+      { to: "/admin/auditoria", label: "Auditoría", icon: ScrollText },
+    ],
+  },
+  {
+    id: "cuenta",
+    section: "Configuración",
+    icon: Settings,
     items: [
       { to: "/admin/cuenta", label: "Mi perfil y apariencia", icon: Settings },
       { to: "/admin/accesos", label: "Equipo y accesos", icon: ShieldCheck },
     ],
   },
 ];
+
+const CLAVE_GRUPOS = "cloud-esther-admin:grupos-cerrados";
+
+function leerCerrados(): string[] {
+  try {
+    const raw = window.localStorage.getItem(CLAVE_GRUPOS);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 function iniciales(nombre: string) {
   return nombre
@@ -88,48 +129,97 @@ function iniciales(nombre: string) {
     .toUpperCase();
 }
 
+function ItemNav({ item, active, onIr }: { item: NavItem; active: boolean; onIr?: () => void }) {
+  return (
+    <Link
+      to={item.to}
+      {...(onIr ? { onClick: onIr } : {})}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all",
+        active
+          ? "bg-card text-primary shadow-[0_10px_24px_-14px_rgba(0,0,0,0.6)]"
+          : "text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+      )}
+    >
+      <span
+        className={cn(
+          "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors",
+          active ? "bg-primary/10 text-primary" : "bg-sidebar-accent/70",
+        )}
+      >
+        <item.icon className="h-4 w-4" />
+      </span>
+      <span className="truncate">{item.label}</span>
+    </Link>
+  );
+}
+
 function Navegacion({ onIr }: { onIr?: () => void }) {
   const { role } = useRole();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [cerrados, setCerrados] = useState<string[]>([]);
+  useEffect(() => setCerrados(leerCerrados()), []);
+  const alternar = (id: string) =>
+    setCerrados((prev) => {
+      const sig = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        window.localStorage.setItem(CLAVE_GRUPOS, JSON.stringify(sig));
+      } catch {
+        /* sin almacenamiento: solo dura la sesión */
+      }
+      return sig;
+    });
+  const activo = (to: string) =>
+    to === "/admin" ? pathname === "/admin" : pathname.startsWith(to);
+
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5" aria-label="Secciones del panel">
+      {canAccess(role, inicio.to) && (
+        <div className="pb-2">
+          <ItemNav item={inicio} active={activo(inicio.to)} {...(onIr ? { onIr } : {})} />
+        </div>
+      )}
       {nav.map((group) => {
         const items = group.items.filter((i) => canAccess(role, i.to));
         if (!items.length) return null;
+        const conActivo = items.some((i) => activo(i.to));
+        // El grupo de la página abierta siempre se muestra desplegado.
+        const abierto = conActivo || !cerrados.includes(group.id);
         return (
-          <div key={group.section}>
-            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/45">
-              {group.section}
-            </p>
-            <div className="space-y-0.5">
-              {items.map((item) => {
-                const active =
-                  item.to === "/admin" ? pathname === "/admin" : pathname.startsWith(item.to);
-                return (
-                  <Link
+          <div key={group.id} className="rounded-2xl">
+            <button
+              type="button"
+              onClick={() => alternar(group.id)}
+              aria-expanded={abierto}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[10.5px] font-bold uppercase tracking-[0.16em] transition-colors",
+                conActivo
+                  ? "text-sidebar-foreground"
+                  : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80",
+              )}
+            >
+              <group.icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1">{group.section}</span>
+              <span className="rounded-full bg-sidebar-accent/70 px-1.5 text-[9.5px] tracking-normal">
+                {items.length}
+              </span>
+              <ChevronDown
+                className={cn("h-3.5 w-3.5 transition-transform", abierto ? "" : "-rotate-90")}
+              />
+            </button>
+            {abierto && (
+              <div className="ml-[18px] space-y-0.5 border-l border-sidebar-foreground/10 pb-1 pl-2">
+                {items.map((item) => (
+                  <ItemNav
                     key={item.to}
-                    to={item.to}
-                    {...(onIr ? { onClick: onIr } : {})}
-                    className={cn(
-                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all",
-                      active
-                        ? "bg-card text-primary shadow-[0_10px_24px_-14px_rgba(0,0,0,0.6)]"
-                        : "text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-7 w-7 place-items-center rounded-lg transition-colors",
-                        active ? "bg-primary/10 text-primary" : "bg-sidebar-accent/70",
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                    </span>
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
+                    item={item}
+                    active={activo(item.to)}
+                    {...(onIr ? { onIr } : {})}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
@@ -262,8 +352,9 @@ export function AdminShell({
             >
               <Menu className="h-4 w-4" />
             </button>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-              <ShieldCheck className="h-3 w-3" /> Panel interno
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+              <ShieldCheck className="h-3 w-3" /> Panel
+              <span className="hidden min-[400px]:inline">interno</span>
               <span className="hidden sm:inline"> · Cloud Esther</span>
             </span>
             <OrigenDatos />

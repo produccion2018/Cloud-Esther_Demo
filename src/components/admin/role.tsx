@@ -39,6 +39,7 @@ export const sectionAccess: Record<string, AdminRole[]> = {
   "/admin/clinicas": ROLES,
   "/admin/pagos": ["owner", "partner", "customer-care"],
   "/admin/planes": ["owner", "partner"],
+  "/admin/paises": ["owner", "partner", "customer-care"],
   "/admin/ia": ["owner", "partner", "support"],
   "/admin/soporte": ROLES,
   "/admin/personal": ["owner", "partner"],
@@ -60,6 +61,8 @@ export function canAccess(role: AdminRole, path: string): boolean {
 export const permisos = {
   verImportes: (r: AdminRole) => r === "owner",
   editarPlanes: (r: AdminRole) => r === "owner",
+  /** Habilitar países y cambiar sus datos fiscales: solo el Dueño. */
+  editarPaises: (r: AdminRole) => r === "owner",
   /** Límites del período de prueba (duración, espera, cuentas sin límite). */
   configurarDemo: (r: AdminRole) => r === "owner",
   gestionarDemos: (r: AdminRole) => r !== "support",

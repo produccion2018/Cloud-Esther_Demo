@@ -20,6 +20,7 @@ import {
   INCIDENTES_INICIALES,
   LIQUIDACIONES_INICIALES,
   NOTIFICACIONES_INICIALES,
+  PAISES_INICIALES,
   SESIONES_INICIALES,
   INTENTOS_INICIALES,
   PAGOS_NOMINA_INICIALES,
@@ -40,6 +41,7 @@ import type {
   Liquidacion,
   Notificacion,
   PagoNomina,
+  PaisOperacion,
   Proveedor,
   SesionPanel,
   TareaInterna,
@@ -154,6 +156,7 @@ export type Colecciones = {
   ticketsSoporte: TicketSoporte[];
   incidentes: Incidente[];
   tareas: TareaInterna[];
+  paises: PaisOperacion[];
 };
 
 const COLECCIONES_INICIALES: Colecciones = {
@@ -170,6 +173,7 @@ const COLECCIONES_INICIALES: Colecciones = {
   ticketsSoporte: TICKETS_SOPORTE_INICIALES,
   incidentes: INCIDENTES_INICIALES,
   tareas: TAREAS_INICIALES,
+  paises: PAISES_INICIALES,
 };
 
 type BaseLocal = {

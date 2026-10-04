@@ -220,3 +220,24 @@ export type IntentoFallido = {
   dispositivo: string;
   navegador: string;
 };
+
+/* ───────────── Países donde opera Cloud Esther ───────────── */
+
+export type EstadoPais = "Activo" | "Próximamente" | "Pausado";
+
+/** País habilitado para vender Cloud Esther: moneda, facturación e impuestos de cada uno. */
+export type PaisOperacion = {
+  id: string;
+  /** Código ISO de dos letras (AR, UY, CL…). */
+  codigo: string;
+  nombre: string;
+  estado: EstadoPais;
+  moneda: string;
+  /** Organismo o sistema de facturación electrónica del país. */
+  facturacion: string;
+  impuesto: string;
+  zonaHoraria: string;
+  /** Fecha en que se habilitó la venta (ISO, día) o vacío si todavía no. */
+  desde: string;
+  notas: string;
+};

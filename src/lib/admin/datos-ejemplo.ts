@@ -174,7 +174,7 @@ const FILAS: FilaClinica[] = [
   ],
   [
     "Sonríe Clínicas",
-    "La Plata",
+    "Santiago",
     "avanzada",
     "al-dia",
     15,
@@ -213,8 +213,8 @@ const FILAS: FilaClinica[] = [
     "Martín González",
   ],
   [
-    "Clínica Familiar Oeste",
-    "Morón",
+    "Clínica Familiar Pocitos",
+    "Montevideo",
     "profesional",
     "al-dia",
     6,
@@ -234,12 +234,18 @@ const FILAS: FilaClinica[] = [
   ],
 ];
 
+/* Las clínicas de ejemplo fuera de Argentina, para ver el panel con varios países. */
+const PAIS_POR_CIUDAD: Record<string, { pais: string; prefijo: string }> = {
+  Montevideo: { pais: "Uruguay", prefijo: "+598 2" },
+  Santiago: { pais: "Chile", prefijo: "+56 2" },
+};
+
 export const CLINICAS_INICIALES: Clinica[] = FILAS.map(
   ([nombre, ciudad, plan, estadoPago, cobro, meses, [suc, usu, pac, arch, ia], contacto], i) => ({
     id: `cli-${String(i + 1).padStart(3, "0")}`,
     nombre,
     ciudad,
-    pais: "Argentina",
+    pais: PAIS_POR_CIUDAD[ciudad]?.pais ?? "Argentina",
     plan,
     ciclo: i % 4 === 0 ? "Anual" : "Mensual",
     importe: null,
@@ -253,7 +259,7 @@ export const CLINICAS_INICIALES: Clinica[] = FILAS.map(
         .normalize("NFD")
         .replace(/[^a-z]/g, "")
         .slice(0, 14)}.com`,
-      telefono: `+54 11 5${String(100 + i * 37).slice(0, 3)}-${String(1000 + i * 211).slice(0, 4)}`,
+      telefono: `${PAIS_POR_CIUDAD[ciudad]?.prefijo ?? "+54 11"} 5${String(100 + i * 37).slice(0, 3)}-${String(1000 + i * 211).slice(0, 4)}`,
     },
     uso: {
       sucursales: suc,

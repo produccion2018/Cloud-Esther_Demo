@@ -37,6 +37,7 @@ import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminNominaRouteImport } from './routes/admin.nomina'
 import { Route as AdminNotificacionesRouteImport } from './routes/admin.notificaciones'
 import { Route as AdminPagosRouteImport } from './routes/admin.pagos'
+import { Route as AdminPaisesRouteImport } from './routes/admin.paises'
 import { Route as AdminPersonalRouteImport } from './routes/admin.personal'
 import { Route as AdminPlanesRouteImport } from './routes/admin.planes'
 import { Route as AdminRecuperarRouteImport } from './routes/admin.recuperar'
@@ -212,6 +213,11 @@ const AdminNotificacionesRoute = AdminNotificacionesRouteImport.update({
 const AdminPagosRoute = AdminPagosRouteImport.update({
   id: '/pagos',
   path: '/pagos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPaisesRoute = AdminPaisesRouteImport.update({
+  id: '/paises',
+  path: '/paises',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPersonalRoute = AdminPersonalRouteImport.update({
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
+  '/admin/paises': typeof AdminPaisesRoute
   '/admin/personal': typeof AdminPersonalRoute
   '/admin/planes': typeof AdminPlanesRoute
   '/admin/recuperar': typeof AdminRecuperarRoute
@@ -491,6 +498,7 @@ export interface FileRoutesByTo {
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
+  '/admin/paises': typeof AdminPaisesRoute
   '/admin/personal': typeof AdminPersonalRoute
   '/admin/planes': typeof AdminPlanesRoute
   '/admin/recuperar': typeof AdminRecuperarRoute
@@ -558,6 +566,7 @@ export interface FileRoutesById {
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
+  '/admin/paises': typeof AdminPaisesRoute
   '/admin/personal': typeof AdminPersonalRoute
   '/admin/planes': typeof AdminPlanesRoute
   '/admin/recuperar': typeof AdminRecuperarRoute
@@ -626,6 +635,7 @@ export interface FileRouteTypes {
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
+    | '/admin/paises'
     | '/admin/personal'
     | '/admin/planes'
     | '/admin/recuperar'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
+    | '/admin/paises'
     | '/admin/personal'
     | '/admin/planes'
     | '/admin/recuperar'
@@ -757,6 +768,7 @@ export interface FileRouteTypes {
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
+    | '/admin/paises'
     | '/admin/personal'
     | '/admin/planes'
     | '/admin/recuperar'
@@ -1042,6 +1054,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPagosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/paises': {
+      id: '/admin/paises'
+      path: '/paises'
+      fullPath: '/admin/paises'
+      preLoaderRoute: typeof AdminPaisesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/personal': {
       id: '/admin/personal'
       path: '/personal'
@@ -1310,6 +1329,7 @@ interface AdminRouteChildren {
   AdminNominaRoute: typeof AdminNominaRoute
   AdminNotificacionesRoute: typeof AdminNotificacionesRoute
   AdminPagosRoute: typeof AdminPagosRoute
+  AdminPaisesRoute: typeof AdminPaisesRoute
   AdminPersonalRoute: typeof AdminPersonalRoute
   AdminPlanesRoute: typeof AdminPlanesRoute
   AdminRecuperarRoute: typeof AdminRecuperarRoute
@@ -1332,6 +1352,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminNominaRoute: AdminNominaRoute,
   AdminNotificacionesRoute: AdminNotificacionesRoute,
   AdminPagosRoute: AdminPagosRoute,
+  AdminPaisesRoute: AdminPaisesRoute,
   AdminPersonalRoute: AdminPersonalRoute,
   AdminPlanesRoute: AdminPlanesRoute,
   AdminRecuperarRoute: AdminRecuperarRoute,

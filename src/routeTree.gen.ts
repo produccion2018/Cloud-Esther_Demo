@@ -44,6 +44,7 @@ import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
 import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer'
 import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
 import { Route as DemoBiRouteImport } from './routes/demo_.bi'
@@ -248,6 +249,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoAdminRoute = DemoAdminRouteImport.update({
+  id: '/demo_/admin',
+  path: '/demo/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoAgendaRoute = DemoAgendaRouteImport.update({
   id: '/demo_/agenda',
   path: '/demo/agenda',
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
@@ -490,6 +497,7 @@ export interface FileRoutesByTo {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/demo_/admin': typeof DemoAdminRoute
   '/demo_/agenda': typeof DemoAgendaRoute
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
@@ -623,6 +632,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/demo/admin'
     | '/demo/agenda'
     | '/demo/automatizaciones'
     | '/demo/bi'
@@ -687,6 +697,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/demo/admin'
     | '/demo/agenda'
     | '/demo/automatizaciones'
     | '/demo/bi'
@@ -752,6 +763,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/demo_/admin'
     | '/demo_/agenda'
     | '/demo_/automatizaciones'
     | '/demo_/bi'
@@ -800,6 +812,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRoute
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
+  DemoAdminRoute: typeof DemoAdminRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
   DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
   DemoBiRoute: typeof DemoBiRoute
@@ -1078,6 +1091,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/admin': {
+      id: '/demo_/admin'
+      path: '/demo/admin'
+      fullPath: '/demo/admin'
+      preLoaderRoute: typeof DemoAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/agenda': {
       id: '/demo_/agenda'
       path: '/demo/agenda'
@@ -1339,6 +1359,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRoute,
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
+  DemoAdminRoute: DemoAdminRoute,
   DemoAgendaRoute: DemoAgendaRoute,
   DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,
   DemoBiRoute: DemoBiRoute,

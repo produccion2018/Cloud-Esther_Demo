@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccesoPruebaRouteImport } from './routes/acceso-prueba'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
 import { Route as DemoRouteImport } from './routes/demo'
@@ -75,6 +76,11 @@ import { Route as DemoEquipoProfesionalPermisosAccesosRouteImport } from './rout
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccesoPruebaRoute = AccesoPruebaRouteImport.update({
+  id: '/acceso-prueba',
+  path: '/acceso-prueba',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -388,6 +394,7 @@ const DemoEquipoProfesionalPermisosAccesosRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/acceso-prueba': typeof AccesoPruebaRoute
   '/admin': typeof AdminRouteWithChildren
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
@@ -452,6 +459,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/acceso-prueba': typeof AccesoPruebaRoute
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
@@ -516,6 +524,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/acceso-prueba': typeof AccesoPruebaRoute
   '/admin': typeof AdminRouteWithChildren
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
@@ -582,6 +591,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/acceso-prueba'
     | '/admin'
     | '/caracteristicas'
     | '/demo'
@@ -646,6 +656,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/acceso-prueba'
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
@@ -709,6 +720,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/acceso-prueba'
     | '/admin'
     | '/caracteristicas'
     | '/demo'
@@ -774,6 +786,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccesoPruebaRoute: typeof AccesoPruebaRoute
   AdminRoute: typeof AdminRouteWithChildren
   CaracteristicasRoute: typeof CaracteristicasRoute
   DemoRoute: typeof DemoRoute
@@ -825,6 +838,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acceso-prueba': {
+      id: '/acceso-prueba'
+      path: '/acceso-prueba'
+      fullPath: '/acceso-prueba'
+      preLoaderRoute: typeof AccesoPruebaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1305,6 +1325,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccesoPruebaRoute: AccesoPruebaRoute,
   AdminRoute: AdminRouteWithChildren,
   CaracteristicasRoute: CaracteristicasRoute,
   DemoRoute: DemoRoute,

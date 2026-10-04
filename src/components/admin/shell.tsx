@@ -252,7 +252,7 @@ export function AdminShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Barra superior */}
-        <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="flex items-center gap-3 px-4 py-2.5 md:px-8">
             <button
               type="button"
@@ -301,7 +301,7 @@ export function AdminShell({
           )}
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-8">
+        <main className="flex-1 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 lg:pb-6">
           <div className="mx-auto w-full max-w-[1360px] space-y-6">
             {/* Encabezado de la sección */}
             <section className="relative overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/[0.06] p-5 shadow-[0_18px_44px_-34px_rgba(76,29,149,0.55)] md:p-7">
@@ -323,6 +323,66 @@ export function AdminShell({
           </div>
         </main>
       </div>
+      <BarraInferiorPanel onMas={() => setMenu(true)} />
     </div>
+  );
+}
+
+/* Barra inferior en el celular (modo aplicación): accesos más usados por el dueño.
+   «Más» abre el menú completo. Cada perfil ve solo lo que su rol permite. */
+function BarraInferiorPanel({ onMas }: { onMas: () => void }) {
+  const { role } = useRole();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const items = [
+    { to: "/admin", label: "Resumen", icon: LayoutDashboard },
+    { to: "/admin/demos", label: "Demos", icon: MonitorPlay },
+    { to: "/admin/clinicas", label: "Clínicas", icon: Building2 },
+    { to: "/admin/notificaciones", label: "Avisos", icon: Bell },
+  ].filter((i) => canAccess(role, i.to));
+  return (
+    <nav
+      aria-label="Accesos rápidos"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+    >
+      <div
+        className="mx-auto grid max-w-md"
+        style={{ gridTemplateColumns: `repeat(${items.length + 1}, 1fr)` }}
+      >
+        {items.map((it) => {
+          const activo = it.to === "/admin" ? pathname === "/admin" : pathname.startsWith(it.to);
+          return (
+            <Link
+              key={it.to}
+              to={it.to}
+              aria-current={activo ? "page" : undefined}
+              className={cn(
+                "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold",
+                activo ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-7 w-12 place-items-center rounded-full",
+                  activo && "bg-primary/10",
+                )}
+              >
+                <it.icon className="h-5 w-5" />
+              </span>
+              {it.label}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onMas}
+          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold text-muted-foreground"
+        >
+          <span className="grid h-7 w-12 place-items-center rounded-full">
+            <Menu className="h-5 w-5" />
+          </span>
+          Más
+        </button>
+      </div>
+    </nav>
   );
 }

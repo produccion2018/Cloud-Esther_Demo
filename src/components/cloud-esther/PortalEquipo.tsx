@@ -775,7 +775,8 @@ function FilaTurno({
           </span>
         </span>
       </button>
-      <div className="flex gap-1.5">
+      {/* En el celular los botones bajan de renglón y se reparten el ancho (nada queda afuera). */}
+      <div className="flex w-full flex-wrap gap-1.5 sm:w-auto [&>*]:flex-1 sm:[&>*]:flex-none">
         {puedeGestionar && t.estado === "Pendiente" && (
           <button
             className={BTN_SECUNDARIO}

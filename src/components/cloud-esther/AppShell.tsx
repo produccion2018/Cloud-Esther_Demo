@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MODULES,
@@ -431,26 +431,100 @@ function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined })
   );
 }
 
-function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
+function MobileHeader({
+  sidebarStyle,
+  menu,
+  setMenu,
+  titulo,
+}: {
+  sidebarStyle: React.CSSProperties;
+  menu: boolean;
+  setMenu: (v: boolean) => void;
+  titulo: string;
+}) {
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border/80 bg-background/85 px-3 py-2.5 backdrop-blur-xl lg:hidden">
-      <Sheet>
+    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border/80 bg-background/85 px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+      <Sheet open={menu} onOpenChange={setMenu}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="size-11" aria-label="Abrir menú">
             <Menu className="size-5" />
           </Button>
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="w-[280px] border-sidebar-border bg-sidebar p-0"
+          className="w-[86vw] max-w-[300px] border-sidebar-border bg-sidebar p-0"
           style={sidebarStyle}
         >
           <SheetTitle className="sr-only">Navegación</SheetTitle>
-          <SidebarInner />
+          <SidebarInner onNavigate={() => setMenu(false)} />
         </SheetContent>
       </Sheet>
       <Logo compact />
+      <p className="min-w-0 flex-1 truncate text-sm font-semibold">{titulo}</p>
     </header>
+  );
+}
+
+/* Barra inferior en el celular: navegación tipo aplicación con los accesos más usados.
+   «Más» abre el menú completo con todos los módulos del plan. */
+function BarraInferior({ onMas }: { onMas: () => void }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sinLeer } = useNotificaciones();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  const items = [
+    { to: "/demo", label: "Inicio", icon: LayoutDashboard },
+    { to: "/demo/agenda", label: "Agenda", icon: CalendarDays },
+    { to: "/demo/pacientes", label: "Pacientes", icon: Users },
+    { to: "/demo/notificaciones", label: "Avisos", icon: Bell },
+  ];
+  return (
+    <nav
+      aria-label="Accesos rápidos"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+    >
+      <div className="mx-auto grid max-w-md grid-cols-5">
+        {items.map((it) => {
+          const activo = it.to === "/demo" ? pathname === "/demo" : pathname.startsWith(it.to);
+          return (
+            <Link
+              key={it.to}
+              to={it.to as never}
+              aria-current={activo ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition-colors",
+                activo ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-7 w-12 place-items-center rounded-full transition-colors",
+                  activo && "bg-primary/12",
+                )}
+              >
+                <it.icon className="size-5" />
+              </span>
+              {it.label}
+              {it.to === "/demo/notificaciones" && montado && sinLeer > 0 && (
+                <span className="absolute right-[22%] top-1.5 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
+                  {sinLeer > 9 ? "9+" : sinLeer}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onMas}
+          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold text-muted-foreground"
+        >
+          <span className="grid h-7 w-12 place-items-center rounded-full">
+            <MoreHorizontal className="size-5" />
+          </span>
+          Más
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -530,6 +604,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const modulo = moduloDeRuta(pathname);
+  const [menuMovil, setMenuMovil] = useState(false);
   storeModulosExtra.usar(); // al comprar un módulo, se desbloquea en el momento
   const subBloqueada = SUBRUTAS_PLAN.find(
     (x) =>
@@ -604,8 +679,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileHeader sidebarStyle={sidebarStyle} />
-        <main className="min-w-0 flex-1">
+        <MobileHeader
+          sidebarStyle={sidebarStyle}
+          menu={menuMovil}
+          setMenu={setMenuMovil}
+          titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
+        />
+        {/* En el celular se deja lugar para la barra inferior. */}
+        <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (
@@ -623,6 +704,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
+      <BarraInferior onMas={() => setMenuMovil(true)} />
       {/* Esther a mano en todos los módulos, solo en planes con IA (Plus y Enterprise). */}
       {iaDisponible &&
         !bloqueado &&

@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { escucharInstalacion, registrarServiceWorker } from "../lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -76,8 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "theme-color", content: "#7c3aed" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#6d28d9" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      // PWA: se instala y se abre como aplicación (Android, iPhone, tablet y PC).
+      { name: "application-name", content: "Cloud Esther" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Cloud Esther" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "format-detection", content: "telephone=no" },
       { title: "Cloud Esther — Software de gestión para clínicas odontológicas" },
       {
         name: "description",
@@ -107,6 +115,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
 
@@ -118,7 +127,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>
@@ -132,6 +141,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // PWA: aviso de instalación del navegador y service worker (una sola vez).
+  useEffect(() => {
+    escucharInstalacion();
+    registrarServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

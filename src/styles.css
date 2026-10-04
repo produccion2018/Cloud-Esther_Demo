@@ -1280,3 +1280,35 @@ html[data-app="panel"][data-lateral="claro"] {
   --sidebar-accent: oklch(0.93 0.03 300);
   --sidebar-border: oklch(0.9 0.02 300);
 }
+
+/* ═════════════ Celular y modo aplicación (PWA) ═════════════ */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+a,
+button,
+[role="button"],
+summary,
+label {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* En el celular los campos usan 16px: iPhone no hace zoom al escribir. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+/* Abierta como app instalada: sin rebote del navegador ni selección accidental del menú. */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+  }
+  nav,
+  header {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

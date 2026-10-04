@@ -64,6 +64,9 @@ function AccesoDueno() {
                   <button type="button" onClick={salirModoDueno} className="btn-ce-outline !h-10">
                     <LogOut className="size-4" /> Salir del modo dueño
                   </button>
+                  <Link to={"/acceso-prueba" as never} className="btn-ce-outline !h-10">
+                    Probar los 4 perfiles (propietario, clínica, profesional y paciente)
+                  </Link>
                 </div>
               </>
             ) : (

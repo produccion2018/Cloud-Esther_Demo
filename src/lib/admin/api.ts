@@ -193,6 +193,17 @@ let base: BaseLocal | null = null;
 
 async function hash(texto: string) {
   const datos = new TextEncoder().encode(`cloud-esther-admin:${texto}`);
+  // Desde el celular por la IP de la red local (http) el navegador no habilita crypto.subtle:
+  // en ese caso se usa un resumen local simple (solo modo demo; el backend valida de verdad).
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    let h1 = 0x811c9dc5;
+    let h2 = 0x01000193;
+    for (const b of datos) {
+      h1 = Math.imul(h1 ^ b, 0x01000193) >>> 0;
+      h2 = Math.imul(h2 ^ b, 0x85ebca6b) >>> 0;
+    }
+    return `local-${h1.toString(16)}${h2.toString(16)}`;
+  }
   const digest = await crypto.subtle.digest("SHA-256", datos);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }

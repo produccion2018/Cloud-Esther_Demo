@@ -15,7 +15,6 @@ import {
 } from "@/lib/cloud-esther/data";
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
-import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/ControlDemo";
 import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
 import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
@@ -391,7 +390,6 @@ function PlanFooter() {
         <LogOut className="size-3.5" />
         {planContratado ? "Cerrar sesión" : "Salir del demo"}
       </Link>
-      <ContadorDemo />
       <button
         type="button"
         onClick={() => {
@@ -581,7 +579,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <ControlSesionDemo />
       {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
           blanco debajo aunque el contenido sea largo) y el menú queda fijo al hacer scroll. */}
       <aside

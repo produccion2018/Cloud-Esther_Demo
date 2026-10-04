@@ -35,7 +35,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
-import { nivelModulo, type NivelModulo } from "@/lib/cloud-esther/niveles";
+import { nivelModulo, useConIA, type NivelModulo } from "@/lib/cloud-esther/niveles";
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 
@@ -253,7 +253,7 @@ export function ConfiguracionModule({ onToast }: Props) {
                     className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                       activo
                         ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                        : "text-muted-foreground hover:bg-white hover:text-foreground"
+                        : "text-muted-foreground hover:bg-card hover:text-foreground"
                     }`}
                   >
                     <Icon className="size-3.5" />
@@ -363,6 +363,8 @@ function GeneralTab({
   actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
 }) {
+  // El interruptor de Esther IA solo existe en planes con IA (Plus y Enterprise).
+  const conIA = useConIA();
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1fr_300px]">
       <div className={`${CARD} p-5`}>
@@ -406,16 +408,18 @@ function GeneralTab({
             onChange={(value) => actualizar("darkModePage", value)}
           />
 
-          <FilaSwitch
-            icon={Sparkles}
-            titulo="Esther AI"
-            descripcion="Asistente inteligente disponible en la plataforma."
-            checked={settings.aiEnabled}
-            onChange={(value) => {
-              actualizar("aiEnabled", value);
-              onToast(value ? "Esther AI activada" : "Esther AI desactivada");
-            }}
-          />
+          {conIA && (
+            <FilaSwitch
+              icon={Sparkles}
+              titulo="Esther AI"
+              descripcion="Asistente inteligente disponible en la plataforma."
+              checked={settings.aiEnabled}
+              onChange={(value) => {
+                actualizar("aiEnabled", value);
+                onToast(value ? "Esther AI activada" : "Esther AI desactivada");
+              }}
+            />
+          )}
 
           <FilaSwitch
             icon={Bell}

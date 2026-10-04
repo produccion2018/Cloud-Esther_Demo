@@ -485,7 +485,7 @@ export default function Marketing() {
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                     seccion === s.id
                       ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      : "text-muted-foreground hover:bg-card hover:text-foreground"
                   }`}
                 >
                   <s.icon className="size-3.5" />
@@ -2307,7 +2307,7 @@ function Referidos({ ctx }: { ctx: Ctx }) {
                       <button
                         type="button"
                         onClick={() => ctx.abrirLead(l.id)}
-                        className="flex w-full items-center gap-2 rounded-xl bg-white/70 px-2.5 py-2 text-left ring-1 ring-primary/10 transition-colors hover:bg-white"
+                        className="flex w-full items-center gap-2 rounded-xl bg-white/70 px-2.5 py-2 text-left ring-1 ring-primary/10 transition-colors hover:bg-card"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-semibold">{l.nombre}</span>

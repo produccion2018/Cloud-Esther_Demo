@@ -128,7 +128,7 @@ const CHIP = (activo: boolean) =>
   `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
     activo
       ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:bg-white hover:text-foreground"
+      : "text-muted-foreground hover:bg-card hover:text-foreground"
   }`;
 
 const NIVEL_ESTILO: Record<NivelStock, { chip: string; barra: string }> = {
@@ -670,7 +670,7 @@ export function Inventario() {
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                     seccion === s.id
                       ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      : "text-muted-foreground hover:bg-card hover:text-foreground"
                   }`}
                 >
                   <s.icon className="size-3.5" />

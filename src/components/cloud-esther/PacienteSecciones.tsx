@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNivel } from "@/lib/cloud-esther/niveles";
+import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import {
   SUCURSALES as SUCURSALES_AGENDA,
@@ -2269,6 +2269,8 @@ function NotaRapidaForm({
 }
 
 function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
+  // Notas de voz (grabación y transcripción): solo en planes con IA (Plus y Enterprise).
+  const conIA = useConIA();
   const [abierto, setAbierto] = useState(false);
   const [vozAbierta, setVozAbierta] = useState(false);
   const [rapidaAbierta, setRapidaAbierta] = useState(false);
@@ -2302,7 +2304,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm lg:col-span-2">
+        <div
+          className={`rounded-2xl border border-primary/10 bg-card p-3 shadow-sm ${conIA ? "lg:col-span-2" : "lg:col-span-3"}`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold">Notas clínicas</p>
@@ -2311,7 +2315,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              {conIA && (
+                <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              )}
               <BotonMini
                 icon={Plus}
                 label="Nota clínica"
@@ -2341,6 +2347,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             </Field>
           </div>
         </div>
+        {conIA && (
         <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
             Notas de voz
@@ -2356,6 +2363,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.
           </p>
         </div>
+        )}
       </div>
 
       {notas.length === 0 ? (
@@ -2440,7 +2448,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
         </ul>
       )}
 
-      {datos.notasVoz.length > 0 && (
+      {conIA && datos.notasVoz.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Notas de voz guardadas</p>
           {datos.notasVoz.map((v) => (
@@ -2526,6 +2534,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
       )}
       {vozAbierta && (
         <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}>
+          {/* Solo se abre desde el botón, que existe únicamente en planes con IA. */}
           <NotaVozRecorder
             profesional={datos.profesionales[0]?.nombre ?? ""}
             onToast={onToast}
@@ -6653,6 +6662,8 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [simulacionAbierta, setSimulacionAbierta] = useState(false);
   const [tab, setTab] = useState<"galeria" | "comparar" | "simulacion">("galeria");
+  // La simulación estética usa IA: solo en Plus y Enterprise.
+  const conIA = useConIA();
   const lista = [...datos.fotografias].sort((a, b) =>
     `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
   );
@@ -6666,14 +6677,16 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
       <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+        <div className={`grid grid-cols-1 gap-1 ${conIA ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           {(
             [
               ["galeria", "Galería"],
               ["comparar", "Antes / Después"],
               ["simulacion", "Simulación estética"],
             ] as const
-          ).map(([id, label]) => (
+          )
+            .filter(([id]) => conIA || id !== "simulacion")
+            .map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -6735,7 +6748,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
           </div>
         ))}
       {tab === "comparar" && <CompararFotografias fotografias={lista} />}
-      {tab === "simulacion" && (
+      {conIA && tab === "simulacion" && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -8437,6 +8450,7 @@ function TimelinePaciente({
 }) {
   // Se muestran los más recientes; el resto se despliega con "Ver todos" para no dejar la ficha tan larga.
   const [verTodos, setVerTodos] = useState(false);
+  const conIA = useConIA();
   type Evento = {
     id: string;
     fecha: string;
@@ -8478,7 +8492,7 @@ function TimelinePaciente({
         seccion: "historia" as SeccionRegistros,
         tono: "primary" as Tono,
       })),
-      ...datos.notasVoz.map((n) => ({
+      ...(conIA ? datos.notasVoz : []).map((n) => ({
         id: `voz-${n.id}`,
         fecha: n.fecha,
         hora: n.hora,

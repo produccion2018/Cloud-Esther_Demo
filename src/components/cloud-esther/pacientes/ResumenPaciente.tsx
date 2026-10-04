@@ -103,7 +103,7 @@ export function NavCarpeta({
   return (
     <nav
       aria-label="Secciones de la carpeta"
-      className="border-b border-primary/10 bg-gradient-to-b from-primary/[0.07] via-primary/[0.025] to-white p-3 md:border-b-0 md:border-r"
+      className="border-b border-primary/10 bg-gradient-to-b from-primary/[0.07] via-primary/[0.025] to-card p-3 md:border-b-0 md:border-r"
     >
       <div className="md:sticky md:top-4">
         <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/70">
@@ -133,7 +133,7 @@ export function NavCarpeta({
                         className={`group relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-200 ${
                           on
                             ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]"
-                            : "text-foreground/70 hover:bg-white hover:text-foreground hover:shadow-[0_6px_16px_-12px_rgba(124,58,237,0.5)]"
+                            : "text-foreground/70 hover:bg-card hover:text-foreground hover:shadow-[0_6px_16px_-12px_rgba(124,58,237,0.5)]"
                         }`}
                       >
                         <span

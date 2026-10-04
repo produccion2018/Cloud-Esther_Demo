@@ -606,7 +606,7 @@ export function EquipoProfesional() {
                 onClick={() => setVista(v.id)}
                 aria-pressed={vista === v.id}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                  vista === v.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"
+                  vista === v.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               >
                 <v.icon className="size-3.5" />

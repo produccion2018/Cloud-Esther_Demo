@@ -288,7 +288,7 @@ function IntegracionesInner() {
                     type="button"
                     onClick={() => setFiltro(c)}
                     aria-pressed={filtro === c}
-                    className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${filtro === c ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${filtro === c ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
                   >
                     {c}
                   </button>

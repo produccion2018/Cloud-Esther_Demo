@@ -16,7 +16,7 @@ const columns: {
     title: "Producto",
     links: [
       { label: "Características", to: "/caracteristicas" },
-      { label: "Planes y precios", to: "/planes" },
+      { label: "Planes", to: "/planes" },
       { label: "Probar demo", to: "/registro" },
     ],
   },

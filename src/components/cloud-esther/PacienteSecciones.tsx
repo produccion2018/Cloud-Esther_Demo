@@ -318,6 +318,8 @@ type NotaVoz = {
   audioUrl: string;
   transcripcion: string;
   estadoTranscripcion: "Pendiente de integración" | "Transcrita";
+  /** Pieza dental (FDI) cuando se grabó desde el Odontograma 3D. */
+  piezas?: string;
 };
 
 type NotaRapida = {
@@ -2084,7 +2086,7 @@ function NotaClinicaForm({
   );
 }
 
-function NotaVozRecorder({
+export function NotaVozRecorder({
   profesional,
   onSave,
   onToast,
@@ -2459,6 +2461,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                   {formatearFecha(v.fecha)} · {v.hora}
                 </span>
                 <Badge tono="gris">{v.estadoTranscripcion}</Badge>
+                {v.piezas && <Badge tono="primary">Pieza {v.piezas}</Badge>}
                 <span className="text-[11px] text-muted-foreground">
                   {v.profesional} · {v.duracionSegundos}s
                 </span>

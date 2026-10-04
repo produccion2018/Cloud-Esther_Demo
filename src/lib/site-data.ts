@@ -62,10 +62,10 @@ export const plans: Plan[] = [
       "Dashboard",
       "Agenda y turnos",
       "Gestión de pacientes",
-      "Gestión clínica",
       "Historia clínica",
       "Odontograma 2D",
-      "Recetas y tratamientos",
+      "Recetas",
+      "Tratamientos",
       "Equipo: integrantes, especialidades y horarios",
       "Estudios clínicos",
       "Laboratorio básico",
@@ -87,7 +87,8 @@ export const plans: Plan[] = [
     modules: "Módulos esenciales + gestión",
     features: [
       "Todo lo del plan Start",
-      "Odontograma 2D",
+      "Odontograma 2D completo: dentición temporal y mixta, historial y exportación",
+      "Agenda avanzada: vista mensual, bloqueos y lista de espera",
       "Comunicación con pacientes",
       "Presupuestos",
       "Pagos y facturación avanzada",
@@ -115,6 +116,8 @@ export const plans: Plan[] = [
     features: [
       "Todo lo del plan Pro",
       "Odontograma 3D con rayos X y simulador de sonrisa",
+      "Notas de voz y audio clínico",
+      "Agenda completa con recordatorios automáticos",
       "Estudios y diagnóstico avanzado",
       "Comunicación avanzada con pacientes",
       "Marketing y captación",
@@ -196,15 +199,30 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Dashboard", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Agenda y turnos", values: ["✓", "✓", "✓", "✓"] },
+  {
+    feature: "Agenda y turnos",
+    values: ["Esencial", "Avanzada", "Completa", "Completa"],
+  },
+
+  {
+    feature: "Recordatorios automáticos de turnos",
+    values: ["—", "—", "✓", "✓"],
+  },
 
   { feature: "Pacientes", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Gestión clínica", values: ["✓", "✓", "✓", "✓"] },
+  { feature: "Tratamientos", values: ["✓", "✓", "✓", "✓"] },
+
+  { feature: "Recetas", values: ["✓", "✓", "✓", "✓"] },
+
+  {
+    feature: "Equipo: integrantes, especialidades y horarios",
+    values: ["✓", "✓", "✓", "✓"],
+  },
 
   { feature: "Historia clínica", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma 2D", values: ["✓", "✓", "—", "—"] },
+  { feature: "Odontograma 2D", values: ["Esencial", "Completo", "—", "—"] },
 
   { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
 
@@ -214,8 +232,8 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Estudios y diagnóstico",
-    values: ["✓", "✓", "✓", "✓"],
+    feature: "Estudios",
+    values: ["Estudios clínicos", "Estudios y diagnóstico", "✓", "✓"],
   },
 
   {
@@ -272,6 +290,16 @@ export const comparison: { feature: string; values: string[] }[] = [
   {
     feature: "Esther IA",
     values: ["—", "—", "✓", "Avanzada"],
+  },
+
+  {
+    feature: "Notas de voz y audio clínico",
+    values: ["—", "—", "✓", "✓"],
+  },
+
+  {
+    feature: "Rayos X con IA y simulador de sonrisa",
+    values: ["—", "—", "✓", "✓"],
   },
 
   {

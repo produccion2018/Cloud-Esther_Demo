@@ -7,7 +7,9 @@ import type { PaisOperacion } from "@/lib/admin/tipos-empresa";
    seleccionados») y la configuración de cada clínica solo ofrece esos países.
    TODO backend: GET /paises (públicos, solo los seleccionados) y PUT /admin/empresa/paises. */
 
-/** Datos de ejemplo hasta conectar el backend. */
+/** Países hispanohablantes de Latinoamérica y España (incluye México). Brasil queda afuera
+ *  hasta tener la versión en portugués. Datos fiscales de referencia: verificarlos con un
+ *  contador de cada país antes de facturar. Datos de ejemplo hasta conectar el backend. */
 export const PAISES_BASE: PaisOperacion[] = [
   {
     id: "pais-ar",
@@ -46,18 +48,6 @@ export const PAISES_BASE: PaisOperacion[] = [
     notas: "",
   },
   {
-    id: "pais-py",
-    codigo: "PY",
-    nombre: "Paraguay",
-    estado: "Próximamente",
-    moneda: "PYG · Guaraní",
-    facturacion: "SET · SIFEN",
-    impuesto: "IVA 10 %",
-    zonaHoraria: "America/Asuncion (UTC−3)",
-    desde: "",
-    notas: "Evaluando socio local para la implementación.",
-  },
-  {
     id: "pais-mx",
     codigo: "MX",
     nombre: "México",
@@ -69,7 +59,208 @@ export const PAISES_BASE: PaisOperacion[] = [
     desde: "",
     notas: "",
   },
+  {
+    id: "pais-co",
+    codigo: "CO",
+    nombre: "Colombia",
+    estado: "Próximamente",
+    moneda: "COP · Peso colombiano",
+    facturacion: "DIAN · factura electrónica",
+    impuesto: "IVA 19 %",
+    zonaHoraria: "America/Bogota (UTC−5)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-pe",
+    codigo: "PE",
+    nombre: "Perú",
+    estado: "Próximamente",
+    moneda: "PEN · Sol",
+    facturacion: "SUNAT · comprobante de pago electrónico",
+    impuesto: "IGV 18 %",
+    zonaHoraria: "America/Lima (UTC−5)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-ec",
+    codigo: "EC",
+    nombre: "Ecuador",
+    estado: "Próximamente",
+    moneda: "USD · Dólar estadounidense",
+    facturacion: "SRI · comprobante electrónico",
+    impuesto: "IVA 15 %",
+    zonaHoraria: "America/Guayaquil (UTC−5)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-bo",
+    codigo: "BO",
+    nombre: "Bolivia",
+    estado: "Próximamente",
+    moneda: "BOB · Boliviano",
+    facturacion: "SIN · facturación en línea",
+    impuesto: "IVA 13 %",
+    zonaHoraria: "America/La_Paz (UTC−4)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-py",
+    codigo: "PY",
+    nombre: "Paraguay",
+    estado: "Próximamente",
+    moneda: "PYG · Guaraní",
+    facturacion: "DNIT (ex SET) · SIFEN",
+    impuesto: "IVA 10 %",
+    zonaHoraria: "America/Asuncion (UTC−3)",
+    desde: "",
+    notas: "Evaluando socio local para la implementación.",
+  },
+  {
+    id: "pais-ve",
+    codigo: "VE",
+    nombre: "Venezuela",
+    estado: "Próximamente",
+    moneda: "VES · Bolívar",
+    facturacion: "SENIAT · factura fiscal",
+    impuesto: "IVA 16 %",
+    zonaHoraria: "America/Caracas (UTC−4)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-cr",
+    codigo: "CR",
+    nombre: "Costa Rica",
+    estado: "Próximamente",
+    moneda: "CRC · Colón",
+    facturacion: "Ministerio de Hacienda · comprobante electrónico",
+    impuesto: "IVA 13 %",
+    zonaHoraria: "America/Costa_Rica (UTC−6)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-pa",
+    codigo: "PA",
+    nombre: "Panamá",
+    estado: "Próximamente",
+    moneda: "PAB / USD",
+    facturacion: "DGI · factura electrónica",
+    impuesto: "ITBMS 7 %",
+    zonaHoraria: "America/Panama (UTC−5)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-gt",
+    codigo: "GT",
+    nombre: "Guatemala",
+    estado: "Próximamente",
+    moneda: "GTQ · Quetzal",
+    facturacion: "SAT · FEL (factura electrónica en línea)",
+    impuesto: "IVA 12 %",
+    zonaHoraria: "America/Guatemala (UTC−6)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-hn",
+    codigo: "HN",
+    nombre: "Honduras",
+    estado: "Próximamente",
+    moneda: "HNL · Lempira",
+    facturacion: "SAR · facturación",
+    impuesto: "ISV 15 %",
+    zonaHoraria: "America/Tegucigalpa (UTC−6)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-sv",
+    codigo: "SV",
+    nombre: "El Salvador",
+    estado: "Próximamente",
+    moneda: "USD · Dólar estadounidense",
+    facturacion: "Ministerio de Hacienda · DTE",
+    impuesto: "IVA 13 %",
+    zonaHoraria: "America/El_Salvador (UTC−6)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-ni",
+    codigo: "NI",
+    nombre: "Nicaragua",
+    estado: "Próximamente",
+    moneda: "NIO · Córdoba",
+    facturacion: "DGI · facturación",
+    impuesto: "IVA 15 %",
+    zonaHoraria: "America/Managua (UTC−6)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-do",
+    codigo: "DO",
+    nombre: "República Dominicana",
+    estado: "Próximamente",
+    moneda: "DOP · Peso dominicano",
+    facturacion: "DGII · e-CF (comprobante fiscal electrónico)",
+    impuesto: "ITBIS 18 %",
+    zonaHoraria: "America/Santo_Domingo (UTC−4)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-cu",
+    codigo: "CU",
+    nombre: "Cuba",
+    estado: "Próximamente",
+    moneda: "CUP · Peso cubano",
+    facturacion: "ONAT",
+    impuesto: "A definir",
+    zonaHoraria: "America/Havana (UTC−5/−4)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-pr",
+    codigo: "PR",
+    nombre: "Puerto Rico",
+    estado: "Próximamente",
+    moneda: "USD · Dólar estadounidense",
+    facturacion: "Departamento de Hacienda · SURI",
+    impuesto: "IVU 11,5 %",
+    zonaHoraria: "America/Puerto_Rico (UTC−4)",
+    desde: "",
+    notas: "",
+  },
+  {
+    id: "pais-es",
+    codigo: "ES",
+    nombre: "España",
+    estado: "Próximamente",
+    moneda: "EUR · Euro",
+    facturacion: "AEAT · factura electrónica (Verifactu)",
+    impuesto: "IVA 21 % (sanidad: exento)",
+    zonaHoraria: "Europe/Madrid (UTC+1/+2)",
+    desde: "",
+    notas: "",
+  },
 ];
+
+/** Completa una lista guardada con los países que falten (sin pisar lo que eligió el dueño). */
+export function completarPaises(guardados: PaisOperacion[]): PaisOperacion[] {
+  const codigos = new Set(guardados.map((p) => p.codigo.toUpperCase()));
+  return [...guardados, ...PAISES_BASE.filter((p) => !codigos.has(p.codigo))];
+}
+
+/** Todos los países donde Cloud Esther puede operar (para selectores de configuración). */
+export const PAISES_SOPORTADOS = PAISES_BASE;
 
 /** Un país está «seleccionado» (se vende y las clínicas pueden elegirlo) cuando está Activo. */
 export const estaSeleccionado = (p: PaisOperacion) => p.estado === "Activo";
@@ -90,7 +281,7 @@ export function leerPaisesSeleccionados(): PaisOperacion[] {
       const guardados = raw
         ? (JSON.parse(raw) as { colecciones?: { paises?: PaisOperacion[] } }).colecciones?.paises
         : undefined;
-      if (Array.isArray(guardados) && guardados.length) lista = guardados;
+      if (Array.isArray(guardados) && guardados.length) lista = completarPaises(guardados);
     } catch {
       /* datos corruptos: se usan los de ejemplo */
     }

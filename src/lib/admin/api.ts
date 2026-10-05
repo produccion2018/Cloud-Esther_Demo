@@ -9,6 +9,7 @@ import {
   PLANES_INICIALES,
 } from "./datos-ejemplo";
 import { leerSesion } from "./sesion";
+import { completarPaises } from "@/lib/paises";
 import {
   ANTICIPOS_INICIALES,
   ASISTENCIAS_INICIALES,
@@ -222,7 +223,12 @@ async function db(): Promise<BaseLocal> {
       base = {
         ...guardada,
         version: 2,
-        colecciones: { ...COLECCIONES_INICIALES, ...(guardada.colecciones ?? {}) },
+        colecciones: {
+          ...COLECCIONES_INICIALES,
+          ...(guardada.colecciones ?? {}),
+          // Países nuevos del catálogo (sin pisar los que ya editó el dueño).
+          paises: completarPaises(guardada.colecciones?.paises ?? PAISES_INICIALES),
+        },
         notificaciones: guardada.notificaciones ?? NOTIFICACIONES_INICIALES,
         sesiones: guardada.sesiones ?? SESIONES_INICIALES,
         intentos: guardada.intentos ?? INTENTOS_INICIALES,

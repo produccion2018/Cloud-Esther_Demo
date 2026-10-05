@@ -94,14 +94,9 @@ function permsFor(role: TeamRole): Permission[] {
       "acceder_mensajes",
     ],
     asistente: ["ver_pacientes", "gestionar_turnos", "acceder_mensajes"],
-    // Recepción cobra y factura en la mayoría de las clínicas; el dueño lo puede quitar.
-    secretaria: [
-      "ver_pacientes",
-      "gestionar_turnos",
-      "gestionar_agenda",
-      "gestionar_facturacion",
-      "acceder_mensajes",
-    ],
+    // Sin áreas sensibles por defecto (facturación, finanzas, RRHH, auditoría): las habilita el
+    // propietario. Caja y cobros se asignan en «Permisos por módulo y acción».
+    secretaria: ["ver_pacientes", "gestionar_turnos", "gestionar_agenda", "acceder_mensajes"],
     administrador: Object.keys(base),
   };
   return Object.entries(base).map(([key, label]) => ({

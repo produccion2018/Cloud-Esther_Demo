@@ -28,6 +28,8 @@ import {
   Send,
   ShieldCheck,
   KeyRound,
+  History,
+  LifeBuoy,
   Mail,
   Stethoscope,
   Upload,
@@ -63,6 +65,22 @@ import {
 import { capitalizarNombre } from "@/lib/utils";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { totalesPresupuesto } from "@/components/cloud-esther/presupuestos/Presupuestos";
+import { PortalShell } from "@/components/cloud-esther/portales/PortalShell";
+import { usePreferenciasPortal } from "@/components/cloud-esther/portales/preferencias";
+import {
+  NotificacionesUniversales,
+  type NotifUniversal,
+} from "@/components/cloud-esther/portales/NotificacionesUniversales";
+import {
+  AutorizacionesPanel,
+  PrivacidadPaciente,
+} from "@/components/cloud-esther/portales/AutorizacionesPanel";
+import {
+  EstadoCuenta,
+  HistorialPaciente,
+  SoporteAyuda,
+} from "@/components/cloud-esther/portales/paciente/SeccionesPaciente";
+import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
 
 /* Ubicación: src/components/cloud-esther/PortalPaciente.tsx
 
@@ -77,21 +95,47 @@ type Seccion =
   | "turnos"
   | "tratamientos"
   | "documentos"
+  | "historial"
+  | "autorizaciones"
   | "documentacion"
+  | "cuenta"
   | "pagos"
   | "mensajes"
-  | "perfil";
+  | "soporte"
+  | "perfil"
+  | "privacidad";
 
-const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
-  { id: "inicio", label: "Inicio", icon: Home },
-  { id: "turnos", label: "Mis turnos", icon: CalendarDays },
-  { id: "tratamientos", label: "Tratamientos", icon: Stethoscope },
-  { id: "documentos", label: "Recetas y estudios", icon: FileText },
-  { id: "documentacion", label: "Documentación", icon: Upload },
-  { id: "pagos", label: "Pagos", icon: Wallet },
-  { id: "mensajes", label: "Mensajes", icon: MessageCircle },
-  { id: "perfil", label: "Mis datos", icon: UserRound },
+const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; grupo: string }[] = [
+  { id: "inicio", label: "Inicio", icon: Home, grupo: "Mi salud" },
+  { id: "turnos", label: "Mis turnos", icon: CalendarDays, grupo: "Mi salud" },
+  { id: "tratamientos", label: "Tratamientos", icon: Stethoscope, grupo: "Mi salud" },
+  { id: "documentos", label: "Recetas y estudios", icon: FileText, grupo: "Mi salud" },
+  { id: "historial", label: "Mi historial", icon: History, grupo: "Mi salud" },
+  { id: "autorizaciones", label: "Autorizaciones", icon: KeyRound, grupo: "Trámites" },
+  { id: "documentacion", label: "Documentación", icon: Upload, grupo: "Trámites" },
+  { id: "cuenta", label: "Estado de cuenta", icon: ReceiptText, grupo: "Trámites" },
+  { id: "pagos", label: "Pagos", icon: Wallet, grupo: "Trámites" },
+  { id: "mensajes", label: "Mensajes", icon: MessageCircle, grupo: "Ayuda" },
+  { id: "soporte", label: "Soporte y ayuda", icon: LifeBuoy, grupo: "Ayuda" },
+  { id: "perfil", label: "Mis datos", icon: UserRound, grupo: "Mi cuenta" },
+  { id: "privacidad", label: "Privacidad y permisos", icon: ShieldCheck, grupo: "Mi cuenta" },
 ];
+
+const TITULO_SECCION: Record<Seccion, string> = {
+  inicio: "Inicio",
+  turnos: "Mis turnos",
+  tratamientos: "Tratamientos",
+  documentos: "Recetas y estudios",
+  historial: "Mi historial",
+  autorizaciones: "Autorizaciones",
+  documentacion: "Documentación",
+  cuenta: "Estado de cuenta",
+  pagos: "Pagos",
+  mensajes: "Mensajes",
+  soporte: "Soporte y ayuda",
+  perfil: "Mis datos",
+  privacidad: "Privacidad y permisos",
+};
 
 /* ───────────── Utilidades ───────────── */
 
@@ -313,7 +357,7 @@ function PortalGate() {
     setMontado(true);
   }, []);
 
-  if (!montado) return <div className="min-h-screen bg-[#faf9ff]" />;
+  if (!montado) return <div className="min-h-screen bg-background" />;
   if (vista !== null)
     return <PortalInner modo="vista" pacienteInicial={vista} onSalir={() => {}} />;
   // Si al paciente le revocaron el acceso, se cierra su sesión.
@@ -419,7 +463,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-center bg-[#faf9ff] p-6">
+      <div className="flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2.5">
             <BrandMark className="size-10" />
@@ -521,9 +565,10 @@ function PortalInner({
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("inicio");
   const [pacienteId, setPacienteId] = useState<number | null>(pacienteInicial);
-  const [menu, setMenu] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
+  const { prefs, cambiar: cambiarPrefs } = usePreferenciasPortal("paciente");
+  const { autorizaciones } = storeAutorizaciones.usar();
 
   useEffect(() => setMontado(true), []);
 
@@ -544,7 +589,7 @@ function PortalInner({
 
   if (!paciente) {
     return (
-      <div className="grid min-h-screen place-items-center bg-[#faf9ff] p-6 text-center">
+      <div className="grid min-h-screen place-items-center bg-background p-6 text-center">
         <div>
           <p className="text-lg font-semibold">Todavía no hay pacientes activos</p>
           <Link to="/demo/pacientes" className={`${BTN_PRIMARIO} mt-3`}>
@@ -566,7 +611,6 @@ function PortalInner({
     onToast,
     ir: (s) => {
       setSeccion(s);
-      setMenu(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
   };
@@ -577,132 +621,127 @@ function PortalInner({
       .conversaciones.find((c) => c.paciente === nombre)
       ?.mensajes.filter((m) => m.de === "clinica").length ?? 0;
 
-  const sidebar = (
-    <div className="flex h-full flex-col">
-      <div className="px-5 pb-4 pt-5">
-        <div className="flex items-center gap-2.5">
-          <BrandMark className="size-9 shrink-0" />
-          <span className="leading-tight">
-            <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
-              Cloud Esther
-            </span>
-            <span className="block text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
-              Portal del paciente
-            </span>
-          </span>
-        </div>
-        <div className="mt-4 rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
-            Tu clínica
-          </p>
-          <p className="truncate text-[13px] font-medium text-sidebar-foreground">{clinica}</p>
-          <p className="truncate text-[11px] text-sidebar-foreground/60">{paciente.sucursal}</p>
-        </div>
-      </div>
-      <nav className="flex-1 overflow-y-auto px-3 pb-6">
-        <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
-          Mi portal
-        </p>
-        <ul className="space-y-0.5">
-          {SECCIONES.filter(
-            (s) =>
-              (s.id !== "pagos" || config.pagosOnline) && (s.id !== "mensajes" || config.mensajes),
-          ).map((s) => {
-            const activo = seccion === s.id;
-            return (
-              <li key={s.id}>
-                <button
-                  onClick={() => ctx.ir(s.id)}
-                  className={`group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                    activo
-                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                  }`}
-                >
-                  <s.icon className={`size-4 shrink-0 ${activo ? "text-sidebar-primary" : ""}`} />
-                  <span className="truncate">{s.label}</span>
-                  {s.id === "mensajes" && montado && sinLeer > 0 && (
-                    <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-sidebar-primary px-1.5 text-[10px] font-bold text-sidebar-primary-foreground">
-                      {sinLeer}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <div className="space-y-2 border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2.5 rounded-xl bg-sidebar-accent/50 p-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-xs font-bold text-white">
-            {`${paciente.nombre[0] ?? ""}${paciente.apellido[0] ?? ""}`}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-[13px] font-medium text-sidebar-foreground">
-              {nombre}
-            </span>
-            <span className="block truncate text-[11px] text-sidebar-foreground/55">
-              {paciente.obraSocial || "Paciente particular"}
-            </span>
-          </span>
-        </div>
-        {modo === "paciente" ? (
-          <button
-            onClick={onSalir}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            <LogOut className="size-3.5" />
-            Cerrar sesión
-          </button>
-        ) : (
-          <Link
-            to="/demo/portal-paciente"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            <LogOut className="size-3.5" />
-            Volver al monitoreo
-          </Link>
-        )}
-      </div>
-    </div>
+  // Notificaciones universales del paciente: turnos, tratamientos, estudios, documentos, pagos
+  // y autorizaciones, en un solo lugar.
+  const hoy = hoyISO();
+  const manana = sumarDias(hoy, 2);
+  const misAut = autorizaciones.filter((a) => a.pacienteId === paciente.id);
+  const saldoPaciente = saldoDe(ctx.registros);
+  const docsPendientes = docsDe(storePortal.leer().docs, paciente.id).filter(
+    (d) => d.estado === "Pendiente",
   );
+  const notificaciones: NotifUniversal[] = [
+    ...ctx.turnos
+      .filter((t) => t.fecha >= hoy && t.fecha <= manana && t.estado !== "Cancelada")
+      .map((t) => ({
+        id: `turno-${t.id}-${t.estado}`,
+        categoria: "Turnos" as const,
+        titulo: t.estado === "Pendiente" ? "Confirmá tu próximo turno" : "Tenés un turno cerca",
+        detalle: `${fechaLarga(t.fecha)} · ${t.hora} · ${t.tratamiento}`,
+        fecha: `${t.fecha}T${t.hora}:00`,
+        urgente: t.estado === "Pendiente",
+        onAbrir: () => ctx.ir("turnos"),
+      })),
+    ...ctx.registros.tratamientos
+      .filter((t) => t.estado === "En tratamiento" || t.estado === "Planificado")
+      .slice(0, 3)
+      .map((t) => ({
+        id: `trat-${t.id}-${t.estado}`,
+        categoria: "Tratamientos" as const,
+        titulo: `${t.nombre}: ${t.estado.toLowerCase()}`,
+        detalle: t.profesional,
+        onAbrir: () => ctx.ir("tratamientos"),
+      })),
+    ...ctx.registros.estudios
+      .filter((e) => e.fecha >= sumarDias(hoy, -21))
+      .map((e) => ({
+        id: `estudio-${e.id}`,
+        categoria: "Estudios" as const,
+        titulo: `Nuevo estudio: ${e.tipo}`,
+        detalle: `Informe ${e.estadoInforme.toLowerCase()}`,
+        fecha: `${e.fecha}T12:00:00`,
+        onAbrir: () => ctx.ir("documentos"),
+      })),
+    ...docsPendientes.slice(0, 3).map((d) => ({
+      id: `doc-${d.id}`,
+      categoria: "Documentos" as const,
+      titulo: `La clínica te pide: ${d.titulo}`,
+      detalle: "Subilo desde Documentación",
+      onAbrir: () => ctx.ir("documentacion"),
+    })),
+    ...(saldoPaciente > 0
+      ? [
+          {
+            id: `saldo-${saldoPaciente}`,
+            categoria: "Pagos" as const,
+            titulo: `Tenés un saldo de ${ars(saldoPaciente)}`,
+            detalle: "Revisá tu estado de cuenta",
+            onAbrir: () => ctx.ir("cuenta"),
+          },
+        ]
+      : []),
+    ...misAut
+      .filter((a) => a.estado === "Pendiente" && a.origen !== "Paciente")
+      .map((a) => ({
+        id: `aut-${a.id}`,
+        categoria: "Autorizaciones" as const,
+        titulo: `Autorización pendiente: ${a.titulo}`,
+        detalle: `Pedida por ${a.solicitadoPor}`,
+        fecha: a.fecha,
+        urgente: true,
+        onAbrir: () => ctx.ir("autorizaciones"),
+      })),
+  ];
+
+  const visibles = SECCIONES.filter(
+    (s) => (s.id !== "pagos" || config.pagosOnline) && (s.id !== "mensajes" || config.mensajes),
+  );
+  const pendientesAut = misAut.filter(
+    (a) => a.estado === "Pendiente" && a.origen !== "Paciente",
+  ).length;
+  const grupos = ["Mi salud", "Trámites", "Ayuda", "Mi cuenta"].map((g) => ({
+    titulo: g,
+    items: visibles
+      .filter((x) => x.grupo === g)
+      .map((x) => ({
+        id: x.id,
+        label: x.label,
+        icon: x.icon,
+        ...(x.id === "mensajes" && montado && sinLeer > 0 ? { badge: sinLeer } : {}),
+        ...(x.id === "autorizaciones" && pendientesAut > 0 ? { badge: pendientesAut } : {}),
+      })),
+  }));
 
   return (
-    <div className="flex min-h-screen bg-[#faf9ff]">
-      <aside className="hidden w-64 shrink-0 self-stretch border-r border-sidebar-border bg-sidebar lg:block">
-        <div className="sticky top-0 h-screen">{sidebar}</div>
-      </aside>
-      {menu && (
-        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenu(false)}>
-          <aside className="h-full w-64 bg-sidebar" onClick={(e) => e.stopPropagation()}>
-            {sidebar}
-          </aside>
-        </div>
-      )}
-
-      <main className="relative min-w-0 flex-1 overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.12),transparent_28%),radial-gradient(circle_at_92%_40%,rgba(52,211,153,0.07),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
-        />
-        <div className="relative mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 lg:px-8">
-          {modo === "paciente" ? (
-            <button
-              className="mb-3 grid size-9 place-items-center rounded-lg border border-primary/15 bg-white lg:hidden"
-              aria-label="Abrir menú"
-              onClick={() => setMenu(true)}
-            >
-              <Menu className="size-4" />
-            </button>
-          ) : (
+    <>
+      <PortalShell
+        portal="Portal del paciente"
+        clinica={clinica}
+        usuario={{
+          nombre,
+          detalle: paciente.obraSocial || "Paciente particular",
+          iniciales: `${paciente.nombre[0] ?? ""}${paciente.apellido[0] ?? ""}`,
+        }}
+        grupos={grupos}
+        activo={seccion}
+        onIr={(id) => ctx.ir(id as Seccion)}
+        titulo={TITULO_SECCION[seccion]}
+        subtitulo={`${clinica} · ${paciente.sucursal}`}
+        acciones={
+          montado ? (
+            <NotificacionesUniversales items={notificaciones} clave={`paciente:${paciente.id}`} />
+          ) : null
+        }
+        prefs={prefs}
+        onPrefs={cambiarPrefs}
+        onSalir={
+          modo === "paciente" ? onSalir : () => window.location.assign("/demo/portal-paciente")
+        }
+        salirLabel={modo === "paciente" ? "Cerrar sesión" : "Volver al monitoreo"}
+        principales={["inicio", "turnos", "autorizaciones", "mensajes"]}
+        aviso={
+          modo === "vista" ? (
             <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
-              <button
-                className="grid size-8 place-items-center rounded-lg border border-amber-200 bg-white lg:hidden"
-                aria-label="Abrir menú"
-                onClick={() => setMenu(true)}
-              >
-                <Menu className="size-4" />
-              </button>
               <Eye className="size-4 shrink-0" />
               <span className="font-semibold">Vista previa del equipo:</span>
               <span>así ve el portal</span>
@@ -713,7 +752,7 @@ function PortalInner({
                   onToast("Ahora ves el portal de otro paciente");
                 }}
                 aria-label="Paciente"
-                className="h-8 rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-foreground outline-none"
+                className="h-8 rounded-full border border-amber-200 bg-card px-3 text-xs font-semibold text-foreground outline-none"
               >
                 {activos.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -725,34 +764,65 @@ function PortalInner({
                 Lo que hagas acá queda registrado como si fuera el paciente.
               </span>
             </div>
-          )}
-
-          {!montado ? (
-            <div className="card-grad h-[520px] animate-pulse" />
-          ) : (
-            <>
-              {seccion === "inicio" && <Inicio ctx={ctx} />}
-              {seccion === "turnos" && <Turnos ctx={ctx} />}
-              {seccion === "tratamientos" && <Tratamientos ctx={ctx} />}
-              {seccion === "documentos" && <Documentos ctx={ctx} />}
-              {seccion === "documentacion" && <Documentacion ctx={ctx} />}
-              {seccion === "pagos" && <Pagos ctx={ctx} />}
-              {seccion === "mensajes" && <Mensajes ctx={ctx} />}
-              {seccion === "perfil" && <Perfil ctx={ctx} />}
-            </>
-          )}
-        </div>
-      </main>
+          ) : null
+        }
+      >
+        {!montado ? (
+          <div className="card-grad h-[520px] animate-pulse" />
+        ) : (
+          <>
+            {seccion === "inicio" && <Inicio ctx={ctx} />}
+            {seccion === "turnos" && <Turnos ctx={ctx} />}
+            {seccion === "tratamientos" && <Tratamientos ctx={ctx} />}
+            {seccion === "documentos" && <Documentos ctx={ctx} />}
+            {seccion === "historial" && (
+              <HistorialPaciente registros={ctx.registros} turnos={ctx.turnos} />
+            )}
+            {seccion === "autorizaciones" && (
+              <AutorizacionesPanel
+                rol="paciente"
+                usuario={nombre}
+                paciente={paciente}
+                onToast={onToast}
+              />
+            )}
+            {seccion === "documentacion" && <Documentacion ctx={ctx} />}
+            {seccion === "cuenta" && (
+              <EstadoCuenta
+                registros={ctx.registros}
+                nombre={nombre}
+                clinica={clinica}
+                {...(config.pagosOnline ? { onPagar: () => ctx.ir("pagos") } : {})}
+              />
+            )}
+            {seccion === "pagos" && <Pagos ctx={ctx} />}
+            {seccion === "mensajes" && <Mensajes ctx={ctx} />}
+            {seccion === "soporte" && (
+              <SoporteAyuda
+                paciente={paciente}
+                nombre={nombre}
+                clinica={clinica}
+                onToast={onToast}
+                onMensajes={() => ctx.ir("mensajes")}
+              />
+            )}
+            {seccion === "perfil" && <Perfil ctx={ctx} />}
+            {seccion === "privacidad" && (
+              <PrivacidadPaciente paciente={paciente} usuario={nombre} onToast={onToast} />
+            )}
+          </>
+        )}
+      </PortalShell>
 
       {toast && (
         <div
-          className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
+          className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl lg:bottom-6"
           role="status"
         >
           {toast}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

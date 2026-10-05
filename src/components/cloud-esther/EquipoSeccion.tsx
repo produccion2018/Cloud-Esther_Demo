@@ -21,6 +21,7 @@ import {
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
+import { PermisosPortalEditor } from "@/components/cloud-esther/portales/PermisosPortalEditor";
 
 /** Los cambios de permisos quedan siempre en la auditoría de la clínica. */
 function auditarPermiso(accion: string) {
@@ -851,6 +852,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
           </ul>
         </div>
       </div>
+      <PermisosPortalEditor miembro={miembro} onCambio={auditarPermiso} />
       <MatrizAccesos miembros={miembros} seleccionado={miembro.id} onElegir={setSeleccionado} />
     </div>
   );

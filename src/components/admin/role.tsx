@@ -42,6 +42,7 @@ export const sectionAccess: Record<string, AdminRole[]> = {
   "/admin/paises": ["owner", "partner", "customer-care"],
   "/admin/ia": ["owner", "partner", "support"],
   "/admin/soporte": ROLES,
+  "/admin/atencion": ["owner", "partner", "customer-care", "support"],
   "/admin/personal": ["owner", "partner"],
   "/admin/nomina": ["owner", "partner"],
   "/admin/gastos": ["owner", "partner"],
@@ -69,6 +70,8 @@ export const permisos = {
   /** Sueldos e importes de nómina: solo Dueño y Socio. */
   verSueldos: (r: AdminRole) => r === "owner" || r === "partner",
   gestionarTickets: (r: AdminRole) => r === "owner" || r === "support" || r === "customer-care",
+  /** Atención a clínicas (secretaría de Cloud Esther): registrar y gestionar casos. */
+  gestionarAtencion: (r: AdminRole) => r === "owner" || r === "customer-care",
 };
 
 const RoleContext = createContext<{

@@ -54,6 +54,10 @@ export type Tarea = {
   paciente: string;
   fecha: string;
   hecha: boolean;
+  /** Integrante a cargo (portal administrativo). */
+  responsable?: string;
+  /** Fecha límite (ISO, día). */
+  vence?: string;
 };
 export type NuevaTarea = Omit<Tarea, "id" | "hecha">;
 
@@ -146,16 +150,19 @@ export type EstadoAgenda = {
   recordatorios: Recordatorio[];
   tareas: Tarea[];
 };
-export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(() => {
-  const hoy = hoyISO();
-  return {
-    turnos: turnosEjemplo(hoy),
-    bloqueos: [],
-    espera: ESPERA_EJEMPLO,
-    recordatorios: RECORDATORIOS_INICIAL,
-    tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
-  };
-}, { persistir: "agenda" });
+export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(
+  () => {
+    const hoy = hoyISO();
+    return {
+      turnos: turnosEjemplo(hoy),
+      bloqueos: [],
+      espera: ESPERA_EJEMPLO,
+      recordatorios: RECORDATORIOS_INICIAL,
+      tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
+    };
+  },
+  { persistir: "agenda" },
+);
 
 type Actualizar<T> = T | ((prev: T) => T);
 function setterAgenda<K extends keyof EstadoAgenda>(clave: K) {

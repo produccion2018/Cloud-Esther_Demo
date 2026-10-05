@@ -42,6 +42,7 @@ import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
    directa con Microsoft 365 / Google Workspace queda para el backend.
    TODO backend: los mismos datos por API con el token del integrante (clinicId + rol + permisos). */
 
+export type PestanaAdministrativa = Pestana;
 type Pestana = "escritorio" | "cobros" | "presupuestos" | "documentos" | "tareas";
 
 const PESTANAS: { id: Pestana; label: string; icon: LucideIcon }[] = [
@@ -119,17 +120,22 @@ export function EspacioAdministrativo({
   turnos,
   onToast,
   abrirFicha,
+  pestana: pestanaControlada,
 }: {
   yo: TeamMember;
   clinica: string;
   vista: boolean;
+  /** Si se indica, la pestaña la elige el menú del portal y no se muestra la barra interna. */
+  pestana?: Pestana;
   /** ¿El integrante tiene este permiso? (Equipo → Permisos y accesos). */
   puede: (permiso: string) => boolean;
   turnos: Turno[];
   onToast: (m: string) => void;
   abrirFicha: (paciente: string) => void;
 }) {
-  const [pestana, setPestana] = useState<Pestana>("escritorio");
+  const [pestanaInterna, setPestana] = useState<Pestana>("escritorio");
+  const pestana = pestanaControlada ?? pestanaInterna;
+  const controlada = pestanaControlada !== undefined;
   const { pacientes } = usePacientes();
   const registros = useTodosLosRegistros();
   const { cambiar } = useRegistrosPacientes();
@@ -170,38 +176,42 @@ export function EspacioAdministrativo({
 
   return (
     <div className="space-y-4">
-      <header className="rounded-3xl border border-primary/12 bg-card p-4 shadow-sm sm:p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-          Administración
-        </p>
-        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Tu escritorio</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Turnos por confirmar, cobros, presupuestos, documentos y tareas de {clinica}.
-        </p>
-      </header>
+      {!controlada && (
+        <header className="rounded-3xl border border-primary/12 bg-card p-4 shadow-sm sm:p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+            Administración
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Tu escritorio</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Turnos por confirmar, cobros, presupuestos, documentos y tareas de {clinica}.
+          </p>
+        </header>
+      )}
 
-      <div
-        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
-        role="tablist"
-      >
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={pestana === p.id}
-            onClick={() => setPestana(p.id)}
-            className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold transition ${
-              pestana === p.id
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "border border-primary/12 bg-card text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <p.icon className="size-4" />
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {!controlada && (
+        <div
+          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
+          role="tablist"
+        >
+          {PESTANAS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={pestana === p.id}
+              onClick={() => setPestana(p.id)}
+              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold transition ${
+                pestana === p.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "border border-primary/12 bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <p.icon className="size-4" />
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {pestana === "escritorio" && (
         <div className="space-y-4">

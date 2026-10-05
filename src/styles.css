@@ -1504,3 +1504,15 @@ label {
     display: none;
   }
 }
+
+/* Menú lateral en modo oscuro para los que no traen paleta propia (portales del Plan 4).
+   El panel de la clínica y el panel del dueño definen la suya y no se ven afectados. */
+.dark {
+  --sidebar: oklch(0.15 0.03 292);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.72 0.17 300);
+  --sidebar-primary-foreground: oklch(0.16 0.05 292);
+  --sidebar-accent: oklch(0.23 0.05 292);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 9%);
+}

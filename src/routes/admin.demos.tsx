@@ -38,6 +38,7 @@ import { useAccion, useDemos, useEquipo } from "@/lib/admin/consultas";
 import { fecha, haceCuanto, minutosTexto, resumenDemo, type Interes } from "@/lib/admin/formato";
 import type { CuentaDemo, EstadoDemo } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 export const Route = createFileRoute("/admin/demos")({
   head: () => ({
@@ -402,9 +403,9 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
                 href={`https://wa.me/${telefono}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold hover:bg-white/25"
+                className="btn-wa !min-h-8 !text-xs"
               >
-                <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                <IconoWhatsApp /> WhatsApp
               </a>
             </>
           )}

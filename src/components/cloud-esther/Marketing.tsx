@@ -56,6 +56,7 @@ import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/Marketing.tsx
 
@@ -1332,9 +1333,9 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
                 )}
                 target="_blank"
                 rel="noreferrer"
-                className={BTN_SECUNDARIO}
+                className="btn-wa"
               >
-                <MessageCircle className="size-3.5" /> WhatsApp
+                <IconoWhatsApp /> WhatsApp
               </a>
             )}
             {l.etapa !== "Convertido" && (

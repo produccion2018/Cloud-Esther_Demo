@@ -418,6 +418,48 @@ export function HeroPortal({
   );
 }
 
+/** Encabezado con degradé para cada sección (versión compacta del héroe). */
+export function EncabezadoSeccion({
+  area,
+  titulo,
+  detalle,
+  icon: Icon,
+}: {
+  area: string;
+  titulo: string;
+  detalle?: string | undefined;
+  icon?: LucideIcon | undefined;
+}) {
+  return (
+    <section className="relative mb-5 overflow-hidden rounded-[26px] bg-gradient-to-r from-primary via-violet-600 to-fuchsia-600 px-5 py-4 text-white shadow-[0_20px_50px_-30px_rgba(124,58,237,0.8)] sm:px-6 sm:py-5">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10 blur-2xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-20 right-1/3 size-56 rounded-full bg-fuchsia-300/20 blur-3xl"
+      />
+      <div className="relative flex items-center gap-3.5">
+        {Icon && (
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/25 bg-white/15 shadow-inner backdrop-blur-md">
+            <Icon className="size-[22px]" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-white/75">
+            {area}
+          </p>
+          <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
+            {titulo}
+          </h1>
+          {detalle && <p className="mt-0.5 text-sm text-white/85">{detalle}</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function KpiPortal({
   titulo,
   valor,
@@ -431,7 +473,7 @@ export function KpiPortal({
   detalle?: string;
   icon: LucideIcon;
   tono?: "violeta" | "verde" | "ambar" | "rosa" | "azul";
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }) {
   const tonos = {
     violeta: "from-primary to-fuchsia-500",
@@ -446,7 +488,15 @@ export function KpiPortal({
       {...(onClick ? { type: "button" as const, onClick } : {})}
       className="group relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 text-left shadow-[0_12px_32px_-24px_rgba(124,58,237,0.6)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(124,58,237,0.7)]"
     >
-      <div className="flex items-start justify-between gap-2">
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gradient-to-br ${tonos} opacity-[0.12] blur-2xl transition group-hover:opacity-20`}
+      />
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-4 bottom-0 h-[3px] rounded-full bg-gradient-to-r ${tonos} opacity-70`}
+      />
+      <div className="relative flex items-start justify-between gap-2">
         <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
           {titulo}
         </p>
@@ -456,10 +506,10 @@ export function KpiPortal({
           <Icon className="size-4" />
         </span>
       </div>
-      <p className="mt-1 truncate font-display text-2xl font-bold tabular-nums tracking-tight">
+      <p className="relative mt-1 truncate font-display text-2xl font-bold tabular-nums tracking-tight">
         {valor}
       </p>
-      {detalle && <p className="truncate text-xs text-muted-foreground">{detalle}</p>}
+      {detalle && <p className="relative truncate text-xs text-muted-foreground">{detalle}</p>}
     </Tag>
   );
 }
@@ -481,18 +531,28 @@ export function TarjetaPortal({
 }) {
   return (
     <section
-      className={`rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_12px_32px_-26px_rgba(124,58,237,0.55)] sm:p-5 ${className}`}
+      className={`relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_12px_32px_-26px_rgba(124,58,237,0.55)] sm:p-5 ${className}`}
     >
+      {titulo && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400 opacity-70"
+        />
+      )}
       {(titulo || acciones) && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
             {Icon && (
-              <span className="grid size-9 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <Icon className="size-4" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+                <Icon className="size-[18px]" />
               </span>
             )}
             <div className="min-w-0">
-              {titulo && <h2 className="truncate text-sm font-bold">{titulo}</h2>}
+              {titulo && (
+                <h2 className="truncate font-display text-[15px] font-bold tracking-tight">
+                  {titulo}
+                </h2>
+              )}
               {detalle && <p className="truncate text-xs text-muted-foreground">{detalle}</p>}
             </div>
           </div>

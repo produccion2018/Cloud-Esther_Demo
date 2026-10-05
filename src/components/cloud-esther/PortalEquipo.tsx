@@ -82,7 +82,11 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
-import { PortalShell, type GrupoPortal } from "@/components/cloud-esther/portales/PortalShell";
+import {
+  EncabezadoSeccion,
+  PortalShell,
+  type GrupoPortal,
+} from "@/components/cloud-esther/portales/PortalShell";
 import { usePreferenciasPortal } from "@/components/cloud-esther/portales/preferencias";
 import {
   NotificacionesUniversales,
@@ -167,6 +171,28 @@ const ROL_LABEL: Record<TeamRole, string> = {
 const ROL_AVISOS: Partial<Record<TeamRole, string>> = {
   secretaria: "Recepción",
   administrador: "Administración",
+};
+
+/* Bajada de cada sección del Portal administrativo (encabezado con degradé). */
+const DESCRIPCION_ADMIN: Partial<Record<Seccion, string>> = {
+  jornada: "Iniciá y cerrá tu jornada; el resumen queda registrado.",
+  agenda: "Turnos del día, la semana y el mes. Reprogramá, confirmá o cancelá.",
+  "pacientes-admin": "Altas, búsqueda, fichas y documentación de los pacientes.",
+  autorizaciones: "Consentimientos y permisos pendientes, aprobados y su historial.",
+  mensajes: "Conversaciones con pacientes, mensajes del equipo y avisos.",
+  tareas: "Pendientes del equipo con responsable y vencimiento.",
+  documentos: "Planillas para Excel y documentos para Word con los datos de la clínica.",
+  cobros: "Saldos de pacientes y registro de cobros.",
+  caja: "Ingresos del día por medio de pago.",
+  presupuestos: "Presupuestos enviados, aprobados y en seguimiento.",
+  reportes: "Indicadores de turnos, asistencia y atención.",
+  equipo: "Integrantes, roles y accesos del equipo.",
+  auditoria: "Quién hizo qué y cuándo dentro de la clínica.",
+  facturacion: "Comprobantes, cuentas corrientes y cobranzas.",
+  finanzas: "Ingresos, egresos, proveedores y flujo de caja.",
+  liquidaciones: "Liquidaciones y comisiones de los profesionales.",
+  rrhh: "Personal, asistencia, licencias y sueldos.",
+  perfil: "Tus datos, país e idioma de trabajo.",
 };
 
 function seccionesDe(rol: TeamRole): { id: Seccion; label: string; icon: LucideIcon }[] {
@@ -817,6 +843,8 @@ function AppEquipo({
   const disponibles = grupos.flatMap((g) => g.items.map((i) => i.id));
   const actual: Seccion = disponibles.includes(seccion) ? seccion : (disponibles[0] as Seccion);
   const etiqueta = grupos.flatMap((g) => g.items).find((i) => i.id === actual)?.label ?? "";
+  const grupoActual = grupos.find((g) => g.items.some((i) => i.id === actual));
+  const itemActual = grupoActual?.items.find((i) => i.id === actual);
 
   const pestanaClinica: Record<string, PestanaClinica> = {
     pacientes: "ficha",
@@ -861,11 +889,19 @@ function AppEquipo({
           ) : null
         }
       >
+        {administrativo && actual !== "escritorio" && (
+          <EncabezadoSeccion
+            area={grupoActual?.titulo ?? "Portal administrativo"}
+            titulo={etiqueta}
+            detalle={DESCRIPCION_ADMIN[actual]}
+            icon={itemActual?.icon}
+          />
+        )}
         {actual === "hoy" && <Hoy ctx={ctx} avisos={autPend} />}
         {actual === "escritorio" && (
           <EspacioAdministrativo
             yo={miembro}
-            clinica={clinica?.nombre ?? "la clínica"}
+            clinica={clinica?.nombre ?? "Clínica Dental Esther"}
             vista={vista}
             puede={(p) =>
               p === "gestionar_facturacion"
@@ -878,12 +914,16 @@ function AppEquipo({
             onToast={onToast}
             abrirFicha={(paciente) => abrirPaciente(paciente)}
             pestana="escritorio"
+            onIr={(d) => ir(d)}
+            disponibles={(
+              ["agenda", "cobros", "pacientes-admin", "tareas", "presupuestos"] as const
+            ).filter((d) => grupos.some((g) => g.items.some((i) => i.id === d)))}
           />
         )}
         {actual === "cobros" && (
           <EspacioAdministrativo
             yo={miembro}
-            clinica={clinica?.nombre ?? "la clínica"}
+            clinica={clinica?.nombre ?? "Clínica Dental Esther"}
             vista={vista || !puede("cobros", "crear")}
             puede={(p) => (p === "gestionar_facturacion" ? puede("cobros") : tiene(miembro, p))}
             turnos={turnosVisibles}
@@ -895,7 +935,7 @@ function AppEquipo({
         {actual === "documentos" && (
           <EspacioAdministrativo
             yo={miembro}
-            clinica={clinica?.nombre ?? "la clínica"}
+            clinica={clinica?.nombre ?? "Clínica Dental Esther"}
             vista={vista}
             puede={(p) => (p === "gestionar_facturacion" ? puede("cobros") : tiene(miembro, p))}
             turnos={turnosVisibles}

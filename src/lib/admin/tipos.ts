@@ -35,6 +35,9 @@ export type PlanConfig = {
   nombre: "Start" | "Pro" | "Plus" | "Enterprise";
   /** null = todavía sin definir (en la web se ve «US$ —»). */
   precioMensual: number | null;
+  /** MONTO INICIAL del plan en US$: se cobra UNA SOLA VEZ al contratar (alta / implementación).
+   *  null = sin definir. Lo administra el dueño (backend: PUT /admin/planes/:id). */
+  precioInicial?: number | null;
   /** 0,15 = 15 % de descuento pagando anual. */
   descuentoAnual: number;
   sucursales: number;

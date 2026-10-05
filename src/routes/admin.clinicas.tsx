@@ -401,7 +401,11 @@ function MontosClinica({
           <div className="rounded-xl bg-card p-3">
             <dt className="text-[11px] text-muted-foreground">Monto inicial</dt>
             <dd className="mt-0.5 text-base font-extrabold tabular-nums">
-              {c.montoInicial == null ? "Sin definir" : precio(c.montoInicial)}
+              {c.montoInicial != null
+                ? precio(c.montoInicial)
+                : plan?.precioInicial != null
+                  ? `${precio(plan.precioInicial)} (del plan)`
+                  : "Sin definir"}
             </dd>
           </div>
           <div className="rounded-xl bg-card p-3">

@@ -39,7 +39,8 @@ function PlanesPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 text-sm">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p className="text-foreground/85">
-          Mientras un plan no tenga precio, la web muestra <b>«US$ — / mes»</b>. El precio anual se
+          El <b>monto inicial</b> se cobra una sola vez al contratar; el <b>precio mensual</b> es el
+          recurrente. Mientras un plan no tenga precio, no se muestra en la web. El precio anual se
           calcula solo: <b>precio mensual × 12 × (1 − descuento)</b>. El odontograma de cada plan es
           una regla fija: <b>Start y Pro usan el 2D · Plus y Enterprise usan el 3D</b>.
           {!editable && " Tu perfil puede ver los planes; los cambia el Dueño."}
@@ -74,6 +75,7 @@ function TarjetaPlan({
   clinicas: number;
 }) {
   const [f, setF] = useState({
+    inicial: plan.precioInicial == null ? "" : String(plan.precioInicial),
     precio: plan.precioMensual === null ? "" : String(plan.precioMensual),
     descuento: String(Math.round(plan.descuentoAnual * 100)),
     sucursales: String(plan.sucursales),
@@ -88,9 +90,11 @@ function TarjetaPlan({
 
   const num = (v: string) => Math.max(0, Math.round(Number(v.replace(",", ".")) || 0));
   const precioMensual = f.precio.trim() === "" ? null : num(f.precio);
+  const precioInicial = f.inicial.trim() === "" ? null : num(f.inicial);
   const borrador = { precioMensual, descuentoAnual: Math.min(90, num(f.descuento)) / 100 };
   const cambios =
     precioMensual !== plan.precioMensual ||
+    precioInicial !== (plan.precioInicial ?? null) ||
     borrador.descuentoAnual !== plan.descuentoAnual ||
     num(f.sucursales) !== plan.sucursales ||
     num(f.usuarios) !== plan.usuariosInternos ||
@@ -108,7 +112,7 @@ function TarjetaPlan({
           inputMode="numeric"
           value={f[id]}
           disabled={!editable}
-          placeholder={id === "precio" ? "Sin definir" : ""}
+          placeholder={id === "precio" || id === "inicial" ? "Sin definir" : ""}
           onChange={(e) => setF((x) => ({ ...x, [id]: e.target.value.replace(/[^0-9.,]/g, "") }))}
           className="h-10 rounded-xl pr-12"
         />
@@ -145,6 +149,10 @@ function TarjetaPlan({
           {precio(precioMensual)}{" "}
           <span className="text-xs font-semibold text-muted-foreground">/ mes</span>
         </p>
+        <p className="text-xs font-semibold text-foreground/80">
+          Monto inicial (pago único):{" "}
+          {precioInicial === null ? "sin definir" : precio(precioInicial)}
+        </p>
         <p className="text-xs text-muted-foreground">
           Anual: {precio(precioAnual(borrador))} / año ({Math.round(borrador.descuentoAnual * 100)}%
           de descuento)
@@ -157,6 +165,13 @@ function TarjetaPlan({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          {campo(
+            "inicial",
+            "Monto inicial · pago único al contratar",
+            <span className="font-bold text-primary">US$</span>,
+          )}
+        </div>
         {campo("precio", "Precio mensual", <span className="font-bold text-primary">US$</span>)}
         {campo(
           "descuento",
@@ -183,6 +198,7 @@ function TarjetaPlan({
             disabled={!cambios}
             onClick={() =>
               setF({
+                inicial: plan.precioInicial == null ? "" : String(plan.precioInicial),
                 precio: plan.precioMensual === null ? "" : String(plan.precioMensual),
                 descuento: String(Math.round(plan.descuentoAnual * 100)),
                 sucursales: String(plan.sucursales),
@@ -199,6 +215,7 @@ function TarjetaPlan({
             onClick={() =>
               guardar.mutate({
                 precioMensual,
+                precioInicial,
                 descuentoAnual: borrador.descuentoAnual,
                 sucursales: Math.max(1, num(f.sucursales)),
                 usuariosInternos: Math.max(1, num(f.usuarios)),

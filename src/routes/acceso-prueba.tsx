@@ -207,7 +207,7 @@ function AccesoPrueba() {
         <section className="mt-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:p-9">
           <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85 ring-1 ring-white/20">
             <span className="size-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
-            Demo en vivo · {VERSION_APP}
+            Demo en vivo · Versión {VERSION_APP}
           </p>
           <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
             Elegí qué{" "}

@@ -27,6 +27,7 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccesosRouteImport } from './routes/admin.accesos'
 import { Route as AdminActividadRouteImport } from './routes/admin.actividad'
+import { Route as AdminAtencionRouteImport } from './routes/admin.atencion'
 import { Route as AdminAuditoriaRouteImport } from './routes/admin.auditoria'
 import { Route as AdminClinicasRouteImport } from './routes/admin.clinicas'
 import { Route as AdminCuentaRouteImport } from './routes/admin.cuenta'
@@ -163,6 +164,11 @@ const AdminAccesosRoute = AdminAccesosRouteImport.update({
 const AdminActividadRoute = AdminActividadRouteImport.update({
   id: '/actividad',
   path: '/actividad',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAtencionRoute = AdminAtencionRouteImport.update({
+  id: '/atencion',
+  path: '/atencion',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAuditoriaRoute = AdminAuditoriaRouteImport.update({
@@ -422,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
+  '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -488,6 +495,7 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroRoute
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
+  '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
+  '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -625,6 +634,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/admin/accesos'
     | '/admin/actividad'
+    | '/admin/atencion'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/admin/accesos'
     | '/admin/actividad'
+    | '/admin/atencion'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -758,6 +769,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/admin/accesos'
     | '/admin/actividad'
+    | '/admin/atencion'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -982,6 +994,13 @@ declare module '@tanstack/react-router' {
       path: '/actividad'
       fullPath: '/admin/actividad'
       preLoaderRoute: typeof AdminActividadRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/atencion': {
+      id: '/admin/atencion'
+      path: '/atencion'
+      fullPath: '/admin/atencion'
+      preLoaderRoute: typeof AdminAtencionRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/auditoria': {
@@ -1319,6 +1338,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAccesosRoute: typeof AdminAccesosRoute
   AdminActividadRoute: typeof AdminActividadRoute
+  AdminAtencionRoute: typeof AdminAtencionRoute
   AdminAuditoriaRoute: typeof AdminAuditoriaRoute
   AdminClinicasRoute: typeof AdminClinicasRoute
   AdminCuentaRoute: typeof AdminCuentaRoute
@@ -1342,6 +1362,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAccesosRoute: AdminAccesosRoute,
   AdminActividadRoute: AdminActividadRoute,
+  AdminAtencionRoute: AdminAtencionRoute,
   AdminAuditoriaRoute: AdminAuditoriaRoute,
   AdminClinicasRoute: AdminClinicasRoute,
   AdminCuentaRoute: AdminCuentaRoute,

@@ -28,11 +28,13 @@ import {
   PROVEEDORES_INICIALES,
   TAREAS_INICIALES,
   TICKETS_SOPORTE_INICIALES,
+  ATENCION_CLINICAS_INICIAL,
 } from "./datos-ejemplo-empresa";
 import type {
   Anticipo,
   Asistencia,
   Ausencia,
+  CasoAtencion,
   Contrato,
   DocumentoInterno,
   Empleado,
@@ -98,7 +100,7 @@ import type {
    GET    /admin/auditoria/intentos                                  → IntentoFallido[]
    GET    /admin/empresa/:coleccion                                  → lista (empleados, asistencias,
           ausencias, documentos, liquidaciones, pagosNomina, anticipos, proveedores, gastos,
-          contratos, ticketsSoporte, incidentes, tareas)
+          contratos, ticketsSoporte, incidentes, tareas, atencionClinicas)
    PUT    /admin/empresa/:coleccion/:id   item                       → item (crea o actualiza)
    DELETE /admin/empresa/:coleccion/:id                              → 204
    GET    /admin/actividad                                           → EventoActividad[]
@@ -158,6 +160,7 @@ export type Colecciones = {
   incidentes: Incidente[];
   tareas: TareaInterna[];
   paises: PaisOperacion[];
+  atencionClinicas: CasoAtencion[];
 };
 
 const COLECCIONES_INICIALES: Colecciones = {
@@ -175,6 +178,7 @@ const COLECCIONES_INICIALES: Colecciones = {
   incidentes: INCIDENTES_INICIALES,
   tareas: TAREAS_INICIALES,
   paises: PAISES_INICIALES,
+  atencionClinicas: ATENCION_CLINICAS_INICIAL,
 };
 
 type BaseLocal = {

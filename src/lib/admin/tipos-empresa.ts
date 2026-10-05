@@ -164,6 +164,37 @@ export type TicketSoporte = {
   historial: { fecha: string; autor: string; cambio: string }[];
 };
 
+/* Atención a clínicas: la secretaría / mesa de atención de CLOUD ESTHER (nuestro equipo) que
+   atiende a las clínicas clientes. No es la secretaría de una clínica: esa trabaja dentro del
+   Portal administrativo de cada clínica, con sus propios datos y aislada por empresa. */
+export type TipoAtencion =
+  | "Consulta"
+  | "Mensaje interno"
+  | "Llamada"
+  | "Solicitud administrativa"
+  | "Seguimiento"
+  | "Incidencia";
+export type EstadoAtencion = "Nuevo" | "En curso" | "Esperando a la clínica" | "Resuelto";
+
+export type CasoAtencion = {
+  id: string;
+  clinica: string;
+  tipo: TipoAtencion;
+  canal: "Teléfono" | "WhatsApp" | "Email" | "Chat" | "Reunión";
+  asunto: string;
+  detalle: string;
+  contacto: string; // persona de la clínica
+  prioridad: "Alta" | "Media" | "Baja";
+  estado: EstadoAtencion;
+  responsable: string | null;
+  creado: string; // ISO
+  proximoSeguimiento: string | null; // yyyy-mm-dd
+  /** Si se derivó a Soporte técnico, id del ticket. */
+  ticket: string | null;
+  mensajes: { fecha: string; autor: string; texto: string; interno: boolean }[];
+  historial: { fecha: string; autor: string; cambio: string }[];
+};
+
 export type Incidente = {
   id: string;
   titulo: string;

@@ -17,6 +17,7 @@ import {
   Moon,
   MonitorPlay,
   Package,
+  PhoneCall,
   Receipt,
   ScrollText,
   Settings,
@@ -85,6 +86,7 @@ const nav: NavGrupo[] = [
     section: "Atención",
     icon: Headset,
     items: [
+      { to: "/admin/atencion", label: "Atención a clínicas", icon: PhoneCall },
       { to: "/admin/soporte", label: "Soporte técnico", icon: LifeBuoy },
       { to: "/admin/notificaciones", label: "Notificaciones", icon: Bell },
     ],

@@ -65,7 +65,7 @@ import {
 import { capitalizarNombre } from "@/lib/utils";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { totalesPresupuesto } from "@/components/cloud-esther/presupuestos/Presupuestos";
-import { PortalShell } from "@/components/cloud-esther/portales/PortalShell";
+import { EncabezadoSeccion, PortalShell } from "@/components/cloud-esther/portales/PortalShell";
 import { usePreferenciasPortal } from "@/components/cloud-esther/portales/preferencias";
 import {
   NotificacionesUniversales,
@@ -135,6 +135,23 @@ const TITULO_SECCION: Record<Seccion, string> = {
   soporte: "Soporte y ayuda",
   perfil: "Mis datos",
   privacidad: "Privacidad y permisos",
+};
+
+/* Bajada de cada sección (encabezado con degradé). */
+const DESCRIPCION_SECCION: Record<Seccion, string> = {
+  inicio: "",
+  turnos: "Pedí, confirmá, cambiá o cancelá tus turnos. La clínica lo ve al instante.",
+  tratamientos: "Avance, sesiones realizadas y próximos pasos de cada tratamiento.",
+  documentos: "Descargá tus recetas, mirá tus estudios y aprobá presupuestos online.",
+  historial: "Todo lo que pasó en tu atención, ordenado en el tiempo.",
+  autorizaciones: "Consentimientos y permisos que te pide la clínica. Vos decidís.",
+  documentacion: "Subí lo que te pide la clínica. Te avisamos cuando esté aprobado.",
+  cuenta: "Movimientos, cuotas y comprobantes de tu cuenta.",
+  pagos: "Tu cuenta con la clínica: lo que se cobró, lo que pagaste y tu saldo.",
+  mensajes: "Escribile a la clínica. Te responden por acá.",
+  soporte: "Preguntas frecuentes y contacto con la clínica.",
+  perfil: "Mantené tus datos de contacto al día para recibir recordatorios.",
+  privacidad: "Quién puede ver tu información y qué permisos diste.",
 };
 
 /* ───────────── Utilidades ───────────── */
@@ -291,13 +308,22 @@ function Modal({
 }
 
 function Tarjeta({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`card-grad p-4 ${className}`}>{children}</div>;
+  return (
+    <div
+      className={`relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_14px_36px_-28px_rgba(124,58,237,0.65)] sm:p-5 ${className}`}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400 opacity-70"
+      />
+      {children}
+    </div>
+  );
 }
 
+/* El título y la bajada de cada sección van en el encabezado con degradé del portal; acá
+   quedan solo las acciones de la sección. */
 function TituloSeccion({
-  icon: Icon,
-  titulo,
-  descripcion,
   children,
 }: {
   icon: LucideIcon;
@@ -305,20 +331,8 @@ function TituloSeccion({
   descripcion: string;
   children?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15">
-          <Icon className="size-5" />
-        </span>
-        <div>
-          <h2 className="font-display text-xl font-semibold tracking-tight">{titulo}</h2>
-          <p className="text-sm text-muted-foreground">{descripcion}</p>
-        </div>
-      </div>
-      {children && <div className="flex flex-wrap gap-2">{children}</div>}
-    </div>
-  );
+  if (!children) return null;
+  return <div className="flex flex-wrap justify-end gap-2">{children}</div>;
 }
 
 function Vacio({ icon: Icon, texto }: { icon: LucideIcon; texto: string }) {
@@ -771,6 +785,14 @@ function PortalInner({
           <div className="card-grad h-[520px] animate-pulse" />
         ) : (
           <>
+            {seccion !== "inicio" && (
+              <EncabezadoSeccion
+                area={SECCIONES.find((x) => x.id === seccion)?.grupo ?? "Portal del paciente"}
+                titulo={TITULO_SECCION[seccion]}
+                detalle={DESCRIPCION_SECCION[seccion]}
+                icon={SECCIONES.find((x) => x.id === seccion)?.icon}
+              />
+            )}
             {seccion === "inicio" && <Inicio ctx={ctx} />}
             {seccion === "turnos" && <Turnos ctx={ctx} />}
             {seccion === "tratamientos" && <Tratamientos ctx={ctx} />}
@@ -936,8 +958,9 @@ function Inicio({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
 
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-violet-600 to-fuchsia-600 px-6 py-5 text-white shadow-[0_20px_45px_-25px_rgba(124,58,237,0.8)]">
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 px-6 py-6 text-white shadow-[0_24px_60px_-30px_rgba(124,58,237,0.85)]">
         <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full border-[26px] border-white/10" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 size-72 rounded-full bg-fuchsia-300/25 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/75">
@@ -951,20 +974,54 @@ function Inicio({ ctx }: { ctx: Ctx }) {
                 `Este es tu espacio en ${clinica}: turnos, tratamientos, recetas, estudios y pagos.`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {prox && (
+            <button
+              type="button"
+              onClick={() => ir("turnos")}
+              className="flex items-center gap-3 rounded-2xl border border-white/25 bg-white/15 p-3 text-left backdrop-blur-md transition hover:bg-white/20"
+            >
+              <span className="grid w-14 shrink-0 place-items-center rounded-xl bg-white py-1.5 text-center text-primary shadow">
+                <span className="text-[10px] font-bold uppercase">
+                  {new Date(`${prox.fecha}T12:00:00`).toLocaleDateString("es-AR", {
+                    month: "short",
+                  })}
+                </span>
+                <span className="font-display text-xl font-bold leading-none">
+                  {Number(prox.fecha.slice(8, 10))}
+                </span>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/75">
+                  Tu próximo turno
+                </span>
+                <span className="block truncate text-sm font-semibold">
+                  {prox.hora} · {prox.tratamiento}
+                </span>
+                <span className="block truncate text-xs text-white/80">{prox.odontologo}</span>
+              </span>
+            </button>
+          )}
+          <div className="flex w-full flex-wrap gap-2">
             <button
               onClick={() => ir("turnos")}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow"
             >
               <CalendarPlus className="size-4" />
               Pedir turno
             </button>
             <button
               onClick={() => ir("mensajes")}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/25"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white ring-1 ring-white/40 backdrop-blur-md hover:bg-white/25"
             >
               <MessageCircle className="size-4" />
               Escribir a la clínica
+            </button>
+            <button
+              onClick={() => ir("tratamientos")}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white ring-1 ring-white/40 backdrop-blur-md hover:bg-white/25"
+            >
+              <Stethoscope className="size-4" />
+              Mis tratamientos
             </button>
           </div>
         </div>
@@ -978,6 +1035,7 @@ function Inicio({ ctx }: { ctx: Ctx }) {
             d: prox ? `${prox.tratamiento} · ${prox.odontologo}` : "Pedí uno cuando quieras",
             i: CalendarDays,
             s: "turnos" as Seccion,
+            g: "from-primary to-fuchsia-500",
           },
           {
             l: "Tratamientos en curso",
@@ -987,6 +1045,7 @@ function Inicio({ ctx }: { ctx: Ctx }) {
               : "Nada en curso",
             i: Stethoscope,
             s: "tratamientos" as Seccion,
+            g: "from-sky-500 to-indigo-500",
           },
           {
             l: "Saldo de tu cuenta",
@@ -994,6 +1053,7 @@ function Inicio({ ctx }: { ctx: Ctx }) {
             d: saldo > 0 ? "Podés pagarlo online" : "No tenés deudas",
             i: Wallet,
             s: "pagos" as Seccion,
+            g: saldo > 0 ? "from-amber-500 to-orange-500" : "from-emerald-500 to-teal-500",
           },
           {
             l: "Recetas y estudios",
@@ -1001,14 +1061,22 @@ function Inicio({ ctx }: { ctx: Ctx }) {
             d: `${registros.recetas.length} recetas · ${registros.estudios.length} estudios`,
             i: FileText,
             s: "documentos" as Seccion,
+            g: "from-rose-500 to-pink-500",
           },
         ].map((c) => (
           <button
             key={c.l}
             onClick={() => ir(c.s)}
-            className="group relative min-h-[108px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 text-left shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all hover:-translate-y-0.5 hover:border-primary/45"
+            className="group relative min-h-[112px] overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 text-left shadow-[0_14px_34px_-24px_rgba(124,58,237,0.6)] transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-24px_rgba(124,58,237,0.7)]"
           >
-            <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gradient-to-br ${c.g} opacity-[0.12] blur-2xl transition group-hover:opacity-20`}
+            />
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute inset-x-4 bottom-0 h-[3px] rounded-full bg-gradient-to-r ${c.g} opacity-70`}
+            />
             <div className="relative flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">
@@ -1017,8 +1085,10 @@ function Inicio({ ctx }: { ctx: Ctx }) {
                 <p className="mt-2 truncate text-lg font-bold text-foreground">{c.v}</p>
                 <p className="mt-1 truncate text-[11px] text-muted-foreground">{c.d}</p>
               </div>
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
-                <c.i className="size-4" />
+              <span
+                className={`grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${c.g} text-white shadow-md`}
+              >
+                <c.i className="size-[18px]" />
               </span>
             </div>
           </button>
@@ -1084,7 +1154,7 @@ function Inicio({ ctx }: { ctx: Ctx }) {
                 onClick={() => ir(destino)}
                 className="group flex flex-col items-start gap-2 rounded-xl border border-primary/10 bg-white/80 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30"
               >
-                <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-md">
                   <Icon className="size-4" />
                 </span>
                 <span className="flex w-full items-center justify-between text-xs font-semibold">

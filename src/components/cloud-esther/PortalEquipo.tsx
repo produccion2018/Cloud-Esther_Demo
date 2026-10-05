@@ -84,7 +84,9 @@ import { normalizarBusqueda } from "@/lib/utils";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
 import {
   EncabezadoSeccion,
+  KpiPortal,
   PortalShell,
+  TarjetaPortal,
   type GrupoPortal,
 } from "@/components/cloud-esther/portales/PortalShell";
 import { usePreferenciasPortal } from "@/components/cloud-esther/portales/preferencias";
@@ -193,6 +195,18 @@ const DESCRIPCION_ADMIN: Partial<Record<Seccion, string>> = {
   liquidaciones: "Liquidaciones y comisiones de los profesionales.",
   rrhh: "Personal, asistencia, licencias y sueldos.",
   perfil: "Tus datos, país e idioma de trabajo.",
+};
+
+/* Bajada de las secciones clínicas del Portal profesional. */
+const DESCRIPCION_PRO: Partial<Record<Seccion, string>> = {
+  pacientes: "Buscá al paciente y abrí su ficha, historia, tratamientos y estudios.",
+  historia: "Evolución, diagnósticos, notas y archivos de cada paciente.",
+  odontograma: "Odontograma 3D con herramientas por pieza.",
+  tratamientos: "Planes de tratamiento, sesiones y avance.",
+  recetas: "Recetas y órdenes de estudios para tus pacientes.",
+  estudios: "Radiografías, laboratorio e imágenes de cada paciente.",
+  gabinete: "Estado de los sillones y del instrumental.",
+  ia: "Asistente que sugiere; la decisión clínica siempre es tuya.",
 };
 
 function seccionesDe(rol: TeamRole): { id: Seccion; label: string; icon: LucideIcon }[] {
@@ -537,6 +551,8 @@ type Ctx = {
   onToast: (m: string) => void;
   abrirFicha: (paciente: string, turno?: Turno) => void;
   ir: (s: Seccion) => void;
+  /** ¿La sección está en el menú de este integrante? (permisos del portal) */
+  puedeIr: (s: Seccion) => boolean;
 };
 
 function AppEquipo({
@@ -615,6 +631,8 @@ function AppEquipo({
     onToast,
     abrirFicha: abrirPaciente,
     ir,
+    // `disponibles` se calcula más abajo con el menú; se consulta recién al renderizar.
+    puedeIr: (sec) => disponibles.includes(sec),
   };
 
   /* ── Notificaciones universales (reemplazan «Avisos para vos») ── */
@@ -889,11 +907,14 @@ function AppEquipo({
           ) : null
         }
       >
-        {administrativo && actual !== "escritorio" && (
+        {actual !== "escritorio" && actual !== "hoy" && (
           <EncabezadoSeccion
-            area={grupoActual?.titulo ?? "Portal administrativo"}
+            area={
+              grupoActual?.titulo ??
+              (administrativo ? "Portal administrativo" : "Portal profesional")
+            }
             titulo={etiqueta}
-            detalle={DESCRIPCION_ADMIN[actual]}
+            detalle={DESCRIPCION_ADMIN[actual] ?? DESCRIPCION_PRO[actual]}
             icon={itemActual?.icon}
           />
         )}
@@ -1154,14 +1175,18 @@ function FilaTurno({
   const puedeGestionar = tiene(ctx.yo, "gestionar_turnos") && ctx.yo.role !== "asistente";
   return (
     <li
-      className={`card-grad flex flex-wrap items-center gap-3 p-3 ${enCurso ? "ring-2 ring-primary/40" : ""}`}
+      className={`flex flex-wrap items-center gap-3 rounded-2xl border bg-gradient-to-r p-3 transition hover:shadow-[0_12px_26px_-18px_rgba(124,58,237,0.7)] ${
+        enCurso
+          ? "border-primary/40 from-primary/[0.10] to-fuchsia-500/[0.04] ring-2 ring-primary/25"
+          : "border-primary/10 from-primary/[0.04] to-transparent hover:border-primary/25"
+      }`}
     >
       <button
         onClick={() => ctx.abrirFicha(t.paciente, t)}
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
         <span
-          className={`grid w-14 shrink-0 place-items-center rounded-xl py-2 ${enCurso ? "bg-primary text-white" : "bg-primary/10 text-primary"}`}
+          className={`grid w-14 shrink-0 place-items-center rounded-xl py-2 ${enCurso ? "bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-md" : "bg-card text-primary shadow-sm ring-1 ring-primary/10"}`}
         >
           <span className="font-display text-base font-bold leading-none">{t.hora}</span>
           {enCurso && <span className="mt-0.5 text-[9px] font-bold uppercase">Ahora</span>}
@@ -1224,83 +1249,244 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
   const trato =
     ctx.yo.role === "odontologo" ? (ctx.yo.firstName.endsWith("a") ? "Dra. " : "Dr. ") : "";
 
+  const total = deHoy.length;
+  const avance = total ? Math.round((atendidos / total) * 100) : 0;
+  const fecha = new Date().toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const puedeCitar = tiene(ctx.yo, "gestionar_turnos") && ctx.yo.role !== "asistente";
+  const siguiente = proximo ?? pendientes[0];
+  const accesos = (
+    [
+      { s: "pacientes", l: "Pacientes", i: Users, g: "from-primary to-fuchsia-500" },
+      { s: "historia", l: "Historia clínica", i: FileText, g: "from-sky-500 to-indigo-500" },
+      { s: "odontograma", l: "Odontograma 3D", i: Box, g: "from-emerald-500 to-teal-500" },
+      { s: "recetas", l: "Recetas", i: PillIcon, g: "from-amber-500 to-orange-500" },
+      { s: "mensajes", l: "Mensajes", i: MessageCircle, g: "from-rose-500 to-pink-500" },
+      { s: "ia", l: "IA asistencial", i: Sparkles, g: "from-violet-500 to-purple-600" },
+    ] as const
+  ).filter((a) => ctx.puedeIr(a.s));
+
   return (
-    <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_20px_45px_-25px_rgba(124,58,237,0.8)]">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_60px_-30px_rgba(124,58,237,0.85)] sm:p-7">
         <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full border-[26px] border-white/10" />
-        <p className="relative text-[11px] font-bold uppercase tracking-[0.2em] text-white/75">
-          {saludo}
-        </p>
-        <h1 className="relative mt-1 font-display text-2xl font-bold tracking-tight md:text-3xl">
-          {trato}
-          {ctx.yo.firstName}
-        </h1>
-        <p className="relative mt-1 text-sm text-white/85">
-          {deHoy.length
-            ? `Hoy ${deHoy.length === 1 ? "hay 1 turno" : `hay ${deHoy.length} turnos`}${ctx.yo.role === "secretaria" || ctx.yo.role === "administrador" ? " en la clínica" : ""}.`
-            : "Hoy no hay turnos agendados."}
-          {proximo ? ` Próximo: ${proximo.hora} ${proximo.paciente}.` : ""}
-        </p>
-        <div className="relative mt-4">
-          <Fichaje ctx={ctx} />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 size-72 rounded-full bg-fuchsia-300/25 blur-3xl" />
+        <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/75">
+              {saludo} · {fecha}
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight md:text-4xl">
+              {trato}
+              {ctx.yo.firstName}
+            </h1>
+            <p className="mt-1 text-sm text-white/85">
+              {deHoy.length
+                ? `Hoy ${deHoy.length === 1 ? "hay 1 turno" : `hay ${deHoy.length} turnos`}${ctx.yo.role === "secretaria" || ctx.yo.role === "administrador" ? " en la clínica" : ""}.`
+                : "Hoy no hay turnos agendados."}
+            </p>
+            <div className="mt-4">
+              <Fichaje ctx={ctx} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {puedeCitar && (
+                <button
+                  type="button"
+                  onClick={() => setNuevaCita(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow"
+                >
+                  <CalendarPlus className="size-4" /> Nueva cita
+                </button>
+              )}
+              {ctx.puedeIr("agenda") && (
+                <button
+                  type="button"
+                  onClick={() => ctx.ir("agenda")}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-semibold text-white ring-1 ring-white/35 backdrop-blur-md hover:bg-white/25"
+                >
+                  <CalendarDays className="size-4" /> Mi agenda
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/25 bg-white/12 p-4 backdrop-blur-md">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/75">
+              {siguiente ? "Próximo paciente" : "Agenda del día"}
+            </p>
+            {siguiente ? (
+              <>
+                <div className="mt-2 flex items-center gap-3">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white font-display text-sm font-bold text-primary shadow">
+                    {siguiente.hora}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-bold">{siguiente.paciente}</p>
+                    <p className="truncate text-xs text-white/80">
+                      {siguiente.tratamiento} · {siguiente.gabinete}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => ctx.abrirFicha(siguiente.paciente, siguiente)}
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-primary shadow"
+                >
+                  <Stethoscope className="size-4" />
+                  {ctx.yo.role === "odontologo" ? "Atender" : "Ver ficha"}
+                </button>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-white/85">
+                {total ? "No quedan pacientes por atender hoy." : "Sin turnos para hoy."}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          { l: "Turnos hoy", v: deHoy.length, i: CalendarDays, s: "agenda" as Seccion },
-          { l: "Atendidos", v: atendidos, i: CheckCheck, s: "agenda" as Seccion },
-          { l: "Por atender", v: pendientes.length, i: Clock3, s: "agenda" as Seccion },
-          { l: "Autorizaciones", v: avisos, i: KeyRound, s: "autorizaciones" as Seccion },
-        ].map((c) => (
-          <button
-            key={c.l}
-            onClick={() => ctx.ir(c.s)}
-            className="card-grad flex items-start justify-between p-3.5 text-left transition-all hover:-translate-y-0.5"
-          >
-            <span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {c.l}
-              </span>
-              <span className="mt-1 block text-2xl font-bold text-primary">{c.v}</span>
-            </span>
-            <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
-              <c.i className="size-4" />
-            </span>
-          </button>
-        ))}
+        <KpiPortal
+          titulo="Turnos hoy"
+          valor={String(deHoy.length)}
+          detalle="en tu agenda"
+          icon={CalendarDays}
+          onClick={() => ctx.ir("agenda")}
+        />
+        <KpiPortal
+          titulo="Atendidos"
+          valor={String(atendidos)}
+          detalle={`${avance}% del día`}
+          icon={CheckCheck}
+          tono="verde"
+          onClick={() => ctx.ir("agenda")}
+        />
+        <KpiPortal
+          titulo="Por atender"
+          valor={String(pendientes.length)}
+          detalle={proximo ? `Próximo ${proximo.hora}` : "Sin pendientes"}
+          icon={Clock3}
+          tono="ambar"
+          onClick={() => ctx.ir("agenda")}
+        />
+        <KpiPortal
+          titulo="Autorizaciones"
+          valor={String(avisos)}
+          detalle="pendientes"
+          icon={KeyRound}
+          tono="rosa"
+          onClick={ctx.puedeIr("autorizaciones") ? () => ctx.ir("autorizaciones") : undefined}
+        />
       </div>
 
-      <Tarjeta>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-display text-base font-semibold">
-            {ctx.yo.role === "odontologo"
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <TarjetaPortal
+          titulo={
+            ctx.yo.role === "odontologo"
               ? "Mis pacientes de hoy"
               : ctx.yo.role === "asistente"
                 ? "Pacientes de hoy de tus odontólogos"
-                : "Agenda de hoy"}
-          </p>
-          {tiene(ctx.yo, "gestionar_turnos") && ctx.yo.role !== "asistente" && (
-            <button className={BTN_PRIMARIO} onClick={() => setNuevaCita(true)}>
-              <CalendarPlus className="size-3.5" /> Nueva cita
-            </button>
+                : "Agenda de hoy"
+          }
+          detalle={`${deHoy.length} turnos · ${atendidos} atendidos`}
+          icon={Users}
+        >
+          {deHoy.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-primary/20 py-8 text-center text-sm text-muted-foreground">
+              No hay turnos para hoy.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {deHoy.map((t) => (
+                <FilaTurno
+                  key={t.id}
+                  t={t}
+                  ctx={ctx}
+                  mostrarProfesional={ctx.yo.role !== "odontologo"}
+                />
+              ))}
+            </ul>
+          )}
+        </TarjetaPortal>
+
+        <div className="space-y-5">
+          <TarjetaPortal titulo="Progreso del día" icon={CheckCheck}>
+            <div className="flex items-center gap-4">
+              <div className="relative size-24 shrink-0">
+                <svg viewBox="0 0 36 36" className="size-24 -rotate-90">
+                  <defs>
+                    <linearGradient id="ce-progreso" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#7c3aed" />
+                      <stop offset="100%" stopColor="#d946ef" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.5"
+                    fill="none"
+                    strokeWidth="3.5"
+                    className="stroke-primary/12"
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.5"
+                    fill="none"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    stroke="url(#ce-progreso)"
+                    strokeDasharray={`${(avance / 100) * 97.4} 97.4`}
+                  />
+                </svg>
+                <span className="absolute inset-0 grid place-items-center font-display text-xl font-bold">
+                  {avance}%
+                </span>
+              </div>
+              <div className="space-y-1.5 text-sm">
+                <p>
+                  <b className="tabular-nums">{atendidos}</b>{" "}
+                  <span className="text-muted-foreground">atendidos</span>
+                </p>
+                <p>
+                  <b className="tabular-nums">{pendientes.length}</b>{" "}
+                  <span className="text-muted-foreground">por atender</span>
+                </p>
+                <p>
+                  <b className="tabular-nums">
+                    {deHoy.filter((t) => t.estado === "Ausente").length}
+                  </b>{" "}
+                  <span className="text-muted-foreground">ausentes</span>
+                </p>
+              </div>
+            </div>
+          </TarjetaPortal>
+
+          {accesos.length > 0 && (
+            <TarjetaPortal titulo="Accesos clínicos" icon={Stethoscope}>
+              <div className="grid grid-cols-2 gap-2.5">
+                {accesos.map((a) => (
+                  <button
+                    key={a.s}
+                    type="button"
+                    onClick={() => ctx.ir(a.s)}
+                    className="group flex items-center gap-2.5 rounded-2xl border border-primary/10 bg-card p-2.5 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_26px_-18px_rgba(124,58,237,0.7)]"
+                  >
+                    <span
+                      className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${a.g} text-white shadow-md`}
+                    >
+                      <a.i className="size-4" />
+                    </span>
+                    <span className="truncate text-xs font-semibold">{a.l}</span>
+                  </button>
+                ))}
+              </div>
+            </TarjetaPortal>
           )}
         </div>
-        {deHoy.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No hay turnos para hoy.</p>
-        ) : (
-          <ul className="space-y-2">
-            {deHoy.map((t) => (
-              <FilaTurno
-                key={t.id}
-                t={t}
-                ctx={ctx}
-                mostrarProfesional={ctx.yo.role !== "odontologo"}
-              />
-            ))}
-          </ul>
-        )}
-      </Tarjeta>
+      </div>
 
       {nuevaCita && (
         <Hoja titulo="Nueva cita" onClose={() => setNuevaCita(false)}>

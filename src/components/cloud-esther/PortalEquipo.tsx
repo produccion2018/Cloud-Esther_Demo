@@ -3,8 +3,20 @@ import type { FormEvent, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
+  BarChart3,
   Bell,
+  Box,
   Briefcase,
+  Coins,
+  Landmark,
+  LayoutDashboard,
+  ClipboardList,
+  Pill as PillIcon,
+  Receipt,
+  ReceiptText,
+  ScanLine,
+  Sparkles,
+  UserCog,
   CalendarDays,
   CalendarPlus,
   Check,
@@ -70,6 +82,40 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
+import { PortalShell, type GrupoPortal } from "@/components/cloud-esther/portales/PortalShell";
+import { usePreferenciasPortal } from "@/components/cloud-esther/portales/preferencias";
+import {
+  NotificacionesUniversales,
+  type NotifUniversal,
+} from "@/components/cloud-esther/portales/NotificacionesUniversales";
+import { AutorizacionesPanel } from "@/components/cloud-esther/portales/AutorizacionesPanel";
+import { AgendaPortal } from "@/components/cloud-esther/portales/equipo/AgendaPortal";
+import {
+  PacienteClinico,
+  type PestanaClinica,
+} from "@/components/cloud-esther/portales/equipo/PacienteClinico";
+import {
+  ConfiguracionProfesional,
+  IAPortal,
+  JornadaPortal,
+  MensajesPortal,
+  ReportesPortal,
+} from "@/components/cloud-esther/portales/equipo/SeccionesEquipo";
+import {
+  AuditoriaPortal,
+  CajaPortal,
+  LiquidacionesPortal,
+  PacientesAdministracion,
+  TareasAdministrativas,
+} from "@/components/cloud-esther/portales/equipo/SeccionesAdministrativas";
+import { Facturacion } from "@/components/cloud-esther/facturacion/Facturacion";
+import { Finanzas } from "@/components/cloud-esther/finanzas/Finanzas";
+import { RRHH } from "@/components/cloud-esther/rrhh/RRHH";
+import { Presupuestos } from "@/components/cloud-esther/presupuestos/Presupuestos";
+import { EquipoProfesional } from "@/components/cloud-esther/EquipoProfesional";
+import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
+import { storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
+import { usePermisosPortal } from "@/lib/cloud-esther/permisos-portal";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -78,7 +124,37 @@ import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/E
    configurados en Equipo → Permisos y accesos. Trabaja sobre los datos reales del demo
    (Agenda, carpetas de pacientes, Notificaciones), separados por empresa. */
 
-type Seccion = "hoy" | "administracion" | "agenda" | "pacientes" | "gabinete" | "avisos" | "perfil";
+type Seccion =
+  | "hoy"
+  | "escritorio"
+  | "jornada"
+  | "agenda"
+  | "pacientes"
+  | "historia"
+  | "odontograma"
+  | "tratamientos"
+  | "recetas"
+  | "estudios"
+  | "gabinete"
+  | "autorizaciones"
+  | "mensajes"
+  | "reportes"
+  | "ia"
+  | "perfil"
+  | "pacientes-admin"
+  | "tareas"
+  | "documentos"
+  | "cobros"
+  | "caja"
+  | "presupuestos"
+  | "equipo"
+  | "auditoria"
+  | "facturacion"
+  | "finanzas"
+  | "liquidaciones"
+  | "rrhh"
+  | "avisos"
+  | "administracion";
 
 const ROL_LABEL: Record<TeamRole, string> = {
   odontologo: "Odontólogo/a",
@@ -257,7 +333,7 @@ function GateEquipo() {
     setMontado(true);
   }, []);
 
-  if (!montado) return <div className="min-h-screen bg-[#faf9ff]" />;
+  if (!montado) return <div className="min-h-screen bg-background" />;
   if (vista) {
     const m = miembros.find((x) => x.id === vista);
     if (m) return <AppEquipo miembro={m} vista onSalir={() => {}} />;
@@ -446,14 +522,24 @@ function AppEquipo({
   vista?: boolean;
   onSalir: () => void;
 }) {
-  const { clinica } = useSesion();
+  const { clinica, clinicId } = useSesion();
+  const { plan } = useCloudEsther();
   const { miembros } = useEquipo();
-  const { turnos } = storeAgenda.usar();
+  const { pacientes } = usePacientes();
+  const { turnos, tareas } = storeAgenda.usar();
   const { notificaciones } = useNotificaciones();
-  const [seccion, setSeccion] = useState<Seccion>(
-    miembro.role === "secretaria" || miembro.role === "administrador" ? "administracion" : "hoy",
+  const { autorizaciones } = storeAutorizaciones.usar();
+  const { conversaciones } = storeComunicacion.usar();
+  const permisos = usePermisosPortal(miembro);
+  const puede = permisos.puede;
+  const administrativo = miembro.role === "secretaria" || miembro.role === "administrador";
+  const { prefs, cambiar: cambiarPrefs } = usePreferenciasPortal(
+    administrativo ? `administrativo:${miembro.id}` : `profesional:${miembro.id}`,
   );
+  const [seccion, setSeccion] = useState<Seccion>(administrativo ? "escritorio" : "hoy");
   const [ficha, setFicha] = useState<{ paciente: string; turno?: Turno } | null>(null);
+  const [foco, setFoco] = useState<string | null>(null);
+  const [nuevaCita, setNuevaCita] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
 
@@ -463,7 +549,7 @@ function AppEquipo({
     timer.current = window.setTimeout(() => setToast(null), 2600);
   };
 
-  // Qué turnos ve cada rol: el odontólogo los suyos, el asistente los de sus odontólogos, recepción todos.
+  // Qué turnos ve cada rol: el odontólogo los suyos, el asistente los de sus odontólogos, administración todos.
   const asistidos = miembros.filter((m) => miembro.assistantOf?.includes(m.id)).map(nombreDe);
   const turnosVisibles = turnos.filter((t) =>
     miembro.role === "odontologo"
@@ -472,203 +558,456 @@ function AppEquipo({
         ? asistidos.includes(t.odontologo)
         : true,
   );
+  const odontologos = miembros.filter((m) => m.role === "odontologo" && m.status === "activo");
+  const profesionalesVisibles = administrativo
+    ? odontologos
+    : miembro.role === "odontologo"
+      ? [miembro]
+      : odontologos.filter((m) => asistidos.includes(nombreDe(m)));
+  const pacientesPropios = administrativo
+    ? null
+    : [...new Set(turnosVisibles.map((t) => t.paciente))];
 
-  const rolAvisos = ROL_AVISOS[miembro.role];
-  const misAvisos = notificaciones.filter(
-    (n) =>
-      !n.estado.completada &&
-      (n.asignado === nombreDe(miembro) || (rolAvisos && n.asignado === rolAvisos)),
-  );
+  const ir = (s: Seccion) => {
+    setSeccion(s);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const abrirPaciente = (paciente: string, turno?: Turno) => {
+    if (!administrativo && puede("pacientes")) {
+      setFoco(paciente);
+      ir("pacientes");
+    } else if (administrativo && puede("pacientes")) {
+      setFoco(paciente);
+      ir("pacientes-admin");
+    } else setFicha(turno ? { paciente, turno } : { paciente });
+  };
 
-  const secciones = seccionesDe(miembro.role);
   const ctx: Ctx = {
     yo: miembro,
     vista,
     turnosVisibles,
     onToast,
-    abrirFicha: (paciente, turno) => setFicha(turno ? { paciente, turno } : { paciente }),
-    ir: (s) => {
-      setSeccion(s);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
+    abrirFicha: abrirPaciente,
+    ir,
+  };
+
+  /* ── Notificaciones universales (reemplazan «Avisos para vos») ── */
+  const yoNombre = nombreDe(miembro);
+  const hoy = hoyISO();
+  const rolAvisos = ROL_AVISOS[miembro.role];
+  const misAvisos = notificaciones.filter(
+    (n) =>
+      !n.estado.completada && (n.asignado === yoNombre || (rolAvisos && n.asignado === rolAvisos)),
+  );
+  const ahoraMin = minutos(horaActual());
+  const notifs: NotifUniversal[] = [
+    ...turnosVisibles
+      .filter(
+        (t) =>
+          t.fecha === hoy &&
+          t.estado !== "Cancelada" &&
+          t.estado !== "Atendida" &&
+          minutos(t.hora) >= ahoraMin - 15,
+      )
+      .sort((a, b) => a.hora.localeCompare(b.hora))
+      .slice(0, 3)
+      .map((t) => ({
+        id: `t-${t.id}-${t.estado}`,
+        categoria: "Turnos" as const,
+        titulo: `${t.hora} · ${t.paciente}`,
+        detalle: `${t.tratamiento}${administrativo ? ` · ${t.odontologo}` : ""}`,
+        fecha: `${t.fecha}T${t.hora}:00`,
+        onAbrir: () => ir("agenda"),
+      })),
+    ...(administrativo
+      ? turnosVisibles
+          .filter((t) => t.fecha === sumarDias(hoy, 1) && t.estado === "Pendiente")
+          .slice(0, 5)
+          .map((t) => ({
+            id: `c-${t.id}`,
+            categoria: "Turnos" as const,
+            titulo: `Confirmar turno de ${t.paciente}`,
+            detalle: `Mañana ${t.hora} · ${t.odontologo}`,
+            urgente: true,
+            onAbrir: () => ir("escritorio"),
+          }))
+      : []),
+    ...turnosVisibles
+      .filter(
+        (t) => t.fecha >= hoy && t.fecha <= sumarDias(hoy, 3) && /primera/i.test(t.tratamiento),
+      )
+      .map((t) => ({
+        id: `p-${t.id}`,
+        categoria: "Pacientes" as const,
+        titulo: `Paciente nuevo: ${t.paciente}`,
+        detalle: `Primera consulta · ${etiquetaDia(t.fecha)} ${t.hora}`,
+        onAbrir: () => abrirPaciente(t.paciente, t),
+      })),
+    ...autorizaciones
+      .filter((a) =>
+        administrativo
+          ? a.estado === "Pendiente" && (a.gestion === "Sin gestionar" || a.origen === "Paciente")
+          : a.solicitadoPor.includes(miembro.lastName) && (a.estado !== "Pendiente" || true),
+      )
+      .slice(0, 6)
+      .map((a) => ({
+        id: `a-${a.id}-${a.estado}`,
+        categoria: "Autorizaciones" as const,
+        titulo:
+          a.estado === "Pendiente"
+            ? `${administrativo && a.origen === "Paciente" ? "Pedido del paciente" : "Esperando respuesta"}: ${a.titulo}`
+            : `${a.paciente} ${a.estado === "Autorizada" ? "autorizó" : a.estado === "Rechazada" ? "rechazó" : "revocó"}: ${a.titulo}`,
+        detalle: a.paciente,
+        fecha: a.respuesta?.fecha ?? a.fecha,
+        urgente: a.estado === "Pendiente" && administrativo,
+        onAbrir: () => ir("autorizaciones"),
+      })),
+    ...tareas
+      .filter(
+        (t) =>
+          !t.hecha &&
+          (t.responsable === yoNombre || (administrativo && !!t.vence && t.vence < hoy)),
+      )
+      .slice(0, 5)
+      .map((t) => ({
+        id: `ta-${t.id}`,
+        categoria: "Tareas" as const,
+        titulo: t.texto,
+        detalle: t.vence
+          ? `Vence ${t.vence.split("-").reverse().join("/")}`
+          : (t.responsable ?? ""),
+        urgente: !!t.vence && t.vence < hoy,
+        onAbrir: () => ir(administrativo ? "tareas" : "hoy"),
+      })),
+    ...misAvisos.slice(0, 6).map((n) => ({
+      id: `av-${n.id}`,
+      categoria: "Avisos" as const,
+      titulo: n.titulo,
+      detalle: n.detalle,
+      fecha: n.fecha,
+      onAbrir: () => {
+        cambiarEstadoNotif(
+          [{ id: n.id, titulo: n.titulo }],
+          { completada: new Date().toISOString() },
+          "Completó",
+          yoNombre,
+        );
+        onToast("Aviso marcado como resuelto");
+      },
+    })),
+    ...(puede("mensajes")
+      ? conversaciones
+          .filter(
+            (c) => c.noLeidos > 0 && (!pacientesPropios || pacientesPropios.includes(c.paciente)),
+          )
+          .slice(0, 4)
+          .map((c) => ({
+            id: `m-${c.id}-${c.mensajes.length}`,
+            categoria: "Mensajes" as const,
+            titulo: `Mensaje de ${c.paciente}`,
+            detalle: c.mensajes.at(-1)?.texto ?? "",
+            fecha: c.mensajes.at(-1)?.fecha,
+            onAbrir: () => ir("mensajes"),
+          }))
+      : []),
+  ];
+
+  /* ── Menú según rol y permisos ── */
+  const autPend = autorizaciones.filter((a) =>
+    administrativo
+      ? a.estado === "Pendiente"
+      : a.estado === "Pendiente" && a.solicitadoPor.includes(miembro.lastName),
+  ).length;
+  const item = (id: Seccion, label: string, icon: LucideIcon, mostrar = true, badge?: number) =>
+    mostrar ? [{ id, label, icon, ...(badge ? { badge } : {}) }] : [];
+  const es3D = plan === "avanzada" || plan === "grupo";
+  const grupos: GrupoPortal[] = (
+    administrativo
+      ? [
+          {
+            titulo: "Inicio",
+            items: [
+              ...item("escritorio", "Escritorio", LayoutDashboard),
+              ...item("jornada", "Jornada", Clock3, puede("jornada")),
+              ...item("agenda", "Agenda", CalendarDays, puede("agenda")),
+            ],
+          },
+          {
+            titulo: "Secretaría",
+            items: [
+              ...item("pacientes-admin", "Pacientes", Users, puede("pacientes")),
+              ...item(
+                "autorizaciones",
+                "Autorizaciones",
+                KeyRound,
+                puede("autorizaciones"),
+                autPend,
+              ),
+              ...item("mensajes", "Comunicación", MessageCircle, puede("mensajes")),
+              ...item("tareas", "Tareas", ClipboardList, puede("tareas")),
+              ...item("documentos", "Documentos y plantillas", FileText, puede("documentos")),
+            ],
+          },
+          {
+            titulo: "Administración",
+            items: [
+              ...item("cobros", "Cobros y saldos", Wallet, puede("cobros")),
+              ...item("caja", "Caja del día", Landmark, puede("cobros")),
+              ...item("presupuestos", "Presupuestos", ReceiptText, puede("presupuestos")),
+              ...item("reportes", "Reportes", BarChart3, puede("reportes")),
+              ...item("equipo", "Gestión de equipo", UserCog, puede("equipo")),
+              ...item("auditoria", "Auditoría", ShieldCheck, puede("auditoria")),
+            ],
+          },
+          {
+            titulo: "Finanzas y administración",
+            items: [
+              ...item("facturacion", "Facturación", Receipt, puede("facturacion")),
+              ...item(
+                "finanzas",
+                "Finanzas y proveedores",
+                Landmark,
+                puede("finanzas") || puede("proveedores"),
+              ),
+              ...item("liquidaciones", "Liquidaciones y comisiones", Coins, puede("liquidaciones")),
+              ...item("rrhh", "RRHH y sueldos", Briefcase, puede("rrhh") || puede("sueldos")),
+            ],
+          },
+          { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
+        ]
+      : [
+          {
+            titulo: "Mi jornada",
+            items: [
+              ...item("hoy", "Inicio", Home),
+              ...item("jornada", "Jornada", Clock3, puede("jornada")),
+              ...item("agenda", "Agenda", CalendarDays, puede("agenda")),
+            ],
+          },
+          {
+            titulo: "Atención clínica",
+            items: [
+              ...item("pacientes", "Pacientes", Users, puede("pacientes")),
+              ...item("historia", "Historia clínica", FileText, puede("historia")),
+              ...item("odontograma", "Odontograma 3D", Box, puede("odontograma") && es3D),
+              ...item("tratamientos", "Tratamientos", Stethoscope, puede("tratamientos")),
+              ...item("recetas", "Recetas y órdenes", PillIcon, puede("recetas")),
+              ...item("estudios", "Estudios", ScanLine, puede("estudios")),
+              ...item("gabinete", "Gabinete", ClipboardCheck),
+            ],
+          },
+          {
+            titulo: "Gestión",
+            items: [
+              ...item(
+                "autorizaciones",
+                "Autorizaciones",
+                KeyRound,
+                puede("autorizaciones"),
+                autPend,
+              ),
+              ...item("mensajes", "Mensajes", MessageCircle, puede("mensajes")),
+              ...item("reportes", "Reportes", BarChart3, puede("reportes")),
+              ...item("ia", "IA asistencial", Sparkles, puede("ia") && plan === "grupo"),
+            ],
+          },
+          { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
+        ]
+  ).filter((g) => g.items.length > 0);
+  const disponibles = grupos.flatMap((g) => g.items.map((i) => i.id));
+  const actual: Seccion = disponibles.includes(seccion) ? seccion : (disponibles[0] as Seccion);
+  const etiqueta = grupos.flatMap((g) => g.items).find((i) => i.id === actual)?.label ?? "";
+
+  const pestanaClinica: Record<string, PestanaClinica> = {
+    pacientes: "ficha",
+    historia: "historia",
+    odontograma: "odontograma",
+    tratamientos: "tratamientos",
+    recetas: "recetas",
+    estudios: "estudios",
   };
 
   return (
-    <div className="flex min-h-screen bg-[#faf9ff]">
-      {/* Sidebar en PC (misma tipografía que Cloud Esther) */}
-      <aside className="hidden w-64 shrink-0 self-stretch border-r border-sidebar-border bg-sidebar lg:block">
-        <div className="sticky top-0 flex h-screen flex-col">
-          <div className="px-5 pb-4 pt-5">
-            <div className="flex items-center gap-2.5">
-              <BrandMark className="size-9 shrink-0" />
-              <span className="leading-tight">
-                <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
-                  Cloud Esther
-                </span>
-                <span className="block text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
-                  Portal del equipo
-                </span>
-              </span>
-            </div>
-            <div className="mt-4 rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
-                Clínica
-              </p>
-              <p className="truncate text-[13px] font-medium text-sidebar-foreground">
-                {clinica?.nombre ?? "Clínica Dental Esther"}
-              </p>
-              <p className="truncate text-[11px] text-sidebar-foreground/60">
-                {ROL_LABEL[miembro.role]}
-              </p>
-            </div>
-          </div>
-          <nav className="flex-1 overflow-y-auto px-3">
-            <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
-              Mi jornada
+    <>
+      <PortalShell
+        portal={administrativo ? "Portal administrativo" : "Portal profesional"}
+        clinica={clinica?.nombre ?? "Clínica Dental Esther"}
+        usuario={{
+          nombre: yoNombre,
+          detalle: ROL_LABEL[miembro.role],
+          iniciales: `${miembro.firstName[0] ?? ""}${miembro.lastName[0] ?? ""}`,
+        }}
+        grupos={grupos}
+        activo={actual}
+        onIr={(id) => ir(id as Seccion)}
+        titulo={etiqueta}
+        subtitulo={`${clinica?.nombre ?? "Clínica Dental Esther"} · ${ROL_LABEL[miembro.role]}`}
+        acciones={<NotificacionesUniversales items={notifs} clave={`equipo:${miembro.id}`} />}
+        prefs={prefs}
+        onPrefs={cambiarPrefs}
+        onSalir={vista ? () => window.location.assign("/demo/equipo-profesional") : onSalir}
+        salirLabel={vista ? "Volver a Equipo" : "Cerrar sesión"}
+        principales={
+          administrativo
+            ? ["escritorio", "agenda", "pacientes-admin", "mensajes"]
+            : ["hoy", "agenda", "pacientes", "mensajes"]
+        }
+        aviso={
+          vista ? (
+            <p className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
+              <Eye className="size-4" /> Vista previa: así ve el portal <b>{yoNombre}</b> (
+              {ROL_LABEL[miembro.role]}) con sus permisos.
             </p>
-            <ul className="space-y-0.5">
-              {secciones.map((s) => {
-                const activo = seccion === s.id;
-                return (
-                  <li key={s.id}>
-                    <button
-                      onClick={() => ctx.ir(s.id)}
-                      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                        activo
-                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                      }`}
-                    >
-                      <s.icon
-                        className={`size-4 shrink-0 ${activo ? "text-sidebar-primary" : ""}`}
-                      />
-                      <span className="truncate">{s.label}</span>
-                      {s.id === "avisos" && misAvisos.length > 0 && (
-                        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-sidebar-primary px-1.5 text-[10px] font-bold text-sidebar-primary-foreground">
-                          {misAvisos.length}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-          <div className="space-y-2 border-t border-sidebar-border p-3">
-            <div className="flex items-center gap-2.5 rounded-xl bg-sidebar-accent/50 p-2.5">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-violet-400 text-xs font-bold text-white">
-                {`${miembro.firstName[0] ?? ""}${miembro.lastName[0] ?? ""}`}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-medium text-sidebar-foreground">
-                  {nombreDe(miembro)}
-                </span>
-                <span className="block truncate text-[11px] text-sidebar-foreground/55">
-                  {miembro.email}
-                </span>
-              </span>
-            </div>
-            {vista ? (
-              <Link
-                to="/demo/equipo-profesional"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
-              >
-                <LogOut className="size-3.5" /> Volver a Equipo
-              </Link>
-            ) : (
-              <button
-                onClick={onSalir}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
-              >
-                <LogOut className="size-3.5" /> Cerrar sesión
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      <main className="relative min-w-0 flex-1 pb-24 lg:pb-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.12),transparent_28%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
-        />
-        {/* Barra superior en el celular */}
-        <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-primary/10 bg-white/85 px-4 py-2.5 backdrop-blur-md lg:hidden">
-          <BrandMark className="size-8" />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-semibold">{nombreDe(miembro)}</p>
-            <p className="truncate text-[11px] text-muted-foreground">{ROL_LABEL[miembro.role]}</p>
-          </div>
-          {vista ? (
-            <Link to="/demo/equipo-profesional" className={BTN_SECUNDARIO}>
-              Volver
-            </Link>
-          ) : (
-            <button
-              onClick={onSalir}
-              aria-label="Cerrar sesión"
-              className="grid size-9 place-items-center rounded-full border border-primary/15 bg-white text-muted-foreground"
-            >
-              <LogOut className="size-4" />
-            </button>
-          )}
-        </header>
-
-        <div className="relative mx-auto w-full max-w-[1180px] px-4 py-4 md:px-6 lg:px-8 lg:py-6">
-          {vista && (
-            <p className="mb-3 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
-              <Eye className="size-4" /> Vista previa: así ve el portal <b>{nombreDe(miembro)}</b> (
-              {ROL_LABEL[miembro.role]}).
-            </p>
-          )}
-          {seccion === "administracion" && (
-            <EspacioAdministrativo
-              yo={miembro}
-              clinica={clinica?.nombre ?? "la clínica"}
-              vista={vista}
-              puede={(permiso) => tiene(miembro, permiso)}
-              turnos={turnosVisibles}
-              onToast={onToast}
-              abrirFicha={(paciente) => setFicha({ paciente })}
-            />
-          )}
-          {seccion === "hoy" && <Hoy ctx={ctx} avisos={misAvisos.length} />}
-          {seccion === "agenda" && <AgendaEquipo ctx={ctx} />}
-          {seccion === "pacientes" && <PacientesEquipo ctx={ctx} />}
-          {seccion === "gabinete" && <Gabinete ctx={ctx} />}
-          {seccion === "avisos" && <Avisos ctx={ctx} avisos={misAvisos} />}
-          {seccion === "perfil" && <PerfilEquipo ctx={ctx} />}
-        </div>
-      </main>
-
-      {/* Navegación inferior en el celular */}
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid border-t border-primary/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
-        style={{ gridTemplateColumns: `repeat(${secciones.length}, minmax(0,1fr))` }}
-        aria-label="Secciones"
+          ) : null
+        }
       >
-        {secciones.map((s) => {
-          const activo = seccion === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => ctx.ir(s.id)}
-              className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${activo ? "text-primary" : "text-muted-foreground"}`}
-            >
-              {activo && (
-                <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary" />
-              )}
-              <s.icon className="size-5" />
-              {s.label}
-              {s.id === "avisos" && misAvisos.length > 0 && (
-                <span className="absolute right-[22%] top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] text-white">
-                  {misAvisos.length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+        {actual === "hoy" && <Hoy ctx={ctx} avisos={autPend} />}
+        {actual === "escritorio" && (
+          <EspacioAdministrativo
+            yo={miembro}
+            clinica={clinica?.nombre ?? "la clínica"}
+            vista={vista}
+            puede={(p) =>
+              p === "gestionar_facturacion"
+                ? puede("cobros")
+                : p === "gestionar_turnos"
+                  ? puede("agenda", "editar")
+                  : tiene(miembro, p)
+            }
+            turnos={turnosVisibles}
+            onToast={onToast}
+            abrirFicha={(paciente) => abrirPaciente(paciente)}
+            pestana="escritorio"
+          />
+        )}
+        {actual === "cobros" && (
+          <EspacioAdministrativo
+            yo={miembro}
+            clinica={clinica?.nombre ?? "la clínica"}
+            vista={vista || !puede("cobros", "crear")}
+            puede={(p) => (p === "gestionar_facturacion" ? puede("cobros") : tiene(miembro, p))}
+            turnos={turnosVisibles}
+            onToast={onToast}
+            abrirFicha={(paciente) => abrirPaciente(paciente)}
+            pestana="cobros"
+          />
+        )}
+        {actual === "documentos" && (
+          <EspacioAdministrativo
+            yo={miembro}
+            clinica={clinica?.nombre ?? "la clínica"}
+            vista={vista}
+            puede={(p) => (p === "gestionar_facturacion" ? puede("cobros") : tiene(miembro, p))}
+            turnos={turnosVisibles}
+            onToast={onToast}
+            abrirFicha={(paciente) => abrirPaciente(paciente)}
+            pestana="documentos"
+          />
+        )}
+        {actual === "jornada" && (
+          <JornadaPortal yo={miembro} turnos={turnosVisibles} vista={vista} onToast={onToast} />
+        )}
+        {actual === "agenda" && (
+          <AgendaPortal
+            modo={administrativo ? "administracion" : "profesional"}
+            turnos={turnosVisibles}
+            profesionales={profesionalesVisibles}
+            yo={miembro}
+            puedeEditar={puede("agenda", "editar")}
+            puedeGestionar={
+              administrativo && (puede("agenda", "gestionar") || puede("agenda", "eliminar"))
+            }
+            vista={vista}
+            onToast={onToast}
+            onAbrirPaciente={abrirPaciente}
+            {...(puede("agenda", "crear") && miembro.role !== "asistente"
+              ? { onNuevoTurno: () => setNuevaCita(true) }
+              : {})}
+          />
+        )}
+        {actual in pestanaClinica && (
+          <PacienteClinico
+            key={`${actual}-${foco ?? ""}`}
+            inicial={pestanaClinica[actual] ?? "ficha"}
+            pacienteInicial={foco}
+            puede={(m) => puede(m) && (m !== "odontograma" || es3D)}
+            onToast={onToast}
+            {...(pacientesPropios && miembro.role !== "odontologo"
+              ? { soloPacientes: pacientesPropios }
+              : {})}
+          />
+        )}
+        {actual === "gabinete" && <Gabinete ctx={ctx} />}
+        {actual === "pacientes-admin" && (
+          <PacientesAdministracion
+            key={foco ?? ""}
+            puedeCrear={puede("pacientes", "crear")}
+            puedeEditar={puede("pacientes", "editar")}
+            onToast={onToast}
+            abrirInicial={foco}
+          />
+        )}
+        {actual === "autorizaciones" && (
+          <AutorizacionesPanel
+            rol={administrativo ? "administracion" : "profesional"}
+            usuario={yoNombre}
+            pacientes={pacientes.filter((p) => p.estado === "Activo")}
+            puedeCrear={puede("autorizaciones", "crear")}
+            puedeGestionar={
+              puede("autorizaciones", "gestionar") || puede("autorizaciones", "aprobar")
+            }
+            onToast={onToast}
+          />
+        )}
+        {actual === "mensajes" && (
+          <MensajesPortal
+            yo={miembro}
+            miembros={miembros}
+            pacientesVisibles={pacientesPropios}
+            conAvisos={administrativo && puede("mensajes", "crear")}
+            vista={vista}
+            onToast={onToast}
+          />
+        )}
+        {actual === "tareas" && (
+          <TareasAdministrativas
+            yo={miembro}
+            miembros={miembros}
+            puedeCrear={puede("tareas", "crear")}
+            puedeEliminar={puede("tareas", "eliminar")}
+            vista={vista}
+            onToast={onToast}
+          />
+        )}
+        {actual === "caja" && <CajaPortal />}
+        {actual === "presupuestos" && <Presupuestos />}
+        {actual === "reportes" && (
+          <ReportesPortal
+            modo={administrativo ? "administracion" : "profesional"}
+            turnos={turnosVisibles}
+            yo={miembro}
+          />
+        )}
+        {actual === "equipo" && <EquipoProfesional />}
+        {actual === "auditoria" && <AuditoriaPortal clinicId={clinicId} miembros={miembros} />}
+        {actual === "facturacion" && <Facturacion />}
+        {actual === "finanzas" && <Finanzas />}
+        {actual === "liquidaciones" && <LiquidacionesPortal miembros={miembros} turnos={turnos} />}
+        {actual === "rrhh" && <RRHH />}
+        {actual === "ia" && <IAPortal yo={miembro} plan={plan} />}
+        {actual === "perfil" && (
+          <div className="space-y-4">
+            <ConfiguracionProfesional yo={miembro} onToast={onToast} />
+            <PerfilEquipo ctx={ctx} />
+          </div>
+        )}
+      </PortalShell>
+
+      {nuevaCita && (
+        <Hoja titulo="Nuevo turno" onClose={() => setNuevaCita(false)}>
+          <NuevaCitaForm ctx={ctx} onDone={() => setNuevaCita(false)} />
+        </Hoja>
+      )}
 
       {ficha && (
         <FichaPaciente
@@ -681,13 +1020,13 @@ function AppEquipo({
 
       {toast && (
         <div
-          className="fixed bottom-20 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl lg:bottom-6"
+          className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl lg:bottom-6"
           role="status"
         >
           {toast}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -872,7 +1211,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
           { l: "Turnos hoy", v: deHoy.length, i: CalendarDays, s: "agenda" as Seccion },
           { l: "Atendidos", v: atendidos, i: CheckCheck, s: "agenda" as Seccion },
           { l: "Por atender", v: pendientes.length, i: Clock3, s: "agenda" as Seccion },
-          { l: "Avisos para vos", v: avisos, i: Bell, s: "avisos" as Seccion },
+          { l: "Autorizaciones", v: avisos, i: KeyRound, s: "autorizaciones" as Seccion },
         ].map((c) => (
           <button
             key={c.l}

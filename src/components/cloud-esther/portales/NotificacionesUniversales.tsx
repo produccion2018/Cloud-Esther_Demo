@@ -42,10 +42,10 @@ export type NotifUniversal = {
   id: string;
   categoria: CategoriaNotif;
   titulo: string;
-  detalle?: string;
-  fecha?: string; // ISO
-  urgente?: boolean;
-  onAbrir?: () => void;
+  detalle?: string | undefined;
+  fecha?: string | undefined; // ISO
+  urgente?: boolean | undefined;
+  onAbrir?: (() => void) | undefined;
 };
 
 const ICONO: Record<CategoriaNotif, LucideIcon> = {

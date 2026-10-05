@@ -28,7 +28,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { BrandMark } from "./logo";
 import { Campana } from "./notificaciones";
@@ -37,6 +37,7 @@ import { CON_BACKEND, registrarSalida } from "@/lib/admin/api";
 import { guardarPreferencias, usePreferencias } from "@/lib/admin/preferencias";
 import { cerrarSesionAdmin, useSesionAdmin } from "@/lib/admin/sesion";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useTablasApilables } from "@/lib/tablas-movil";
 import { cn } from "@/lib/utils";
 
 // El acceso por rol de cada ítem se define en role.tsx (sectionAccess).
@@ -323,6 +324,9 @@ export function AdminShell({
 }) {
   const { role, setRole, vistaPrevia } = useRole();
   const [menu, setMenu] = useState(false);
+  // En el celular las tablas del panel se ven como tarjetas (etiqueta: valor).
+  const contenido = useRef<HTMLElement>(null);
+  useTablasApilables(contenido);
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -392,7 +396,10 @@ export function AdminShell({
           )}
         </header>
 
-        <main className="flex-1 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 lg:pb-6">
+        <main
+          ref={contenido}
+          className="flex-1 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 lg:pb-6"
+        >
           <div className="mx-auto w-full max-w-[1360px] space-y-6">
             {/* Encabezado de la sección */}
             <section className="relative overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/[0.06] p-5 shadow-[0_18px_44px_-34px_rgba(76,29,149,0.55)] md:p-7">

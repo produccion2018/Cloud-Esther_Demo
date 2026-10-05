@@ -38,6 +38,7 @@ import {
   type TipoEventoPortal,
 } from "@/lib/cloud-esther/portal-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { useTablasApilables } from "@/lib/tablas-movil";
 
 /* Ubicación: src/components/cloud-esther/PortalMonitor.tsx
 
@@ -336,6 +337,9 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
   const [filtro, setFiltro] = useState<"" | EstadoAcceso | "Sin acceso">("");
   const [verCodigo, setVerCodigo] = useState<number | null>(null);
   const texto = normalizarBusqueda(busqueda);
+  // En el celular la tabla de accesos se ve como tarjetas.
+  const tablaRef = useRef<HTMLDivElement>(null);
+  useTablasApilables(tablaRef);
 
   const lista = pacientes
     .filter((p) => p.estado === "Activo")
@@ -415,7 +419,7 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
       </div>
 
       <div className="card-grad overflow-hidden">
-        <div className="overflow-x-auto">
+        <div ref={tablaRef} className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-sm">
             <thead className="bg-primary/[0.04] text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
               <tr>

@@ -55,6 +55,7 @@ import { ToggleSwitch } from "./ToggleSwitch";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
@@ -501,29 +502,30 @@ function GeneralTab({
 /* -------------------------------------------------------------------------- */
 
 function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
-  const profesionales = [
-    {
-      initials: "LM",
-      name: "Profesional",
-      specialty: "Odontología general",
-      status: "Activo",
-      statusClass: "bg-emerald-500/10 text-emerald-600",
-    },
-    {
-      initials: "MG",
-      name: "Profesional",
-      specialty: "Especialidad odontológica",
-      status: "Activo",
-      statusClass: "bg-emerald-500/10 text-emerald-600",
-    },
-    {
-      initials: "CR",
-      name: "Profesional",
-      specialty: "Especialidad odontológica",
-      status: "Pendiente",
-      statusClass: "bg-amber-500/10 text-amber-600",
-    },
-  ];
+  // El equipo real de la empresa (Equipo profesional), no una lista fija.
+  const { miembros } = useEquipo();
+  const [busqueda, setBusqueda] = useState("");
+  const texto = busqueda.trim().toLowerCase();
+  const odontologos = miembros.filter((m) => m.role === "odontologo");
+  const ESTADO: Record<string, { label: string; clase: string }> = {
+    activo: { label: "Activo", clase: "bg-emerald-500/10 text-emerald-600" },
+    pendiente: { label: "Pendiente", clase: "bg-amber-500/10 text-amber-600" },
+    inactivo: { label: "Inactivo", clase: "bg-muted text-muted-foreground" },
+  };
+  const profesionales = odontologos
+    .filter((m) =>
+      `${m.firstName} ${m.lastName} ${(m.specialties ?? []).join(" ")}`
+        .toLowerCase()
+        .includes(texto),
+    )
+    .map((m) => ({
+      initials: `${m.firstName[0] ?? ""}${m.lastName[0] ?? ""}`.toUpperCase(),
+      name: `${m.firstName} ${m.lastName}`.trim(),
+      specialty: m.specialties?.join(", ") || "Odontología general",
+      status: ESTADO[m.status]?.label ?? m.status,
+      statusClass: ESTADO[m.status]?.clase ?? "bg-muted text-muted-foreground",
+    }));
+  const activos = odontologos.filter((m) => m.status === "activo").length;
 
   return (
     <div className="space-y-4">
@@ -545,17 +547,23 @@ function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard icon={Users} label="Profesionales" value="3" />
+          <StatCard icon={Users} label="Profesionales" value={String(odontologos.length)} />
 
-          <StatCard icon={CheckCircle2} label="Activos" value="2" />
+          <StatCard icon={CheckCircle2} label="Activos" value={String(activos)} />
 
-          <StatCard icon={Clock3} label="Pendientes" value="1" />
+          <StatCard
+            icon={Clock3}
+            label="Pendientes"
+            value={String(odontologos.filter((m) => m.status === "pendiente").length)}
+          />
         </div>
 
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
           <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar profesionales..."
             className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           />

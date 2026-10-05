@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Clock, LogIn, MessageSquare, Sparkles, TimerOff, UserPlus } from "lucide-react";
+import { Clock, Crown, LogIn, MessageSquare, Sparkles, TimerOff, UserPlus } from "lucide-react";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import {
-  AVISO_DEMO_MS,
+  avisoDemoMs,
+  configDemo,
   contactoVisitante,
   esperaDemoHasta,
   formatearRestante,
@@ -11,7 +12,9 @@ import {
   identidadVisitante,
   iniciarIngresoDemo,
   registrarSolicitudDemo,
+  salirModoDueno,
   terminarIngresoDemo,
+  useModoDueno,
   useTiempoDemo,
 } from "@/lib/cloud-esther/demo-seguimiento";
 
@@ -26,8 +29,29 @@ import {
 export function ContadorDemo() {
   const { sesion } = useSesion();
   const restante = useTiempoDemo();
+  const dueno = useModoDueno();
+  if (dueno) {
+    return (
+      <div className="mt-2">
+        <p
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-sidebar-accent/60 px-2 py-1.5 text-[11px] font-semibold text-sidebar-foreground/80"
+          title="Entraste como dueño: sin límite de tiempo y sin registrarse como demo"
+        >
+          <Crown className="size-3.5" />
+          Modo dueño · sin límite
+        </p>
+        <button
+          type="button"
+          onClick={salirModoDueno}
+          className="mt-1 w-full text-center text-[10px] text-sidebar-foreground/50 underline-offset-2 hover:underline"
+        >
+          Salir del modo dueño
+        </button>
+      </div>
+    );
+  }
   if ((sesion && sesion.tipo !== "demo") || restante === null) return null;
-  const poco = restante <= AVISO_DEMO_MS;
+  const poco = restante <= avisoDemoMs();
   return (
     <div className="mt-2">
       <p
@@ -36,7 +60,7 @@ export function ContadorDemo() {
             ? "bg-amber-400/20 text-amber-700 dark:text-amber-300"
             : "bg-sidebar-accent/60 text-sidebar-foreground/75"
         }`}
-        title="Cada ingreso al demo dura 30 minutos"
+        title={`Cada ingreso al demo dura ${configDemo().minutos} minutos`}
       >
         <Clock className="size-3.5" />
         Tu demo: {formatearRestante(restante)}
@@ -53,10 +77,11 @@ export function ContadorDemo() {
 export function ControlSesionDemo() {
   const { sesion } = useSesion();
   const restante = useTiempoDemo();
+  const dueno = useModoDueno();
   const [avisoVisto, setAvisoVisto] = useState(false);
   const [espera, setEspera] = useState<number | null>(null);
-  const conCuenta = sesion?.tipo === "demo";
-  const sinCuenta = !sesion;
+  const conCuenta = sesion?.tipo === "demo" && !dueno;
+  const sinCuenta = !sesion && !dueno;
 
   // Al entrar: si esta identidad está en período de espera, se muestra el aviso; si no, empieza
   // el ingreso (también para quien recorre el demo sin cuenta).
@@ -112,9 +137,9 @@ export function ControlSesionDemo() {
               Terminó tu tiempo de prueba
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Cada ingreso al demo dura 30 minutos. Podés volver a probar a partir de las{" "}
-              <b className="text-foreground">{hora.replace(/\.$/, "")}</b>. Si querés seguir ahora,
-              te contamos los planes o te ayudamos a contratar.
+              Cada ingreso al demo dura {configDemo().minutos} minutos. Podés volver a probar a
+              partir de las <b className="text-foreground">{hora.replace(/\.$/, "")}</b>. Si querés
+              seguir ahora, te contamos los planes o te ayudamos a contratar.
             </p>
             <div className="mt-6 grid gap-2">
               <Link
@@ -157,7 +182,7 @@ export function ControlSesionDemo() {
     (conCuenta || sinCuenta) &&
     restante !== null &&
     restante > 0 &&
-    restante <= AVISO_DEMO_MS &&
+    restante <= avisoDemoMs() &&
     !avisoVisto
   ) {
     return (

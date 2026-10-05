@@ -83,7 +83,7 @@ export const CHIP = (activo: boolean) =>
   `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
     activo
       ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:bg-white hover:text-foreground"
+      : "text-muted-foreground hover:bg-card hover:text-foreground"
   }`;
 
 export const ROL_LABEL: Record<TeamMember["role"], string> = {

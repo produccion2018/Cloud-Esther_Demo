@@ -45,6 +45,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
+import { useNivel, type NivelModulo } from "@/lib/cloud-esther/niveles";
 import { setTurnosStore, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
 import {
   CANALES,
@@ -74,13 +75,16 @@ import { normalizarBusqueda } from "@/lib/utils";
 
 type Seccion = "bandeja" | "recordatorios" | "plantillas" | "campanas" | "historial" | "canales";
 
-const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
-  { id: "bandeja", label: "Bandeja", icon: Inbox },
-  { id: "recordatorios", label: "Recordatorios", icon: Bell },
-  { id: "plantillas", label: "Plantillas", icon: FileText },
-  { id: "campanas", label: "Campañas", icon: Megaphone },
-  { id: "historial", label: "Historial de envíos", icon: Clock3 },
-  { id: "canales", label: "Canales y horarios", icon: Settings2 },
+/* Nivel mínimo de cada sección según el plan (uso interno, no se muestra):
+   Start: bandeja, recordatorios e historial. Pro: además plantillas y canales.
+   Plus y Enterprise: además campañas. */
+const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; desde: NivelModulo }[] = [
+  { id: "bandeja", label: "Bandeja", icon: Inbox, desde: "basico" },
+  { id: "recordatorios", label: "Recordatorios", icon: Bell, desde: "basico" },
+  { id: "plantillas", label: "Plantillas", icon: FileText, desde: "avanzado" },
+  { id: "campanas", label: "Campañas", icon: Megaphone, desde: "completo" },
+  { id: "historial", label: "Historial de envíos", icon: Clock3, desde: "basico" },
+  { id: "canales", label: "Canales y horarios", icon: Settings2, desde: "avanzado" },
 ];
 
 const VARIABLES = ["paciente", "fecha", "hora", "profesional", "clinica", "tratamiento"] as const;
@@ -596,7 +600,10 @@ function ComunicacionInner() {
 
   const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
   const usuario = usuarioSesion?.nombre ?? "Recepción";
-  const conCampanas = planLevel(plan) >= planLevel("avanzada");
+  const nivelCom = useNivel("comunicaciones");
+  const conCampanas = nivelCom.desde("completo");
+  const secciones = SECCIONES.filter((x) => nivelCom.desde(x.desde));
+  const seccionVisible: Seccion = secciones.some((x) => x.id === seccion) ? seccion : "bandeja";
 
   const onToast = (msg: string) => {
     setToast(msg);
@@ -764,8 +771,7 @@ function ComunicacionInner() {
                 className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
                 aria-label="Secciones de comunicación"
               >
-                {SECCIONES.map((s) => {
-                  const bloqueada = s.id === "campanas" && !conCampanas;
+                {secciones.map((s) => {
                   const contador =
                     s.id === "bandeja" && montado && noLeidos > 0
                       ? noLeidos
@@ -776,19 +782,18 @@ function ComunicacionInner() {
                     <button
                       key={s.id}
                       onClick={() => setSeccion(s.id)}
-                      aria-pressed={seccion === s.id}
+                      aria-pressed={seccionVisible === s.id}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                        seccion === s.id
+                        seccionVisible === s.id
                           ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                          : "text-muted-foreground hover:bg-white hover:text-foreground"
+                          : "text-muted-foreground hover:bg-card hover:text-foreground"
                       }`}
                     >
                       <s.icon className="size-3.5" />
                       {s.label}
-                      {bloqueada && <Lock className="size-3" />}
                       {contador > 0 && (
                         <span
-                          className={`grid min-w-4 place-items-center rounded-full px-1 text-[10px] ${seccion === s.id ? "bg-white/25" : "bg-primary text-primary-foreground"}`}
+                          className={`grid min-w-4 place-items-center rounded-full px-1 text-[10px] ${seccionVisible === s.id ? "bg-white/25" : "bg-primary text-primary-foreground"}`}
                         >
                           {contador}
                         </span>
@@ -803,7 +808,7 @@ function ComunicacionInner() {
           <div className="mt-5">
             {!montado ? (
               <div className="card-grad h-[560px] animate-pulse" />
-            ) : seccion === "bandeja" ? (
+            ) : seccionVisible === "bandeja" ? (
               <Bandeja
                 ctx={ctx}
                 chatId={chatId}
@@ -813,17 +818,17 @@ function ComunicacionInner() {
                 nueva={nuevaConv}
                 setNueva={setNuevaConv}
               />
-            ) : seccion === "recordatorios" ? (
+            ) : seccionVisible === "recordatorios" ? (
               <Recordatorios ctx={ctx} />
-            ) : seccion === "plantillas" ? (
+            ) : seccionVisible === "plantillas" ? (
               <Plantillas ctx={ctx} />
-            ) : seccion === "campanas" ? (
+            ) : seccionVisible === "campanas" ? (
               conCampanas ? (
                 <Campanas ctx={ctx} />
               ) : (
                 <CampanasBloqueadas />
               )
-            ) : seccion === "historial" ? (
+            ) : seccionVisible === "historial" ? (
               <Historial ctx={ctx} />
             ) : (
               <Canales ctx={ctx} />

@@ -87,6 +87,9 @@ export function PlanCard({
   const limites = textoLimites(config);
   const anual = precioAnual(config);
   const descuento = Math.round(config.descuentoAnual * 100);
+  // Sin precio cargado desde el panel (backend) no se muestra ningún monto ni marcador.
+  const monto = ciclo === "anual" ? anual : config.precioMensual;
+  const mostrarPrecio = precio !== undefined || monto !== null;
   const isEnterprise = plan.id === "enterprise";
   const extras = EXTRAS_POR_PLAN[index] ?? EXTRAS_POR_PLAN[0];
   const [verTodas, setVerTodas] = useState(false);
@@ -146,15 +149,17 @@ export function PlanCard({
         </p>
 
         {/* Precio: lo define Cloud Esther desde el panel administrativo (backend). */}
-        <p className="relative mt-3 flex flex-wrap items-baseline gap-1">
-          <span className="font-display text-3xl font-bold tracking-tight text-primary">
-            {precio ?? formatearPrecio(ciclo === "anual" ? anual : config.precioMensual)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {precio ? notaPrecio : ciclo === "anual" ? "/ año" : "/ mes"}
-          </span>
-        </p>
-        {!precio && ciclo === "anual" && (
+        {mostrarPrecio && (
+          <p className="relative mt-3 flex flex-wrap items-baseline gap-1">
+            <span className="font-display text-3xl font-bold tracking-tight text-primary">
+              {precio ?? formatearPrecio(monto)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {precio ? notaPrecio : ciclo === "anual" ? "/ año" : "/ mes"}
+            </span>
+          </p>
+        )}
+        {!precio && monto !== null && ciclo === "anual" && (
           <p className="relative mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
             {descuento}% de descuento pagando anual
           </p>
@@ -261,10 +266,13 @@ export function PlanGrid({
   onSelect?: ((plan: Plan, ciclo: CicloPago) => void) | undefined;
 }) {
   const [ciclo, setCiclo] = useState<CicloPago>("mensual");
-  const descuento = Math.round(useConfigPlanes().inicial.descuentoAnual * 100);
+  const configs = useConfigPlanes();
+  const descuento = Math.round(configs.inicial.descuentoAnual * 100);
+  // Mensual/anual solo tiene sentido cuando hay precios cargados desde el panel.
+  const hayPrecios = Object.values(configs).some((c) => c.precioMensual !== null);
   return (
     <div>
-      <div className="mb-8 flex justify-center">
+      <div className={hayPrecios ? "mb-8 flex justify-center" : "hidden"}>
         <div
           className="inline-flex items-center rounded-full border border-primary/20 bg-card p-1 shadow-sm"
           role="radiogroup"

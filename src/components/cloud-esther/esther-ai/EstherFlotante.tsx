@@ -15,7 +15,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
       {abierto && (
         <Suspense
           fallback={
-            <div className="fixed bottom-24 right-5 z-[60] h-[560px] w-[min(400px,calc(100vw-2.5rem))] animate-pulse rounded-3xl border border-primary/15 bg-card shadow-2xl" />
+            <div className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-24 lg:right-5 h-[560px] w-[min(400px,calc(100vw-2.5rem))] animate-pulse rounded-3xl border border-primary/15 bg-card shadow-2xl" />
           }
         >
           <Panel moduloId={moduloId} modulo={modulo} onClose={() => setAbierto(false)} />
@@ -26,7 +26,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
         onClick={() => setAbierto((v) => !v)}
         aria-label={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
         title={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
-        className="group fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-card p-1.5 pr-4 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] transition hover:-translate-y-0.5 hover:border-primary/40"
+        className="group fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-5 lg:right-5 flex items-center gap-2 rounded-full border border-primary/20 bg-card p-1.5 sm:pr-4 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] transition hover:-translate-y-0.5 hover:border-primary/40"
       >
         <span
           aria-hidden
@@ -43,7 +43,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
         >
           {abierto && <X className="size-4" />}
         </span>
-        <span className="text-left leading-tight">
+        <span className="hidden text-left leading-tight sm:block">
           <span className="block text-xs font-bold text-foreground">Esther IA</span>
           <span className="block text-[10.5px] text-muted-foreground">
             {abierto ? "Cerrar" : "Preguntame algo"}

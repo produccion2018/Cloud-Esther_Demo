@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import {
   SUCURSALES as SUCURSALES_AGENDA,
@@ -317,6 +318,8 @@ type NotaVoz = {
   audioUrl: string;
   transcripcion: string;
   estadoTranscripcion: "Pendiente de integración" | "Transcrita";
+  /** Pieza dental (FDI) cuando se grabó desde el Odontograma 3D. */
+  piezas?: string;
 };
 
 type NotaRapida = {
@@ -2083,7 +2086,7 @@ function NotaClinicaForm({
   );
 }
 
-function NotaVozRecorder({
+export function NotaVozRecorder({
   profesional,
   onSave,
   onToast,
@@ -2268,6 +2271,8 @@ function NotaRapidaForm({
 }
 
 function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
+  // Notas de voz (grabación y transcripción): solo en planes con IA (Plus y Enterprise).
+  const conIA = useConIA();
   const [abierto, setAbierto] = useState(false);
   const [vozAbierta, setVozAbierta] = useState(false);
   const [rapidaAbierta, setRapidaAbierta] = useState(false);
@@ -2301,7 +2306,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm lg:col-span-2">
+        <div
+          className={`rounded-2xl border border-primary/10 bg-card p-3 shadow-sm ${conIA ? "lg:col-span-2" : "lg:col-span-3"}`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold">Notas clínicas</p>
@@ -2310,7 +2317,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              {conIA && (
+                <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              )}
               <BotonMini
                 icon={Plus}
                 label="Nota clínica"
@@ -2340,6 +2349,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             </Field>
           </div>
         </div>
+        {conIA && (
         <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
             Notas de voz
@@ -2355,6 +2365,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.
           </p>
         </div>
+        )}
       </div>
 
       {notas.length === 0 ? (
@@ -2439,7 +2450,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
         </ul>
       )}
 
-      {datos.notasVoz.length > 0 && (
+      {conIA && datos.notasVoz.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Notas de voz guardadas</p>
           {datos.notasVoz.map((v) => (
@@ -2450,6 +2461,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                   {formatearFecha(v.fecha)} · {v.hora}
                 </span>
                 <Badge tono="gris">{v.estadoTranscripcion}</Badge>
+                {v.piezas && <Badge tono="primary">Pieza {v.piezas}</Badge>}
                 <span className="text-[11px] text-muted-foreground">
                   {v.profesional} · {v.duracionSegundos}s
                 </span>
@@ -2525,6 +2537,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
       )}
       {vozAbierta && (
         <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}>
+          {/* Solo se abre desde el botón, que existe únicamente en planes con IA. */}
           <NotaVozRecorder
             profesional={datos.profesionales[0]?.nombre ?? ""}
             onToast={onToast}
@@ -6652,6 +6665,8 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [simulacionAbierta, setSimulacionAbierta] = useState(false);
   const [tab, setTab] = useState<"galeria" | "comparar" | "simulacion">("galeria");
+  // La simulación estética usa IA: solo en Plus y Enterprise.
+  const conIA = useConIA();
   const lista = [...datos.fotografias].sort((a, b) =>
     `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
   );
@@ -6665,14 +6680,16 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
       <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+        <div className={`grid grid-cols-1 gap-1 ${conIA ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           {(
             [
               ["galeria", "Galería"],
               ["comparar", "Antes / Después"],
               ["simulacion", "Simulación estética"],
             ] as const
-          ).map(([id, label]) => (
+          )
+            .filter(([id]) => conIA || id !== "simulacion")
+            .map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -6734,7 +6751,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
           </div>
         ))}
       {tab === "comparar" && <CompararFotografias fotografias={lista} />}
-      {tab === "simulacion" && (
+      {conIA && tab === "simulacion" && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -6882,6 +6899,9 @@ type TabEstudios =
   "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
+  // mediciones, vínculo con tratamientos y diagnóstico.
+  const conDiagnostico = useNivel("estudios").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [tab, setTab] = useState<TabEstudios>("galeria");
   const [visorId, setVisorId] = useState<number | null>(null);
@@ -6893,26 +6913,34 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const informados = datos.estudios.filter((s) => s.estadoInforme === "Informado").length;
   const activos = datos.diagnosticos.filter((d) => d.estado === "Activo").length;
 
-  const TABS: { id: TabEstudios; label: string; icon: LucideIcon }[] = [
+  const TODAS: { id: TabEstudios; label: string; icon: LucideIcon; avanzado?: boolean }[] = [
     { id: "galeria", label: "Galería", icon: Images },
     { id: "fotografias", label: "Fotografías", icon: Camera },
-    { id: "comparar", label: "Comparar", icon: GitCompare },
-    { id: "anotaciones", label: "Mediciones", icon: Ruler },
-    { id: "vinculados", label: "Tratamiento", icon: Link2 },
-    { id: "diagnostico", label: "Diagnóstico", icon: Activity },
+    { id: "comparar", label: "Comparar", icon: GitCompare, avanzado: true },
+    { id: "anotaciones", label: "Mediciones", icon: Ruler, avanzado: true },
+    { id: "vinculados", label: "Tratamiento", icon: Link2, avanzado: true },
+    { id: "diagnostico", label: "Diagnóstico", icon: Activity, avanzado: true },
   ];
+  const TABS = TODAS.filter((t) => conDiagnostico || !t.avanzado);
+  const tabVisible = TABS.some((t) => t.id === tab) ? tab : "galeria";
 
   return (
     <div className="space-y-3">
       <Encabezado
         icon={Images}
-        titulo="Estudios y diagnóstico por imagen"
-        descripcion="Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+        titulo={conDiagnostico ? "Estudios y diagnóstico por imagen" : "Estudios clínicos"}
+        descripcion={
+          conDiagnostico
+            ? "Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+            : "Radiografías, tomografías y fotografías clínicas del paciente, ordenadas por fecha."
+        }
         etiquetaBoton="Cargar estudio"
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
+      <div
+        className={`grid grid-cols-2 gap-2.5 ${conDiagnostico ? "md:grid-cols-5" : "md:grid-cols-3"}`}
+      >
         <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
         <ResumenCuenta
           etiqueta="Informados"
@@ -6926,23 +6954,27 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={Clock3}
           tono={datos.estudios.length - informados > 0 ? "text-amber-600" : ""}
         />
-        <ResumenCuenta
-          etiqueta="Mediciones"
-          valor={String(datos.anotaciones.length)}
-          icon={Ruler}
-        />
-        <ResumenCuenta
-          etiqueta="Diagnósticos activos"
-          valor={String(activos)}
-          icon={Activity}
-          tono="text-primary"
-        />
+        {conDiagnostico && (
+          <>
+            <ResumenCuenta
+              etiqueta="Mediciones"
+              valor={String(datos.anotaciones.length)}
+              icon={Ruler}
+            />
+            <ResumenCuenta
+              etiqueta="Diagnósticos activos"
+              valor={String(activos)}
+              icon={Activity}
+              tono="text-primary"
+            />
+          </>
+        )}
       </div>
 
       <div className="card-grad p-1">
-        <div className="grid grid-cols-2 gap-1 md:grid-cols-6">
+        <div className={`grid grid-cols-2 gap-1 ${conDiagnostico ? "md:grid-cols-6" : ""}`}>
           {TABS.map((t) => {
-            const activa = tab === t.id;
+            const activa = tabVisible === t.id;
             return (
               <button
                 key={t.id}
@@ -6962,7 +6994,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         </div>
       </div>
 
-      {tab === "galeria" && (
+      {tabVisible === "galeria" && (
         <GaleriaTab
           estudios={lista}
           onVer={setVisorId}
@@ -6975,15 +7007,15 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           }}
         />
       )}
-      {tab === "fotografias" && (
+      {tabVisible === "fotografias" && (
         <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />
       )}
-      {tab === "comparar" && <CompararTab estudios={datos.estudios} />}
-      {tab === "anotaciones" && (
+      {tabVisible === "comparar" && <CompararTab estudios={datos.estudios} />}
+      {tabVisible === "anotaciones" && (
         <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />
       )}
-      {tab === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
-      {tab === "diagnostico" && (
+      {tabVisible === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
+      {tabVisible === "diagnostico" && (
         <DiagnosticoTab datos={datos} cambiar={cambiar} onToast={onToast} />
       )}
 
@@ -8149,6 +8181,9 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
 }
 
 function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: registrar trabajos y su estado. Pro en adelante: seguimiento por pasos, avisos de
+  // demora, costos, filtros y orden imprimible para el laboratorio.
+  const conSeguimiento = useNivel("laboratorio").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
@@ -8206,7 +8241,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-2.5 ${conSeguimiento ? "md:grid-cols-4" : ""}`}>
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(enProceso)}
@@ -8219,20 +8254,24 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={PackageCheck}
           tono="text-emerald-600"
         />
-        <ResumenCuenta
-          etiqueta="Demorados"
-          valor={String(demorados)}
-          icon={Clock3}
-          tono={demorados ? "text-destructive" : ""}
-        />
-        <ResumenCuenta
-          etiqueta="Costo total"
-          valor={formatearMonto(costoTotal)}
-          icon={CircleDollarSign}
-        />
+        {conSeguimiento && (
+          <>
+            <ResumenCuenta
+              etiqueta="Demorados"
+              valor={String(demorados)}
+              icon={Clock3}
+              tono={demorados ? "text-destructive" : ""}
+            />
+            <ResumenCuenta
+              etiqueta="Costo total"
+              valor={formatearMonto(costoTotal)}
+              icon={CircleDollarSign}
+            />
+          </>
+        )}
       </div>
 
-      {todos.length > 0 && (
+      {conSeguimiento && todos.length > 0 && (
         <div className="card-grad flex flex-wrap gap-1.5 p-2">
           {FILTROS.map((f) => (
             <button
@@ -8282,7 +8321,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                         </Badge>
                       )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
-                      {aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                      {conSeguimiento && aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       {t.material && <span>{t.material}</span>}
@@ -8294,12 +8333,12 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                     </p>
                   </div>
-                  {t.costo > 0 && (
+                  {conSeguimiento && t.costo > 0 && (
                     <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>
                   )}
                 </div>
 
-                <PasosLaboratorio trabajo={t} />
+                {conSeguimiento && <PasosLaboratorio trabajo={t} />}
 
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -8329,14 +8368,16 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       onClick={() => cambiarEstado(t, "Entregado")}
                     />
                   )}
-                  <BotonMini
-                    icon={Printer}
-                    label="Orden"
-                    onClick={() => {
-                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
-                        onToast("Permití las ventanas emergentes para imprimir");
-                    }}
-                  />
+                  {conSeguimiento && (
+                    <BotonMini
+                      icon={Printer}
+                      label="Orden"
+                      onClick={() => {
+                        if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
+                          onToast("Permití las ventanas emergentes para imprimir");
+                      }}
+                    />
+                  )}
                   <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
                   <BotonBorrar
                     etiqueta="Eliminar trabajo de laboratorio"
@@ -8412,6 +8453,7 @@ function TimelinePaciente({
 }) {
   // Se muestran los más recientes; el resto se despliega con "Ver todos" para no dejar la ficha tan larga.
   const [verTodos, setVerTodos] = useState(false);
+  const conIA = useConIA();
   type Evento = {
     id: string;
     fecha: string;
@@ -8453,7 +8495,7 @@ function TimelinePaciente({
         seccion: "historia" as SeccionRegistros,
         tono: "primary" as Tono,
       })),
-      ...datos.notasVoz.map((n) => ({
+      ...(conIA ? datos.notasVoz : []).map((n) => ({
         id: `voz-${n.id}`,
         fecha: n.fecha,
         hora: n.hora,

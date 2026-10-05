@@ -142,6 +142,13 @@ export interface AppModule {
   minPlan: PlanId;
   /** Último plan que lo muestra (ej. el 2D deja de verse cuando el plan ya tiene 3D). */
   maxPlan?: PlanId;
+  /** Nombre visible distinto según el plan (sin palabras como «básico» o «avanzado»). */
+  labelPorPlan?: Partial<Record<PlanId, string>>;
+}
+
+/** Nombre del módulo que se muestra para ese plan. */
+export function etiquetaModulo(m: AppModule, plan: PlanId) {
+  return m.labelPorPlan?.[plan] ?? m.label;
 }
 
 export const MODULES: AppModule[] = [
@@ -210,6 +217,7 @@ export const MODULES: AppModule[] = [
   {
     id: "estudios",
     label: "Estudios y diagnóstico",
+    labelPorPlan: { inicial: "Estudios clínicos" },
     icon: "studies",
     path: "/demo/estudios",
     group: "Clínico",
@@ -221,7 +229,7 @@ export const MODULES: AppModule[] = [
     icon: "laboratorio",
     path: "/demo/laboratorio",
     group: "Clínico",
-    minPlan: "profesional",
+    minPlan: "inicial",
   },
   {
     id: "tratamientos",
@@ -241,7 +249,7 @@ export const MODULES: AppModule[] = [
     icon: "message",
     path: "/demo/comunicaciones",
     group: "Operación",
-    minPlan: "profesional",
+    minPlan: "inicial",
   },
   {
     id: "notificaciones",
@@ -273,7 +281,7 @@ export const MODULES: AppModule[] = [
     icon: "portal-paciente",
     path: "/demo/portal-paciente",
     group: "Operación",
-    minPlan: "profesional",
+    minPlan: "grupo",
   },
   {
     id: "inventario",
@@ -305,11 +313,11 @@ export const MODULES: AppModule[] = [
   // ─────────────────────────────────────────────
   {
     id: "facturacion",
-    label: "Facturación",
+    label: "Pagos y facturación",
     icon: "receipt",
     path: "/demo/facturacion",
     group: "Administración",
-    minPlan: "inicial",
+    minPlan: "profesional",
   },
   {
     id: "finanzas",
@@ -317,11 +325,11 @@ export const MODULES: AppModule[] = [
     icon: "finanzas",
     path: "/demo/finanzas",
     group: "Administración",
-    minPlan: "inicial",
+    minPlan: "avanzada",
   },
   {
     id: "bi",
-    label: "Analítica",
+    label: "Analítica y reportes",
     icon: "chart",
     path: "/demo/bi",
     group: "Administración",
@@ -392,30 +400,36 @@ export function availableIn(module: AppModule, plan: PlanId) {
 
 export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   inicial: [
-    "Agenda",
+    "Agenda y turnos",
     "Pacientes",
     "Historia clínica",
     "Odontograma 2D",
-    "Recetas",
-    "Estudios y diagnóstico",
-    "Tratamientos",
-    "Equipo",
+    "Recetas y tratamientos",
+    "Equipo: integrantes, especialidades y horarios",
+    "Estudios clínicos",
+    "Laboratorio",
+    "Comunicación",
     "Notificaciones",
-    "Finanzas y facturación básica",
-    "Configuración",
+    "Configuración con modo oscuro",
   ],
   profesional: [
-    "Todo lo anterior",
-    "Comunicación",
+    "Todo lo de Start",
+    "Odontograma 2D con más herramientas",
+    "Comunicación con pacientes",
     "Presupuestos",
-    "Laboratorio",
-    "Portal del paciente",
+    "Pagos y facturación",
+    "Estudios y diagnóstico",
+    "Laboratorio con seguimiento",
     "Analítica y reportes",
-    "Integraciones básicas",
+    "Documentos de la clínica",
+    "Notificaciones con filtros y reglas",
+    "Configuración: modo oscuro y color del menú",
+    "Integraciones",
   ],
   avanzada: [
     "Todo lo anterior",
     "Odontograma 3D con rayos X y simulador de sonrisa",
+    "Finanzas",
     "Marketing y captación",
     "Inventario",
     "Equipo y RRHH",
@@ -424,6 +438,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   grupo: [
     "Todo lo anterior",
     "Odontograma 3D avanzado",
+    "Portal del paciente y portal del profesional",
     "Automatizaciones con n8n",
     "Multi-clínica",
     "Multiempresa",
@@ -470,6 +485,9 @@ interface CloudEstherContextValue {
   /** true cuando hay una empresa con plan contratado: el plan no se puede cambiar.
    *  false en el demo (sin sesión), donde se pueden probar todos los planes. */
   planContratado: boolean;
+  /** true cuando ya se leyó el plan guardado de la empresa (después de montar). Hasta entonces
+   *  el plan es provisorio y no se muestra nada que dependa de IA o audio. */
+  planListo: boolean;
   clinic: string;
   setClinic: (c: string) => void;
   role: string;
@@ -483,8 +501,10 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
   // guardado de la empresa de la sesión; se vuelve a leer si cambia la sesión.
   const [plan, setPlanState] = useState<PlanId>("avanzada");
   const tenant = useTenantActual();
+  const [planListo, setPlanListo] = useState(false);
   useEffect(() => {
     setPlanState(getStoredPlan());
+    setPlanListo(true);
   }, [tenant]);
   const [clinic, setClinic] = useState("centro");
   const [role] = useState("admin");
@@ -507,6 +527,7 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
         plan,
         setPlan,
         planContratado,
+        planListo,
         clinic,
         setClinic,
         role,
@@ -516,6 +537,11 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
       {children}
     </CloudEstherContext.Provider>
   );
+}
+
+/** Como useCloudEsther, pero devuelve null fuera del proveedor (portales, pantallas públicas). */
+export function useCloudEstherOpcional() {
+  return useContext(CloudEstherContext);
 }
 
 export function useCloudEsther() {

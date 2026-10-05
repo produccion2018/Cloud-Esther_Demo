@@ -222,7 +222,7 @@ export function EstherAI({
                     role="tab"
                     aria-selected={modo === id}
                     onClick={() => setModo(id)}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${modo === id ? "text-primary-foreground shadow-[var(--shadow-glow)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${modo === id ? "text-primary-foreground shadow-[var(--shadow-glow)]" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
                     style={modo === id ? { background: "var(--gradient-esther)" } : {}}
                   >
                     <I className="size-3.5" />

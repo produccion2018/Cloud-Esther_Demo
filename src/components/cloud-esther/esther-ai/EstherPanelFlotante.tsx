@@ -73,7 +73,7 @@ export default function EstherPanelFlotante({
     <div
       role="dialog"
       aria-label="Esther IA"
-      className="esther-ai fixed bottom-24 right-5 z-[60] flex h-[min(600px,calc(100vh-8rem))] w-[min(400px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-[0_30px_70px_-30px_rgba(76,29,149,0.6)]"
+      className="esther-ai fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-24 lg:right-5 flex h-[min(600px,calc(100vh-8rem))] w-[min(400px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-[0_30px_70px_-30px_rgba(76,29,149,0.6)]"
     >
       <div
         className="relative flex items-end gap-3 border-b border-primary/10 px-4 pt-3"

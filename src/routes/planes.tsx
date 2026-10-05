@@ -19,7 +19,7 @@ import {
 export const Route = createFileRoute("/planes")({
   head: () => ({
     meta: [
-      { title: "Planes y precios | Cloud Esther" },
+      { title: "Planes | Cloud Esther" },
       {
         name: "description",
         content:
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/planes")({
       },
       {
         property: "og:title",
-        content: "Planes y precios de Cloud Esther",
+        content: "Planes de Cloud Esther",
       },
       {
         property: "og:description",
@@ -128,7 +128,7 @@ function Planes() {
                 className="size-1.5 rounded-full bg-primary"
               />
 
-              Planes y precios
+              Planes
             </motion.span>
           </motion.div>
 
@@ -214,8 +214,8 @@ function Planes() {
             }}
             className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-lg"
           >
-            Precios claros, implementación acompañada y una plataforma que
-            crece con tu organización.
+            Compará los módulos de cada plan, con implementación acompañada y
+            una plataforma que crece con tu organización.
           </motion.p>
 
           <motion.div
@@ -463,8 +463,8 @@ function Planes() {
           <Reveal delay={0.15}>
             <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
               Los módulos adicionales se agregan al plan contratado cuando
-              estén disponibles para ese nivel. Los precios indicados no
-              incluyen impuestos.
+              estén disponibles para ese nivel. Para conocer las condiciones
+              comerciales, escribinos y te asesoramos.
             </p>
           </Reveal>
         </div>

@@ -725,12 +725,17 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
     return () => document.removeEventListener("mousedown", cerrar);
   }, [abierto]);
 
-  const ITEMS: { href: string; titulo: string; detalle: string; nueva?: boolean; icon: typeof Users }[] = [
-    { href: "/portal", titulo: "Portal del paciente", detalle: "Así lo ven tus pacientes (DNI + código)", nueva: true, icon: UserRound },
-    { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope },
-    { href: "/demo/portal-paciente", titulo: "Monitoreo del portal", detalle: "Accesos, actividad y documentación de pacientes", icon: ShieldCheck },
-    { href: "/demo/equipo-profesional", titulo: "Equipo y accesos del equipo", detalle: "Integrantes, fichajes y portal del equipo", icon: Users },
+  // Los portales del paciente y del profesional son exclusivos de Enterprise.
+  const { plan: planMenu } = useCloudEsther();
+  const TODOS: { href: string; titulo: string; detalle: string; nueva?: boolean; icon: typeof Users; enterprise?: boolean }[] = [
+    { href: "/portal", titulo: "Portal del paciente", detalle: "Así lo ven tus pacientes (DNI + código)", nueva: true, icon: UserRound, enterprise: true },
+    { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope, enterprise: true },
+    { href: "/demo/portal-paciente", titulo: "Monitoreo del portal", detalle: "Accesos, actividad y documentación de pacientes", icon: ShieldCheck, enterprise: true },
+    { href: "/demo/equipo-profesional", titulo: "Equipo y accesos del equipo", detalle: "Integrantes, fichajes y horarios", icon: Users },
+    // Etapa de pruebas: entrar a los perfiles (propietario, clínica, profesional, secretaría, paciente).
+    { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", detalle: "Propietario, clínica, profesional, secretaría y paciente · PC, tablet y celular", icon: ShieldCheck },
   ];
+  const ITEMS = TODOS.filter((it) => !it.enterprise || planMenu === "grupo");
 
   return (
     <div ref={ref} className="relative">
@@ -754,7 +759,7 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
             <p className="text-sm font-semibold">{nombre}</p>
             <p className="text-[11px] text-white/80">{clinica ? `Dueño/a · ${clinica}` : "Dueño/a · Demo"}</p>
           </div>
-          <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Portales para probar</p>
+          <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{planMenu === "grupo" ? "Portales para probar" : "Accesos"}</p>
           <ul className="px-2 pb-2">
             {ITEMS.map((it) => (
               <li key={it.href}>

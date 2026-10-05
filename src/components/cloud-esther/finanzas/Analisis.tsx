@@ -329,7 +329,7 @@ export function FlujoCaja({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                 <button
                   type="button"
                   onClick={() => setAbierta(i)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 transition ${abierta === i ? "bg-primary/[0.07] ring-primary/30" : "bg-white/85 ring-primary/10 hover:bg-white"}`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 transition ${abierta === i ? "bg-primary/[0.07] ring-primary/30" : "bg-white/85 ring-primary/10 hover:bg-card"}`}
                 >
                   <span className="w-24 text-[12px] font-semibold">
                     {fecha(s.desde).slice(0, 5)} – {fecha(s.hasta).slice(0, 5)}

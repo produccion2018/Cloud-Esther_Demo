@@ -5,6 +5,7 @@ import {
   FileText,
   History,
   ImagePlus,
+  Mic,
   Pencil,
   Plus,
   ScanSearch,
@@ -28,6 +29,7 @@ import { storeRayosX, TIPOS_RX } from "@/lib/cloud-esther/rayos-x";
 import { leerImagen } from "@/components/cloud-esther/esther-ai/imagenes";
 import {
   cambiarRegistro,
+  NotaVozRecorder,
   useRegistrosPacientes,
   type Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
@@ -40,6 +42,7 @@ import {
    TODO backend: los mismos registros por API, con el token del tenant. */
 
 type Nota = Registros["notasClinicas"][number];
+type NotaVoz = Registros["notasVoz"][number];
 type Tratamiento = Registros["tratamientos"][number];
 type EstadoTratamiento = Tratamiento["estado"];
 
@@ -219,6 +222,8 @@ function FichaDePieza({
   const diagnosticos = registros.diagnosticos.filter((x) => incluyePieza(x.pieza, fdi));
   const tratamientos = registros.tratamientos.filter((x) => incluyePieza(x.pieza, fdi));
   const notas = registros.notasClinicas.filter((x) => incluyePieza(x.piezas, fdi));
+  // Notas de voz: el 3D es de Plus y Enterprise, que tienen IA; igual se respeta tieneIA.
+  const notasVoz = tieneIA ? registros.notasVoz.filter((x) => incluyePieza(x.piezas, fdi)) : [];
   const fotos = registros.fotografias.filter((x) => incluyePieza(x.pieza, fdi));
   const estudios = registros.estudios.filter((x) => incluyePieza(x.pieza, fdi));
   const hallazgosRX = rx.analisis
@@ -238,7 +243,7 @@ function FichaDePieza({
   const contar: Record<Pestana, number> = {
     resumen: diagnosticos.length,
     tratamientos: tratamientos.length,
-    notas: notas.length,
+    notas: notas.length + notasVoz.length,
     imagenes: fotos.length,
     estudios: estudios.length + hallazgosRX.length,
     historial: 0,
@@ -329,7 +334,9 @@ function FichaDePieza({
             tieneIA={tieneIA}
           />
         )}
-        {pestana === "notas" && <SeccionNotas {...comun} notas={notas} />}
+        {pestana === "notas" && (
+          <SeccionNotas {...comun} notas={notas} notasVoz={notasVoz} conVoz={tieneIA} />
+        )}
         {pestana === "imagenes" && <SeccionImagenes {...comun} fotos={fotos} />}
         {pestana === "estudios" && (
           <SeccionEstudios
@@ -850,8 +857,11 @@ function SeccionNotas({
   onToast,
   auditar,
   notas,
-}: Comun & { notas: Nota[] }) {
+  notasVoz,
+  conVoz,
+}: Comun & { notas: Nota[]; notasVoz: NotaVoz[]; conVoz: boolean }) {
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
+  const [grabando, setGrabando] = useState(false);
   const [form, setForm] = useState(NOTA_VACIA);
 
   const abrir = (n?: Nota) => {
@@ -922,11 +932,72 @@ function SeccionNotas({
     <>
       <Titulo
         accion={
-          editando === null && <BotonAgregar onClick={() => abrir()}>Nota clínica</BotonAgregar>
+          editando === null &&
+          !grabando && (
+            <div className="flex shrink-0 gap-1.5">
+              {conVoz && (
+                <button
+                  type="button"
+                  onClick={() => setGrabando(true)}
+                  className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-primary/20 px-2 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
+                >
+                  <Mic className="size-3" /> Nota de voz
+                </button>
+              )}
+              <BotonAgregar onClick={() => abrir()}>Nota clínica</BotonAgregar>
+            </div>
+          )
         }
       >
         Notas clínicas de la pieza
       </Titulo>
+
+      {grabando && (
+        <div className="space-y-2">
+          <NotaVozRecorder
+            profesional={profesional}
+            onToast={onToast}
+            onSave={(nota) => {
+              cambiarRegistro(pacienteId, "notasVoz", (prev) => [
+                ...prev,
+                { ...nota, id: siguienteId(prev), piezas: String(fdi) },
+              ]);
+              auditar(`Nota de voz en pieza ${fdi}`);
+              onToast(`Nota de voz guardada en la pieza ${fdi}`);
+              setGrabando(false);
+            }}
+          />
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="btn-ce-outline !py-1 !text-[11px]"
+              onClick={() => setGrabando(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {notasVoz.map((v) => (
+        <div key={`voz-${v.id}`} className={ITEM}>
+          <div className="flex items-center gap-2">
+            <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Mic className="size-3.5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground">
+                Nota de voz · {v.duracionSegundos}s
+              </p>
+              <Meta fecha={v.fecha} extra={v.hora} profesional={v.profesional} />
+            </div>
+          </div>
+          <audio controls src={v.audioUrl} className="mt-2 h-9 w-full" />
+          <p className="mt-1 text-[10.5px] text-muted-foreground">
+            Transcripción: {v.estadoTranscripcion.toLowerCase()}.
+          </p>
+        </div>
+      ))}
 
       {editando !== null && (
         <div className={`${ITEM} space-y-2`}>
@@ -961,40 +1032,38 @@ function SeccionNotas({
         </div>
       )}
 
-      {notas.length === 0 ? (
-        <Vacio>Sin notas clínicas para la pieza {fdi}.</Vacio>
-      ) : (
-        notas.map((n) => (
-          <div key={n.id} className={ITEM}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground">
-                  {n.motivoConsulta || n.diagnostico || "Nota clínica"}
-                </p>
-                <Meta fecha={n.fecha} extra={n.hora} profesional={n.profesional} />
+      {notas.length === 0
+        ? notasVoz.length === 0 && <Vacio>Sin notas clínicas para la pieza {fdi}.</Vacio>
+        : notas.map((n) => (
+            <div key={n.id} className={ITEM}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground">
+                    {n.motivoConsulta || n.diagnostico || "Nota clínica"}
+                  </p>
+                  <Meta fecha={n.fecha} extra={n.hora} profesional={n.profesional} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abrir(n)}
+                  title="Editar nota"
+                  className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => abrir(n)}
-                title="Editar nota"
-                className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
-              >
-                <Pencil className="size-3.5" />
-              </button>
+              <dl className="mt-1.5 space-y-1 text-xs">
+                {campos.slice(1).map(([k, l]) =>
+                  n[k] ? (
+                    <div key={k}>
+                      <dt className="inline font-semibold text-foreground">{l}: </dt>
+                      <dd className="inline text-foreground/80">{n[k]}</dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
             </div>
-            <dl className="mt-1.5 space-y-1 text-xs">
-              {campos.slice(1).map(([k, l]) =>
-                n[k] ? (
-                  <div key={k}>
-                    <dt className="inline font-semibold text-foreground">{l}: </dt>
-                    <dd className="inline text-foreground/80">{n[k]}</dd>
-                  </div>
-                ) : null,
-              )}
-            </dl>
-          </div>
-        ))
-      )}
+          ))}
     </>
   );
 }

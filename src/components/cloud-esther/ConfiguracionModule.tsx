@@ -35,6 +35,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
+import { nivelModulo, useConIA, type NivelModulo } from "@/lib/cloud-esther/niveles";
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 
@@ -45,6 +46,7 @@ import {
   SIDEBAR_COLORS,
   FONT_SIZES,
   type ClinicSettings,
+  type DatosClinica,
   type SidebarColor,
   type FontSize,
 } from "@/lib/cloud-esther/settings-store";
@@ -53,6 +55,8 @@ import { ToggleSwitch } from "./ToggleSwitch";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
 const CARD =
@@ -73,15 +77,15 @@ const TABS: {
   id: TabId;
   label: string;
   icon: typeof Settings;
-  /** Nivel de plan mínimo: Start y Pro tienen la configuración básica; Plus y Enterprise, la avanzada. */
+  /** Nivel de plan mínimo para ver la pestaña (1 Start, 2 Pro, 3 Plus, 4 Enterprise). */
   min?: number;
 }[] = [
   { id: "general", label: "General", icon: Settings },
   { id: "profesionales", label: "Profesionales", icon: Users },
-  { id: "directorio", label: "Directorio", icon: FolderOpen, min: 3 },
+  { id: "directorio", label: "Documentos", icon: FolderOpen, min: 2 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
-  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 3 },
+  { id: "integraciones", label: "Integraciones", icon: PlugZap, min: 2 },
   { id: "seguridad", label: "Seguridad y auditoría", icon: ShieldCheck, min: 3 },
 ];
 
@@ -96,6 +100,7 @@ const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
   advancedSecurityEnabled: "Seguridad avanzada",
   auditLogEnabled: "Registrar accesos a módulos",
   auditRetentionDays: "Conservación de registros de auditoría",
+  datosClinica: "Datos de la clínica",
 };
 
 type Props = {
@@ -231,7 +236,11 @@ export function ConfiguracionModule({ onToast }: Props) {
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
           <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
           <div className="relative p-5 md:p-7">
-            <ConfiguracionHeader avanzada={avanzada} planNombre={PLANS[plan].name} />
+            <ConfiguracionHeader
+              conPro={planLevel(plan) >= 2}
+              avanzada={avanzada}
+              planNombre={PLANS[plan].name}
+            />
             <nav
               className="mt-5 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5"
               aria-label="Secciones de configuración"
@@ -248,7 +257,7 @@ export function ConfiguracionModule({ onToast }: Props) {
                     className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                       activo
                         ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                        : "text-muted-foreground hover:bg-white hover:text-foreground"
+                        : "text-muted-foreground hover:bg-card hover:text-foreground"
                     }`}
                   >
                     <Icon className="size-3.5" />
@@ -262,14 +271,25 @@ export function ConfiguracionModule({ onToast }: Props) {
 
         <div className="mt-5">
           {tab === "general" && (
-            <GeneralTab settings={settings} actualizar={actualizar} onToast={onToast} />
+            <GeneralTab
+              settings={settings}
+              actualizar={actualizar}
+              onToast={onToast}
+              nombreSesion={sesion?.clinica.nombre ?? ""}
+            />
           )}
 
           {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
 
           {tab === "directorio" && <DirectorioTab />}
 
-          {tab === "apariencia" && <AparienciaTab settings={settings} actualizar={actualizar} />}
+          {tab === "apariencia" && (
+            <AparienciaTab
+              settings={settings}
+              actualizar={actualizar}
+              nivel={nivelModulo("configuracion", plan)}
+            />
+          )}
 
           {tab === "notificaciones" && (
             <NotificacionesTab settings={settings} actualizar={actualizar} onToast={onToast} />
@@ -295,7 +315,15 @@ export function ConfiguracionModule({ onToast }: Props) {
 /*                               HEADER                                       */
 /* -------------------------------------------------------------------------- */
 
-function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; planNombre: string }) {
+function ConfiguracionHeader({
+  avanzada,
+  planNombre,
+  conPro,
+}: {
+  avanzada: boolean;
+  planNombre: string;
+  conPro: boolean;
+}) {
   const { setPlan, planContratado } = useCloudEsther();
   return (
     <div className="flex flex-wrap items-start justify-between gap-5">
@@ -308,7 +336,7 @@ function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; plan
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${avanzada ? "border-primary/20 bg-primary/10 text-primary" : "border-sky-200 bg-sky-50 text-sky-700"}`}
           >
-            {avanzada ? "Configuración avanzada" : "Configuración básica"} · Plan {planNombre}
+            Plan {planNombre}
           </span>
         </div>
         <h1 className="mt-4 text-[32px] font-bold tracking-[-0.035em] md:text-[40px]">
@@ -316,13 +344,15 @@ function ConfiguracionHeader({ avanzada, planNombre }: { avanzada: boolean; plan
         </h1>
         <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
           {avanzada
-            ? "Datos de la clínica, profesionales, apariencia, notificaciones, integraciones y seguridad y auditoría."
-            : "Datos de la clínica, profesionales, apariencia y notificaciones. La configuración avanzada (seguridad y auditoría, directorio e integraciones) viene con Plus y Enterprise."}
+            ? "Datos de la clínica, profesionales, apariencia, documentos, notificaciones, integraciones y seguridad y auditoría."
+            : conPro
+              ? "Datos de la clínica, profesionales, apariencia, documentos, notificaciones e integraciones. Seguridad y auditoría vienen con Plus y Enterprise."
+              : "Datos de la clínica, profesionales, modo oscuro y notificaciones. Documentos, integraciones y más opciones de apariencia vienen con Pro."}
         </p>
       </div>
       {!avanzada && !planContratado && (
         <button type="button" className="btn-ce-outline" onClick={() => setPlan("avanzada")}>
-          Probar la configuración avanzada (Plus)
+          Probar Seguridad y auditoría (Plus)
         </button>
       )}
     </div>
@@ -337,11 +367,22 @@ function GeneralTab({
   settings,
   actualizar,
   onToast,
+  nombreSesion,
 }: {
   settings: ClinicSettings;
   actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
+  nombreSesion: string;
 }) {
+  // El interruptor de Esther IA solo existe en planes con IA (Plus y Enterprise).
+  const conIA = useConIA();
+  // País: solo los que el dueño de Cloud Esther tiene seleccionados para vender.
+  const paises = usePaisesSeleccionados();
+  const [datos, setDatos] = useState<DatosClinica>(settings.datosClinica);
+  useEffect(() => setDatos(settings.datosClinica), [settings.datosClinica]);
+  const set = (k: keyof DatosClinica) => (e: { target: { value: string } }) =>
+    setDatos((d) => ({ ...d, [k]: e.target.value }));
+  const paisElegido = paises.find((p) => p.codigo === datos.pais);
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1fr_300px]">
       <div className={`${CARD} p-5`}>
@@ -352,18 +393,61 @@ function GeneralTab({
         />
 
         <div className="mt-5 space-y-3">
-          <InputVisual label="Nombre de la clínica" value="Centro Odontológico Esthetic" />
-
-          <InputVisual label="RUC / CUIT" value="30-12345678-9" />
-
-          <InputVisual label="Dirección" value="Av. Siempre Viva 123, CABA" />
-
-          <InputVisual label="Teléfono" value="+54 11 1234-5678" />
-
-          <InputVisual label="Email de contacto" value="info@cloudesther.com" />
+          <CampoTexto
+            label="Nombre de la clínica"
+            value={datos.nombre}
+            placeholder={nombreSesion || "Nombre de tu clínica"}
+            onChange={set("nombre")}
+          />
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              País
+            </span>
+            <select value={datos.pais} onChange={set("pais")} className={CAMPO}>
+              <option value="">Elegí el país</option>
+              {paises.map((p) => (
+                <option key={p.id} value={p.codigo}>
+                  {bandera(p.codigo)} {p.nombre}
+                </option>
+              ))}
+            </select>
+            {paisElegido && (
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                {paisElegido.moneda} · {paisElegido.impuesto} · {paisElegido.facturacion}
+              </span>
+            )}
+          </label>
+          <CampoTexto
+            label="Identificación fiscal (CUIT, RUT, RFC…)"
+            value={datos.identificacionFiscal}
+            onChange={set("identificacionFiscal")}
+          />
+          <CampoTexto label="Dirección" value={datos.direccion} onChange={set("direccion")} />
+          <CampoTexto
+            label="Teléfono"
+            type="tel"
+            value={datos.telefono}
+            onChange={set("telefono")}
+          />
+          <CampoTexto
+            label="Email de contacto"
+            type="email"
+            value={datos.email}
+            onChange={set("email")}
+          />
         </div>
 
-        <button type="button" onClick={() => onToast("Cambios guardados")} className="btn-ce mt-4">
+        <button
+          type="button"
+          onClick={() => {
+            actualizar("datosClinica", {
+              ...datos,
+              nombre: datos.nombre.trim() || nombreSesion,
+            });
+            onToast("Datos de la clínica guardados");
+          }}
+          className="btn-ce mt-4"
+        >
           <CheckCircle2 className="size-4" />
           Guardar cambios
         </button>
@@ -385,16 +469,18 @@ function GeneralTab({
             onChange={(value) => actualizar("darkModePage", value)}
           />
 
-          <FilaSwitch
-            icon={Sparkles}
-            titulo="Esther AI"
-            descripcion="Asistente inteligente disponible en la plataforma."
-            checked={settings.aiEnabled}
-            onChange={(value) => {
-              actualizar("aiEnabled", value);
-              onToast(value ? "Esther AI activada" : "Esther AI desactivada");
-            }}
-          />
+          {conIA && (
+            <FilaSwitch
+              icon={Sparkles}
+              titulo="Esther AI"
+              descripcion="Asistente inteligente disponible en la plataforma."
+              checked={settings.aiEnabled}
+              onChange={(value) => {
+                actualizar("aiEnabled", value);
+                onToast(value ? "Esther AI activada" : "Esther AI desactivada");
+              }}
+            />
+          )}
 
           <FilaSwitch
             icon={Bell}
@@ -416,29 +502,30 @@ function GeneralTab({
 /* -------------------------------------------------------------------------- */
 
 function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
-  const profesionales = [
-    {
-      initials: "LM",
-      name: "Profesional",
-      specialty: "Odontología general",
-      status: "Activo",
-      statusClass: "bg-emerald-500/10 text-emerald-600",
-    },
-    {
-      initials: "MG",
-      name: "Profesional",
-      specialty: "Especialidad odontológica",
-      status: "Activo",
-      statusClass: "bg-emerald-500/10 text-emerald-600",
-    },
-    {
-      initials: "CR",
-      name: "Profesional",
-      specialty: "Especialidad odontológica",
-      status: "Pendiente",
-      statusClass: "bg-amber-500/10 text-amber-600",
-    },
-  ];
+  // El equipo real de la empresa (Equipo profesional), no una lista fija.
+  const { miembros } = useEquipo();
+  const [busqueda, setBusqueda] = useState("");
+  const texto = busqueda.trim().toLowerCase();
+  const odontologos = miembros.filter((m) => m.role === "odontologo");
+  const ESTADO: Record<string, { label: string; clase: string }> = {
+    activo: { label: "Activo", clase: "bg-emerald-500/10 text-emerald-600" },
+    pendiente: { label: "Pendiente", clase: "bg-amber-500/10 text-amber-600" },
+    inactivo: { label: "Inactivo", clase: "bg-muted text-muted-foreground" },
+  };
+  const profesionales = odontologos
+    .filter((m) =>
+      `${m.firstName} ${m.lastName} ${(m.specialties ?? []).join(" ")}`
+        .toLowerCase()
+        .includes(texto),
+    )
+    .map((m) => ({
+      initials: `${m.firstName[0] ?? ""}${m.lastName[0] ?? ""}`.toUpperCase(),
+      name: `${m.firstName} ${m.lastName}`.trim(),
+      specialty: m.specialties?.join(", ") || "Odontología general",
+      status: ESTADO[m.status]?.label ?? m.status,
+      statusClass: ESTADO[m.status]?.clase ?? "bg-muted text-muted-foreground",
+    }));
+  const activos = odontologos.filter((m) => m.status === "activo").length;
 
   return (
     <div className="space-y-4">
@@ -460,17 +547,23 @@ function ProfesionalesTab({ onToast }: { onToast: (msg: string) => void }) {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard icon={Users} label="Profesionales" value="3" />
+          <StatCard icon={Users} label="Profesionales" value={String(odontologos.length)} />
 
-          <StatCard icon={CheckCircle2} label="Activos" value="2" />
+          <StatCard icon={CheckCircle2} label="Activos" value={String(activos)} />
 
-          <StatCard icon={Clock3} label="Pendientes" value="1" />
+          <StatCard
+            icon={Clock3}
+            label="Pendientes"
+            value={String(odontologos.filter((m) => m.status === "pendiente").length)}
+          />
         </div>
 
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
           <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar profesionales..."
             className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           />
@@ -594,10 +687,42 @@ function DirectorioTab() {
 function AparienciaTab({
   settings,
   actualizar,
+  nivel,
 }: {
   settings: ClinicSettings;
   actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
+  nivel: NivelModulo;
 }) {
+  // Start: solo modo oscuro. Pro: modo oscuro y menú lateral. Plus y Enterprise: todo.
+  const conMenu = nivel !== "basico";
+  const conLetra = nivel === "completo";
+  const modoOscuro = (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-bold text-foreground">Modo oscuro</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Activá el tema oscuro de la plataforma.
+        </p>
+      </div>
+      <ToggleSwitch
+        checked={settings.darkModePage}
+        onChange={(value) => actualizar("darkModePage", value)}
+        label="Modo oscuro"
+      />
+    </div>
+  );
+  if (!conMenu) {
+    return (
+      <div className={`${CARD} max-w-2xl p-5`}>
+        <SectionHeader
+          icon={Palette}
+          title="Apariencia"
+          description="Elegí entre el tema claro y el oscuro."
+        />
+        <div className="mt-5">{modoOscuro}</div>
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_340px]">
       <div className={`${CARD} p-5`}>
@@ -631,23 +756,7 @@ function AparienciaTab({
           </div>
         </div>
 
-        <div className="mt-6 border-t border-border/60 pt-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-foreground">Modo oscuro</p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Activá el tema oscuro de la plataforma.
-              </p>
-            </div>
-
-            <ToggleSwitch
-              checked={settings.darkModePage}
-              onChange={(value) => actualizar("darkModePage", value)}
-              label="Modo oscuro"
-            />
-          </div>
-        </div>
+        <div className="mt-6 border-t border-border/60 pt-5">{modoOscuro}</div>
 
         <div className="mt-4 border-t border-border/60 pt-5">
           <div className="flex items-center justify-between gap-4">
@@ -667,35 +776,37 @@ function AparienciaTab({
           </div>
         </div>
 
-        <div className="mt-5 border-t border-border/60 pt-5">
-          <p className="text-xs font-bold text-foreground">Tamaño de letra</p>
+        {conLetra && (
+          <div className="mt-5 border-t border-border/60 pt-5">
+            <p className="text-xs font-bold text-foreground">Tamaño de letra</p>
 
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Ajustá el tamaño del texto en toda la plataforma.
-          </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Ajustá el tamaño del texto en toda la plataforma.
+            </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {FONT_SIZES.map((font) => {
-              const activo = settings.fontSize === font.id;
+            <div className="mt-3 flex flex-wrap gap-2">
+              {FONT_SIZES.map((font) => {
+                const activo = settings.fontSize === font.id;
 
-              return (
-                <button
-                  key={font.id}
-                  type="button"
-                  onClick={() => actualizar("fontSize", font.id as FontSize)}
-                  className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
-                    activo
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  <Type className="mr-1.5 inline-block size-3.5" />
-                  {font.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={font.id}
+                    type="button"
+                    onClick={() => actualizar("fontSize", font.id as FontSize)}
+                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
+                      activo
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-background text-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    <Type className="mr-1.5 inline-block size-3.5" />
+                    {font.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <PreviewSidebar settings={settings} actualizar={actualizar} />
@@ -945,17 +1056,35 @@ function FilaVisual({
   );
 }
 
-function InputVisual({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </label>
+const CAMPO =
+  "h-11 w-full rounded-lg border border-border/70 bg-background px-3 text-base text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 sm:h-9 sm:text-xs";
 
-      <div className="flex h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-xs text-foreground">
-        {value}
-      </div>
-    </div>
+function CampoTexto({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (e: { target: { value: string } }) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder ?? "Sin completar"}
+        className={CAMPO}
+      />
+    </label>
   );
 }
 

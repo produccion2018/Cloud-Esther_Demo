@@ -108,7 +108,8 @@ export function PortalShell({
       {grupos.map((g) => (
         <div key={g.titulo}>
           {!modoCompacto && (
-            <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+            <p className="flex items-center gap-2 px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
               {g.titulo}
             </p>
           )}
@@ -127,12 +128,14 @@ export function PortalShell({
                     } ${
                       on
                         ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
-                        : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
                   >
                     <span
                       className={`grid size-8 shrink-0 place-items-center rounded-lg transition ${
-                        on ? "bg-white/20" : "bg-sidebar-accent/60 group-hover:bg-sidebar-accent"
+                        on
+                          ? "bg-white/20 shadow-inner"
+                          : "bg-sidebar-accent/60 text-primary group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white"
                       }`}
                     >
                       <it.icon className="size-4" />
@@ -161,11 +164,21 @@ export function PortalShell({
     <div className="relative flex h-full flex-col overflow-hidden">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(168,85,247,0.18),transparent_45%),radial-gradient(circle_at_100%_100%,rgba(236,72,153,0.10),transparent_40%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(168,85,247,0.26),transparent_48%),radial-gradient(circle_at_100%_55%,rgba(236,72,153,0.12),transparent_42%),radial-gradient(circle_at_0%_100%,rgba(99,102,241,0.14),transparent_45%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-primary/40 via-fuchsia-500/25 to-transparent"
       />
       <div className={`relative pb-4 pt-5 ${modoCompacto ? "px-3" : "px-5"}`}>
         <div className={`flex items-center gap-2.5 ${modoCompacto ? "justify-center" : ""}`}>
-          <BrandMark className="size-9 shrink-0" />
+          <span className="relative shrink-0">
+            <span
+              aria-hidden
+              className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 opacity-40 blur-md"
+            />
+            <BrandMark className="relative size-9" />
+          </span>
           {!modoCompacto && (
             <span className="leading-tight">
               <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
@@ -178,11 +191,19 @@ export function PortalShell({
           )}
         </div>
         {!modoCompacto && (
-          <div className="mt-4 rounded-2xl border border-sidebar-border bg-sidebar-accent/40 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-white/15 blur-xl"
+            />
+            <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
               Clínica
             </p>
-            <p className="truncate text-[13px] font-semibold text-sidebar-foreground">{clinica}</p>
+            <p className="relative truncate text-[13px] font-bold">{clinica}</p>
+            <p className="relative mt-1 inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/80">
+              <span className="size-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+              Conectado
+            </p>
           </div>
         )}
       </div>
@@ -192,8 +213,9 @@ export function PortalShell({
       >
         {!modoCompacto && (
           <div className="flex items-center gap-2.5 rounded-2xl bg-sidebar-accent/50 p-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-xs font-bold text-white">
+            <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-xs font-bold text-white ring-2 ring-white/70 ring-offset-2 ring-offset-sidebar">
               {usuario.iniciales}
+              <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-[#22c55e] ring-2 ring-sidebar" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[13px] font-semibold text-sidebar-foreground">
@@ -260,9 +282,17 @@ export function PortalShell({
       <div className="relative flex min-w-0 flex-1 flex-col">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_12%_0%,rgba(124,58,237,0.13),transparent_42%),radial-gradient(circle_at_88%_8%,rgba(236,72,153,0.08),transparent_38%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_12%_0%,rgba(124,58,237,0.18),transparent_45%),radial-gradient(circle_at_88%_6%,rgba(236,72,153,0.12),transparent_40%),radial-gradient(circle_at_50%_40%,rgba(99,102,241,0.06),transparent_50%)]"
         />
-        <header className="sticky top-0 z-30 border-b border-primary/10 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div
+          aria-hidden
+          className="pointer-events-none fixed bottom-0 right-0 h-[420px] w-[520px] bg-[radial-gradient(circle_at_100%_100%,rgba(217,70,239,0.10),transparent_60%)]"
+        />
+        <header className="sticky top-0 z-30 bg-background/75 pt-[env(safe-area-inset-top)] shadow-[0_10px_30px_-24px_rgba(124,58,237,0.6)] backdrop-blur-xl">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent"
+          />
           <div className="mx-auto flex w-full max-w-[1320px] items-center gap-2.5 px-4 py-2.5 md:px-6 lg:px-8">
             <button
               type="button"

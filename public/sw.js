@@ -1,11 +1,12 @@
 /* Cloud Esther · service worker (PWA)
    - Instalación como aplicación y apertura en modo app.
    - Páginas: primero la red; si no hay conexión, la última versión guardada o la página offline.
-   - Archivos estáticos (JS, CSS, imágenes, fuentes): se sirven desde caché y se actualizan en segundo plano.
+   - JS y CSS: primero la red (así una versión nueva se ve enseguida); sin conexión, la guardada.
+   - Imágenes y fuentes: desde caché y se actualizan en segundo plano.
    - Notificaciones push: listo para cuando el backend envíe avisos (eventos push y notificationclick).
    Nunca se guardan respuestas de la API ni datos de pacientes en caché. */
 
-const VERSION = "ce-v1";
+const VERSION = "ce-v2";
 const CACHE_PAGINAS = `${VERSION}-paginas`;
 const CACHE_ESTATICOS = `${VERSION}-estaticos`;
 const OFFLINE = "/offline.html";
@@ -47,6 +48,21 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => caches.match(req).then((r) => r || caches.match(OFFLINE))),
+    );
+    return;
+  }
+
+  if (/\.(?:js|css)$/i.test(url.pathname)) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copia = res.clone();
+            caches.open(CACHE_ESTATICOS).then((c) => c.put(req, copia));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req)),
     );
     return;
   }

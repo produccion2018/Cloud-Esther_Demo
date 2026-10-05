@@ -19,7 +19,20 @@ const avisar = () => oyentes.forEach((o) => o());
 export function registrarServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   const enDesarrollo = import.meta.env.DEV && import.meta.env["VITE_PWA_DEV"] !== "1";
-  if (enDesarrollo) return;
+  if (enDesarrollo) {
+    // En desarrollo no hay caché de la app: se quita cualquier service worker que haya quedado
+    // de una versión instalada antes, para que siempre se vea el código actual.
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then((rs) => Promise.all(rs.map((r) => r.unregister())))
+      .catch(() => {});
+    if ("caches" in window)
+      void caches
+        .keys()
+        .then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
+        .catch(() => {});
+    return;
+  }
   const registrar = () => void navigator.serviceWorker.register("/sw.js").catch(() => {});
   // La app hidrata cuando la página suele estar ya cargada: en ese caso se registra enseguida.
   if (document.readyState === "complete") registrar();

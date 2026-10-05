@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
   Bell,
+  Briefcase,
   CalendarDays,
   CalendarPlus,
   Check,
@@ -68,6 +69,7 @@ import {
   storeEquipoPortal,
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -76,7 +78,7 @@ import { normalizarBusqueda } from "@/lib/utils";
    configurados en Equipo → Permisos y accesos. Trabaja sobre los datos reales del demo
    (Agenda, carpetas de pacientes, Notificaciones), separados por empresa. */
 
-type Seccion = "hoy" | "agenda" | "pacientes" | "gabinete" | "avisos" | "perfil";
+type Seccion = "hoy" | "administracion" | "agenda" | "pacientes" | "gabinete" | "avisos" | "perfil";
 
 const ROL_LABEL: Record<TeamRole, string> = {
   odontologo: "Odontólogo/a",
@@ -92,10 +94,18 @@ const ROL_AVISOS: Partial<Record<TeamRole, string>> = {
 };
 
 function seccionesDe(rol: TeamRole): { id: Seccion; label: string; icon: LucideIcon }[] {
-  const base: { id: Seccion; label: string; icon: LucideIcon }[] = [
-    { id: "hoy", label: "Hoy", icon: Home },
-    { id: "agenda", label: "Agenda", icon: CalendarDays },
-  ];
+  // Secretaría y administración tienen su propio escritorio de trabajo (no el del odontólogo).
+  const administrativo = rol === "secretaria" || rol === "administrador";
+  const base: { id: Seccion; label: string; icon: LucideIcon }[] = administrativo
+    ? [
+        { id: "administracion", label: "Gestión", icon: Briefcase },
+        { id: "hoy", label: "Hoy", icon: Home },
+        { id: "agenda", label: "Agenda", icon: CalendarDays },
+      ]
+    : [
+        { id: "hoy", label: "Hoy", icon: Home },
+        { id: "agenda", label: "Agenda", icon: CalendarDays },
+      ];
   if (rol !== "asistente") base.push({ id: "pacientes", label: "Pacientes", icon: Users });
   if (rol === "asistente" || rol === "odontologo")
     base.push({ id: "gabinete", label: "Gabinete", icon: ClipboardCheck });
@@ -440,7 +450,9 @@ function AppEquipo({
   const { miembros } = useEquipo();
   const { turnos } = storeAgenda.usar();
   const { notificaciones } = useNotificaciones();
-  const [seccion, setSeccion] = useState<Seccion>("hoy");
+  const [seccion, setSeccion] = useState<Seccion>(
+    miembro.role === "secretaria" || miembro.role === "administrador" ? "administracion" : "hoy",
+  );
   const [ficha, setFicha] = useState<{ paciente: string; turno?: Turno } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
@@ -608,6 +620,17 @@ function AppEquipo({
               <Eye className="size-4" /> Vista previa: así ve el portal <b>{nombreDe(miembro)}</b> (
               {ROL_LABEL[miembro.role]}).
             </p>
+          )}
+          {seccion === "administracion" && (
+            <EspacioAdministrativo
+              yo={miembro}
+              clinica={clinica?.nombre ?? "la clínica"}
+              vista={vista}
+              puede={(permiso) => tiene(miembro, permiso)}
+              turnos={turnosVisibles}
+              onToast={onToast}
+              abrirFicha={(paciente) => setFicha({ paciente })}
+            />
           )}
           {seccion === "hoy" && <Hoy ctx={ctx} avisos={misAvisos.length} />}
           {seccion === "agenda" && <AgendaEquipo ctx={ctx} />}

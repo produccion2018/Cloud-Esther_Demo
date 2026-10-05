@@ -732,8 +732,8 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
     { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope, enterprise: true },
     { href: "/demo/portal-paciente", titulo: "Monitoreo del portal", detalle: "Accesos, actividad y documentación de pacientes", icon: ShieldCheck, enterprise: true },
     { href: "/demo/equipo-profesional", titulo: "Equipo y accesos del equipo", detalle: "Integrantes, fichajes y horarios", icon: Users },
-    // Etapa de pruebas: entrar a los cuatro perfiles (propietario, clínica, profesional, paciente).
-    { href: "/acceso-prueba", titulo: "Probar los 4 perfiles", detalle: "Propietario, clínica, profesional y paciente · PC, tablet y celular", icon: ShieldCheck },
+    // Etapa de pruebas: entrar a los perfiles (propietario, clínica, profesional, secretaría, paciente).
+    { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", detalle: "Propietario, clínica, profesional, secretaría y paciente · PC, tablet y celular", icon: ShieldCheck },
   ];
   const ITEMS = TODOS.filter((it) => !it.enterprise || planMenu === "grupo");
 

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Briefcase,
   Building2,
   Crown,
   Download,
@@ -18,12 +19,17 @@ import { BrandMark } from "@/components/cloud-esther/AppShell";
 import { iniciarSesionAdmin } from "@/lib/admin/api";
 import { guardarSesion } from "@/lib/admin/sesion";
 import { setStoredPlan, type PlanId } from "@/lib/cloud-esther/data";
-import { guardarSesionEquipo, storeEquipoPortal } from "@/lib/cloud-esther/portal-equipo-store";
+import {
+  asegurarAcceso,
+  guardarSesionEquipo,
+  storeEquipoPortal,
+} from "@/lib/cloud-esther/portal-equipo-store";
+import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { guardarSesionPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { useInstalarApp } from "@/lib/pwa";
 
 /* Ubicación: src/routes/acceso-prueba.tsx
-   ACCESO DE PRUEBA (solo esta etapa): entrar con un toque a los cuatro perfiles de Cloud Esther
+   ACCESO DE PRUEBA (solo esta etapa): entrar con un toque a los perfiles de Cloud Esther
    para revisar diseño y funcionamiento en PC, tablet y celular.
    - Propietario: inicia sesión con la cuenta de ejemplo del Dueño.
    - Clínica: abre el panel con el plan elegido.
@@ -49,7 +55,7 @@ const PLANES: { id: PlanId; nombre: string }[] = [
 ];
 
 type Perfil = {
-  id: "propietario" | "clinica" | "profesional" | "paciente";
+  id: "propietario" | "clinica" | "profesional" | "secretaria" | "paciente";
   titulo: string;
   quien: string;
   detalle: string;
@@ -83,6 +89,14 @@ const PERFILES: Perfil[] = [
     color: "from-indigo-500 to-violet-500",
   },
   {
+    id: "secretaria",
+    titulo: "Secretaría / administración",
+    quien: "Recepción y personal administrativo",
+    detalle: "Escritorio propio: turnos por confirmar, cobros, presupuestos, Word, Excel y tareas.",
+    icon: Briefcase,
+    color: "from-emerald-500 to-teal-500",
+  },
+  {
     id: "paciente",
     titulo: "Portal del paciente",
     quien: "Pacientes de la clínica",
@@ -110,6 +124,15 @@ function AccesoPrueba() {
       } else if (perfil === "clinica") {
         setStoredPlan(plan);
         await navigate({ to: "/demo" as never });
+      } else if (perfil === "secretaria") {
+        const sec = storeEquipo
+          .leer()
+          .miembros.find((m) => m.role === "secretaria" && m.status === "activo");
+        if (sec) {
+          asegurarAcceso(sec.id);
+          guardarSesionEquipo(sec.id);
+          window.location.assign("/equipo");
+        } else window.location.assign("/equipo?vista=1");
       } else if (perfil === "profesional") {
         const accesos = storeEquipoPortal.leer().accesos;
         const id = Object.keys(accesos).find((k) => accesos[k]?.estado === "Activo");
@@ -175,7 +198,7 @@ function AccesoPrueba() {
           </p>
         )}
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {PERFILES.map((p) => (
             <article
               key={p.id}

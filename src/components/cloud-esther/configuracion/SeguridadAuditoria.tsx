@@ -403,7 +403,7 @@ function SesionesActivas({ sesiones }: { sesiones: SesionAuditoria[] }) {
               />
               <Campo k="Última actividad" v={hora(s.ultimaActividad)} />
               <Campo k="Dispositivo" v={`${s.dispositivo} · ${s.sistema} · ${s.navegador}`} />
-              <Campo k="IP registrada" v={IP_PENDIENTE} />
+              <Campo k="IP registrada" v={s.ip ?? IP_PENDIENTE} />
             </dl>
           </div>
         ))}
@@ -608,7 +608,7 @@ function HistorialAccesos({ sesiones }: { sesiones: SesionAuditoria[] }) {
                           ? "En curso"
                           : "Sin cierre registrado"}
                     </td>
-                    <td className="py-2.5 pr-3 text-muted-foreground">{IP_PENDIENTE}</td>
+                    <td className="py-2.5 pr-3 text-muted-foreground">{s.ip ?? IP_PENDIENTE}</td>
                     <td className="py-2.5 pr-3">
                       {s.dispositivo} · {s.navegador}
                     </td>
@@ -643,7 +643,7 @@ function HistorialAccesos({ sesiones }: { sesiones: SesionAuditoria[] }) {
           <Campo k="Dispositivo" v={detalle.dispositivo} />
           <Campo k="Sistema operativo" v={detalle.sistema} />
           <Campo k="Navegador" v={detalle.navegador} />
-          <Campo k="IP registrada" v={IP_PENDIENTE} />
+          <Campo k="IP registrada" v={detalle.ip ?? IP_PENDIENTE} />
           <Campo k="Ubicación aproximada" v="Pendiente de integración (derivada de la IP)" />
         </Detalle>
       )}

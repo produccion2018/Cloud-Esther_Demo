@@ -236,7 +236,12 @@ export function cerrarSesion(motivo: "Manual" | "Vencida" = "Manual") {
 
 /* Quien crea la cuenta es el propietario de la clínica. TODO backend: rol real del usuario. */
 function quienDe(s: Sesion) {
-  return { usuario: s.usuario.nombre, email: s.usuario.email, rol: "Propietario" };
+  return {
+    usuario: s.usuario.nombre,
+    email: s.usuario.email,
+    rol: "Propietario",
+    clinica: s.clinica.nombre,
+  };
 }
 
 function contactoDe(s: Sesion) {

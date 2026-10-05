@@ -1,3 +1,4 @@
+import { PAISES_BASE } from "@/lib/paises";
 import type {
   Anticipo,
   Asistencia,
@@ -558,66 +559,5 @@ export const INTENTOS_INICIALES: IntentoFallido[] = [
   },
 ];
 
-/* Países de ejemplo: en cuáles se vende Cloud Esther y con qué datos fiscales. */
-export const PAISES_INICIALES: PaisOperacion[] = [
-  {
-    id: "pais-ar",
-    codigo: "AR",
-    nombre: "Argentina",
-    estado: "Activo",
-    moneda: "ARS · Peso argentino",
-    facturacion: "ARCA (ex AFIP) · factura electrónica",
-    impuesto: "IVA 21 %",
-    zonaHoraria: "America/Argentina/Buenos_Aires (UTC−3)",
-    desde: "2025-03-01",
-    notas: "País de origen. Cobro en pesos y en dólares.",
-  },
-  {
-    id: "pais-uy",
-    codigo: "UY",
-    nombre: "Uruguay",
-    estado: "Activo",
-    moneda: "UYU · Peso uruguayo",
-    facturacion: "DGI · CFE (comprobante fiscal electrónico)",
-    impuesto: "IVA 22 %",
-    zonaHoraria: "America/Montevideo (UTC−3)",
-    desde: "2026-02-01",
-    notas: "",
-  },
-  {
-    id: "pais-cl",
-    codigo: "CL",
-    nombre: "Chile",
-    estado: "Activo",
-    moneda: "CLP · Peso chileno",
-    facturacion: "SII · boleta y factura electrónica",
-    impuesto: "IVA 19 %",
-    zonaHoraria: "America/Santiago (UTC−4/−3)",
-    desde: "2026-06-01",
-    notas: "",
-  },
-  {
-    id: "pais-py",
-    codigo: "PY",
-    nombre: "Paraguay",
-    estado: "Próximamente",
-    moneda: "PYG · Guaraní",
-    facturacion: "SET · SIFEN",
-    impuesto: "IVA 10 %",
-    zonaHoraria: "America/Asuncion (UTC−3)",
-    desde: "",
-    notas: "Evaluando socio local para la implementación.",
-  },
-  {
-    id: "pais-mx",
-    codigo: "MX",
-    nombre: "México",
-    estado: "Próximamente",
-    moneda: "MXN · Peso mexicano",
-    facturacion: "SAT · CFDI 4.0",
-    impuesto: "IVA 16 %",
-    zonaHoraria: "America/Mexico_City (UTC−6)",
-    desde: "",
-    notas: "",
-  },
-];
+/* Países de ejemplo: la lista compartida con la configuración de cada clínica. */
+export const PAISES_INICIALES: PaisOperacion[] = PAISES_BASE;

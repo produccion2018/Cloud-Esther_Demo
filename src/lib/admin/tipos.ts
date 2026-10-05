@@ -55,8 +55,12 @@ export type Clinica = {
   pais: string;
   plan: PlanId;
   ciclo: "Mensual" | "Anual";
-  /** Importe mensual en US$ (null si el plan todavía no tiene precio). */
+  /** MONTO MENSUAL en US$: importe recurrente de esta clínica (null = sin definir; lo carga el
+   *  backend/admin). Si falta, se toma el precio mensual del plan. */
   importe: number | null;
+  /** MONTO INICIAL en US$: lo que paga la clínica al comenzar (implementación/alta).
+   *  null = sin definir; lo carga el backend/admin. Nunca se inventa. */
+  montoInicial?: number | null;
   estadoPago: EstadoPago;
   proximoCobro: string; // ISO (día)
   clienteDesde: string; // ISO (día)

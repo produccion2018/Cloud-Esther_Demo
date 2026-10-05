@@ -55,6 +55,9 @@ export function useNivel(modulo: string) {
 /** ¿El plan tiene IA (notas de voz, transcripción, simulaciones, Esther)? Solo Plus y Enterprise.
     En Start y Pro no se muestra nada de IA ni audio para no confundir al cliente. */
 export function useConIA() {
-  const plan = useCloudEstherOpcional()?.plan ?? "grupo";
-  return plan === "avanzada" || plan === "grupo";
+  const ctx = useCloudEstherOpcional();
+  // Ante la duda, sin IA ni audio: fuera del proveedor del plan o mientras el plan guardado
+  // todavía no se leyó (primer render), nunca se muestran a un plan Start o Pro.
+  if (!ctx || !ctx.planListo) return false;
+  return ctx.plan === "avanzada" || ctx.plan === "grupo";
 }

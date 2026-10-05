@@ -517,6 +517,21 @@ export async function marcarActividadSesion() {
   }
 }
 
+/** Agrega la sección visitada a la sesión abierta (módulo utilizado). TODO backend: lo registra
+ *  el servidor con cada pedido autenticado. */
+export async function registrarSeccionSesion(seccion: string) {
+  if (CON_BACKEND) return;
+  const token = leerSesion()?.token;
+  const b = await db();
+  const s = b.sesiones.find((x) => x.id === token);
+  if (!s || s.fin) return;
+  const previas = s.secciones ?? [];
+  if (!previas.includes(seccion)) {
+    s.secciones = [...previas, seccion].slice(-40);
+    guardar();
+  }
+}
+
 export async function obtenerSesiones(): Promise<SesionPanel[]> {
   if (CON_BACKEND) return http("GET", "/admin/auditoria/sesiones");
   return copia((await db()).sesiones);
@@ -613,6 +628,28 @@ export async function guardarPlan(
 export async function obtenerClinicas(): Promise<Clinica[]> {
   if (CON_BACKEND) return http("GET", "/admin/clinicas");
   return copia((await db()).clinicas);
+}
+
+/** Montos del contrato de una clínica (tenant): monto inicial y monto mensual, en US$.
+ *  null = sin definir. TODO backend: PATCH /admin/clinicas/:id/montos (solo Dueño). */
+export async function guardarMontosClinica(a: {
+  id: string;
+  montoInicial: number | null;
+  montoMensual: number | null;
+}) {
+  if (CON_BACKEND)
+    return http<void>("PATCH", `/admin/clinicas/${a.id}/montos`, {
+      montoInicial: a.montoInicial,
+      montoMensual: a.montoMensual,
+    });
+  await espera();
+  const b = await db();
+  const c = b.clinicas.find((x) => x.id === a.id);
+  if (!c) throw new Error("No se encontró la clínica.");
+  c.montoInicial = a.montoInicial;
+  c.importe = a.montoMensual;
+  guardar();
+  await registrar(`Actualizó los montos de ${c.nombre}`, "plan");
 }
 
 export async function enviarRecordatorioPago(id: string) {

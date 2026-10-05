@@ -46,6 +46,7 @@ import {
   SIDEBAR_COLORS,
   FONT_SIZES,
   type ClinicSettings,
+  type DatosClinica,
   type SidebarColor,
   type FontSize,
 } from "@/lib/cloud-esther/settings-store";
@@ -54,6 +55,7 @@ import { ToggleSwitch } from "./ToggleSwitch";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
 const CARD =
@@ -97,6 +99,7 @@ const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
   advancedSecurityEnabled: "Seguridad avanzada",
   auditLogEnabled: "Registrar accesos a módulos",
   auditRetentionDays: "Conservación de registros de auditoría",
+  datosClinica: "Datos de la clínica",
 };
 
 type Props = {
@@ -267,7 +270,12 @@ export function ConfiguracionModule({ onToast }: Props) {
 
         <div className="mt-5">
           {tab === "general" && (
-            <GeneralTab settings={settings} actualizar={actualizar} onToast={onToast} />
+            <GeneralTab
+              settings={settings}
+              actualizar={actualizar}
+              onToast={onToast}
+              nombreSesion={sesion?.clinica.nombre ?? ""}
+            />
           )}
 
           {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
@@ -358,13 +366,22 @@ function GeneralTab({
   settings,
   actualizar,
   onToast,
+  nombreSesion,
 }: {
   settings: ClinicSettings;
   actualizar: <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => void;
   onToast: (msg: string) => void;
+  nombreSesion: string;
 }) {
   // El interruptor de Esther IA solo existe en planes con IA (Plus y Enterprise).
   const conIA = useConIA();
+  // País: solo los que el dueño de Cloud Esther tiene seleccionados para vender.
+  const paises = usePaisesSeleccionados();
+  const [datos, setDatos] = useState<DatosClinica>(settings.datosClinica);
+  useEffect(() => setDatos(settings.datosClinica), [settings.datosClinica]);
+  const set = (k: keyof DatosClinica) => (e: { target: { value: string } }) =>
+    setDatos((d) => ({ ...d, [k]: e.target.value }));
+  const paisElegido = paises.find((p) => p.codigo === datos.pais);
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1fr_300px]">
       <div className={`${CARD} p-5`}>
@@ -375,18 +392,61 @@ function GeneralTab({
         />
 
         <div className="mt-5 space-y-3">
-          <InputVisual label="Nombre de la clínica" value="Centro Odontológico Esthetic" />
-
-          <InputVisual label="RUC / CUIT" value="30-12345678-9" />
-
-          <InputVisual label="Dirección" value="Av. Siempre Viva 123, CABA" />
-
-          <InputVisual label="Teléfono" value="+54 11 1234-5678" />
-
-          <InputVisual label="Email de contacto" value="info@cloudesther.com" />
+          <CampoTexto
+            label="Nombre de la clínica"
+            value={datos.nombre}
+            placeholder={nombreSesion || "Nombre de tu clínica"}
+            onChange={set("nombre")}
+          />
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              País
+            </span>
+            <select value={datos.pais} onChange={set("pais")} className={CAMPO}>
+              <option value="">Elegí el país</option>
+              {paises.map((p) => (
+                <option key={p.id} value={p.codigo}>
+                  {bandera(p.codigo)} {p.nombre}
+                </option>
+              ))}
+            </select>
+            {paisElegido && (
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                {paisElegido.moneda} · {paisElegido.impuesto} · {paisElegido.facturacion}
+              </span>
+            )}
+          </label>
+          <CampoTexto
+            label="Identificación fiscal (CUIT, RUT, RFC…)"
+            value={datos.identificacionFiscal}
+            onChange={set("identificacionFiscal")}
+          />
+          <CampoTexto label="Dirección" value={datos.direccion} onChange={set("direccion")} />
+          <CampoTexto
+            label="Teléfono"
+            type="tel"
+            value={datos.telefono}
+            onChange={set("telefono")}
+          />
+          <CampoTexto
+            label="Email de contacto"
+            type="email"
+            value={datos.email}
+            onChange={set("email")}
+          />
         </div>
 
-        <button type="button" onClick={() => onToast("Cambios guardados")} className="btn-ce mt-4">
+        <button
+          type="button"
+          onClick={() => {
+            actualizar("datosClinica", {
+              ...datos,
+              nombre: datos.nombre.trim() || nombreSesion,
+            });
+            onToast("Datos de la clínica guardados");
+          }}
+          className="btn-ce mt-4"
+        >
           <CheckCircle2 className="size-4" />
           Guardar cambios
         </button>
@@ -988,17 +1048,35 @@ function FilaVisual({
   );
 }
 
-function InputVisual({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </label>
+const CAMPO =
+  "h-11 w-full rounded-lg border border-border/70 bg-background px-3 text-base text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 sm:h-9 sm:text-xs";
 
-      <div className="flex h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-xs text-foreground">
-        {value}
-      </div>
-    </div>
+function CampoTexto({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (e: { target: { value: string } }) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder ?? "Sin completar"}
+        className={CAMPO}
+      />
+    </label>
   );
 }
 

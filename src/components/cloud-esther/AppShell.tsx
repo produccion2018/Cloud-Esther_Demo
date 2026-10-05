@@ -600,7 +600,7 @@ function ModuloNoIncluido({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { clinic, plan } = useCloudEsther();
+  const { clinic, plan, planListo } = useCloudEsther();
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const modulo = moduloDeRuta(pathname);
@@ -639,7 +639,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (w.requestIdleCallback) w.requestIdleCallback(precargar, { timeout: 4000 });
     else window.setTimeout(precargar, 2500);
   }, [plan]);
-  const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
+  // Hasta leer el plan guardado no se muestra Esther (evita un destello de IA en Start o Pro).
+  const iaDisponible = planListo && !!moduloIA && availableIn(moduloIA, plan);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);

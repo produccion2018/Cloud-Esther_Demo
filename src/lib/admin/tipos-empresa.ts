@@ -210,6 +210,10 @@ export type SesionPanel = {
   cierre: "Manual" | "Inactividad" | null;
   dispositivo: string;
   navegador: string;
+  /** Dirección IP: la completa el backend (el navegador no la conoce). */
+  ip?: string | null;
+  /** Secciones del panel visitadas durante la sesión (módulo utilizado). */
+  secciones?: string[];
 };
 
 export type IntentoFallido = {

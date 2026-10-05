@@ -391,7 +391,18 @@ function Sesiones({ sesiones }: { sesiones: SesionPanel[] }) {
                     ["Duración", duracion(detalle)],
                     ["Dispositivo", detalle.dispositivo],
                     ["Navegador", detalle.navegador],
-                    ["Dirección IP", "La registra el servidor (pendiente de backend)"],
+                    [
+                      "Dirección IP",
+                      detalle.ip ?? "La registra el servidor (pendiente de backend)",
+                    ],
+                    [
+                      "Secciones usadas",
+                      detalle.secciones?.length
+                        ? detalle.secciones
+                            .map((p) => p.replace(/^\/admin\/?/, "") || "resumen")
+                            .join(", ")
+                        : "—",
+                    ],
                   ] as const
                 ).map(([k, v]) => (
                   <div key={k} className="contents">

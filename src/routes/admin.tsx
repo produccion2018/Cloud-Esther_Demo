@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { RoleProvider } from "@/components/admin/role";
 import { Toaster } from "@/components/ui/sonner";
-import { marcarActividadSesion, registrarSalida } from "@/lib/admin/api";
+import { marcarActividadSesion, registrarSalida, registrarSeccionSesion } from "@/lib/admin/api";
 import { aplicarPreferencias, leerPreferencias } from "@/lib/admin/preferencias";
 import {
   INACTIVIDAD_MS,
@@ -53,6 +53,11 @@ function AdminLayout() {
       raiz.classList.toggle("dark", teniaOscuro);
     };
   }, []);
+
+  // Auditoría: sección del panel usada en esta sesión.
+  useEffect(() => {
+    if (sesion && !publica) void registrarSeccionSesion(pathname);
+  }, [sesion, publica, pathname]);
 
   // Cierre por inactividad (30 minutos sin usar el panel).
   useEffect(() => {

@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Mail, Phone, Search, UserRound, Users } from "lucide-react";
+import { Building2, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide-react";
 import { useState } from "react";
 
 import { BarraUso, Cargando, KpiCard, Seccion, StatusBadge, Vacio } from "@/components/admin/bits";
+import { Campo, INPUT } from "@/components/admin/formularios";
 import { permisos, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { useClinicas, usePlanes } from "@/lib/admin/consultas";
+import { guardarMontosClinica } from "@/lib/admin/api";
+import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import {
   ETIQUETA_PAGO,
   NOMBRE_PLAN,
@@ -217,6 +220,7 @@ function ClinicsPage() {
               clinica={seleccionada}
               plan={limite(seleccionada.plan)}
               importes={permisos.verImportes(role)}
+              editarMontos={permisos.editarPlanes(role)}
             />
           )}
         </SheetContent>
@@ -229,10 +233,12 @@ function DetalleClinica({
   clinica: c,
   plan,
   importes,
+  editarMontos,
 }: {
   clinica: Clinica;
   plan: PlanConfig | undefined;
   importes: boolean;
+  editarMontos: boolean;
 }) {
   const filas: [string, string][] = [
     ["Plan", `${NOMBRE_PLAN[c.plan]} · ${c.ciclo}`],
@@ -241,12 +247,6 @@ function DetalleClinica({
     ["Cliente desde", fecha(c.clienteDesde)],
     ["Consumo de IA (mes)", minutosTexto(c.uso.minutosIA)],
     ["Pacientes archivados", `${miles(c.uso.pacientesArchivados)} (no cuentan para el límite)`],
-    ...(importes
-      ? ([["Importe mensual", precio(c.importe ?? plan?.precioMensual ?? null)]] as [
-          string,
-          string,
-        ][])
-      : []),
   ];
   return (
     <div>
@@ -303,6 +303,7 @@ function DetalleClinica({
             ))}
           </div>
         )}
+        {importes && <MontosClinica clinica={c} plan={plan} editable={editarMontos} />}
         <dl className="divide-y divide-border/60 rounded-2xl border border-border">
           {filas.map(([k, v]) => (
             <div key={k} className={cn("flex justify-between gap-3 px-4 py-2.5 text-sm")}>
@@ -312,6 +313,109 @@ function DetalleClinica({
           ))}
         </dl>
       </div>
+    </div>
+  );
+}
+
+/** Montos del contrato de la clínica (tenant): inicial y mensual. Vacíos hasta que se carguen. */
+function MontosClinica({
+  clinica: c,
+  plan,
+  editable,
+}: {
+  clinica: Clinica;
+  plan: PlanConfig | undefined;
+  editable: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [inicial, setInicial] = useState(c.montoInicial == null ? "" : String(c.montoInicial));
+  const [mensual, setMensual] = useState(c.importe == null ? "" : String(c.importe));
+  const [error, setError] = useState<string | null>(null);
+  const guardarMontos = useAccion(guardarMontosClinica, ["clinicas"], "Montos guardados");
+  const numero = (t: string) => (t.trim() === "" ? null : Number(t.replace(",", ".")));
+
+  const guardar = () => {
+    const a = numero(inicial);
+    const m = numero(mensual);
+    if (
+      (a !== null && (!Number.isFinite(a) || a < 0)) ||
+      (m !== null && (!Number.isFinite(m) || m < 0))
+    )
+      return setError("Escribí importes válidos (o dejalos vacíos).");
+    setError(null);
+    guardarMontos.mutate(
+      { id: c.id, montoInicial: a, montoMensual: m },
+      { onSuccess: () => setEditando(false) },
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold">Montos del contrato</p>
+          <p className="text-[11px] text-muted-foreground">
+            De esta clínica y su plan {NOMBRE_PLAN[c.plan]}. Se administran desde el backend.
+          </p>
+        </div>
+        {editable && !editando && (
+          <Button variant="outline" size="sm" onClick={() => setEditando(true)}>
+            <Pencil className="h-3.5 w-3.5" /> Editar
+          </Button>
+        )}
+      </div>
+      {editando ? (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Monto inicial (US$)" ayuda="Lo que paga al comenzar">
+              <input
+                inputMode="decimal"
+                value={inicial}
+                onChange={(e) => setInicial(e.target.value)}
+                placeholder="Sin definir"
+                className={INPUT}
+              />
+            </Campo>
+            <Campo label="Monto mensual (US$)" ayuda="Importe recurrente">
+              <input
+                inputMode="decimal"
+                value={mensual}
+                onChange={(e) => setMensual(e.target.value)}
+                placeholder="Sin definir"
+                className={INPUT}
+              />
+            </Campo>
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditando(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={guardar} disabled={guardarMontos.isPending}>
+              Guardar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <dl className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-card p-3">
+            <dt className="text-[11px] text-muted-foreground">Monto inicial</dt>
+            <dd className="mt-0.5 text-base font-extrabold tabular-nums">
+              {c.montoInicial == null ? "Sin definir" : precio(c.montoInicial)}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-card p-3">
+            <dt className="text-[11px] text-muted-foreground">Monto mensual</dt>
+            <dd className="mt-0.5 text-base font-extrabold tabular-nums">
+              {c.importe != null
+                ? precio(c.importe)
+                : plan?.precioMensual != null
+                  ? `${precio(plan.precioMensual)} (del plan)`
+                  : "Sin definir"}
+            </dd>
+          </div>
+        </dl>
+      )}
     </div>
   );
 }

@@ -485,6 +485,9 @@ interface CloudEstherContextValue {
   /** true cuando hay una empresa con plan contratado: el plan no se puede cambiar.
    *  false en el demo (sin sesión), donde se pueden probar todos los planes. */
   planContratado: boolean;
+  /** true cuando ya se leyó el plan guardado de la empresa (después de montar). Hasta entonces
+   *  el plan es provisorio y no se muestra nada que dependa de IA o audio. */
+  planListo: boolean;
   clinic: string;
   setClinic: (c: string) => void;
   role: string;
@@ -498,8 +501,10 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
   // guardado de la empresa de la sesión; se vuelve a leer si cambia la sesión.
   const [plan, setPlanState] = useState<PlanId>("avanzada");
   const tenant = useTenantActual();
+  const [planListo, setPlanListo] = useState(false);
   useEffect(() => {
     setPlanState(getStoredPlan());
+    setPlanListo(true);
   }, [tenant]);
   const [clinic, setClinic] = useState("centro");
   const [role] = useState("admin");
@@ -522,6 +527,7 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
         plan,
         setPlan,
         planContratado,
+        planListo,
         clinic,
         setClinic,
         role,

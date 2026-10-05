@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Download, Globe2, MonitorPlay, Pencil, Plus, Rocket } from "lucide-react";
+import {
+  Building2,
+  Check,
+  Download,
+  Globe2,
+  MonitorPlay,
+  Pencil,
+  Plus,
+  Rocket,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Cargando, KpiCard, Seccion, Vacio } from "@/components/admin/bits";
@@ -21,6 +30,7 @@ import { useClinicas, useColeccion, useDemos, useGuardarEn } from "@/lib/admin/c
 import { NOMBRE_PLAN, fecha, miles } from "@/lib/admin/formato";
 import type { Clinica, CuentaDemo, PlanId } from "@/lib/admin/tipos";
 import type { EstadoPais, PaisOperacion } from "@/lib/admin/tipos-empresa";
+import { bandera, estaSeleccionado } from "@/lib/paises";
 
 /* Ubicación: src/routes/admin.paises.tsx
    Países donde se vende Cloud Esther: clínicas contratadas y demos por país, y los datos de cada
@@ -42,14 +52,12 @@ type Vista = "contratos" | "configuracion";
 const ESTADOS: EstadoPais[] = ["Activo", "Próximamente", "Pausado"];
 const PLANES: PlanId[] = ["inicial", "profesional", "avanzada", "grupo"];
 
-/** Bandera a partir del código ISO (AR → 🇦🇷). */
-function bandera(codigo: string) {
-  const c = codigo.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(c)) return "🌐";
-  return String.fromCodePoint(...[...c].map((l) => 0x1f1e6 + l.charCodeAt(0) - 65));
-}
-
-const normal = (t: string) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+const normal = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 type Resumen = {
   pais: PaisOperacion;
@@ -86,6 +94,7 @@ function PaisesPage() {
   const { data: demos } = useDemos();
   const [vista, setVista] = useState<Vista>("contratos");
   const [editar, setEditar] = useState<PaisOperacion | "nuevo" | null>(null);
+  const guardarPais = useGuardarEn("paises", "Países seleccionados actualizados");
   if (!canAccess(role, "/admin/paises")) return <RestrictedView />;
   const puedeEditar = permisos.editarPaises(role);
 
@@ -176,6 +185,56 @@ function PaisesPage() {
               icon={<Rocket className="h-4 w-4" />}
             />
           </div>
+
+          <Seccion
+            titulo="Países seleccionados"
+            descripcion="Dónde se vende Cloud Esther. Las clínicas solo pueden elegir estos países en su configuración."
+          >
+            <div className="flex flex-wrap gap-2">
+              {lista.map((p) => {
+                const elegido = estaSeleccionado(p);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={!puedeEditar || guardarPais.isPending}
+                    aria-pressed={elegido}
+                    onClick={() =>
+                      guardarPais.mutate({
+                        item: {
+                          ...p,
+                          estado: elegido ? "Pausado" : "Activo",
+                          desde:
+                            !elegido && !p.desde ? new Date().toISOString().slice(0, 10) : p.desde,
+                        },
+                        accion: `${elegido ? "Quitó" : "Seleccionó"} el país ${p.nombre}`,
+                      })
+                    }
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm font-semibold transition disabled:cursor-default ${
+                      elegido
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    <span className="text-lg leading-none">{bandera(p.codigo)}</span>
+                    {p.nombre}
+                    <span
+                      className={`grid size-5 place-items-center rounded-full ${
+                        elegido ? "bg-primary text-primary-foreground" : "border border-border"
+                      }`}
+                    >
+                      {elegido && <Check className="size-3" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              {puedeEditar
+                ? "Tocá un país para seleccionarlo o quitarlo. Un país quitado queda en pausa: no se pierden sus datos."
+                : "Solo el Dueño puede cambiar los países seleccionados."}
+            </p>
+          </Seccion>
 
           <Pestanas
             valor={vista}

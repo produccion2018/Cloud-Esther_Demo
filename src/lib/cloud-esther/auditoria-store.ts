@@ -39,6 +39,12 @@ export type EventoAuditoria = {
   registro?: string;
   resultado: "Correcto" | "Fallido" | "Denegado";
   sesionId?: string;
+  /** Empresa (tenant) dueña del registro. */
+  tenantId?: string;
+  /** Nombre de la clínica / empresa al momento del evento. */
+  clinica?: string;
+  /** Dirección IP: la completa el backend (el navegador no la conoce). */
+  ip?: string | null;
 };
 
 export type SesionAuditoria = {
@@ -53,6 +59,13 @@ export type SesionAuditoria = {
   dispositivo: string;
   sistema: string;
   navegador: string;
+  /** Empresa (tenant) dueña de la sesión. */
+  tenantId?: string;
+  clinica?: string;
+  /** Dirección IP: la completa el backend. */
+  ip?: string | null;
+  /** Duración en segundos, guardada al cerrar la sesión. */
+  duracionSeg?: number;
 };
 
 type Registro = { sesiones: SesionAuditoria[]; eventos: EventoAuditoria[] };
@@ -127,7 +140,7 @@ export function datosDispositivo() {
   return { dispositivo, sistema, navegador };
 }
 
-type Quien = { usuario: string; email: string; rol: string };
+type Quien = { usuario: string; email: string; rol: string; clinica?: string };
 
 export function registrarEventoAuditoria(
   clinicId: string,
@@ -140,6 +153,8 @@ export function registrarEventoAuditoria(
     id: nuevoId("ev"),
     fecha: new Date().toISOString(),
     resultado: "Correcto",
+    tenantId: clinicId,
+    ip: null,
     ...e,
   };
   escribir(clinicId, { ...r, eventos: [evento, ...r.eventos].slice(0, MAX_EVENTOS) });
@@ -157,6 +172,8 @@ export function abrirSesionAuditoria(clinicId: string, quien: Quien) {
     fin: null,
     cierre: null,
     ...datosDispositivo(),
+    tenantId: clinicId,
+    ip: null,
   };
   escribir(clinicId, { ...r, sesiones: [sesion, ...r.sesiones].slice(0, MAX_SESIONES) });
   registrarEventoAuditoria(clinicId, {
@@ -177,13 +194,21 @@ export function cerrarSesionAuditoria(clinicId: string, motivo: "Manual" | "Venc
   escribir(clinicId, {
     ...r,
     sesiones: r.sesiones.map((s) =>
-      s.id === abierta.id ? { ...s, fin: ahora, cierre: motivo } : s,
+      s.id === abierta.id
+        ? {
+            ...s,
+            fin: ahora,
+            cierre: motivo,
+            duracionSeg: Math.max(0, Math.round((Date.parse(ahora) - Date.parse(s.inicio)) / 1000)),
+          }
+        : s,
     ),
   });
   registrarEventoAuditoria(clinicId, {
     usuario: abierta.usuario,
     email: abierta.email,
     rol: abierta.rol,
+    ...(abierta.clinica ? { clinica: abierta.clinica } : {}),
     tipo: "Cierre de sesión",
     accion: motivo === "Manual" ? "Cerró sesión" : "La sesión venció por inactividad",
     modulo: "Acceso",
@@ -210,6 +235,7 @@ export function registrarActividadAuditoria(
       usuario: abierta.usuario,
       email: abierta.email,
       rol: abierta.rol,
+      ...(abierta.clinica ? { clinica: abierta.clinica } : {}),
       tipo: "Acceso a módulo",
       accion: `Abrió ${modulo}`,
       modulo,

@@ -249,6 +249,7 @@ export const CLINICAS_INICIALES: Clinica[] = FILAS.map(
     plan,
     ciclo: i % 4 === 0 ? "Anual" : "Mensual",
     importe: null,
+    montoInicial: null,
     estadoPago,
     proximoCobro: en(cobro),
     clienteDesde: diaISO(hace(meses * 30)),

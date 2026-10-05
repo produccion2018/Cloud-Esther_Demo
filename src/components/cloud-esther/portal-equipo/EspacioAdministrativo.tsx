@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  ArrowRight,
   CalendarCheck2,
+  CalendarClock,
+  CalendarPlus,
   Check,
   ClipboardList,
+  Clock3,
   Download,
   FileSpreadsheet,
   FileText,
@@ -13,6 +17,7 @@ import {
   ReceiptText,
   ShieldCheck,
   Trash2,
+  UserPlus,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -33,6 +38,7 @@ import {
   type Turno,
 } from "@/lib/cloud-esther/agenda-store";
 import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
+import { HeroPortal, KpiPortal } from "@/components/cloud-esther/portales/PortalShell";
 
 /* Ubicación: src/components/cloud-esther/portal-equipo/EspacioAdministrativo.tsx
    Espacio de trabajo de la secretaria / administración dentro del Portal del equipo.
@@ -43,6 +49,8 @@ import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
    TODO backend: los mismos datos por API con el token del integrante (clinicId + rol + permisos). */
 
 export type PestanaAdministrativa = Pestana;
+/** Secciones del Portal administrativo a las que se puede saltar desde el escritorio. */
+export type DestinoEscritorio = "agenda" | "cobros" | "pacientes-admin" | "tareas" | "presupuestos";
 type Pestana = "escritorio" | "cobros" | "presupuestos" | "documentos" | "tareas";
 
 const PESTANAS: { id: Pestana; label: string; icon: LucideIcon }[] = [
@@ -64,6 +72,28 @@ function hoyISO(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const PUNTO_ESTADO: Record<Turno["estado"], string> = {
+  Pendiente: "bg-amber-400",
+  Confirmada: "bg-primary",
+  Atendida: "bg-emerald-500",
+  Ausente: "bg-rose-500",
+  Cancelada: "bg-slate-400",
+};
+
+function saludoDelDia() {
+  const h = new Date().getHours();
+  return h < 12 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
+}
+
+function fechaLarga() {
+  const t = new Date().toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function saldoDe(r: Registros | undefined) {
@@ -121,6 +151,8 @@ export function EspacioAdministrativo({
   onToast,
   abrirFicha,
   pestana: pestanaControlada,
+  onIr,
+  disponibles = [],
 }: {
   yo: TeamMember;
   clinica: string;
@@ -132,6 +164,9 @@ export function EspacioAdministrativo({
   turnos: Turno[];
   onToast: (m: string) => void;
   abrirFicha: (paciente: string) => void;
+  /** Accesos rápidos del escritorio: solo aparecen los destinos que el portal habilita. */
+  onIr?: ((destino: DestinoEscritorio) => void) | undefined;
+  disponibles?: DestinoEscritorio[] | undefined;
 }) {
   const [pestanaInterna, setPestana] = useState<Pestana>("escritorio");
   const pestana = pestanaControlada ?? pestanaInterna;
@@ -166,6 +201,21 @@ export function EspacioAdministrativo({
     .sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
   const deHoy = turnos.filter((t) => t.fecha === hoyISO());
   const pendientes = tareas.filter((t) => !t.hecha);
+  const vencidas = pendientes.filter((t) => t.vence && t.vence < hoyISO()).length;
+  const confirmadosHoy = deHoy.filter(
+    (t) => t.estado === "Confirmada" || t.estado === "Atendida",
+  ).length;
+  const avance = deHoy.length ? Math.round((confirmadosHoy / deHoy.length) * 100) : 100;
+  const ir = (d: DestinoEscritorio) =>
+    onIr && disponibles.includes(d) ? () => onIr(d) : undefined;
+  const atajos = (
+    [
+      { id: "agenda", label: "Nuevo turno", corto: "Turno", icon: CalendarPlus },
+      { id: "cobros", label: "Registrar cobro", corto: "Cobrar", icon: Wallet },
+      { id: "pacientes-admin", label: "Alta de paciente", corto: "Paciente", icon: UserPlus },
+      { id: "tareas", label: "Nueva tarea", corto: "Tarea", icon: ClipboardList },
+    ] as const
+  ).filter((a) => ir(a.id));
 
   const confirmar = (t: Turno) => {
     if (vista || !gestionarTurnos) return onToast("Tu rol no puede confirmar turnos");
@@ -214,77 +264,274 @@ export function EspacioAdministrativo({
       )}
 
       {pestana === "escritorio" && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          <HeroPortal
+            saludo={`${saludoDelDia()} · Escritorio administrativo`}
+            titulo={`Hola, ${yo.firstName}`}
+            detalle={`${fechaLarga()} · ${clinica}. Hoy hay ${deHoy.length} turnos y ${sinConfirmar.length} esperan confirmación.`}
+          >
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-3.5 backdrop-blur-md">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+                  <span className="text-white/85">Turnos confirmados hoy</span>
+                  <span className="tabular-nums">
+                    {confirmadosHoy}/{deHoy.length || 0}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-white to-fuchsia-200 transition-all"
+                    style={{ width: `${avance}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[11px] text-white/75">
+                  {avance === 100
+                    ? "Agenda del día confirmada."
+                    : `${avance}% de la agenda confirmada`}
+                </p>
+              </div>
+              {atajos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                  {atajos.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => onIr?.(a.id)}
+                      className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-semibold text-white backdrop-blur-md transition hover:bg-white/25 sm:px-3.5 sm:text-sm"
+                    >
+                      <a.icon className="size-4" />
+                      <span className="sm:hidden">{a.corto}</span>
+                      <span className="hidden sm:inline">{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </HeroPortal>
+
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Indicador
+            <KpiPortal
               titulo="Turnos de hoy"
               valor={String(deHoy.length)}
               detalle={`${sinConfirmar.length} por confirmar`}
+              icon={CalendarCheck2}
+              onClick={ir("agenda")}
             />
-            <Indicador
+            <KpiPortal
               titulo="Por cobrar"
               valor={verFacturacion ? pesos(porCobrar) : "—"}
-              detalle={verFacturacion ? `${saldos.length} pacientes` : "Sin permiso"}
+              detalle={verFacturacion ? `${saldos.length} pacientes con saldo` : "Sin permiso"}
+              icon={Wallet}
+              tono="verde"
+              onClick={verFacturacion ? ir("cobros") : undefined}
             />
-            <Indicador
+            <KpiPortal
               titulo="Presupuestos"
               valor={String(presupuestos.length)}
-              detalle="sin respuesta"
+              detalle="sin respuesta del paciente"
+              icon={ReceiptText}
+              tono="ambar"
+              onClick={ir("presupuestos")}
             />
-            <Indicador titulo="Tareas" valor={String(pendientes.length)} detalle="pendientes" />
+            <KpiPortal
+              titulo="Tareas"
+              valor={String(pendientes.length)}
+              detalle={vencidas ? `${vencidas} vencidas` : "pendientes"}
+              icon={ClipboardList}
+              tono={vencidas ? "rosa" : "azul"}
+              onClick={ir("tareas")}
+            />
           </div>
 
-          <Bloque titulo="Turnos por confirmar" icono={CalendarCheck2} detalle="Hoy y mañana">
-            {sinConfirmar.length === 0 ? (
-              <Vacio>No hay turnos pendientes de confirmar.</Vacio>
-            ) : (
-              <ul className="divide-y divide-border/60">
-                {sinConfirmar.slice(0, 8).map((t) => {
-                  const p = porNombre.get(t.paciente);
-                  const wa = p
-                    ? whatsapp(
-                        p.telefono,
-                        `Hola ${p.nombre}, te escribimos de ${clinica} para confirmar tu turno del ${t.fecha === hoyISO() ? "día de hoy" : "día de mañana"} a las ${t.hora}. ¿Nos confirmás?`,
-                      )
-                    : null;
-                  return (
-                    <li key={t.id} className="flex flex-wrap items-center gap-2 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => abrirFicha(t.paciente)}
-                        className="min-w-0 flex-1 text-left"
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <Bloque
+              titulo="Turnos por confirmar"
+              icono={CalendarCheck2}
+              detalle="Hoy y mañana · confirmá o escribí por WhatsApp"
+              acciones={
+                sinConfirmar.length > 0 ? (
+                  <span className="rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                    {sinConfirmar.length} pendientes
+                  </span>
+                ) : undefined
+              }
+            >
+              {sinConfirmar.length === 0 ? (
+                <Vacio>No hay turnos pendientes de confirmar.</Vacio>
+              ) : (
+                <ul className="space-y-2">
+                  {sinConfirmar.slice(0, 8).map((t) => {
+                    const p = porNombre.get(t.paciente);
+                    const wa = p
+                      ? whatsapp(
+                          p.telefono,
+                          `Hola ${p.nombre}, te escribimos de ${clinica} para confirmar tu turno del ${t.fecha === hoyISO() ? "día de hoy" : "día de mañana"} a las ${t.hora}. ¿Nos confirmás?`,
+                        )
+                      : null;
+                    return (
+                      <li
+                        key={t.id}
+                        className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-primary/[0.04] to-transparent p-3 transition hover:border-primary/25 hover:shadow-[0_10px_24px_-18px_rgba(124,58,237,0.7)]"
                       >
-                        <span className="block truncate text-sm font-semibold">{t.paciente}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          {t.fecha === hoyISO() ? "Hoy" : "Mañana"} {t.hora} · {t.tratamiento} ·{" "}
-                          {t.odontologo}
+                        <span className="grid w-14 shrink-0 place-items-center rounded-xl bg-card py-1.5 text-center shadow-sm ring-1 ring-primary/10">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                            {t.fecha === hoyISO() ? "Hoy" : "Mañana"}
+                          </span>
+                          <span className="font-display text-sm font-bold tabular-nums text-primary">
+                            {t.hora}
+                          </span>
                         </span>
-                      </button>
-                      <div className="flex w-full gap-2 sm:w-auto">
-                        {wa && (
-                          <a
-                            href={wa}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn-ce-outline !min-h-10 flex-1 justify-center sm:flex-none"
-                          >
-                            <MessageCircle className="size-4" /> WhatsApp
-                          </a>
-                        )}
                         <button
                           type="button"
-                          onClick={() => confirmar(t)}
-                          className="btn-ce !min-h-10 flex-1 justify-center sm:flex-none"
+                          onClick={() => abrirFicha(t.paciente)}
+                          className="min-w-0 flex-1 text-left"
                         >
-                          <Check className="size-4" /> Confirmar
+                          <span className="block truncate text-sm font-semibold">{t.paciente}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {t.tratamiento} · {t.odontologo}
+                          </span>
                         </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Bloque>
+                        <div className="flex w-full gap-2 sm:w-auto">
+                          {wa && (
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn-ce-outline !min-h-10 flex-1 justify-center sm:flex-none"
+                            >
+                              <MessageCircle className="size-4" /> WhatsApp
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => confirmar(t)}
+                            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 text-sm font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110 sm:flex-none"
+                          >
+                            <Check className="size-4" /> Confirmar
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Bloque>
+
+            <div className="space-y-5">
+              <Bloque
+                titulo="Agenda de hoy"
+                icono={CalendarClock}
+                detalle={`${deHoy.length} turnos`}
+              >
+                {deHoy.length === 0 ? (
+                  <Vacio>Hoy no hay turnos cargados.</Vacio>
+                ) : (
+                  <ol className="relative space-y-3 border-l-2 border-primary/15 pl-4">
+                    {[...deHoy]
+                      .sort((x, y) => x.hora.localeCompare(y.hora))
+                      .slice(0, 6)
+                      .map((t) => (
+                        <li key={t.id} className="relative">
+                          <span
+                            className={`absolute -left-[23px] top-1 size-3 rounded-full ring-4 ring-card ${PUNTO_ESTADO[t.estado]}`}
+                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-sm font-semibold">
+                              <span className="mr-1.5 tabular-nums text-primary">{t.hora}</span>
+                              {t.paciente}
+                            </p>
+                            <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+                              {t.estado}
+                            </span>
+                          </div>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {t.tratamiento} · {t.odontologo}
+                          </p>
+                        </li>
+                      ))}
+                  </ol>
+                )}
+                {ir("agenda") && (
+                  <button
+                    type="button"
+                    onClick={ir("agenda")}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                  >
+                    Ver agenda completa <ArrowRight className="size-3.5" />
+                  </button>
+                )}
+              </Bloque>
+
+              {verFacturacion && saldos.length > 0 && (
+                <Bloque titulo="Mayores saldos" icono={Wallet} detalle="Para gestionar el cobro">
+                  <ul className="space-y-2.5">
+                    {saldos.slice(0, 4).map(({ p, saldo }) => (
+                      <li key={p.id}>
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => abrirFicha(nombreCompleto(p))}
+                            className="truncate text-left font-semibold hover:text-primary"
+                          >
+                            {nombreCompleto(p)}
+                          </button>
+                          <span className="shrink-0 font-bold tabular-nums">{pesos(saldo)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                            style={{
+                              width: `${Math.max(6, Math.round((saldo / (saldos[0]?.saldo || 1)) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </Bloque>
+              )}
+
+              <Bloque
+                titulo="Tareas pendientes"
+                icono={ClipboardList}
+                detalle={`${pendientes.length} abiertas`}
+              >
+                {pendientes.length === 0 ? (
+                  <Vacio>Sin tareas pendientes.</Vacio>
+                ) : (
+                  <ul className="space-y-2">
+                    {[...pendientes]
+                      .sort((x, y) => (x.vence ?? "9").localeCompare(y.vence ?? "9"))
+                      .slice(0, 4)
+                      .map((t) => {
+                        const vencida = !!t.vence && t.vence < hoyISO();
+                        return (
+                          <li
+                            key={t.id}
+                            className="flex items-start gap-2.5 rounded-xl bg-muted/50 px-3 py-2"
+                          >
+                            <Clock3
+                              className={`mt-0.5 size-4 shrink-0 ${vencida ? "text-rose-500" : "text-primary"}`}
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{t.texto}</p>
+                              <p
+                                className={`text-[11px] ${vencida ? "font-semibold text-rose-600" : "text-muted-foreground"}`}
+                              >
+                                {t.vence
+                                  ? `${vencida ? "Venció" : "Vence"} ${t.vence.split("-").reverse().join("/")}`
+                                  : "Sin vencimiento"}
+                                {t.responsable ? ` · ${t.responsable}` : ""}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                )}
+              </Bloque>
+            </div>
+          </div>
         </div>
       )}
 
@@ -382,18 +629,6 @@ export function EspacioAdministrativo({
   );
 }
 
-function Indicador({ titulo, valor, detalle }: { titulo: string; valor: string; detalle: string }) {
-  return (
-    <div className="rounded-2xl border border-primary/12 bg-card p-3.5 shadow-sm">
-      <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary/80">
-        {titulo}
-      </p>
-      <p className="mt-1 truncate text-2xl font-extrabold tabular-nums text-foreground">{valor}</p>
-      <p className="text-xs text-muted-foreground">{detalle}</p>
-    </div>
-  );
-}
-
 function Bloque({
   titulo,
   detalle,
@@ -408,14 +643,18 @@ function Bloque({
   acciones?: ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-primary/12 bg-card p-4 shadow-sm sm:p-5">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-            <Icono className="size-4" />
+    <section className="relative overflow-hidden rounded-[26px] border border-primary/10 bg-card p-4 shadow-[0_16px_40px_-30px_rgba(124,58,237,0.65)] sm:p-5">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400 opacity-80"
+      />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-10 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+            <Icono className="size-[18px]" />
           </span>
           <div>
-            <h2 className="text-sm font-bold">{titulo}</h2>
+            <h2 className="font-display text-[15px] font-bold tracking-tight">{titulo}</h2>
             {detalle && <p className="text-xs text-muted-foreground">{detalle}</p>}
           </div>
         </div>

@@ -82,6 +82,8 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
+import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
+import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
 import {
   EncabezadoSeccion,
   KpiPortal,
@@ -207,7 +209,7 @@ const DESCRIPCION_PRO: Partial<Record<Seccion, string>> = {
   recetas: "Recetas y órdenes de estudios para tus pacientes.",
   estudios: "Radiografías, laboratorio e imágenes de cada paciente.",
   gabinete: "Estado de los sillones y del instrumental.",
-  ia: "Asistente que sugiere; la decisión clínica siempre es tuya.",
+  ia: "Tu asistente clínica: sugiere, resume y responde. La decisión siempre es tuya.",
 };
 
 function seccionesDe(rol: TeamRole): { id: Seccion; label: string; icon: LucideIcon }[] {
@@ -766,6 +768,8 @@ function AppEquipo({
   const item = (id: Seccion, label: string, icon: LucideIcon, mostrar = true, badge?: number) =>
     mostrar ? [{ id, label, icon, ...(badge ? { badge } : {}) }] : [];
   const es3D = plan === "avanzada" || plan === "grupo";
+  // Esther IA asistencial: planes con IA (Plus y Enterprise), con el permiso del propietario.
+  const conIA = plan === "avanzada" || plan === "grupo";
   const grupos: GrupoPortal[] = (
     administrativo
       ? [
@@ -853,7 +857,7 @@ function AppEquipo({
               ),
               ...item("mensajes", "Mensajes", MessageCircle, puede("mensajes")),
               ...item("reportes", "Reportes", BarChart3, puede("reportes")),
-              ...item("ia", "IA asistencial", Sparkles, puede("ia") && plan === "grupo"),
+              ...item("ia", "Esther IA", Sparkles, puede("ia") && conIA),
             ],
           },
           { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
@@ -908,7 +912,7 @@ function AppEquipo({
           ) : null
         }
       >
-        {actual !== "escritorio" && actual !== "hoy" && (
+        {actual !== "escritorio" && actual !== "hoy" && actual !== "ia" && (
           <EncabezadoSeccion
             area={
               grupoActual?.titulo ??
@@ -1064,6 +1068,9 @@ function AppEquipo({
           </div>
         )}
       </PortalShell>
+      {disponibles.includes("ia") && actual !== "ia" && (
+        <EstherFlotante moduloId={actual} modulo={etiqueta || "el portal"} />
+      )}
 
       {nuevaCita && (
         <Hoja titulo="Nuevo turno" onClose={() => setNuevaCita(false)}>
@@ -1266,7 +1273,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
       { s: "odontograma", l: "Odontograma 3D", i: Box, g: "from-emerald-500 to-teal-500" },
       { s: "recetas", l: "Recetas", i: PillIcon, g: "from-amber-500 to-orange-500" },
       { s: "mensajes", l: "Mensajes", i: MessageCircle, g: "from-rose-500 to-pink-500" },
-      { s: "ia", l: "IA asistencial", i: Sparkles, g: "from-violet-500 to-purple-600" },
+      { s: "ia", l: "Esther IA", i: Sparkles, g: "from-violet-500 to-purple-600" },
     ] as const
   ).filter((a) => ctx.puedeIr(a.s));
 
@@ -1464,6 +1471,40 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
               </div>
             </div>
           </TarjetaPortal>
+
+          {ctx.puedeIr("ia") && (
+            <button
+              type="button"
+              onClick={() => ctx.ir("ia")}
+              className="group relative flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#4c1d95] via-[#7c3aed] to-[#c026d3] p-4 text-left text-white shadow-[0_24px_50px_-28px_rgba(124,58,237,0.95)] transition hover:-translate-y-0.5"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-white/15 blur-2xl"
+              />
+              <span
+                aria-hidden
+                className="relative size-20 shrink-0 overflow-hidden rounded-2xl bg-white/15 ring-1 ring-white/30"
+                style={{
+                  backgroundImage: `url(${estherPoses.waving.url})`,
+                  backgroundSize: "auto 300%",
+                  backgroundPosition: "50% 4%",
+                  backgroundRepeat: "no-repeat",
+                }}
+              />
+              <span className="relative min-w-0">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]">
+                  <Sparkles className="size-3" /> Esther IA
+                </span>
+                <span className="mt-1.5 block font-display text-base font-bold leading-tight">
+                  Tu asistente clínica
+                </span>
+                <span className="mt-0.5 block text-xs text-white/80">
+                  Resúmenes de pacientes, agenda e informes. Vos decidís siempre.
+                </span>
+              </span>
+            </button>
+          )}
 
           {accesos.length > 0 && (
             <TarjetaPortal titulo="Accesos clínicos" icon={Stethoscope}>

@@ -10,12 +10,14 @@ import {
   MessageCircle,
   Send,
   ShieldAlert,
+  Sparkles,
   Stethoscope,
   UserRound,
   Users,
 } from "lucide-react";
 
 import { EstherAI } from "@/components/cloud-esther/esther-ai/EstherAI";
+import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import { setComunicacion, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
@@ -754,23 +756,68 @@ export function IAPortal({
         : yo.role === "secretaria"
           ? "secretaria"
           : "admin";
+  const capacidades = [
+    "Resumen del paciente antes de atender",
+    "Agenda del día y huecos libres",
+    "Borradores de indicaciones e informes",
+    "Búsqueda en historias clínicas",
+  ];
   return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-3xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <ShieldAlert className="mt-0.5 size-5 shrink-0" />
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#2e1065] via-[#6d28d9] to-[#c026d3] p-5 text-white shadow-[0_28px_60px_-30px_rgba(124,58,237,0.95)] sm:p-7">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-20 size-72 rounded-full bg-fuchsia-400/30 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-sky-400/20 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+          <img
+            src={estherPoses.waving.url}
+            alt={estherPoses.waving.alt}
+            className="mx-auto h-40 w-auto shrink-0 drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)] sm:mx-0 sm:h-48"
+          />
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.16em] ring-1 ring-white/25">
+              <Sparkles className="size-3.5" /> Esther IA · asistente clínica
+            </span>
+            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              Hola, {yo.firstName}. ¿En qué te ayudo hoy?
+            </h2>
+            <p className="mt-1.5 max-w-xl text-sm text-white/85">
+              Esther analiza y organiza la información de tus pacientes y tu agenda, sugiere y
+              responde. <b>Nunca reemplaza al profesional</b>: la decisión final es siempre tuya.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {capacidades.map((c) => (
+                <span
+                  key={c}
+                  className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold ring-1 ring-white/20 backdrop-blur-md"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-300/50 bg-amber-50/70 px-4 py-3 text-xs text-amber-900">
+        <ShieldAlert className="mt-0.5 size-4 shrink-0" />
         <p>
-          <b>Esther es una herramienta de apoyo.</b> Analiza y organiza la información disponible,
-          sugiere y responde consultas, pero <b>nunca reemplaza al profesional</b>: la decisión
-          final siempre corresponde al profesional tratante.
+          Herramienta de apoyo: no diagnostica ni prescribe por sí sola. Revisá siempre lo que
+          sugiere antes de usarlo con un paciente.
         </p>
       </div>
       <TarjetaPortal
-        titulo="IA asistencial"
+        titulo="Conversá con Esther"
         detalle="Consultas sobre pacientes, agenda, historia clínica e informes"
         icon={Bot}
       >
         <EstherAI
           context={{ section: "general", plan, rol, usuario: nombreDe(yo), n8n: plan === "grupo" }}
+          embebido
         />
       </TarjetaPortal>
     </div>

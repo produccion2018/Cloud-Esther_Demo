@@ -130,7 +130,7 @@ export function NavCarpeta({
                         type="button"
                         onClick={() => onElegir(s.id)}
                         aria-current={on ? "page" : undefined}
-                        className={`group relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-200 ${
+                        className={`group relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:pointer-events-none disabled:opacity-50 ${
                           on
                             ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]"
                             : "text-foreground/70 hover:bg-card hover:text-foreground hover:shadow-[0_6px_16px_-12px_rgba(124,58,237,0.5)]"
@@ -215,26 +215,26 @@ function Indicador({
       borde: "border-primary/20",
     },
     emerald: {
-      valor: "text-emerald-600",
+      valor: "text-emerald-600 dark:text-emerald-400",
       icono: "from-emerald-500 to-teal-500",
-      borde: "border-emerald-200/80",
+      borde: "border-emerald-200/80 dark:border-emerald-500/30",
     },
     rose: {
-      valor: "text-rose-600",
+      valor: "text-rose-600 dark:text-rose-400",
       icono: "from-rose-500 to-pink-500",
-      borde: "border-rose-200/80",
+      borde: "border-rose-200/80 dark:border-rose-500/30",
     },
     amber: {
-      valor: "text-amber-600",
+      valor: "text-amber-600 dark:text-amber-400",
       icono: "from-amber-500 to-orange-500",
-      borde: "border-amber-200/80",
+      borde: "border-amber-200/80 dark:border-amber-500/30",
     },
   }[tono];
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group relative min-h-[118px] overflow-hidden rounded-[22px] border bg-gradient-to-br from-white via-white to-primary/[0.07] p-4 text-left shadow-[0_14px_30px_-22px_rgba(124,58,237,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-22px_rgba(124,58,237,0.6)] ${T.borde}`}
+      className={`group relative min-h-[118px] overflow-hidden rounded-[22px] border bg-gradient-to-br from-card via-card to-primary/[0.07] p-4 text-left shadow-[0_14px_30px_-22px_rgba(124,58,237,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-22px_rgba(124,58,237,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${T.borde}`}
     >
       <span className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-primary/[0.04] ring-[14px] ring-primary/[0.035]" />
       <div className="relative flex items-start justify-between gap-3">
@@ -290,7 +290,7 @@ function Fila({
 }
 
 const PANEL =
-  "rounded-[22px] border border-primary/12 bg-gradient-to-br from-white via-white to-primary/[0.04] p-4 shadow-[0_14px_30px_-24px_rgba(124,58,237,0.5)]";
+  "rounded-[22px] border border-primary/12 bg-gradient-to-br from-card via-card to-primary/[0.04] p-4 shadow-[0_14px_30px_-24px_rgba(124,58,237,0.5)]";
 
 export function ResumenPaciente({
   paciente,
@@ -334,11 +334,11 @@ export function ResumenPaciente({
   return (
     <div className="space-y-4">
       {/* Ficha */}
-      <section className="relative overflow-hidden rounded-[26px] border border-primary/15 bg-gradient-to-br from-primary/[0.09] via-white to-fuchsia-500/[0.06] p-5 shadow-[0_18px_40px_-30px_rgba(124,58,237,0.7)]">
+      <section className="relative overflow-hidden rounded-[26px] border border-primary/15 bg-gradient-to-br from-primary/[0.09] via-card to-fuchsia-500/[0.06] p-5 shadow-[0_18px_40px_-30px_rgba(124,58,237,0.7)]">
         <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-primary/[0.08] blur-2xl" />
         <span className="pointer-events-none absolute -bottom-24 left-1/3 size-56 rounded-full bg-fuchsia-400/[0.08] blur-2xl" />
         <div className="relative flex flex-wrap items-center gap-4">
-          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-gradient-to-br from-primary to-fuchsia-500 text-xl font-bold text-white shadow-[0_14px_28px_-12px_rgba(124,58,237,0.8)] ring-4 ring-white">
+          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-gradient-to-br from-primary to-fuchsia-500 text-xl font-bold text-white shadow-[0_14px_28px_-12px_rgba(124,58,237,0.8)] ring-4 ring-card">
             {paciente.foto ? (
               <img src={paciente.foto} alt={nombre} className="size-full object-cover" />
             ) : (
@@ -351,7 +351,7 @@ export function ResumenPaciente({
                 {nombre}
               </h4>
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${paciente.estado === "Activo" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/15" : "bg-muted text-muted-foreground"}`}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${paciente.estado === "Activo" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/15 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/30" : "bg-muted text-muted-foreground"}`}
               >
                 <span
                   className={`size-1.5 rounded-full ${paciente.estado === "Activo" ? "bg-emerald-500" : "bg-muted-foreground/50"}`}
@@ -359,7 +359,7 @@ export function ResumenPaciente({
                 {paciente.estado}
               </span>
               {ant.alergias[0] && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-inset ring-rose-200">
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-400/30">
                   <AlertTriangle className="size-3" /> Alergia: {ant.alergias.join(", ")}
                 </span>
               )}
@@ -517,7 +517,7 @@ export function ResumenPaciente({
                     {alertas.map((a) => (
                       <span
                         key={a.t}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${a.fuerte ? "bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-200" : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"}`}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${a.fuerte ? "bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-400/30" : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/30"}`}
                       >
                         <AlertTriangle className="size-3" />
                         {a.t}

@@ -156,85 +156,138 @@ function AccesoPrueba() {
   };
 
   return (
-    <main className="min-h-dvh bg-background px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] text-foreground sm:px-6">
-      <div className="mx-auto w-full max-w-5xl">
+    <main
+      className="relative min-h-dvh overflow-hidden px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] text-white sm:px-6"
+      style={{
+        background:
+          "linear-gradient(135deg, #1b0a45 0%, #3b1488 28%, #6d28d9 52%, #a21caf 78%, #db2777 100%)",
+      }}
+    >
+      {/* Fondo: luces difusas y trama de puntos */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute -left-32 -top-32 size-[520px] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.55), transparent 65%)" }}
+        />
+        <div
+          className="absolute -right-40 top-1/4 size-[560px] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(236,72,153,0.45), transparent 65%)" }}
+        />
+        <div
+          className="absolute -bottom-48 left-1/3 size-[600px] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(56,189,248,0.25), transparent 65%)" }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.55) 1px, transparent 1px)",
+            backgroundSize: "26px 26px",
+            maskImage: "linear-gradient(to bottom, black, transparent 85%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black, transparent 85%)",
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <BrandMark className="size-10" />
+            <span className="rounded-2xl bg-white/15 p-1 ring-1 ring-white/25 backdrop-blur-md">
+              <BrandMark className="size-10" />
+            </span>
             <div className="leading-tight">
               <p className="font-display text-lg font-bold">Cloud Esther</p>
-              <p className="text-xs text-muted-foreground">Acceso de prueba</p>
+              <p className="text-xs text-white/70">Acceso de prueba</p>
             </div>
           </div>
-          <span className="rounded-full border border-amber-300/60 bg-amber-100/60 px-3 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-200">
+          <span className="rounded-full border border-[#fde68a]/40 bg-[#fcd34d]/15 px-3 py-1 text-[11px] font-semibold text-[#fef3c7] backdrop-blur-md">
             Solo para revisar el diseño · sin permisos reales
           </span>
         </header>
 
-        <section className="mt-6 rounded-3xl border border-primary/15 bg-card p-5 shadow-sm sm:p-7">
-          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Elegí qué experiencia querés probar
+        <section className="mt-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:p-9">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85 ring-1 ring-white/20">
+            <span className="size-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+            Demo en vivo · {VERSION_APP}
+          </p>
+          <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+            Elegí qué{" "}
+            <span className="bg-gradient-to-r from-[#fde68a] via-[#fbcfe8] to-[#f5d0fe] bg-clip-text text-transparent">
+              experiencia
+            </span>{" "}
+            querés probar
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
             Entrás directo a cada perfil con datos de ejemplo. Funciona en la computadora, la tablet
             y el celular. Los permisos, roles y la seguridad definitivos se configuran después en el
             servidor.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary">
-              Versión {VERSION_APP}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
-              <Laptop className="size-3.5" /> PC: experiencia completa
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
-              <Tablet className="size-3.5" /> Tablet: adaptada
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
-              <Smartphone className="size-3.5" /> Celular: modo aplicación
-            </span>
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-semibold">
+            {(
+              [
+                [Laptop, "PC: experiencia completa"],
+                [Tablet, "Tablet: adaptada"],
+                [Smartphone, "Celular: modo aplicación"],
+              ] as const
+            ).map(([Icono, texto]) => (
+              <span
+                key={texto}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-white/90 ring-1 ring-white/20 backdrop-blur-md"
+              >
+                <Icono className="size-3.5" /> {texto}
+              </span>
+            ))}
           </div>
         </section>
 
         {error && (
-          <p className="mt-4 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="mt-4 rounded-2xl border border-rose-200/40 bg-rose-500/20 px-4 py-2.5 text-sm text-white backdrop-blur-md">
             {error}
           </p>
         )}
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {PERFILES.map((p) => (
             <article
               key={p.id}
-              className="flex flex-col rounded-3xl border border-border bg-card p-5 shadow-sm"
+              className="group relative flex flex-col overflow-hidden rounded-[28px] border border-white/40 bg-card/95 p-5 text-foreground shadow-[0_24px_60px_-30px_rgba(20,0,60,0.7)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-[0_34px_70px_-30px_rgba(20,0,60,0.85)] sm:p-6"
             >
-              <div className="flex items-start gap-3">
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${p.color}`}
+              />
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute -right-16 -top-16 size-44 rounded-full bg-gradient-to-br ${p.color} opacity-[0.14] blur-2xl transition group-hover:opacity-25`}
+              />
+              <div className="relative flex items-start gap-3.5">
                 <span
-                  className={`grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${p.color} text-white shadow-md`}
+                  className={`grid size-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${p.color} text-white shadow-[0_12px_24px_-10px_rgba(80,0,120,0.6)]`}
                 >
-                  <p.icon className="size-6" />
+                  <p.icon className="size-7" />
                 </span>
-                <div className="min-w-0">
-                  <h2 className="text-base font-bold">{p.titulo}</h2>
-                  <p className="text-xs font-medium text-primary">{p.quien}</p>
+                <div className="min-w-0 pt-0.5">
+                  <h2 className="font-display text-lg font-bold tracking-tight">{p.titulo}</h2>
+                  <p className="text-xs font-semibold text-primary">{p.quien}</p>
                 </div>
               </div>
-              <p className="mt-3 flex-1 text-sm text-muted-foreground">{p.detalle}</p>
+              <p className="relative mt-4 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {p.detalle}
+              </p>
               {p.id === "clinica" && (
-                <div className="mt-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground">
+                <div className="relative mt-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                     Plan para probar
                   </p>
-                  <div className="mt-1.5 grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+                  <div className="mt-2 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">
                     {PLANES.map((x) => (
                       <button
                         key={x.id}
                         type="button"
                         onClick={() => setPlan(x.id)}
                         aria-pressed={plan === x.id}
-                        className={`min-h-10 rounded-lg text-xs font-semibold transition ${
+                        className={`min-h-10 rounded-xl text-xs font-semibold transition ${
                           plan === x.id
-                            ? "bg-card text-primary shadow-sm"
+                            ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-md"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -248,12 +301,12 @@ function AccesoPrueba() {
                 type="button"
                 onClick={() => void entrar(p.id)}
                 disabled={cargando !== null}
-                className="btn-ce mt-4 !min-h-12 w-full justify-center"
+                className={`relative mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r ${p.color} text-sm font-bold text-white shadow-[0_14px_28px_-14px_rgba(80,0,120,0.8)] transition hover:brightness-110 disabled:opacity-60`}
               >
                 {cargando === p.id ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <ArrowRight className="size-4" />
+                  <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
                 )}
                 Entrar
               </button>
@@ -261,39 +314,48 @@ function AccesoPrueba() {
           ))}
         </div>
 
-        <section className="mt-5 rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.07] to-card p-5 sm:p-6">
+        <section className="mt-6 rounded-[28px] border border-white/20 bg-white/10 p-5 backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h2 className="text-base font-bold">Instalar Cloud Esther como aplicación</h2>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                {app.instalada
-                  ? "Ya la estás usando como aplicación instalada."
-                  : app.ios
-                    ? "En iPhone o iPad: tocá Compartir y después «Agregar a inicio»."
-                    : "Queda un ícono en el celular, la tablet o la PC y se abre en pantalla completa, como una app."}
-              </p>
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+                <Download className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold">Instalar Cloud Esther como aplicación</h2>
+                <p className="mt-1 max-w-xl text-sm text-white/75">
+                  {app.instalada
+                    ? "Ya la estás usando como aplicación instalada."
+                    : app.ios
+                      ? "En iPhone o iPad: tocá Compartir y después «Agregar a inicio»."
+                      : "Queda un ícono en el celular, la tablet o la PC y se abre en pantalla completa, como una app."}
+                </p>
+              </div>
             </div>
             {app.puedeInstalar ? (
               <button
                 type="button"
                 onClick={() => void app.instalar()}
-                className="btn-ce !min-h-12"
+                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-primary shadow-lg"
               >
                 <Download className="size-4" /> Instalar app
               </button>
             ) : app.ios ? (
-              <span className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold ring-1 ring-white/25">
                 <Share className="size-4" /> Compartir → Agregar a inicio
               </span>
             ) : null}
           </div>
           {!app.instalada && !app.puedeInstalar && !app.ios && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
+            <p className="mt-3 text-[11px] text-white/65">
               Si no aparece el botón: en Chrome o Edge usá el menú ⋮ → «Instalar Cloud Esther». La
               instalación necesita la dirección publicada (https).
             </p>
           )}
         </section>
+
+        <p className="mt-6 text-center text-[11px] text-white/55">
+          Cloud Esther · Gestión inteligente para clínicas odontológicas
+        </p>
       </div>
     </main>
   );

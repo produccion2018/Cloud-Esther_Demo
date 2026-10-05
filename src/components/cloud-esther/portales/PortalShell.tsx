@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { BrandMark } from "@/components/cloud-esther/AppShell";
 import type { ModoLateral, PreferenciasPortal } from "./preferencias";
+import { VERSION_APP } from "@/lib/version";
 
 /* Ubicación: src/components/cloud-esther/portales/PortalShell.tsx
    Marco común de los portales del Plan 4 (paciente, profesional y administrativo), con el ADN
@@ -213,6 +214,11 @@ export function PortalShell({
           <LogOut className="size-3.5" />
           {!modoCompacto && salirLabel}
         </button>
+        {!modoCompacto && (
+          <p className="mt-2 text-center text-[10px] text-sidebar-foreground/45">
+            Versión {VERSION_APP}
+          </p>
+        )}
       </div>
     </div>
   );

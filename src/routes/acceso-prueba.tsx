@@ -27,6 +27,7 @@ import {
 import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { guardarSesionPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { useInstalarApp } from "@/lib/pwa";
+import { VERSION_APP } from "@/lib/version";
 
 /* Ubicación: src/routes/acceso-prueba.tsx
    ACCESO DE PRUEBA (solo esta etapa): entrar con un toque a los perfiles de Cloud Esther
@@ -180,6 +181,9 @@ function AccesoPrueba() {
             servidor.
           </p>
           <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+              Versión {VERSION_APP}
+            </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
               <Laptop className="size-3.5" /> PC: experiencia completa
             </span>

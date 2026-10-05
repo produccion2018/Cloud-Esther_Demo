@@ -1516,3 +1516,94 @@ label {
   --sidebar-accent-foreground: oklch(0.98 0.01 300);
   --sidebar-border: oklch(1 0 0 / 9%);
 }
+
+/* ───────── Botón WhatsApp premium (verde de marca + logo) ───────── */
+@utility btn-wa {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0 1.05rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, #2fe07a 0%, #25d366 45%, #128c7e 100%);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow:
+    0 10px 22px -12px rgba(18, 140, 126, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow:
+      0 16px 30px -14px rgba(18, 140, 126, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  & svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+}
+
+/* Versión solo ícono (botones redondos de acciones). */
+@utility btn-wa-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2fe07a 0%, #25d366 45%, #128c7e 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgba(18, 140, 126, 0.9);
+  transition: transform 0.15s, filter 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+  }
+  & svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+/* ───────── Botones de ícono de la barra superior de los portales ───────── */
+@utility btn-icono-portal {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+  color: var(--color-primary);
+  box-shadow: 0 10px 24px -16px rgba(124, 58, 237, 0.9);
+  transition: transform 0.18s, box-shadow 0.18s, color 0.18s, background 0.18s;
+  &:hover {
+    transform: translateY(-2px);
+    color: #fff;
+    background:
+      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
+      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+    box-shadow: 0 16px 30px -14px rgba(124, 58, 237, 0.95);
+  }
+  &[aria-expanded="true"] {
+    color: #fff;
+    background:
+      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
+      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+  }
+  & svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}

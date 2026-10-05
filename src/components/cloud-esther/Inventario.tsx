@@ -68,6 +68,7 @@ import { TRATAMIENTOS } from "@/lib/cloud-esther/agenda-store";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/Inventario.tsx
    Inventario por empresa: stock por sucursal, movimientos, alertas, órdenes de compra,
@@ -2541,9 +2542,9 @@ function Ordenes({ ctx, onEditar }: { ctx: Ctx; onEditar: (o: OrdenCompra) => vo
                       target="_blank"
                       rel="noreferrer"
                       aria-label="Enviar por WhatsApp"
-                      className={BTN_ICONO}
+                      className="btn-wa-icono"
                     >
-                      <MessageCircle className="size-3.5" />
+                      <IconoWhatsApp />
                     </a>
                   )}
                   <button
@@ -2796,9 +2797,9 @@ function Proveedores({ ctx }: { ctx: Ctx }) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="WhatsApp"
-                  className={BTN_ICONO}
+                  className="btn-wa-icono"
                 >
-                  <MessageCircle className="size-3.5" />
+                  <IconoWhatsApp />
                 </a>
                 <a
                   href={`tel:${p.telefono.replace(/[^\d+]/g, "")}`}

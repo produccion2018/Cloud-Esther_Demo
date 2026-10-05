@@ -268,9 +268,7 @@ export function PortalShell({
               type="button"
               aria-label="Abrir menú"
               onClick={() => setHoja(true)}
-              className={`grid size-10 shrink-0 place-items-center rounded-full border border-primary/15 bg-card ${
-                prefs.lateral === "oculto" ? "" : "lg:hidden"
-              }`}
+              className={`btn-icono-portal ${prefs.lateral === "oculto" ? "" : "lg:hidden"}`}
             >
               <Menu className="size-[18px]" />
             </button>
@@ -289,7 +287,7 @@ export function PortalShell({
               type="button"
               onClick={() => onPrefs({ oscuro: !prefs.oscuro })}
               aria-label={prefs.oscuro ? "Usar modo claro" : "Usar modo oscuro"}
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/15 bg-card shadow-sm transition hover:border-primary/35"
+              className="btn-icono-portal"
             >
               {prefs.oscuro ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
             </button>
@@ -299,7 +297,7 @@ export function PortalShell({
                 onClick={() => setMenuVista((v) => !v)}
                 aria-label="Modo del menú lateral"
                 aria-expanded={menuVista}
-                className="grid size-10 place-items-center rounded-full border border-primary/15 bg-card shadow-sm transition hover:border-primary/35"
+                className="btn-icono-portal"
               >
                 <Columns2 className="size-[18px]" />
               </button>

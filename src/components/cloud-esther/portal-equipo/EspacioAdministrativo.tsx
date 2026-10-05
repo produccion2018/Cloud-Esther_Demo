@@ -39,6 +39,7 @@ import {
 } from "@/lib/cloud-esther/agenda-store";
 import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
 import { HeroPortal, KpiPortal } from "@/components/cloud-esther/portales/PortalShell";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/portal-equipo/EspacioAdministrativo.tsx
    Espacio de trabajo de la secretaria / administración dentro del Portal del equipo.
@@ -397,9 +398,9 @@ export function EspacioAdministrativo({
                               href={wa}
                               target="_blank"
                               rel="noreferrer"
-                              className="btn-ce-outline !min-h-10 flex-1 justify-center sm:flex-none"
+                              className="btn-wa flex-1 sm:flex-none"
                             >
-                              <MessageCircle className="size-4" /> WhatsApp
+                              <IconoWhatsApp /> WhatsApp
                             </a>
                           )}
                           <button
@@ -599,9 +600,9 @@ export function EspacioAdministrativo({
                         href={wa}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-ce-outline !min-h-10 w-full justify-center sm:w-auto"
+                        className="btn-wa w-full sm:w-auto"
                       >
-                        <MessageCircle className="size-4" /> Recordar
+                        <IconoWhatsApp /> Recordar
                       </a>
                     )}
                   </li>

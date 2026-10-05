@@ -97,6 +97,7 @@ import {
   facturaPendiente,
   useSuscripcion,
 } from "@/components/cloud-esther/facturacion/MiPlan";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
    Facturación electrónica según el país fiscal de la clínica, cobros (se registran en la cuenta
@@ -1609,9 +1610,9 @@ function Detalle({ ctx, id, onClose }: { ctx: Ctx; id: string; onClose: () => vo
             href={wa(c.cliente.telefono, texto)}
             target="_blank"
             rel="noreferrer"
-            className={BTN_SECUNDARIO}
+            className="btn-wa"
           >
-            <MessageCircle className="size-4" /> WhatsApp
+            <IconoWhatsApp /> WhatsApp
           </a>
         )}
         {c.cliente.email && (

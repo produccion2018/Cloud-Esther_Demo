@@ -122,6 +122,7 @@ import { EquipoProfesional } from "@/components/cloud-esther/EquipoProfesional";
 import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
 import { storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import { usePermisosPortal } from "@/lib/cloud-esther/permisos-portal";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -1683,9 +1684,9 @@ function FichaPaciente({
           href={`https://wa.me/${tel.replace("+", "")}`}
           target="_blank"
           rel="noreferrer"
-          className={`${BTN_SECUNDARIO} flex-1`}
+          className="btn-wa flex-1"
         >
-          <MessageCircle className="size-3.5" /> WhatsApp
+          <IconoWhatsApp /> WhatsApp
         </a>
       </div>
       <div className="mt-3 flex gap-1 rounded-full bg-primary/[0.06] p-0.5">

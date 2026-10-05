@@ -117,11 +117,11 @@ export function NotificacionesUniversales({
         onClick={() => setAbierto((v) => !v)}
         aria-label={`Notificaciones${sinLeer.length ? ` (${sinLeer.length} sin leer)` : ""}`}
         aria-expanded={abierto}
-        className="relative grid size-10 place-items-center rounded-full border border-primary/15 bg-card text-foreground shadow-sm transition hover:border-primary/35"
+        className="btn-icono-portal"
       >
         {sinLeer.length ? <BellRing className="size-[18px]" /> : <Bell className="size-[18px]" />}
         {sinLeer.length > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-gradient-to-br from-rose-500 to-fuchsia-500 px-1 text-[10px] font-bold text-white shadow">
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-gradient-to-br from-[#f43f5e] to-[#d946ef] px-1 text-[10px] font-bold text-white shadow-[0_6px_14px_-6px_rgba(225,29,72,0.9)] ring-2 ring-background">
             {sinLeer.length > 9 ? "9+" : sinLeer.length}
           </span>
         )}

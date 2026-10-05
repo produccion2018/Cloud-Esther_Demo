@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import type { Registros } from "@/components/cloud-esther/PacienteSecciones";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/pacientes/ResumenPaciente.tsx
    Carpeta del paciente: menú lateral agrupado con contadores y la vista «Resumen» con la
@@ -383,10 +384,10 @@ export function ResumenPaciente({
                 href={`https://wa.me/${tel}`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-ce-outline"
+                className="btn-wa"
                 aria-label={`Escribir por WhatsApp a ${nombre}`}
               >
-                <MessageCircle className="size-4" /> WhatsApp
+                <IconoWhatsApp /> WhatsApp
               </a>
             )}
             <button type="button" onClick={onEditar} className="btn-ce">

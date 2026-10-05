@@ -80,6 +80,7 @@ import {
   titulo,
   type Ctx,
 } from "./ui";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 const ROLES: TeamRole[] = ["odontologo", "asistente", "secretaria", "administrador"];
 
@@ -784,9 +785,9 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
               target="_blank"
               rel="noreferrer"
               aria-label="WhatsApp"
-              className={BTN_ICONO}
+              className="btn-wa-icono"
             >
-              <MessageCircle className="size-3.5" />
+              <IconoWhatsApp />
             </a>
           )}
           {m.phone && (

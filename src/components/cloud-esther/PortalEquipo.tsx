@@ -125,6 +125,7 @@ import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
 import { storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import { usePermisosPortal } from "@/lib/cloud-esther/permisos-portal";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { volverSiEsPrueba } from "@/lib/acceso-prueba";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -396,7 +397,7 @@ function GateEquipo() {
       miembro={m}
       onSalir={() => {
         guardarSesionEquipo(null);
-        setSesion(null);
+        if (!volverSiEsPrueba()) setSesion(null);
       }}
     />
   );

@@ -30,6 +30,7 @@ import {
   type Tool,
   type ToothState,
 } from "@/lib/odontograma2d/types";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 const WIDTH: Record<ToothDef["type"], string> = {
   // Ancho proporcional por tipo de pieza: las 16 piezas de cada arcada entran siempre en el
@@ -388,17 +389,16 @@ export function Odontogram({
     const a = document.createElement("a");
     a.href = url;
     a.download = `odontograma-2d-${patientName.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     onToast?.("Hallazgos descargados");
   };
 
   const imprimir = () => {
-    const w = window.open("", "_blank", "width=820,height=900");
-    if (!w) {
-      onToast?.("Permití las ventanas emergentes para imprimir");
-      return;
-    }
+    const w = documentoPDF(`odontograma-2d-${patientName}`);
+    onToast?.("Descargando el odontograma en PDF");
     const filas = findings
       .map((f) => `<tr><td>${f.fdi}</td><td>${f.detail}</td><td>${f.finding}</td></tr>`)
       .join("");

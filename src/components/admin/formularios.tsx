@@ -214,6 +214,8 @@ export function descargarCSV(nombre: string, filas: (string | number | null)[][]
   const a = document.createElement("a");
   a.href = url;
   a.download = `${nombre}.csv`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

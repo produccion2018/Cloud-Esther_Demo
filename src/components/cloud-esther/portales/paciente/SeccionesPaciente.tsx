@@ -26,6 +26,7 @@ import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { cargarSettings } from "@/lib/cloud-esther/settings-store";
 import { KpiPortal, PestanasPortal, TarjetaPortal } from "../PortalShell";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* Ubicación: src/components/cloud-esther/portales/paciente/SeccionesPaciente.tsx
    Secciones nuevas del Portal del paciente (Plan 4): Estado de cuenta (pagos, cuotas,
@@ -52,8 +53,7 @@ function sumarMeses(iso: string, n: number) {
 }
 
 function imprimir(titulo: string, cuerpo: string, clinica: string) {
-  const w = window.open("", "_blank", "width=720,height=900");
-  if (!w) return;
+  const w = documentoPDF(titulo);
   w.document.write(`<html><head><meta charset="utf-8"><title>${escapar(titulo)}</title>
 <style>body{font-family:Inter,Arial,sans-serif;padding:32px;color:#1f1535}h1{font-size:20px}
 table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #e6e0f5;padding:8px;text-align:left}

@@ -23,6 +23,7 @@ import { contarPacientesActivos, leerPacientes } from "@/lib/cloud-esther/pacien
 import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
+import { descargarPDFdeElemento } from "@/lib/descargas";
 
 export const Route = createLazyFileRoute("/demo")({
   component: DashboardPage,
@@ -38,11 +39,13 @@ type ModalActivo = "cita" | "paciente" | "presupuesto" | null;
 /* ───────────── Datos de ejemplo ───────────── */
 
 const STATS = [
-  { label: "Turnos de hoy", value: "11", valueColor: "text-primary", icon: Clock, delta: "+9%", deltaColor: "text-emerald-600", sub: "7 confirmados · 2 pendientes" },
-  { label: "Ingresos del día", value: "$ 1.284.000", valueColor: "text-emerald-600", icon: DollarSign, delta: "+14%", deltaColor: "text-emerald-600", sub: "6 cobros registrados" },
-  { label: "Recordatorios enviados", value: "34", valueColor: "text-foreground", icon: Bell, delta: "94% entregados", deltaColor: "text-muted-foreground", sub: "" },
-  { label: "Deuda vencida", value: "$ 572.000", valueColor: "text-destructive", icon: TriangleAlert, delta: "-4%", deltaColor: "text-destructive", sub: "2 pacientes" },
+  { label: "Turnos de hoy", value: "11", valueColor: "text-primary", tono: "from-primary to-fuchsia-500", icon: Clock, delta: "+9%", deltaColor: "text-emerald-600", sub: "7 confirmados · 2 pendientes" },
+  { label: "Ingresos del día", value: "$ 1.284.000", valueColor: "text-emerald-600", tono: "from-emerald-500 to-teal-500", icon: DollarSign, delta: "+14%", deltaColor: "text-emerald-600", sub: "6 cobros registrados" },
+  { label: "Recordatorios enviados", value: "34", valueColor: "text-foreground", tono: "from-sky-500 to-indigo-500", icon: Bell, delta: "94% entregados", deltaColor: "text-muted-foreground", sub: "" },
+  { label: "Deuda vencida", value: "$ 572.000", valueColor: "text-destructive", tono: "from-rose-500 to-pink-500", icon: TriangleAlert, delta: "-4%", deltaColor: "text-destructive", sub: "2 pacientes" },
 ];
+
+type Stat = (typeof STATS)[number];
 
 const PRODUCCION = [
   { nombre: "Martínez", valor: 4.0 },
@@ -85,7 +88,7 @@ const EVOLUCION_PUNTOS = (() => {
 })();
 
 const CARD =
-  "rounded-2xl border border-primary/25 bg-gradient-to-b from-lavender/70 to-transparent p-4 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-primary hover:shadow-lg hover:shadow-primary/10";
+  "relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_14px_36px_-28px_rgba(124,58,237,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-26px_rgba(124,58,237,0.75)] sm:p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-primary before:via-fuchsia-500 before:to-pink-400 before:opacity-70 before:content-['']";
 
 const INPUT =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -897,24 +900,24 @@ function CentroOperacionesBanner({
             Todo lo que pasa hoy en {clinica ? <strong className="font-semibold text-white">{clinica}</strong> : "tu clínica"}, en una sola pantalla.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-2.5">
           <button
             onClick={onNuevaCita}
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-2.5 text-[13px] font-semibold sm:px-5 sm:text-sm text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
             <CalendarPlus className="size-4" />
             Nueva cita
           </button>
           <button
             onClick={onNuevoPaciente}
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-2.5 text-[13px] font-semibold sm:px-5 sm:text-sm text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
             <UserPlus className="size-4" />
             Nuevo paciente
           </button>
           <Link
             to="/demo/agenda"
-            className="flex items-center gap-2 rounded-full border border-white/60 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white shadow-md backdrop-blur-sm dark:bg-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/20 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="col-span-2 flex items-center justify-center gap-2 rounded-full border border-white/60 bg-white/10 px-4 py-2.5 text-[13px] font-semibold sm:col-span-1 sm:px-5 sm:text-sm text-white shadow-md backdrop-blur-sm dark:bg-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/20 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
             <Clock className="size-4" />
             Ver agenda y horarios
@@ -967,14 +970,17 @@ function ProduccionOdontologo() {
     <div className={CARD}>
       <h2 className="font-semibold">Producción por odontólogo</h2>
       <p className="text-xs text-muted-foreground">Mes en curso</p>
-      <div className="mt-4 flex h-56 items-end gap-4 border-t border-dashed border-border pt-3">
+      <div className="mt-4 flex h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4">
         {PRODUCCION.map((p) => (
-          <div key={p.nombre} className="flex flex-1 flex-col items-center gap-2">
-            <div
-              className="w-full max-w-14 rounded-t-md bg-primary transition-all duration-300 hover:opacity-80"
-              style={{ height: `${(p.valor / max) * 100}%` }}
-            />
-            <span className="text-xs text-muted-foreground">{p.nombre}</span>
+          <div key={p.nombre} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <div className="flex w-full flex-1 items-end justify-center">
+              <div
+                className="w-full max-w-14 rounded-t-xl bg-gradient-to-t from-primary to-fuchsia-500 shadow-[0_10px_22px_-14px_rgba(124,58,237,0.9)] transition-all duration-300 hover:opacity-85"
+                style={{ height: `${(p.valor / max) * 100}%` }}
+                title={`${p.nombre}: $ ${p.valor} M`}
+              />
+            </div>
+            <span className="truncate text-[11px] text-muted-foreground sm:text-xs">{p.nombre}</span>
           </div>
         ))}
       </div>
@@ -1168,8 +1174,11 @@ function DashboardInner() {
   const imprimir = () => window.print();
 
   const guardarPdf = () => {
-    show("En el diálogo de impresión elegí «Guardar como PDF»");
-    window.setTimeout(() => window.print(), 400);
+    const el = document.querySelector<HTMLElement>("main") ?? document.body;
+    show("Generando el PDF del tablero…");
+    void descargarPDFdeElemento(el, "tablero-clinica").then((ok) =>
+      show(ok ? "PDF descargado: tablero-clinica.pdf" : "No se pudo generar el PDF"),
+    );
   };
 
   const exportarExcel = () => {
@@ -1180,8 +1189,10 @@ function DashboardInner() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "evolucion-clinica.csv";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     show("Descargando evolucion-clinica.csv");
   };
 
@@ -1205,11 +1216,12 @@ function DashboardInner() {
 
   const confirmadosHoy = turnos.filter((t) => t.estado === "Confirmada" || t.estado === "Atendida").length;
   const pendientesHoy = turnos.filter((t) => t.estado === "Pendiente").length;
-  const stats = [
-    { ...STATS[0], value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
-    STATS[1],
-    { ...STATS[2], value: String(34 + recordatoriosExtra) },
-    STATS[3],
+  const [s0, s1, s2, s3] = STATS as unknown as [Stat, Stat, Stat, Stat];
+  const stats: Stat[] = [
+    { ...s0, value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
+    s1,
+    { ...s2, value: String(34 + recordatoriosExtra) },
+    s3,
   ];
 
   return (
@@ -1237,18 +1249,22 @@ function DashboardInner() {
           </p>
         )}
 
-        <div className="mb-5 mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-5 mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className={`${CARD} relative overflow-hidden`}>
-              <div className="pointer-events-none absolute -right-5 -top-5 grid size-24 place-items-center rounded-full bg-primary/10">
-                <s.icon className="size-4 text-muted-foreground" />
+            <div key={s.label} className="group relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-3.5 shadow-[0_14px_34px_-24px_rgba(124,58,237,0.6)] transition hover:-translate-y-0.5 sm:p-4">
+              <span aria-hidden className={`pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gradient-to-br ${s.tono} opacity-[0.12] blur-2xl transition group-hover:opacity-20`} />
+              <span aria-hidden className={`pointer-events-none absolute inset-x-4 bottom-0 h-[3px] rounded-full bg-gradient-to-r ${s.tono} opacity-70`} />
+              <div className="relative flex items-start justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase leading-tight tracking-[0.1em] text-muted-foreground sm:text-[10.5px]">{s.label}</span>
+                <span className={`grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${s.tono} text-white shadow-md sm:size-10 sm:rounded-2xl`}>
+                  <s.icon className="size-4" />
+                </span>
               </div>
-              <span className="relative mb-2 block pr-16 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{s.label}</span>
-              <p className={`relative text-2xl font-bold tracking-tight ${s.valueColor}`}>{s.value}</p>
+              <p className={`relative mt-1.5 truncate font-display text-lg font-bold tracking-tight sm:text-2xl ${s.valueColor}`}>{s.value}</p>
               {(s.delta || s.sub) && (
-                <p className="relative mt-1 flex items-center gap-1.5 text-xs">
+                <p className="relative mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs">
                   <span className={s.deltaColor}>{s.delta}</span>
-                  <span className="text-muted-foreground">{s.sub}</span>
+                  <span className="truncate text-muted-foreground">{s.sub}</span>
                 </p>
               )}
             </div>

@@ -81,6 +81,8 @@ import {
   SoporteAyuda,
 } from "@/components/cloud-esther/portales/paciente/SeccionesPaciente";
 import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { volverSiEsPrueba } from "@/lib/acceso-prueba";
 
 /* Ubicación: src/components/cloud-esther/PortalPaciente.tsx
 
@@ -183,8 +185,7 @@ function escapar(t: string) {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function abrirImpresion(titulo: string, cuerpo: string, clinica: string) {
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(titulo);
   w.document
     .write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapar(titulo)}</title>
   <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:13px}h1{font-size:20px;margin:0}
@@ -223,8 +224,10 @@ function descargarICS(t: Turno, clinica: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `turno-${t.fecha}.ics`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /* ───────────── Estilos y piezas ───────────── */
@@ -394,7 +397,7 @@ function PortalGate() {
       pacienteInicial={sesion}
       onSalir={() => {
         guardarSesionPortal(null);
-        setSesion(null);
+        if (!volverSiEsPrueba()) setSesion(null);
       }}
     />
   );

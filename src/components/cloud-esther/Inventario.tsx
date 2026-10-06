@@ -69,6 +69,7 @@ import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* Ubicación: src/components/cloud-esther/Inventario.tsx
    Inventario por empresa: stock por sucursal, movimientos, alertas, órdenes de compra,
@@ -111,8 +112,10 @@ function descargarCSV(nombre: string, filas: (string | number)[][]) {
   const a = document.createElement("a");
   a.href = url;
   a.download = nombre;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /* ───────────── Estilos y piezas ───────────── */
@@ -2375,8 +2378,7 @@ function Alertas({ ctx }: { ctx: Ctx }) {
 /* ───────────── Órdenes de compra ───────────── */
 
 function imprimirOrden(o: OrdenCompra, p: Proveedor | undefined, insumos: Insumo[]) {
-  const w = window.open("", "_blank", "width=820,height=900");
-  if (!w) return;
+  const w = documentoPDF(`orden-de-compra-${o.id}`);
   const filas = o.items
     .map((it) => {
       const i = insumos.find((x) => x.id === it.insumoId);

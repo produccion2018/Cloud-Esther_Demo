@@ -593,8 +593,10 @@ function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = "actividad-portal.csv";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     onToast(`${lista.length} movimientos exportados`);
   };
 

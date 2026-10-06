@@ -251,8 +251,10 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `odontograma-3d-${(pacienteNombre ?? pacienteId).replace(/\s+/g, "-").toLowerCase()}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     onToast("Informe del odontograma descargado");
   };
 

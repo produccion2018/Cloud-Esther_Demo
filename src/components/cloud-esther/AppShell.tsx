@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
+import { vieneDeAccesoPrueba, volverSiEsPrueba } from "@/lib/acceso-prueba";
 
 const GROUPS = [
   "Clínico",
@@ -85,7 +86,10 @@ export function BrandMark({ className }: { className?: string }) {
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link to={"/demo" as never} className="flex items-center gap-2.5">
-      <BrandMark className="size-9 shrink-0" />
+      <span className="relative shrink-0">
+        <span aria-hidden className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 opacity-40 blur-md" />
+        <BrandMark className="relative size-9" />
+      </span>
       {!compact && (
         <span className="leading-tight">
           <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
@@ -185,7 +189,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
 
         return (
           <div key={group}>
-            <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+            <p className="flex items-center gap-2 px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
               {group}
             </p>
             <ul className="space-y-0.5">
@@ -220,16 +225,16 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                           to={m.path as never}
                           onClick={onNavigate}
                           className={cn(
-                            "group flex items-center gap-2.5 rounded-lg px-2 py-2 pr-9 text-sm transition-colors",
+                            "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 pr-9 text-sm transition-all",
                             active
-                              ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                              ? "bg-gradient-to-r from-primary to-fuchsia-500 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                              : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                             off && "opacity-40",
                           )}
                         >
                           <ModuleIcon
                             name={m.icon}
-                            className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                            className={cn("size-4 shrink-0", active ? "text-white" : "text-primary")}
                           />
                           <span className="truncate">{etiquetaModulo(m, plan)}</span>
                           {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
@@ -284,16 +289,16 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                       to={m.path as never}
                       onClick={onNavigate}
                       className={cn(
-                        "group flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors",
+                        "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all",
                         active
-                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                          ? "bg-gradient-to-r from-primary to-fuchsia-500 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                          : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                         off && "opacity-40",
                       )}
                     >
                       <ModuleIcon
                         name={m.icon}
-                        className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                        className={cn("size-4 shrink-0", active ? "text-white" : "text-primary")}
                       />
                       <span className="truncate">{etiquetaModulo(m, plan)}</span>
                       {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
@@ -336,15 +341,17 @@ function EmpresaActiva() {
   if (!usuario || !clinica) return null;
 
   return (
-    <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
+    <div className="relative mx-3 mb-3 flex items-center gap-2.5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]">
+      <span aria-hidden className="pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-white/15 blur-xl" />
+      <span className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 text-[11px] font-bold ring-1 ring-white/30">
         {iniciales(clinica.nombre)}
       </span>
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">
-          {clinica.nombre}
+      <div className="relative min-w-0 flex-1 leading-tight">
+        <p className="truncate font-display text-sm font-bold">{clinica.nombre}</p>
+        <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-white/80">
+          <span className="size-1.5 shrink-0 rounded-full bg-[#6ee7b7] shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+          {usuario.nombre}
         </p>
-        <p className="truncate text-[11px] text-sidebar-foreground/55">{usuario.nombre}</p>
       </div>
     </div>
   );
@@ -390,7 +397,13 @@ function PlanFooter() {
       </div>
       <Link
         to={"/" as never}
-        onClick={() => cerrarSesion()}
+        onClick={(e) => {
+          cerrarSesion();
+          if (vieneDeAccesoPrueba()) {
+            e.preventDefault();
+            volverSiEsPrueba();
+          }
+        }}
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
@@ -418,13 +431,19 @@ function PlanFooter() {
 
 function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="px-4 py-4">
-        <Logo />
+    <div className="relative flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(168,85,247,0.22),transparent_48%),radial-gradient(circle_at_100%_55%,rgba(236,72,153,0.10),transparent_42%),radial-gradient(circle_at_0%_100%,rgba(99,102,241,0.12),transparent_45%)]"
+      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="px-4 py-4">
+          <Logo />
+        </div>
+        <EmpresaActiva />
+        <NavList onNavigate={onNavigate} />
+        <PlanFooter />
       </div>
-      <EmpresaActiva />
-      <NavList onNavigate={onNavigate} />
-      <PlanFooter />
     </div>
   );
 }
@@ -441,12 +460,13 @@ function MobileHeader({
   titulo: string;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border/80 bg-background/85 px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-2.5 bg-background/80 px-3 pb-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] shadow-[0_10px_30px_-24px_rgba(124,58,237,0.6)] backdrop-blur-xl lg:hidden">
+      <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
       <Sheet open={menu} onOpenChange={setMenu}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-11" aria-label="Abrir menú">
-            <Menu className="size-5" />
-          </Button>
+          <button type="button" className="btn-icono-portal" aria-label="Abrir menú">
+            <Menu />
+          </button>
         </SheetTrigger>
         <SheetContent
           side="left"
@@ -458,7 +478,10 @@ function MobileHeader({
         </SheetContent>
       </Sheet>
       <Logo compact />
-      <p className="min-w-0 flex-1 truncate text-sm font-semibold">{titulo}</p>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="truncate font-display text-base font-bold tracking-tight">{titulo}</p>
+        <p className="truncate text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/80">Panel de la clínica</p>
+      </div>
     </header>
   );
 }
@@ -479,7 +502,7 @@ function BarraInferior({ onMas }: { onMas: () => void }) {
   return (
     <nav
       aria-label="Accesos rápidos"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/10 bg-background/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_30px_-22px_rgba(124,58,237,0.55)] backdrop-blur-xl lg:hidden"
     >
       <div className="mx-auto grid max-w-md grid-cols-5">
         {items.map((it) => {
@@ -497,7 +520,7 @@ function BarraInferior({ onMas }: { onMas: () => void }) {
               <span
                 className={cn(
                   "grid h-7 w-12 place-items-center rounded-full transition-colors",
-                  activo && "bg-primary/12",
+                  activo && "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]",
                 )}
               >
                 <it.icon className="size-5" />
@@ -676,7 +699,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_12%_0%,rgba(124,58,237,0.14),transparent_45%),radial-gradient(circle_at_88%_6%,rgba(236,72,153,0.10),transparent_40%)]"
+        />
         <MobileHeader
           sidebarStyle={sidebarStyle}
           menu={menuMovil}
@@ -684,7 +711,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
         />
         {/* En el celular se deja lugar para la barra inferior. */}
-        <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <main className="relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (

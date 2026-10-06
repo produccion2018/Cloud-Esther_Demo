@@ -686,9 +686,9 @@ function Resumen({ ctx }: { ctx: Ctx }) {
               <ul className="mt-3 space-y-2.5">
                 {medios.map(([k, v]) => (
                   <li key={k}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span>{k}</span>
-                      <b>{ctx.$(v)}</b>
+                    <div className="mb-1 flex flex-wrap justify-between gap-x-2 text-xs">
+                      <span className="min-w-0">{k}</span>
+                      <b className="whitespace-nowrap">{ctx.$(v)}</b>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-primary/10">
                       <div

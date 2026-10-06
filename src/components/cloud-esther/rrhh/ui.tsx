@@ -28,7 +28,7 @@ export type Ctx = {
 };
 
 export function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 export function fecha(iso: string) {
   return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—";

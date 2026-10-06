@@ -377,5 +377,5 @@ export function formatoMoneda(n: number, moneda: string) {
     USD: "US$",
   };
   const decimales = moneda === "EUR" || moneda === "USD" || moneda === "PEN" ? 2 : 0;
-  return `${simbolo[moneda] ?? moneda} ${n.toLocaleString("es-AR", { minimumFractionDigits: decimales, maximumFractionDigits: decimales })}${moneda === "ARS" ? "" : ` ${moneda}`}`;
+  return `${simbolo[moneda] ?? moneda}\u00a0${n.toLocaleString("es-AR", { minimumFractionDigits: decimales, maximumFractionDigits: decimales })}${moneda === "ARS" ? "" : `\u00a0${moneda}`}`;
 }

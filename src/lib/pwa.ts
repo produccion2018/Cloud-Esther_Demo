@@ -42,6 +42,12 @@ export function registrarServiceWorker() {
 /** Se llama una vez al iniciar: guarda el aviso de instalación del navegador para usarlo luego. */
 export function escucharInstalacion() {
   if (typeof window === "undefined") return;
+  // Aviso capturado antes de que cargara la app (script del <head> en __root.tsx).
+  const temprano = (window as Window & { __ceInstalar?: EventoInstalacion }).__ceInstalar;
+  if (temprano) {
+    pendiente = temprano;
+    avisar();
+  }
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     pendiente = e as EventoInstalacion;

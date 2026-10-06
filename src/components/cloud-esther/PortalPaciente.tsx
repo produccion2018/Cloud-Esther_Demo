@@ -179,7 +179,7 @@ function formatearFecha(iso: string) {
   return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
 }
 function ars(n: number) {
-  return `$ ${n.toLocaleString("es-AR")}`;
+  return `$\u00a0${n.toLocaleString("es-AR")}`;
 }
 function escapar(t: string) {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

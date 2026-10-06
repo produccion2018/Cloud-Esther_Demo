@@ -178,7 +178,7 @@ export function NavCarpeta({
 type Turno = { fecha: string; hora: string; motivo: string; profesional?: string };
 
 const fechaCorta = (iso: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
-const moneda = (n: number) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
+const moneda = (n: number) => `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 function edad(nac: string) {
   if (!nac) return null;
   const d = new Date(`${nac}T12:00:00`);

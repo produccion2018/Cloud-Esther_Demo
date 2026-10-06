@@ -555,7 +555,7 @@ function Resumen({
               Ver asistencia
             </button>
           </div>
-          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
             {trabajan.map(({ m, l }) => {
               const f = d.deHoy.find((x) => x.miembroId === m.id);
               const lic = d.ausentesHoy.find((a) => a.miembroId === m.id);

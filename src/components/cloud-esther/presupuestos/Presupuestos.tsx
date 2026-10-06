@@ -522,9 +522,9 @@ function Tarjeta({ ctx, f }: { ctx: Ctx; f: Fila }) {
         </div>
         {ev === "Vencido" && <Pill clase={ESTILO.Vencido}>Vencido</Pill>}
       </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-lg font-bold text-primary">{ars(tot.final)}</p>
-        <p className="text-right text-[10.5px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-2 gap-y-0.5">
+        <p className="whitespace-nowrap text-lg font-bold text-primary">{ars(tot.final)}</p>
+        <p className="min-w-0 text-left text-[10.5px] text-muted-foreground sm:text-right">
           {tot.cuotas > 1 ? `${tot.cuotas} × ${ars(tot.cuota)}` : (tot.plan?.nombre ?? "Sin plan")}
           <br />
           {esperando !== null ? `Enviado hace ${esperando} d` : fecha(f.p.fecha)}

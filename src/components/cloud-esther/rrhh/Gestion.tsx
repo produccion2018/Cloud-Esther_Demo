@@ -588,7 +588,7 @@ export function Gestion({ ctx }: { ctx: Ctx }) {
                 {costoPorPeriodo.map(({ p, costo }) => (
                   <div key={p.periodo} className="flex flex-1 flex-col items-center gap-1">
                     <span className="text-[10px] font-semibold text-primary">
-                      $ {(costo / 1_000_000).toFixed(2)} M
+                      {`$\u00a0${(costo / 1_000_000).toFixed(2)}\u00a0M`}
                     </span>
                     <div
                       className="w-full rounded-t-xl bg-gradient-to-t from-primary to-fuchsia-400"

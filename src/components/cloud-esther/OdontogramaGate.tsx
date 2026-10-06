@@ -520,7 +520,7 @@ function Hero3D({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">{acciones}</div>
+        <div className="flex flex-wrap gap-2">{acciones}</div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

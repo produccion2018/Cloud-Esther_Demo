@@ -67,6 +67,54 @@ export function esModoApp() {
   );
 }
 
+export type Plataforma = {
+  /** android · ios (iPhone/iPad) · escritorio */
+  so: "android" | "ios" | "escritorio";
+  /** iPad o tablet Android (cambia dónde está el botón Compartir en Safari). */
+  tablet: boolean;
+  navegador: "chrome" | "edge" | "samsung" | "firefox" | "safari" | "opera" | "otro";
+  /** Navegador interno de WhatsApp, Instagram, Facebook, etc.: desde ahí no se puede instalar. */
+  integrado: boolean;
+};
+
+/** Qué dispositivo y navegador está usando la persona, para ofrecerle la instalación que corresponde. */
+export function detectarPlataforma(): Plataforma {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const ios = esIOS();
+  const android = /Android/i.test(ua);
+  const so = ios ? "ios" : android ? "android" : "escritorio";
+  const tablet = ios
+    ? /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    : android && !/Mobile/i.test(ua);
+  const navegador = /EdgA?|EdgiOS|Edg\//.test(ua)
+    ? "edge"
+    : /SamsungBrowser/.test(ua)
+      ? "samsung"
+      : /OPR\/|OPiOS|OPT\//.test(ua)
+        ? "opera"
+        : /Firefox|FxiOS/.test(ua)
+          ? "firefox"
+          : /CriOS|Chrome\//.test(ua)
+            ? "chrome"
+            : /Safari\//.test(ua)
+              ? "safari"
+              : "otro";
+  const integrado =
+    /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|TikTok|Snapchat|LinkedInApp/i.test(
+      ua,
+    ) ||
+    (android && /; wv\)/.test(ua)) ||
+    (ios && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua));
+  return { so, tablet, navegador, integrado };
+}
+
+/** Android: abre la misma dirección en Chrome (para salir del navegador de WhatsApp, Instagram…). */
+export function enlaceAbrirEnChrome() {
+  if (typeof window === "undefined") return "#";
+  const { host, pathname, search } = window.location;
+  return `intent://${host}${pathname}${search}#Intent;scheme=https;package=com.android.chrome;end`;
+}
+
 function esIOS() {
   if (typeof navigator === "undefined") return false;
   return (
@@ -94,6 +142,9 @@ export function useInstalarApp() {
     puedeInstalar: montado && !instalada && pendiente !== null,
     /** iPhone/iPad: se instala desde «Compartir → Agregar a inicio». */
     ios: montado && !instalada && esIOS(),
+    /** La página está en https (o localhost): requisito de los navegadores para instalar. */
+    seguro: montado && window.isSecureContext,
+    plataforma: montado ? detectarPlataforma() : null,
     instalar: async () => {
       if (!pendiente) return false;
       await pendiente.prompt();

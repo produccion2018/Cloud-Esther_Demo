@@ -383,7 +383,7 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
                 className={`rounded-[28px] bg-gradient-to-b from-primary/[0.08] via-primary/[0.025] to-transparent p-1 ${ampliado ? "min-h-[55vh]" : ""}`}
               >
                 <div
-                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[calc(100vh-240px)] min-h-[600px]"}`}
+                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[72dvh] min-h-[460px] sm:h-[calc(100vh-240px)] sm:min-h-[600px]"}`}
                 >
                   <Limite3D onReintentar={() => setIntento3D((n) => n + 1)}>
                     <Suspense fallback={<Cargando3D />}>

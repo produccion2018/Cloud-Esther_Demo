@@ -7,14 +7,13 @@ import {
   Download,
   Laptop,
   Loader2,
-  Share,
   Smartphone,
   Stethoscope,
   Tablet,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrandMark } from "@/components/cloud-esther/AppShell";
 import { iniciarSesionAdmin } from "@/lib/admin/api";
 import { guardarSesion } from "@/lib/admin/sesion";
@@ -27,6 +26,7 @@ import {
 import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { guardarSesionPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { useInstalarApp } from "@/lib/pwa";
+import { BotonInstalarApp } from "@/components/cloud-esther/InstalarApp";
 import { VERSION_APP } from "@/lib/version";
 import { marcarAccesoPrueba } from "@/lib/acceso-prueba";
 
@@ -113,13 +113,6 @@ function AccesoPrueba() {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanId>("avanzada");
-  const [guiaInstalar, setGuiaInstalar] = useState(false);
-  const [inseguro, setInseguro] = useState(false);
-  const [origen, setOrigen] = useState("");
-  useEffect(() => {
-    setInseguro(!window.isSecureContext);
-    setOrigen(window.location.origin);
-  }, []);
   const app = useInstalarApp();
 
   const entrar = async (perfil: Perfil["id"]) => {
@@ -341,56 +334,9 @@ function AccesoPrueba() {
               </div>
             </div>
             {!app.instalada && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (app.puedeInstalar) void app.instalar();
-                  else setGuiaInstalar(true);
-                }}
-                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-[#6d28d9] shadow-lg transition hover:-translate-y-0.5"
-              >
-                <Download className="size-4" /> Instalar app
-              </button>
+              <BotonInstalarApp className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-[#6d28d9] shadow-lg transition hover:-translate-y-0.5" />
             )}
           </div>
-          {guiaInstalar && (
-            <div className="mt-4 grid gap-3 rounded-2xl bg-white/10 p-4 text-sm ring-1 ring-white/20 sm:grid-cols-3">
-              {(
-                [
-                  [
-                    Laptop,
-                    "PC (Chrome o Edge)",
-                    "Tocá el ícono de instalar a la derecha de la barra de direcciones, o el menú ⋮ → «Transmitir, guardar y compartir» → «Instalar página como app».",
-                  ],
-                  [
-                    Smartphone,
-                    "Android (Chrome)",
-                    "Menú ⋮ → «Agregar a la pantalla principal» o «Instalar app».",
-                  ],
-                  [Share, "iPhone o iPad (Safari)", "Botón Compartir → «Agregar a inicio»."],
-                ] as const
-              ).map(([Icono, titulo, texto]) => (
-                <div key={titulo} className="rounded-xl bg-white/10 p-3">
-                  <p className="flex items-center gap-2 font-bold">
-                    <Icono className="size-4" /> {titulo}
-                  </p>
-                  <p className="mt-1 text-xs text-white/80">{texto}</p>
-                </div>
-              ))}
-              {inseguro ? (
-                <p className="rounded-xl bg-amber-300/20 px-3 py-2 text-xs font-semibold text-[#fef3c7] ring-1 ring-amber-200/40 sm:col-span-3">
-                  Estás entrando por una dirección sin https ({origen}). Android, iPhone y la PC
-                  solo permiten instalar la app desde la dirección publicada con https (por ejemplo,
-                  la de Vercel). Abrila desde ahí y vas a ver la opción de instalar.
-                </p>
-              ) : (
-                <p className="text-[11px] text-white/65 sm:col-span-3">
-                  Si el navegador no muestra la opción, recargá la página una vez: la app queda
-                  lista para instalar después de la primera visita.
-                </p>
-              )}
-            </div>
-          )}
         </section>
 
         <p className="mt-6 text-center text-[11px] text-white/55">

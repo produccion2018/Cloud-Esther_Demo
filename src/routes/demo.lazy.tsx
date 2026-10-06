@@ -647,7 +647,8 @@ function TopBanner({
           {ahora ? `${fecha} · ${hora}` : "\u00a0"}
         </span>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* En celular y tablet el usuario y los avisos están en el encabezado de arriba. */}
+        <div className="hidden flex-wrap items-center gap-2 lg:flex">
           <div className="relative">
             <button
               onClick={() => setAbierto((v) => !v)}

@@ -1,7 +1,7 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, Users } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MODULES,
@@ -27,6 +27,7 @@ import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 import { vieneDeAccesoPrueba, volverSiEsPrueba } from "@/lib/acceso-prueba";
+import { BotonInstalarApp } from "@/components/cloud-esther/InstalarApp";
 
 const GROUPS = [
   "Clínico",
@@ -477,12 +478,134 @@ function MobileHeader({
           <SidebarInner onNavigate={() => setMenu(false)} />
         </SheetContent>
       </Sheet>
-      <Logo compact />
+      <span className="max-[379px]:hidden">
+        <Logo compact />
+      </span>
       <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate font-display text-base font-bold tracking-tight">{titulo}</p>
-        <p className="truncate text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/80">Panel de la clínica</p>
+        <p className="truncate font-display text-[15px] font-bold tracking-tight">{titulo}</p>
+        <p className="truncate text-[9.5px] font-semibold uppercase tracking-[0.12em] text-primary/80">Panel de la clínica</p>
       </div>
+      <CampanaMovil />
+      <UsuarioMovil />
     </header>
+  );
+}
+
+/* Campana del encabezado en el celular: avisos sin leer y acceso directo a Notificaciones. */
+function CampanaMovil() {
+  const { sinLeer } = useNotificaciones();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  return (
+    <Link
+      to={"/demo/notificaciones" as never}
+      aria-label={montado && sinLeer > 0 ? `Notificaciones: ${sinLeer} sin leer` : "Notificaciones"}
+      className="relative grid size-9 shrink-0 place-items-center rounded-full bg-card text-muted-foreground shadow-sm ring-1 ring-primary/15 transition-colors hover:text-primary"
+    >
+      <Bell className="size-[18px]" />
+      {montado && sinLeer > 0 && (
+        <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-white ring-2 ring-background">
+          {sinLeer > 9 ? "9+" : sinLeer}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/* Usuario de la sesión arriba a la derecha (como en la PC), compacto para el celular.
+   Al tocarlo abre su menú: portales, configuración y salir. */
+function UsuarioMovil() {
+  const { usuario, clinica } = useSesion();
+  const { plan, planContratado } = useCloudEsther();
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = (e: Event) => {
+      // El diálogo de «Instalar app» se abre fuera del menú: tocarlo no lo cierra.
+      if ((e.target as Element | null)?.closest?.("[role=dialog]")) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
+    };
+    document.addEventListener("pointerdown", cerrar);
+    return () => document.removeEventListener("pointerdown", cerrar);
+  }, [abierto]);
+  const nombre = usuario?.nombre ?? "Invitado";
+  const primerNombre = nombre.split(/\s+/)[0] ?? nombre;
+  const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = [
+    { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },
+    { href: "/equipo", titulo: "Portal del profesional", icon: Stethoscope, enterprise: true },
+    { href: "/demo/configuracion", titulo: "Configuración", icon: Settings },
+    { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", icon: ShieldCheck },
+  ];
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-haspopup="menu"
+        aria-label={`Usuario: ${nombre}`}
+        className="flex max-w-[7.5rem] items-center gap-1.5 rounded-full bg-card py-1 pl-1 pr-2 shadow-sm ring-1 ring-primary/15 min-[400px]:max-w-[9rem]"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-[10.5px] font-bold text-white">
+          {iniciales(nombre)}
+        </span>
+        <span className="min-w-0 text-left leading-tight">
+          <span className="block truncate text-[11.5px] font-semibold text-foreground">{primerNombre}</span>
+          <span className="block truncate text-[9px] text-muted-foreground">Dueño/a</span>
+        </span>
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-2xl border border-primary/15 bg-card text-foreground shadow-2xl"
+        >
+          <div className="bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white">
+            <p className="truncate font-display text-sm font-bold">{nombre}</p>
+            <p className="truncate text-[11px] text-white/80">
+              {clinica ? `Dueño/a · ${clinica.nombre}` : "Dueño/a"}
+            </p>
+          </div>
+          <ul className="p-1.5">
+            {items
+              .filter((it) => !it.enterprise || plan === "grupo")
+              .map((it) => (
+                <li key={it.href}>
+                  <a
+                    role="menuitem"
+                    href={it.href}
+                    onClick={() => setAbierto(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <it.icon className="size-4 text-primary" />
+                    {it.titulo}
+                  </a>
+                </li>
+              ))}
+            <li>
+              <BotonInstalarApp className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/5" />
+            </li>
+            <li className="mt-1 border-t border-primary/10 pt-1">
+              <Link
+                role="menuitem"
+                to={"/" as never}
+                onClick={(e) => {
+                  cerrarSesion();
+                  if (vieneDeAccesoPrueba()) {
+                    e.preventDefault();
+                    volverSiEsPrueba();
+                  }
+                }}
+                className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-destructive hover:bg-destructive/5"
+              >
+                <LogOut className="size-4" />
+                {planContratado ? "Cerrar sesión" : "Salir del demo"}
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

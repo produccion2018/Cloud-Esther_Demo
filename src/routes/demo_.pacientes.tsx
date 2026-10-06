@@ -1137,7 +1137,7 @@ function CarpetaPaciente({
 
         {/* Contenido */}
 
-        <div className="min-w-0 p-4">
+        <div className={`min-w-0 sm:p-4 ${seccion === "resumen" ? "p-4" : "p-2"}`}>
           {seccion === "resumen" ? (
             <ResumenPaciente
               paciente={paciente}

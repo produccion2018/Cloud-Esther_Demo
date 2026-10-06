@@ -2384,7 +2384,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{n.motivoConsulta}</p>
                     {n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
                       {formatearFecha(n.fecha)} · {n.hora}
                     </span>
                   </div>
@@ -2486,12 +2486,12 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
         {datos.notasRapidas.length === 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p>
         ) : (
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-2 @2xl:grid-cols-2">
             {datos.notasRapidas.map((n) => (
               <div key={n.id} className="rounded-xl border border-border bg-background p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <Badge tono="primary">{n.tipo}</Badge>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground">
                     {formatearFecha(n.fecha)} · {n.hora}
                   </span>
                 </div>
@@ -2963,10 +2963,14 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           <ul className="space-y-2.5">
             {lista.map((e) => (
               <li key={e.id} className={`${ITEM} flex items-start gap-3`}>
-                <div className="w-20 shrink-0">
+                <div className="hidden w-20 shrink-0 sm:block">
                   <p className="text-sm font-bold">{formatearFecha(e.fecha)}</p>
                 </div>
                 <div className="min-w-0 flex-1">
+                  {/* En el celular la fecha va arriba, en la misma línea del registro. */}
+                  <p className="whitespace-nowrap text-xs font-bold text-primary sm:hidden">
+                    {formatearFecha(e.fecha)}
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{e.motivo}</p>
                     {e.pieza && <Badge tono="primary">Pieza {e.pieza}</Badge>}
@@ -3341,8 +3345,15 @@ function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente })
             >
               {paso}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {hecho && fecha ? formatearFecha(fecha) : " "}
+            <p className="truncate whitespace-nowrap text-[10px] text-muted-foreground tabular-nums">
+              {hecho && fecha ? (
+                <>
+                  <span className="hidden @lg:inline">{formatearFecha(fecha)}</span>
+                  <span className="@lg:hidden">{formatearFecha(fecha).slice(0, 5)}</span>
+                </>
+              ) : (
+                " "
+              )}
             </p>
           </li>
         );
@@ -3537,7 +3548,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 @2xl:grid-cols-4">
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(activos)}
@@ -3619,7 +3630,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
           No hay tratamientos que coincidan.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2.5 @4xl:grid-cols-2">
           {lista.map((t) => {
             const hechas = t.sesiones?.length ?? 0;
             const plan = t.sesionesPlan ?? 1;
@@ -3629,12 +3640,21 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             return (
               <li key={t.id} className="card-grad flex flex-col p-4">
                 <div className="flex items-start gap-3">
-                  <span className={`${CIRCULO_ICONO} size-10`}>
+                  {/* En el celular el ícono decorativo se oculta: el ancho queda para los datos. */}
+                  <span className={`${CIRCULO_ICONO} size-10 max-sm:hidden`}>
                     <Stethoscope className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{t.nombre}</p>
+                    {/* Nombre e importe en la misma fila; debajo, los estados en una sola línea. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 text-sm font-semibold">{t.nombre}</p>
+                      {(t.costo ?? 0) > 0 && (
+                        <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums">
+                          {formatearMonto(t.costo ?? 0)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
                       <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
                       {!cerrado && (
@@ -3654,11 +3674,6 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       )}
                     </p>
                   </div>
-                  {(t.costo ?? 0) > 0 && (
-                    <span className="shrink-0 text-sm font-bold">
-                      {formatearMonto(t.costo ?? 0)}
-                    </span>
-                  )}
                 </div>
 
                 <PasosTratamiento tratamiento={t} />
@@ -5594,7 +5609,7 @@ function GaleriaTab({
                   type="button"
                   onClick={() => onVer(s.id)}
                   aria-label={`Ver ${s.tipo}`}
-                  className="group relative h-[92px] w-[112px] shrink-0 overflow-hidden rounded-lg border border-border/80 bg-muted/30 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-[118px]"
+                  className="group relative h-[84px] w-[84px] shrink-0 overflow-hidden rounded-lg border border-border/80 bg-muted/30 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-[92px] sm:w-[118px]"
                 >
                   {tieneArchivo && esImagen(s.archivoNombre) ? (
                     <img
@@ -5627,14 +5642,17 @@ function GaleriaTab({
                 <div className="min-w-0 flex-1 py-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold leading-5 text-foreground">
+                      <p className="line-clamp-2 text-[13px] font-semibold leading-5 text-foreground">
                         {s.tipo}
                       </p>
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                        {[formatearFecha(s.fecha), s.zona].filter(Boolean).join(" · ")}
+                        <span className="whitespace-nowrap">{formatearFecha(s.fecha)}</span>
+                        {s.zona ? ` · ${s.zona}` : ""}
                       </p>
                     </div>
-                    <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
+                    <span className="shrink-0 whitespace-nowrap">
+                      <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
+                    </span>
                   </div>
 
                   <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
@@ -6164,7 +6182,7 @@ function DiagnosticoTab({
       </div>
 
       {/* Resumen */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-3">
         <ResumenCuenta
           etiqueta="Total"
           valor={String(datos.diagnosticos.length)}
@@ -6913,7 +6931,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       />
 
       <div
-        className={`grid grid-cols-2 gap-2.5 ${conDiagnostico ? "md:grid-cols-5" : "md:grid-cols-3"}`}
+        className={`grid grid-cols-2 gap-2.5 ${conDiagnostico ? "@2xl:grid-cols-3 @4xl:grid-cols-5" : "@2xl:grid-cols-3"}`}
       >
         <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
         <ResumenCuenta
@@ -7695,20 +7713,22 @@ function ResumenCuenta({
   tono?: string;
 }) {
   return (
-    <div className="card-grad flex min-h-[80px] items-start justify-between gap-2 p-3.5">
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    // Etiqueta e ícono arriba; el valor usa todo el ancho y nunca se parte (fecha · hora, $ 35.000).
+    <div className="card-grad @container flex min-h-[76px] min-w-0 flex-col gap-1.5 p-2.5 sm:min-h-[80px] sm:p-3.5">
+      <div className="flex items-start justify-between gap-1.5">
+        <p className="min-w-0 text-[9.5px] font-semibold uppercase leading-tight tracking-[0.02em] text-muted-foreground sm:text-[10px] sm:tracking-[0.08em]">
           {etiqueta}
         </p>
-        <p
-          className={`mt-1.5 text-lg font-bold leading-tight tracking-tight ${tono ?? "text-foreground"}`}
-        >
-          {valor}
-        </p>
+        <span className="hidden size-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary @[8.5rem]:grid sm:size-8 sm:rounded-xl">
+          <Icon className="size-3 sm:size-4" />
+        </span>
       </div>
-      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-        <Icon className="size-4" />
-      </span>
+      <p
+        className={`mt-auto whitespace-nowrap font-bold leading-tight tracking-tight tabular-nums ${tono ?? "text-foreground"}`}
+        style={{ fontSize: `clamp(11px, calc(100cqi / ${Math.max(1, valor.length * 0.62).toFixed(2)}), 18px)` }}
+      >
+        {valor}
+      </p>
     </div>
   );
 }
@@ -7737,7 +7757,7 @@ function CuentaSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-3">
         <ResumenCuenta etiqueta="Cargos" valor={formatearMonto(cargos)} icon={ReceiptText} />
         <ResumenCuenta
           etiqueta="Pagos y créditos"
@@ -8125,8 +8145,15 @@ function PasosLaboratorio({ trabajo }: { trabajo: TrabajoLaboratorio }) {
             >
               {estado}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {hecho && fecha ? formatearFecha(fecha) : " "}
+            <p className="truncate whitespace-nowrap text-[10px] text-muted-foreground tabular-nums">
+              {hecho && fecha ? (
+                <>
+                  <span className="hidden @lg:inline">{formatearFecha(fecha)}</span>
+                  <span className="@lg:hidden">{formatearFecha(fecha).slice(0, 5)}</span>
+                </>
+              ) : (
+                " "
+              )}
             </p>
           </li>
         );
@@ -8214,7 +8241,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className={`grid grid-cols-2 gap-2.5 ${conSeguimiento ? "md:grid-cols-4" : ""}`}>
+      <div className={`grid grid-cols-2 gap-2.5 ${conSeguimiento ? "@2xl:grid-cols-4" : ""}`}>
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(enProceso)}
@@ -8276,18 +8303,26 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           No hay trabajos con ese estado.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2.5 @4xl:grid-cols-2">
           {lista.map((t) => {
             const aviso = avisoEntrega(t);
             return (
               <li key={t.id} className="card-grad p-4">
                 <div className="flex items-start gap-3">
-                  <span className={`${CIRCULO_ICONO} size-10`}>
+                  <span className={`${CIRCULO_ICONO} size-10 max-sm:hidden`}>
                     <FlaskConical className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{t.tipo}</p>
+                    {/* Trabajo e importe en la misma fila; debajo, pieza y estados. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 text-sm font-semibold">{t.tipo}</p>
+                      {conSeguimiento && t.costo > 0 && (
+                        <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums">
+                          {formatearMonto(t.costo)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {t.pieza && (
                         <Badge tono="primary">
                           {/^\d/.test(t.pieza) ? `Pieza ${t.pieza}` : t.pieza}
@@ -8306,9 +8341,6 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                     </p>
                   </div>
-                  {conSeguimiento && t.costo > 0 && (
-                    <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>
-                  )}
                 </div>
 
                 {conSeguimiento && <PasosLaboratorio trabajo={t} />}
@@ -8557,7 +8589,9 @@ function TimelinePaciente({
             Historial central del paciente, ordenado cronológicamente.
           </p>
         </div>
-        <Badge tono="primary">{eventos.length} eventos</Badge>
+        <span className="shrink-0 whitespace-nowrap">
+          <Badge tono="primary">{eventos.length} eventos</Badge>
+        </span>
       </div>
       {eventos.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p>
@@ -8859,7 +8893,7 @@ function AlertasPaciente({
           <span className="font-semibold">Sin alertas activas.</span> El seguimiento está al día.
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-2 @xl:grid-cols-2 @4xl:grid-cols-1 @6xl:grid-cols-2">
           {alertas.map((x) => (
             <button
               key={x.id}
@@ -9046,19 +9080,22 @@ function PiezaContexto({
             key={g.id}
             type="button"
             onClick={() => setAbierto(g.id)}
-            className="group flex items-center gap-2.5 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35"
+            className="group flex min-w-0 flex-col gap-1 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35"
           >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-              <g.icon className="size-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-lg font-bold leading-tight">{g.valor}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">
-                {g.label}
+            {/* Misma estructura en todas: cifra e ícono arriba, etiqueta y «Ver» abajo. */}
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-lg font-bold leading-tight tabular-nums">{g.valor}</span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                <g.icon className="size-3.5" />
               </span>
             </span>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-              Ver
+            <span className="flex items-end justify-between gap-2">
+              <span className="min-w-0 text-[11px] leading-tight text-muted-foreground">
+                {g.label}
+              </span>
+              <span className="hidden shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground @md:inline">
+                Ver
+              </span>
             </span>
           </button>
         ))}
@@ -9165,7 +9202,7 @@ function ResumenPaciente({
   const inicialesPaciente = iniciales(contexto.paciente) || "PA";
   return (
     <>
-      <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
+      <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-3 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
         <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
@@ -9201,7 +9238,7 @@ function ResumenPaciente({
             </span>
           </div>
         </div>
-        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 @2xl:grid-cols-3 @4xl:grid-cols-5">
           <ResumenCuenta
             etiqueta="Tratamientos activos"
             valor={String(tratamientosActivos)}
@@ -9231,11 +9268,11 @@ function ResumenPaciente({
           />
         </div>
       </section>
-      <div className="mb-4 grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 items-stretch gap-3 @4xl:grid-cols-2">
         <AlertasPaciente datos={datos} onSeccion={onSeccion} />
         <PiezaContexto datos={datos} onSeccion={onSeccion} />
       </div>
-      <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]">
+      <div className="mb-4 grid grid-cols-1 items-start gap-3 @4xl:grid-cols-[1.25fr_.75fr]">
         <TimelinePaciente datos={datos} onSeccion={onSeccion} />
         <AuditoriaSec datos={datos} />
       </div>
@@ -9268,7 +9305,10 @@ export function SeccionPaciente({
   };
   const props = { datos: datosConAgenda, cambiar, onToast, contexto, onSeccion: setSeccionActiva };
   return (
-    <div className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4">
+    <div
+      data-ficha
+      className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4"
+    >
       {/* Fondo visual del módulo Paciente: suave, clínico y alineado al lenguaje violeta del SaaS. */}
       <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-primary/[0.07] blur-3xl" />
       <div className="pointer-events-none absolute -right-24 top-12 size-80 rounded-full bg-primary/[0.055] blur-3xl" />
@@ -9285,7 +9325,9 @@ export function SeccionPaciente({
         }}
       />
 
-      <div className="relative z-10">
+      {/* @container: las grillas de la ficha se acomodan al ancho real de la ficha (que en la
+          carpeta del paciente es más angosta que la pantalla), no al de la ventana. */}
+      <div className="@container relative z-10">
         <Datalists />
         <ResumenPaciente datos={datosConAgenda} contexto={contexto} onSeccion={setSeccionActiva} />
         <div id="seccion-ficha" className="scroll-mt-4" />

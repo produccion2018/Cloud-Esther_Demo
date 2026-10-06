@@ -116,7 +116,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      // use-credentials: las direcciones de cada deploy de Vercel piden inicio de sesión; sin
+      // credenciales el navegador recibe 401 al leer el manifest y no ofrece instalar la app.
+      { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
     ],
     // PWA: se guarda el aviso de instalación de Android/Chrome aunque llegue antes de que la
     // app termine de cargar (si no, el botón «Instalar app» no lo encontraría).

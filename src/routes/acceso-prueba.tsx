@@ -14,7 +14,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/cloud-esther/AppShell";
 import { iniciarSesionAdmin } from "@/lib/admin/api";
 import { guardarSesion } from "@/lib/admin/sesion";
@@ -114,6 +114,12 @@ function AccesoPrueba() {
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanId>("avanzada");
   const [guiaInstalar, setGuiaInstalar] = useState(false);
+  const [inseguro, setInseguro] = useState(false);
+  const [origen, setOrigen] = useState("");
+  useEffect(() => {
+    setInseguro(!window.isSecureContext);
+    setOrigen(window.location.origin);
+  }, []);
   const app = useInstalarApp();
 
   const entrar = async (perfil: Perfil["id"]) => {
@@ -371,10 +377,18 @@ function AccesoPrueba() {
                   <p className="mt-1 text-xs text-white/80">{texto}</p>
                 </div>
               ))}
-              <p className="text-[11px] text-white/65 sm:col-span-3">
-                La instalación se habilita en la dirección publicada con https (por ejemplo, la de
-                Vercel). En la PC de desarrollo (npm run dev) el navegador no ofrece instalarla.
-              </p>
+              {inseguro ? (
+                <p className="rounded-xl bg-amber-300/20 px-3 py-2 text-xs font-semibold text-[#fef3c7] ring-1 ring-amber-200/40 sm:col-span-3">
+                  Estás entrando por una dirección sin https ({origen}). Android, iPhone y la PC
+                  solo permiten instalar la app desde la dirección publicada con https (por ejemplo,
+                  la de Vercel). Abrila desde ahí y vas a ver la opción de instalar.
+                </p>
+              ) : (
+                <p className="text-[11px] text-white/65 sm:col-span-3">
+                  Si el navegador no muestra la opción, recargá la página una vez: la app queda
+                  lista para instalar después de la primera visita.
+                </p>
+              )}
             </div>
           )}
         </section>

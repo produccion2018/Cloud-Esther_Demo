@@ -117,7 +117,7 @@ function formatearFecha(iso: string) {
   return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
 }
 function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 function hace(iso: string) {
   const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);

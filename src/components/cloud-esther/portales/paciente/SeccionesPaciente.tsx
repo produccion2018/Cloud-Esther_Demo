@@ -33,7 +33,7 @@ import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
    vencimientos y comprobantes), Soporte y ayuda, e Historial del paciente. Usan los mismos datos
    de la clínica (cuenta corriente, presupuestos, agenda, carpeta y Comunicación), por empresa. */
 
-const ars = (n: number) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
+const ars = (n: number) => `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 const fecha = (iso: string) =>
   iso
     ? new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("es-AR", {

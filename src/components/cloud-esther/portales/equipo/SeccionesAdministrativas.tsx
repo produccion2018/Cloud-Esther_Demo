@@ -34,7 +34,7 @@ import { KpiPortal, PestanasPortal, TarjetaPortal } from "../PortalShell";
    comisiones de profesionales y Auditoría de acciones administrativas. Cada una se muestra solo
    si el propietario dio el permiso correspondiente. Datos por empresa. */
 
-const pesos = (n: number) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
+const pesos = (n: number) => `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 const hoyISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

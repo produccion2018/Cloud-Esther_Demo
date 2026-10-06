@@ -905,7 +905,7 @@ function Bandeja({
                   {items.length}
                 </span>
               </p>
-              <ul className="space-y-2">
+              <ul data-movil="1col" className="grid grid-cols-2 gap-2.5 sm:block sm:space-y-2">
                 {items.map((n) => (
                   <TarjetaNotif
                     key={n.id}
@@ -1045,7 +1045,7 @@ function TarjetaNotif({
 
   return (
     <li
-      className={`card-grad group relative flex gap-3 overflow-visible p-3.5 pl-4 transition-all hover:-translate-y-0.5 ${
+      className={`card-grad group relative flex min-w-0 flex-col gap-2 overflow-visible p-3 pl-3.5 transition-all hover:-translate-y-0.5 sm:flex-row sm:gap-3 sm:p-3.5 sm:pl-4 ${
         completada ? "opacity-70" : ""
       }`}
       onClick={() => {
@@ -1055,21 +1055,26 @@ function TarjetaNotif({
       <span
         className={`absolute inset-y-3 left-0 w-1 rounded-r-full ${PRIORIDAD_ESTILO[n.prioridad].franja}`}
       />
-      <span
-        className={`relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br ${CATEGORIA_ESTILO[n.categoria].color}`}
-      >
-        <Icon className="size-4.5" />
-        {!leida && !completada && (
-          <span
-            className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-primary"
-            aria-label="Sin leer"
-          />
-        )}
-      </span>
+      <div className="flex items-center justify-between gap-2 sm:block">
+        <span
+          className={`relative grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br sm:size-10 ${CATEGORIA_ESTILO[n.categoria].color}`}
+        >
+          <Icon className="size-4.5" />
+          {!leida && !completada && (
+            <span
+              className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-primary"
+              aria-label="Sin leer"
+            />
+          )}
+        </span>
+        <span className="truncate text-[10.5px] font-medium text-muted-foreground sm:hidden">
+          {n.origen === "manual" && n.vence ? "" : hace(n.fecha)}
+        </span>
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <p
-            className={`text-sm ${!leida && !completada ? "font-bold" : "font-semibold"} ${completada ? "line-through decoration-muted-foreground/50" : ""}`}
+            className={`line-clamp-3 w-full text-[13px] leading-snug sm:line-clamp-none sm:w-auto sm:text-sm ${!leida && !completada ? "font-bold" : "font-semibold"} ${completada ? "line-through decoration-muted-foreground/50" : ""}`}
           >
             {n.titulo}
           </p>
@@ -1082,8 +1087,10 @@ function TarjetaNotif({
           )}
           {vencida && <Pill clase="bg-destructive/10 text-destructive">Vencida</Pill>}
         </div>
-        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{n.detalle}</p>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+        <p className="mt-1 line-clamp-3 text-[11.5px] leading-[1.45] text-muted-foreground sm:mt-0.5 sm:line-clamp-none sm:text-xs sm:leading-5">
+          {n.detalle}
+        </p>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10.5px] text-muted-foreground sm:text-[11px]">
           <span className="font-medium text-foreground/70">{n.categoria}</span>
           {n.asignado ? (
             <span className="inline-flex items-center gap-1">
@@ -1112,16 +1119,16 @@ function TarjetaNotif({
             <span className="text-emerald-600">Completada {hace(n.estado.completada)}</span>
           )}
           {!completada && !pospuesta && n.origen === "manual" && (
-            <span>Creada por {n.creadaPor}</span>
+            <span className="hidden sm:inline">Creada por {n.creadaPor}</span>
           )}
         </p>
       </div>
 
       <div
-        className="flex shrink-0 flex-col items-end justify-between gap-2"
+        className="mt-auto flex shrink-0 flex-col items-stretch justify-between gap-2 border-t border-primary/10 pt-2 sm:mt-0 sm:items-end sm:border-0 sm:pt-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 max-sm:[&>a]:order-first max-sm:[&>a]:w-full max-sm:[&>a]:justify-center">
           {pospuesta ? (
             <button
               className={BTN_SECUNDARIO}
@@ -1230,7 +1237,7 @@ function TarjetaNotif({
             )}
           </button>
         </div>
-        <span className="text-[10.5px] text-muted-foreground">
+        <span className="hidden text-[10.5px] text-muted-foreground sm:inline">
           {n.origen === "manual" && n.vence ? "" : hace(n.fecha)}
         </span>
       </div>
@@ -1426,7 +1433,7 @@ function Pospuestas({
           texto="Usá el reloj de cada aviso para dejarlo para más tarde."
         />
       ) : (
-        <ul className="space-y-2">
+        <ul data-movil="1col" className="grid grid-cols-2 gap-2.5 sm:block sm:space-y-2">
           {lista.map((n) => (
             <TarjetaNotif
               key={n.id}

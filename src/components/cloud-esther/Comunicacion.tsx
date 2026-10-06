@@ -156,7 +156,7 @@ function iniciales(nombre: string) {
 }
 
 function formatearMonto(n: number) {
-  return `$ ${n.toLocaleString("es-AR")}`;
+  return `$\u00a0${n.toLocaleString("es-AR")}`;
 }
 
 type DatosVariables = Partial<Record<(typeof VARIABLES)[number], string>>;

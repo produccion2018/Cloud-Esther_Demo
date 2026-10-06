@@ -78,7 +78,7 @@ import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 /* ───────────── Utilidades ───────────── */
 
 function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 function num(n: number) {
   return Number.isInteger(n)

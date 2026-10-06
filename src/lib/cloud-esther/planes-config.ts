@@ -128,7 +128,7 @@ export function precioAnual(c: ConfigPlan) {
 }
 
 export function formatearPrecio(n: number | null) {
-  return n === null ? "US$ —" : `US$ ${n.toLocaleString("es-AR")}`;
+  return n === null ? "US$ —" : `US$\u00a0${n.toLocaleString("es-AR")}`;
 }
 
 const miles = (n: number) => n.toLocaleString("es-AR");

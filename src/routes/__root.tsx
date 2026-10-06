@@ -118,6 +118,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
+    // PWA: se guarda el aviso de instalación de Android/Chrome aunque llegue antes de que la
+    // app termine de cargar (si no, el botón «Instalar app» no lo encontraría).
+    scripts: [
+      {
+        children:
+          "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__ceInstalar=e;});",
+      },
+    ],
   }),
 
   shellComponent: RootShell,

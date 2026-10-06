@@ -711,7 +711,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
         />
         {/* En el celular se deja lugar para la barra inferior. */}
-        <main className="relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <main className="panel-clinica relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (

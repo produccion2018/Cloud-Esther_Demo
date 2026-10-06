@@ -1300,7 +1300,7 @@ function formatearFecha(iso: string) {
 }
 
 function formatearMonto(n: number) {
-  return `$ ${n.toLocaleString("es-AR")}`;
+  return `$\u00a0${n.toLocaleString("es-AR")}`;
 }
 
 function formatearTamano(bytes: number) {

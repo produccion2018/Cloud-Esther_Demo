@@ -652,7 +652,7 @@ export function ReportesPortal({
           <>
             <KpiPortal
               titulo="Cobros del mes"
-              valor={`$ ${cobrosMes.reduce((a, m) => a + m.monto, 0).toLocaleString("es-AR")}`}
+              valor={`$\u00a0${cobrosMes.reduce((a, m) => a + m.monto, 0).toLocaleString("es-AR")}`}
               detalle={`${cobrosMes.length} pagos`}
               icon={BarChart3}
               tono="azul"

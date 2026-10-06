@@ -269,7 +269,7 @@ export function DesempenoEquipo() {
         />
         <Resumen
           label="Producción estimada"
-          valor={`$ ${totalProd.toLocaleString("es-AR")}`}
+          valor={`$\u00a0${totalProd.toLocaleString("es-AR")}`}
           icon={Trophy}
         />
       </div>
@@ -300,7 +300,7 @@ export function DesempenoEquipo() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-base font-bold">$ {f.produccion.toLocaleString("es-AR")}</p>
+                  <p className="whitespace-nowrap text-base font-bold">{`$\u00a0${f.produccion.toLocaleString("es-AR")}`}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {f.pctComision
                       ? `Comisión ${f.pctComision.toFixed(0)}%: $ ${f.comision.toLocaleString("es-AR")}`

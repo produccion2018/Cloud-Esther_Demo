@@ -49,7 +49,7 @@ export function diasHasta(diaISO: string) {
 }
 
 export function precio(n: number | null) {
-  return n === null ? "US$ —" : `US$ ${miles(n)}`;
+  return n === null ? "US$ —" : `US$\u00a0${miles(n)}`;
 }
 
 export function precioAnual(p: Pick<PlanConfig, "precioMensual" | "descuentoAnual">) {

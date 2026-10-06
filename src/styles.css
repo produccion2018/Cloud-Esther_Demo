@@ -1607,3 +1607,109 @@ label {
     height: 1.15rem;
   }
 }
+
+/* ───────── Panel de la clínica en celular: tarjetas de a dos ─────────
+   En pantallas chicas, las grillas de tarjetas que en tablet/PC ya muestran varias columnas
+   pasan de una columna interminable a 2 + 2. No afecta formularios, tablas ni gráficos, y
+   cualquier grilla puede quedar en una columna con data-movil="1col". Tablet y PC no cambian. */
+@media (max-width: 639.98px) {
+  .panel-clinica
+    .grid:is([class*="sm:grid-cols-"], [class*="md:grid-cols-"]):not(
+      [class~="grid-cols-2"],
+      [class~="grid-cols-3"],
+      [class~="grid-cols-4"],
+      [data-movil="1col"]
+    ):has(> :is([class*="rounded-"], .card-grad), > li > :is([class*="rounded-"], .card-grad)):not(
+      :has(input, select, textarea, table, canvas, .recharts-wrapper, [data-movil="1col"])
+    ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  /* Dentro de esas tarjetas: nada se sale ni se corta. */
+  .panel-clinica .grid > *,
+  .panel-clinica .grid > li > * {
+    min-width: 0;
+  }
+  .panel-clinica
+    :is(
+      .grid > :is([class*="rounded-"], .card-grad),
+      .grid > li > :is([class*="rounded-"], .card-grad)
+    ) {
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  /* Títulos en mayúscula de las tarjetas: menos separación entre letras para que no se corten. */
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    .uppercase {
+    letter-spacing: 0.04em;
+  }
+  /* Filas de acciones dentro de tarjetas angostas: bajan de renglón en vez de salirse. */
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    .flex:has(> button, > a) {
+    flex-wrap: wrap;
+  }
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    :is(button, a) {
+    max-width: 100%;
+  }
+  /* Cifras grandes más compactas para que entren completas en media pantalla. */
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    :is(.text-3xl, .text-2xl) {
+    font-size: clamp(1rem, 4.6vw, 1.5rem);
+    line-height: 1.2;
+  }
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    .text-xl {
+    font-size: clamp(1rem, 4.6vw, 1.25rem);
+  }
+  .panel-clinica
+    :is(.grid > :is([class*="rounded-"], .card-grad), .grid > li > [class*="rounded-"])
+    :is(
+      [class*="text-[24px]"],
+      [class*="text-[26px]"],
+      [class*="text-[27px]"],
+      [class*="text-[28px]"],
+      [class*="text-[30px]"],
+      [class*="text-[32px]"]
+    ) {
+    font-size: clamp(0.95rem, 4.2vw, 1.5rem);
+    line-height: 1.15;
+  }
+  /* Tarjeta de indicador (título + ícono + cifra): el ícono pasa a la esquina y la cifra usa
+     todo el ancho, así el importe se ve completo ($ 1.284.000) en media pantalla. */
+  .panel-clinica
+    .grid
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between {
+    display: block;
+  }
+  .panel-clinica
+    .grid
+    > :is([class*="rounded-"], .card-grad):has(> .relative.flex.items-start.justify-between) {
+    padding: 0.875rem;
+  }
+  .panel-clinica
+    .grid
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between
+    > :is(span, div).shrink-0:last-child {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+  .panel-clinica
+    .grid
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between
+    > .min-w-0
+    > :first-child {
+    padding-right: 1.875rem;
+  }
+}

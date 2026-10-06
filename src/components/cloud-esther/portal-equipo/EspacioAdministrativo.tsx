@@ -66,7 +66,7 @@ const MEDIOS = ["Efectivo", "Transferencia", "Tarjeta de débito", "Tarjeta de c
 const INPUT =
   "h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-base outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10 sm:h-10 sm:text-sm";
 
-const pesos = (n: number) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
+const pesos = (n: number) => `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 const nombreCompleto = (p: Paciente) => `${p.nombre} ${p.apellido}`.trim();
 
 function hoyISO(offset = 0) {

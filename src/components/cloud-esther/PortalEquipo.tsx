@@ -1809,7 +1809,7 @@ function FichaPaciente({
           <p className="text-xs text-muted-foreground">
             Saldo de la cuenta:{" "}
             <b className={saldo > 0 ? "text-destructive" : "text-emerald-600"}>
-              {saldo > 0 ? `$ ${saldo.toLocaleString("es-AR")}` : "al día"}
+              {saldo > 0 ? `$\u00a0${saldo.toLocaleString("es-AR")}` : "al día"}
             </b>
           </p>
         </div>
@@ -1911,7 +1911,7 @@ function FichaPaciente({
           }}
         >
           <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-xs">
-            Saldo actual: <b>{saldo > 0 ? `$ ${saldo.toLocaleString("es-AR")}` : "al día"}</b>
+            Saldo actual: <b>{saldo > 0 ? `$\u00a0${saldo.toLocaleString("es-AR")}` : "al día"}</b>
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Monto">

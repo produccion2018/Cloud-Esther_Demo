@@ -28,6 +28,7 @@ import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { guardarSesionPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { useInstalarApp } from "@/lib/pwa";
 import { VERSION_APP } from "@/lib/version";
+import { marcarAccesoPrueba } from "@/lib/acceso-prueba";
 
 /* Ubicación: src/routes/acceso-prueba.tsx
    ACCESO DE PRUEBA (solo esta etapa): entrar con un toque a los perfiles de Cloud Esther
@@ -112,11 +113,13 @@ function AccesoPrueba() {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanId>("avanzada");
+  const [guiaInstalar, setGuiaInstalar] = useState(false);
   const app = useInstalarApp();
 
   const entrar = async (perfil: Perfil["id"]) => {
     setError(null);
     setCargando(perfil);
+    marcarAccesoPrueba();
     try {
       if (perfil === "propietario") {
         const sesion = await iniciarSesionAdmin("dueno@cloudesther.com", "Dueno2026!");
@@ -331,25 +334,48 @@ function AccesoPrueba() {
                 </p>
               </div>
             </div>
-            {app.puedeInstalar ? (
+            {!app.instalada && (
               <button
                 type="button"
-                onClick={() => void app.instalar()}
-                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-primary shadow-lg"
+                onClick={() => {
+                  if (app.puedeInstalar) void app.instalar();
+                  else setGuiaInstalar(true);
+                }}
+                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-[#6d28d9] shadow-lg transition hover:-translate-y-0.5"
               >
                 <Download className="size-4" /> Instalar app
               </button>
-            ) : app.ios ? (
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold ring-1 ring-white/25">
-                <Share className="size-4" /> Compartir → Agregar a inicio
-              </span>
-            ) : null}
+            )}
           </div>
-          {!app.instalada && !app.puedeInstalar && !app.ios && (
-            <p className="mt-3 text-[11px] text-white/65">
-              Si no aparece el botón: en Chrome o Edge usá el menú ⋮ → «Instalar Cloud Esther». La
-              instalación necesita la dirección publicada (https).
-            </p>
+          {guiaInstalar && (
+            <div className="mt-4 grid gap-3 rounded-2xl bg-white/10 p-4 text-sm ring-1 ring-white/20 sm:grid-cols-3">
+              {(
+                [
+                  [
+                    Laptop,
+                    "PC (Chrome o Edge)",
+                    "Tocá el ícono de instalar a la derecha de la barra de direcciones, o el menú ⋮ → «Transmitir, guardar y compartir» → «Instalar página como app».",
+                  ],
+                  [
+                    Smartphone,
+                    "Android (Chrome)",
+                    "Menú ⋮ → «Agregar a la pantalla principal» o «Instalar app».",
+                  ],
+                  [Share, "iPhone o iPad (Safari)", "Botón Compartir → «Agregar a inicio»."],
+                ] as const
+              ).map(([Icono, titulo, texto]) => (
+                <div key={titulo} className="rounded-xl bg-white/10 p-3">
+                  <p className="flex items-center gap-2 font-bold">
+                    <Icono className="size-4" /> {titulo}
+                  </p>
+                  <p className="mt-1 text-xs text-white/80">{texto}</p>
+                </div>
+              ))}
+              <p className="text-[11px] text-white/65 sm:col-span-3">
+                La instalación se habilita en la dirección publicada con https (por ejemplo, la de
+                Vercel). En la PC de desarrollo (npm run dev) el navegador no ofrece instalarla.
+              </p>
+            </div>
           )}
         </section>
 

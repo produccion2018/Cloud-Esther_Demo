@@ -1416,9 +1416,11 @@ function PacientesInner() {
 
     a.href = url;
     a.download = "pacientes.csv";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
 
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
     show(
       "Descargando pacientes.csv",

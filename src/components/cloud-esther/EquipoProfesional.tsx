@@ -415,8 +415,10 @@ export function EquipoProfesional() {
     const a = document.createElement("a")
     a.href = url
     a.download = `equipo-${hoyStr}.csv`
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     showToast(`${members.length} integrantes exportados`)
   }
 

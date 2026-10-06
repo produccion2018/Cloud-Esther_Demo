@@ -63,6 +63,7 @@ import {
   PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -2904,8 +2905,7 @@ function imprimirHistoria(datos: Registros, paciente: string) {
   <h2>Notas clínicas</h2>${notas || "<p class='meta'>Sin notas clínicas.</p>"}
   <h2>Evoluciones</h2>${evoluciones || "<p class='meta'>Sin evoluciones.</p>"}
   <script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`historia-clinica-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
@@ -3370,8 +3370,7 @@ function imprimirPlanTratamiento(lista: TratamientoPaciente[], paciente: string)
   <tbody>${filas}</tbody><tfoot><tr><td colspan="5">Total estimado</td><td class="n">${escapar(formatearMonto(total))}</td></tr></tfoot></table>
   <p class="meta" style="margin-top:12px">Los valores y la cantidad de sesiones son estimados y pueden cambiar según la evolución clínica.</p>
   <div class="firma"><p>Firma del profesional</p><p>Conformidad del paciente</p></div><script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`plan-de-tratamiento-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
@@ -4553,34 +4552,9 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
 }
 
 /* TODO backend: reemplazar por GET /pacientes/:id/recetas/:recetaId/pdf (PDF firmado digitalmente).
-   Mientras tanto se abre el diálogo de impresión del navegador (opción "Guardar como PDF"). */
+   Mientras tanto se genera y descarga un PDF en el navegador. */
 function imprimirReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  const win = iframe.contentWindow;
-  const doc = win?.document;
-  if (!win || !doc) {
-    iframe.remove();
-    return;
-  }
-  doc.open();
-  doc.write(htmlReceta(r, contexto));
-  doc.close();
-
-  const limpiar = () => iframe.remove();
-  win.onafterprint = limpiar;
-  window.setTimeout(() => {
-    win.focus();
-    win.print();
-  }, 250);
-  window.setTimeout(limpiar, 120000);
+  void descargarPDF(htmlReceta(r, contexto), `receta-${r.numero}`);
 }
 
 function RecetaVisor({
@@ -4692,7 +4666,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
   const descargar = (r: RecetaPaciente) => {
     imprimirReceta(r, contexto);
-    onToast(`${r.numero}: elegí "Guardar como PDF" para descargarla`);
+    onToast(`${r.numero}: descargando la receta en PDF`);
   };
 
   return (
@@ -8173,8 +8147,7 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
   ${fila("Laboratorio", t.proveedor)}${fila("Profesional", t.profesional ?? "")}${fila("Fecha de envío", formatearFecha(t.fechaEnvio))}
   ${fila("Entrega estimada", t.fechaEntregaEstimada ? formatearFecha(t.fechaEntregaEstimada) : "")}${fila("Especificaciones", t.notas)}</table>
   <p class="firma">Firma y sello del profesional</p><script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`orden-de-laboratorio-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;

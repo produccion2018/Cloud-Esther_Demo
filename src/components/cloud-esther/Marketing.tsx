@@ -849,8 +849,10 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `leads-${hoyISO()}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     ctx.onToast(`${lista.length} leads exportados`);
   };
 

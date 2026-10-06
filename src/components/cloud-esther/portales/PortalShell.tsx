@@ -4,6 +4,7 @@ import {
   Columns2,
   LogOut,
   Menu,
+  Repeat,
   Moon,
   MoreHorizontal,
   PanelLeftClose,
@@ -16,6 +17,7 @@ import type { LucideIcon } from "lucide-react";
 import { BrandMark } from "@/components/cloud-esther/AppShell";
 import type { ModoLateral, PreferenciasPortal } from "./preferencias";
 import { VERSION_APP } from "@/lib/version";
+import { vieneDeAccesoPrueba } from "@/lib/acceso-prueba";
 
 /* Ubicación: src/components/cloud-esther/portales/PortalShell.tsx
    Marco común de los portales del Plan 4 (paciente, profesional y administrativo), con el ADN
@@ -78,6 +80,8 @@ export function PortalShell({
   principales?: string[];
   children: ReactNode;
 }) {
+  const [deAccesoPrueba, setDeAccesoPrueba] = useState(false);
+  useEffect(() => setDeAccesoPrueba(vieneDeAccesoPrueba()), []);
   const [hoja, setHoja] = useState(false);
   const [menuVista, setMenuVista] = useState(false);
   const vistaRef = useRef<HTMLDivElement>(null);
@@ -236,6 +240,16 @@ export function PortalShell({
           <LogOut className="size-3.5" />
           {!modoCompacto && salirLabel}
         </button>
+        {deAccesoPrueba && (
+          <a
+            href="/acceso-prueba"
+            title={modoCompacto ? "Cambiar de portal" : undefined}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary/10 to-fuchsia-500/10 px-3 py-2 text-xs font-semibold text-primary transition hover:from-primary/20 hover:to-fuchsia-500/20"
+          >
+            <Repeat className="size-3.5" />
+            {!modoCompacto && "Cambiar de portal"}
+          </a>
+        )}
         {!modoCompacto && (
           <p className="mt-2 text-center text-[10px] text-sidebar-foreground/45">
             Versión {VERSION_APP}

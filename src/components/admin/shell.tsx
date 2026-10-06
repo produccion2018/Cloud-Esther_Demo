@@ -40,6 +40,7 @@ import { cerrarSesionAdmin, useSesionAdmin } from "@/lib/admin/sesion";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useTablasApilables } from "@/lib/tablas-movil";
 import { cn } from "@/lib/utils";
+import { volverSiEsPrueba } from "@/lib/acceso-prueba";
 
 // El acceso por rol de cada ítem se define en role.tsx (sectionAccess).
 type NavItem = { to: string; label: string; icon: LucideIcon };
@@ -252,7 +253,7 @@ function TarjetaUsuario() {
           onClick={() => {
             void registrarSalida("Manual").finally(() => {
               cerrarSesionAdmin();
-              void navigate({ to: "/admin/login" });
+              if (!volverSiEsPrueba()) void navigate({ to: "/admin/login" });
             });
           }}
           className="grid h-8 w-8 place-items-center rounded-lg text-sidebar-foreground/60 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"

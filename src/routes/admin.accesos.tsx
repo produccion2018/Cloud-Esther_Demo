@@ -6,6 +6,7 @@ import { Cargando, Seccion } from "@/components/admin/bits";
 import { RestrictedView } from "@/components/admin/restricted";
 import {
   ROLES,
+  ROLES_ASIGNABLES,
   canAccess,
   roleDescription,
   roleLabel,
@@ -148,12 +149,12 @@ function AccessPage() {
                         <select
                           className={SELECT}
                           value={a.rol}
-                          disabled={yo || cambiar.isPending}
+                          disabled={yo || a.rol === "owner" || cambiar.isPending}
                           onChange={(e) =>
                             cambiar.mutate({ id: a.id, c: { rol: e.target.value as AdminRole } })
                           }
                         >
-                          {ROLES.map((r) => (
+                          {(a.rol === "owner" ? ROLES : ROLES_ASIGNABLES).map((r) => (
                             <option key={r} value={r}>
                               {roleLabel[r]}
                             </option>
@@ -239,6 +240,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
   const [rol, setRol] = useState<AdminRole>("customer-care");
   const [error, setError] = useState<string | null>(null);
   const [clave, setClave] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState(false);
   const invitar = useAccion(invitarAdmin, ["equipo"], (d) => `Acceso creado para ${d.nombre}`);
 
   const cerrar = () => {
@@ -247,6 +249,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
     setRol("customer-care");
     setError(null);
     setClave(null);
+    setEnviado(false);
     onCerrar();
   };
 
@@ -255,7 +258,15 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
     if (!nombre.trim()) return setError("Escribí el nombre.");
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError("Escribí un correo válido.");
     setError(null);
-    invitar.mutate({ nombre, email, rol }, { onSuccess: (r) => setClave(r.clavePrueba ?? null) });
+    invitar.mutate(
+      { nombre, email, rol },
+      {
+        onSuccess: (r) => {
+          setClave(r.clavePrueba ?? null);
+          setEnviado(true);
+        },
+      },
+    );
   };
 
   return (
@@ -267,7 +278,20 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
             La persona recibe un correo para crear su contraseña. Elegí el perfil según su trabajo.
           </DialogDescription>
         </DialogHeader>
-        {clave ? (
+        {enviado && !clave ? (
+          <div className="space-y-3 text-sm">
+            <p className="rounded-xl bg-success/10 px-3 py-2 font-semibold text-success">
+              Acceso creado. Se envió el correo de invitación.
+            </p>
+            <p className="text-muted-foreground">
+              La persona elige su propia contraseña con el enlace del correo (vale 72 horas y se usa
+              una sola vez). Mientras no haya dominio propio, el correo te llega a vos: reenviáselo.
+            </p>
+            <DialogFooter>
+              <Button onClick={cerrar}>Listo</Button>
+            </DialogFooter>
+          </div>
+        ) : clave ? (
           <div className="space-y-3 text-sm">
             <p className="rounded-xl bg-success/10 px-3 py-2 font-semibold text-success">
               Acceso creado.
@@ -308,7 +332,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
             <div className="space-y-2">
               <Label>Perfil</Label>
               <div className="grid gap-2">
-                {ROLES.map((r) => (
+                {ROLES_ASIGNABLES.map((r) => (
                   <label
                     key={r}
                     className={cn(

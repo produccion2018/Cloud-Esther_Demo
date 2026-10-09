@@ -14,7 +14,7 @@ export const roleLabel: Record<AdminRole, string> = {
 
 export const roleDescription: Record<AdminRole, string> = {
   owner: "Acceso total: negocio, importes, planes y precios, equipo y configuración.",
-  partner: "Seguimiento del negocio: clínicas, demos, pagos (sin importes) e IA. Ve los planes.",
+  partner: "Acceso total, igual que el Dueño: negocio, importes, planes y precios, equipo y configuración.",
   support: "Técnico en sistemas / desarrollo: tickets, clínicas, consumo de IA y registros.",
   "customer-care": "Atención y seguimiento: demos para contactar, clínicas, pagos y tickets.",
 };
@@ -27,6 +27,12 @@ export const roleInitials: Record<AdminRole, string> = {
 };
 
 export const ROLES: AdminRole[] = ["owner", "partner", "support", "customer-care"];
+
+/** Roles que se pueden dar desde "Equipo y accesos" (el Dueño se crea una sola vez, en el servidor). */
+export const ROLES_ASIGNABLES: AdminRole[] = ["partner", "support", "customer-care"];
+
+/** Dueño y Socio ven y administran TODO el panel, sin restricciones (decisión del 9 oct). */
+export const accesoTotal = (r: AdminRole) => r === "owner" || r === "partner";
 
 /**
  * Qué roles ven cada sección del panel.
@@ -50,7 +56,7 @@ export const sectionAccess: Record<string, AdminRole[]> = {
   "/admin/auditoria": ["owner", "partner", "support"],
   "/admin/notificaciones": ROLES,
   "/admin/cuenta": ROLES,
-  "/admin/accesos": ["owner"],
+  "/admin/accesos": ["owner", "partner"],
 };
 
 export function canAccess(role: AdminRole, path: string): boolean {
@@ -60,18 +66,18 @@ export function canAccess(role: AdminRole, path: string): boolean {
 
 /** Permisos finos dentro de las secciones. */
 export const permisos = {
-  verImportes: (r: AdminRole) => r === "owner",
-  editarPlanes: (r: AdminRole) => r === "owner",
-  /** Habilitar países y cambiar sus datos fiscales: solo el Dueño. */
-  editarPaises: (r: AdminRole) => r === "owner",
+  verImportes: (r: AdminRole) => accesoTotal(r),
+  editarPlanes: (r: AdminRole) => accesoTotal(r),
+  /** Habilitar países y cambiar sus datos fiscales: Dueño y Socio. */
+  editarPaises: (r: AdminRole) => accesoTotal(r),
   /** Límites del período de prueba (duración, espera, cuentas sin límite). */
-  configurarDemo: (r: AdminRole) => r === "owner",
+  configurarDemo: (r: AdminRole) => accesoTotal(r),
   gestionarDemos: (r: AdminRole) => r !== "support",
   /** Sueldos e importes de nómina: solo Dueño y Socio. */
-  verSueldos: (r: AdminRole) => r === "owner" || r === "partner",
-  gestionarTickets: (r: AdminRole) => r === "owner" || r === "support" || r === "customer-care",
+  verSueldos: (r: AdminRole) => accesoTotal(r),
+  gestionarTickets: (r: AdminRole) => accesoTotal(r) || r === "support" || r === "customer-care",
   /** Atención a clínicas (secretaría de Cloud Esther): registrar y gestionar casos. */
-  gestionarAtencion: (r: AdminRole) => r === "owner" || r === "customer-care",
+  gestionarAtencion: (r: AdminRole) => accesoTotal(r) || r === "customer-care",
 };
 
 const RoleContext = createContext<{

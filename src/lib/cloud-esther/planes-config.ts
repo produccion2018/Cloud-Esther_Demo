@@ -14,6 +14,8 @@ export type ModuloOdontograma = "2d" | "3d";
 export type ConfigPlan = {
   /** Precio mensual en US$. null = todavía sin definir (se muestra «US$ —»). */
   precioMensual: number | null;
+  /** Monto inicial en US$: se cobra UNA SOLA VEZ al contratar. null = sin definir (no se muestra). */
+  precioInicial: number | null;
   /** Descuento de la modalidad anual (0,15 = 15 %). */
   descuentoAnual: number;
   /** Límites. Infinity = SIN LÍMITE (el backend lo manda como null). */
@@ -27,6 +29,7 @@ export type ConfigPlan = {
 export const CONFIG_PLANES_INICIAL: Record<PlanId, ConfigPlan> = {
   inicial: {
     precioMensual: null,
+    precioInicial: null,
     descuentoAnual: 0.15,
     sucursales: 1,
     usuariosInternos: 5,
@@ -35,6 +38,7 @@ export const CONFIG_PLANES_INICIAL: Record<PlanId, ConfigPlan> = {
   },
   profesional: {
     precioMensual: null,
+    precioInicial: null,
     descuentoAnual: 0.15,
     sucursales: 3,
     usuariosInternos: 15,
@@ -43,6 +47,7 @@ export const CONFIG_PLANES_INICIAL: Record<PlanId, ConfigPlan> = {
   },
   avanzada: {
     precioMensual: null,
+    precioInicial: null,
     descuentoAnual: 0.15,
     sucursales: 6,
     usuariosInternos: 40,
@@ -51,6 +56,7 @@ export const CONFIG_PLANES_INICIAL: Record<PlanId, ConfigPlan> = {
   },
   grupo: {
     precioMensual: null,
+    precioInicial: null,
     descuentoAnual: 0.15,
     sucursales: 20,
     usuariosInternos: 150,
@@ -72,6 +78,7 @@ const IDS: PlanId[] = ["inicial", "profesional", "avanzada", "grupo"];
 type PlanServidor = {
   id: PlanId;
   precioMensual: number | null;
+  precioInicial?: number | null;
   descuentoAnual: number;
   sucursales: number | null;
   usuariosInternos: number | null;
@@ -97,6 +104,7 @@ function traerDelServidor() {
         if (!p) continue;
         nuevo[id] = {
           precioMensual: p.precioMensual,
+          precioInicial: p.precioInicial ?? null,
           descuentoAnual: p.descuentoAnual,
           sucursales: sinLimite(p.sucursales),
           usuariosInternos: sinLimite(p.usuariosInternos),

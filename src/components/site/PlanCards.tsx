@@ -159,6 +159,12 @@ export function PlanCard({
             </span>
           </p>
         )}
+        {/* Monto inicial: pago único al contratar (también lo define el panel). */}
+        {!precio && config.precioInicial !== null && (
+          <p className="relative mt-1 text-[12px] font-semibold text-foreground/80">
+            + {formatearPrecio(config.precioInicial)} de monto inicial (pago único al contratar)
+          </p>
+        )}
         {!precio && monto !== null && ciclo === "anual" && (
           <p className="relative mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
             {descuento}% de descuento pagando anual

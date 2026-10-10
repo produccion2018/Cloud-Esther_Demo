@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
-import { leerConfigPlanes, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
+import { leerConfigPlanes, MENSAJE_LIMITE, mostrarLimite } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
@@ -741,7 +741,7 @@ function Barra({ label, actual, limite }: { label: string; actual: number; limit
       <div className="mb-1.5 flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
         <span className={`font-semibold ${alto ? "text-rose-600" : "text-foreground"}`}>
-          {actual} / {limite}
+          {actual} / {mostrarLimite(limite)}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-primary/10">
@@ -1210,7 +1210,9 @@ function ModalDetalle({
         </div>
         <div>
           <span className="text-muted-foreground">Límite de sucursales</span>
-          <div className="mt-0.5 text-sm font-medium text-foreground">{lim.sucursales}</div>
+          <div className="mt-0.5 text-sm font-medium text-foreground">
+            {mostrarLimite(lim.sucursales)}
+          </div>
         </div>
       </div>
 
@@ -1894,7 +1896,9 @@ export function MultiEmpresa() {
             </div>
             <div className="rounded-2xl bg-primary/[0.04] p-4">
               <div className="text-xs text-muted-foreground">Límite del plan {activa.plan}</div>
-              <div className="mt-1 text-xl font-bold text-foreground">{limActiva.sucursales}</div>
+              <div className="mt-1 text-xl font-bold text-foreground">
+                {mostrarLimite(limActiva.sucursales)}
+              </div>
             </div>
             <div className="rounded-2xl bg-primary/[0.04] p-4">
               <div className="text-xs text-muted-foreground">Boxes totales</div>
@@ -1945,7 +1949,7 @@ export function MultiEmpresa() {
           title={`Usuarios — ${activa.nombre}`}
           action={
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              {usuariosActiva.length} / {limActiva.usuarios} del plan
+              {usuariosActiva.length} / {mostrarLimite(limActiva.usuarios)} del plan
             </span>
           }
         >

@@ -58,6 +58,7 @@ import type {
   ConfigDemo,
   CuentaDemo,
   EventoActividad,
+  CambiosPlan,
   PlanConfig,
   PlanId,
   SesionAdmin,
@@ -82,7 +83,8 @@ import type {
    POST   /admin/equipo                  { nombre, email, rol }      → AdminUser (envía invitación)
    PATCH  /admin/equipo/:id              { rol?, activo? }           → AdminUser
    GET    /admin/planes                                              → PlanConfig[]
-   PUT    /admin/planes/:id              Partial<PlanConfig>         → PlanConfig  (lo lee la web y la app)
+   PUT    /admin/planes/:id              CambiosPlan                 → PlanConfig  (lo lee la web y la app)
+   GET    /planes   (PÚBLICA, sin sesión)                            → PlanConfig[] (la web pública)
    GET    /admin/clinicas                                            → Clinica[]
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
    GET    /admin/demos                                               → CuentaDemo[]
@@ -613,24 +615,43 @@ export const nuevoIdLocal = nuevoId;
 
 /* ───────────── Planes ───────────── */
 
-export async function obtenerPlanes(): Promise<PlanConfig[]> {
-  if (CON_BACKEND) return http("GET", "/admin/planes");
-  return copia((await db()).planes);
+/** El backend manda null cuando un plan no tiene límite; en el panel eso es Infinity. */
+const sinLimite = (n: number | null) => (n === null ? Number.POSITIVE_INFINITY : n);
+type PlanApi = Omit<PlanConfig, "sucursales" | "usuariosInternos" | "pacientesActivos"> & {
+  sucursales: number | null;
+  usuariosInternos: number | null;
+  pacientesActivos: number | null;
+};
+function desdeApi(p: PlanApi): PlanConfig {
+  return {
+    ...p,
+    sucursales: sinLimite(p.sucursales),
+    usuariosInternos: sinLimite(p.usuariosInternos),
+    pacientesActivos: sinLimite(p.pacientesActivos),
+  };
 }
 
-export async function guardarPlan(
-  id: PlanId,
-  cambios: Partial<Omit<PlanConfig, "id" | "nombre" | "odontograma">>,
-) {
-  if (CON_BACKEND) return http<PlanConfig>("PUT", `/admin/planes/${id}`, cambios);
+export async function obtenerPlanes(): Promise<PlanConfig[]> {
+  if (CON_BACKEND) return (await http<PlanApi[]>("GET", "/admin/planes")).map(desdeApi);
+  // (al guardarse en el navegador, Infinity queda como null: se vuelve a convertir)
+  return copia((await db()).planes).map((p) => desdeApi(p as PlanApi));
+}
+
+/** Guarda SOLO lo que cambió. Límites: null = sin límite. */
+export async function guardarPlan(id: PlanId, cambios: CambiosPlan): Promise<PlanConfig> {
+  if (CON_BACKEND) return desdeApi(await http<PlanApi>("PUT", `/admin/planes/${id}`, cambios));
   await espera();
   const b = await db();
   const p = b.planes.find((x) => x.id === id);
   if (!p) throw new ErrorApi("Plan no encontrado.");
-  Object.assign(p, cambios);
+  const { sucursales, usuariosInternos, pacientesActivos, ...resto } = cambios;
+  Object.assign(p, resto);
+  if (sucursales !== undefined) p.sucursales = sinLimite(sucursales);
+  if (usuariosInternos !== undefined) p.usuariosInternos = sinLimite(usuariosInternos);
+  if (pacientesActivos !== undefined) p.pacientesActivos = sinLimite(pacientesActivos);
   guardar();
   await registrar(`Actualizó el plan ${p.nombre}`, "plan");
-  return p;
+  return desdeApi(copia(p) as PlanApi);
 }
 
 /* ───────────── Clínicas, demos y operación ───────────── */

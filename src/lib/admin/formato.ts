@@ -19,6 +19,8 @@ export const ETIQUETA_PAGO: Record<EstadoPago, string> = {
 
 const numero = new Intl.NumberFormat("es-AR");
 export const miles = (n: number) => numero.format(n);
+/** Un límite de plan: Infinity = sin límite. */
+export const limiteTexto = (n: number) => (Number.isFinite(n) ? miles(n) : "sin límite");
 
 export function fecha(isoTexto: string | null, conHora = false) {
   if (!isoTexto) return "—";

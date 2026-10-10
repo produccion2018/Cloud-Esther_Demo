@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { guardarPlan } from "@/lib/admin/api";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
-import { miles, precio, precioAnual } from "@/lib/admin/formato";
-import type { PlanConfig } from "@/lib/admin/tipos";
+import { limiteTexto, precio, precioAnual } from "@/lib/admin/formato";
+import type { CambiosPlan, PlanConfig } from "@/lib/admin/tipos";
 
 export const Route = createFileRoute("/admin/planes")({
   head: () => ({
@@ -40,7 +40,8 @@ function PlanesPage() {
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p className="text-foreground/85">
           El <b>monto inicial</b> se cobra una sola vez al contratar; el <b>precio mensual</b> es el
-          recurrente. Mientras un plan no tenga precio, no se muestra en la web. El precio anual se
+          recurrente. Mientras un plan no tenga precio, no se muestra en la web. En los límites,{" "}
+          <b>dejar la caja vacía = sin límite</b>. El precio anual se
           calcula solo: <b>precio mensual × 12 × (1 − descuento)</b>. El odontograma de cada plan es
           una regla fija: <b>Start y Pro usan el 2D · Plus y Enterprise usan el 3D</b>.
           {!editable && " Tu perfil puede ver los planes; los cambia el Dueño."}
@@ -53,7 +54,9 @@ function PlanesPage() {
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {planes.map((p) => (
             <TarjetaPlan
-              key={p.id}
+              // Si cambian los datos guardados, la tarjeta se vuelve a armar con ellos:
+              // lo que ves después de "Guardar" es lo que quedó guardado de verdad.
+              key={`${p.id}:${JSON.stringify(p)}`}
               plan={p}
               editable={editable}
               clinicas={(clinicas ?? []).filter((c) => c.plan === p.id).length}
@@ -65,6 +68,26 @@ function PlanesPage() {
   );
 }
 
+/** Texto de una caja → importe con hasta 2 decimales. "" = sin definir. NaN = inválido. */
+function leerImporte(v: string): number | null {
+  const t = v.trim();
+  if (t === "") return null;
+  const n = Number(t.replace(",", "."));
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : Number.NaN;
+}
+
+/** Texto de una caja → límite entero. "" = sin límite (null). NaN = inválido. */
+function leerLimite(v: string): number | null {
+  const t = v.trim();
+  if (t === "") return null;
+  const n = Number(t.replace(",", "."));
+  return Number.isInteger(n) && n >= 1 ? n : Number.NaN;
+}
+
+const aCaja = (n: number | null | undefined) =>
+  n === null || n === undefined || !Number.isFinite(n) ? "" : String(n);
+const limiteDelPlan = (n: number) => (Number.isFinite(n) ? n : null);
+
 function TarjetaPlan({
   plan,
   editable,
@@ -74,33 +97,64 @@ function TarjetaPlan({
   editable: boolean;
   clinicas: number;
 }) {
-  const [f, setF] = useState({
-    inicial: plan.precioInicial == null ? "" : String(plan.precioInicial),
-    precio: plan.precioMensual === null ? "" : String(plan.precioMensual),
+  const inicialForm = () => ({
+    inicial: aCaja(plan.precioInicial),
+    precio: aCaja(plan.precioMensual),
     descuento: String(Math.round(plan.descuentoAnual * 100)),
-    sucursales: String(plan.sucursales),
-    usuarios: String(plan.usuariosInternos),
-    pacientes: String(plan.pacientesActivos),
+    sucursales: aCaja(plan.sucursales),
+    usuarios: aCaja(plan.usuariosInternos),
+    pacientes: aCaja(plan.pacientesActivos),
   });
+  const [f, setF] = useState(inicialForm);
   const guardar = useAccion(
-    (c: Parameters<typeof guardarPlan>[1]) => guardarPlan(plan.id, c),
+    (c: CambiosPlan) => guardarPlan(plan.id, c),
     ["planes"],
-    `Plan ${plan.nombre} actualizado`,
+    `Plan ${plan.nombre} guardado`,
   );
 
-  const num = (v: string) => Math.max(0, Math.round(Number(v.replace(",", ".")) || 0));
-  const precioMensual = f.precio.trim() === "" ? null : num(f.precio);
-  const precioInicial = f.inicial.trim() === "" ? null : num(f.inicial);
-  const borrador = { precioMensual, descuentoAnual: Math.min(90, num(f.descuento)) / 100 };
-  const cambios =
-    precioMensual !== plan.precioMensual ||
-    precioInicial !== (plan.precioInicial ?? null) ||
-    borrador.descuentoAnual !== plan.descuentoAnual ||
-    num(f.sucursales) !== plan.sucursales ||
-    num(f.usuarios) !== plan.usuariosInternos ||
-    num(f.pacientes) !== plan.pacientesActivos;
+  const precioMensual = leerImporte(f.precio);
+  const precioInicial = leerImporte(f.inicial);
+  const descuentoNum = Number(f.descuento.trim() === "" ? "0" : f.descuento.replace(",", "."));
+  const descuentoAnual =
+    Number.isInteger(descuentoNum) && descuentoNum >= 0 && descuentoNum <= 90
+      ? descuentoNum / 100
+      : Number.NaN;
+  const sucursales = leerLimite(f.sucursales);
+  const usuariosInternos = leerLimite(f.usuarios);
+  const pacientesActivos = leerLimite(f.pacientes);
 
-  const campo = (id: keyof typeof f, label: string, icono: React.ReactNode, sufijo?: string) => (
+  const errores: string[] = [];
+  if (Number.isNaN(precioMensual) || Number.isNaN(precioInicial))
+    errores.push("Los precios tienen que ser números (hasta 2 decimales).");
+  if (Number.isNaN(descuentoAnual)) errores.push("El descuento va de 0 a 90 (número entero).");
+  if ([sucursales, usuariosInternos, pacientesActivos].some((n) => Number.isNaN(n)))
+    errores.push("Los límites son números enteros de 1 en adelante (o vacío = sin límite).");
+
+  // Solo se manda lo que cambió
+  const cambios: CambiosPlan = {};
+  if (precioMensual !== plan.precioMensual) cambios.precioMensual = precioMensual;
+  if (precioInicial !== (plan.precioInicial ?? null)) cambios.precioInicial = precioInicial;
+  if (descuentoAnual !== plan.descuentoAnual) cambios.descuentoAnual = descuentoAnual;
+  if (sucursales !== limiteDelPlan(plan.sucursales)) cambios.sucursales = sucursales;
+  if (usuariosInternos !== limiteDelPlan(plan.usuariosInternos))
+    cambios.usuariosInternos = usuariosInternos;
+  if (pacientesActivos !== limiteDelPlan(plan.pacientesActivos))
+    cambios.pacientesActivos = pacientesActivos;
+  const hayCambios = Object.keys(cambios).length > 0;
+
+  const vista = (n: number | null) => (n === null || Number.isNaN(n) ? null : n);
+  const anual = precioAnual({
+    precioMensual: vista(precioMensual),
+    descuentoAnual: Number.isNaN(descuentoAnual) ? 0 : descuentoAnual,
+  });
+  const lim = (n: number | null) => limiteTexto(vista(n) ?? Number.POSITIVE_INFINITY);
+
+  const campo = (
+    id: keyof typeof f,
+    label: string,
+    icono: React.ReactNode,
+    opciones: { sufijo?: string; vacio?: string } = {},
+  ) => (
     <div className="space-y-1.5">
       <Label htmlFor={`${plan.id}-${id}`} className="flex items-center gap-1.5 text-xs">
         {icono}
@@ -109,16 +163,16 @@ function TarjetaPlan({
       <div className="relative">
         <Input
           id={`${plan.id}-${id}`}
-          inputMode="numeric"
+          inputMode="decimal"
           value={f[id]}
-          disabled={!editable}
-          placeholder={id === "precio" || id === "inicial" ? "Sin definir" : ""}
+          disabled={!editable || guardar.isPending}
+          placeholder={opciones.vacio ?? ""}
           onChange={(e) => setF((x) => ({ ...x, [id]: e.target.value.replace(/[^0-9.,]/g, "") }))}
           className="h-10 rounded-xl pr-12"
         />
-        {sufijo && (
+        {opciones.sufijo && (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-            {sufijo}
+            {opciones.sufijo}
           </span>
         )}
       </div>
@@ -146,21 +200,20 @@ function TarjetaPlan({
           Así se ve en la web
         </p>
         <p className="mt-1 text-2xl font-extrabold tracking-tight text-primary">
-          {precio(precioMensual)}{" "}
+          {precio(vista(precioMensual))}{" "}
           <span className="text-xs font-semibold text-muted-foreground">/ mes</span>
         </p>
         <p className="text-xs font-semibold text-foreground/80">
           Monto inicial (pago único):{" "}
-          {precioInicial === null ? "sin definir" : precio(precioInicial)}
+          {vista(precioInicial) === null ? "sin definir" : precio(vista(precioInicial))}
         </p>
         <p className="text-xs text-muted-foreground">
-          Anual: {precio(precioAnual(borrador))} / año ({Math.round(borrador.descuentoAnual * 100)}%
-          de descuento)
+          Anual: {precio(anual)} / año (
+          {Number.isNaN(descuentoAnual) ? "—" : Math.round(descuentoAnual * 100)}% de descuento)
         </p>
         <p className="mt-2 text-[11px] leading-5 text-foreground/80">
-          {num(f.sucursales) === 1 ? "1 sucursal" : `Hasta ${miles(num(f.sucursales))} sucursales`}{" "}
-          · Hasta {miles(num(f.usuarios))} usuarios internos · Hasta {miles(num(f.pacientes))}{" "}
-          pacientes activos
+          Sucursales: {lim(sucursales)} · Usuarios internos: {lim(usuariosInternos)} · Pacientes
+          activos: {lim(pacientesActivos)}
         </p>
       </div>
 
@@ -170,60 +223,55 @@ function TarjetaPlan({
             "inicial",
             "Monto inicial · pago único al contratar",
             <span className="font-bold text-primary">US$</span>,
+            { vacio: "Sin definir" },
           )}
         </div>
-        {campo("precio", "Precio mensual", <span className="font-bold text-primary">US$</span>)}
-        {campo(
-          "descuento",
-          "Descuento anual",
-          <span className="font-bold text-primary">%</span>,
-          "%",
-        )}
-        {campo("sucursales", "Sucursales", <Building2 className="h-3.5 w-3.5 text-primary" />)}
-        {campo("usuarios", "Usuarios internos", <Users className="h-3.5 w-3.5 text-primary" />)}
+        {campo("precio", "Precio mensual", <span className="font-bold text-primary">US$</span>, {
+          vacio: "Sin definir",
+        })}
+        {campo("descuento", "Descuento anual", <span className="font-bold text-primary">%</span>, {
+          sufijo: "%",
+        })}
+        {campo("sucursales", "Sucursales", <Building2 className="h-3.5 w-3.5 text-primary" />, {
+          vacio: "Sin límite",
+        })}
+        {campo("usuarios", "Usuarios internos", <Users className="h-3.5 w-3.5 text-primary" />, {
+          vacio: "Sin límite",
+        })}
         <div className="col-span-2">
           {campo(
             "pacientes",
             "Pacientes activos",
             <UserRound className="h-3.5 w-3.5 text-primary" />,
+            { vacio: "Sin límite" },
           )}
         </div>
       </div>
+
+      {editable && errores.length > 0 && (
+        <ul className="mt-3 space-y-1 text-xs font-medium text-destructive">
+          {errores.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
+        </ul>
+      )}
 
       {editable && (
         <div className="mt-4 flex justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
-            disabled={!cambios}
-            onClick={() =>
-              setF({
-                inicial: plan.precioInicial == null ? "" : String(plan.precioInicial),
-                precio: plan.precioMensual === null ? "" : String(plan.precioMensual),
-                descuento: String(Math.round(plan.descuentoAnual * 100)),
-                sucursales: String(plan.sucursales),
-                usuarios: String(plan.usuariosInternos),
-                pacientes: String(plan.pacientesActivos),
-              })
-            }
+            disabled={!hayCambios || guardar.isPending}
+            onClick={() => setF(inicialForm())}
           >
             Deshacer
           </Button>
           <Button
             size="sm"
-            disabled={!cambios || guardar.isPending}
-            onClick={() =>
-              guardar.mutate({
-                precioMensual,
-                precioInicial,
-                descuentoAnual: borrador.descuentoAnual,
-                sucursales: Math.max(1, num(f.sucursales)),
-                usuariosInternos: Math.max(1, num(f.usuarios)),
-                pacientesActivos: Math.max(1, num(f.pacientes)),
-              })
-            }
+            disabled={!hayCambios || errores.length > 0 || guardar.isPending}
+            onClick={() => guardar.mutate(cambios)}
           >
-            Guardar cambios
+            {guardar.isPending ? "Guardando…" : "Guardar cambios"}
           </Button>
         </div>
       )}

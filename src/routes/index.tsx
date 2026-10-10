@@ -180,6 +180,20 @@ const CTA_SPARKS = [
   { left: "90%", size: 5, delay: "4.8s", duration: "8s" },
 ];
 
+/* Partículas violetas que suben en el Hero */
+const HERO_SPARKS = [
+  { left: "4%", size: 5, delay: "0s", duration: "10s" },
+  { left: "13%", size: 4, delay: "3.4s", duration: "9s" },
+  { left: "23%", size: 7, delay: "6.2s", duration: "11s" },
+  { left: "36%", size: 4, delay: "1.6s", duration: "9.5s" },
+  { left: "47%", size: 6, delay: "4.8s", duration: "10.5s" },
+  { left: "58%", size: 5, delay: "2.4s", duration: "9s" },
+  { left: "69%", size: 7, delay: "7.4s", duration: "11s" },
+  { left: "79%", size: 4, delay: "0.9s", duration: "10s" },
+  { left: "88%", size: 6, delay: "5.3s", duration: "9.5s" },
+  { left: "95%", size: 5, delay: "8.1s", duration: "10.5s" },
+];
+
 /* =========================================================
    LOGO — DIENTE
 ========================================================= */
@@ -279,6 +293,57 @@ const TITLE_CSS = `
   to { transform: translateX(380%); }
 }
 
+/* ---------- HERO ---------- */
+.ce-hero-spark {
+  opacity: 0;
+  animation: ce-hero-rise 10s linear infinite;
+}
+@keyframes ce-hero-rise {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.75; }
+  85% { opacity: 0.5; }
+  100% { transform: translateY(-560px) scale(1.1); opacity: 0; }
+}
+.ce-hero-ring {
+  animation: ce-hero-ring 4.2s ease-out infinite;
+}
+@keyframes ce-hero-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.ce-line-pulse {
+  animation: ce-line-pulse 4.5s ease-in-out infinite;
+}
+@keyframes ce-line-pulse {
+  0% { transform: translateX(-120%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(900%); opacity: 0; }
+}
+.ce-card-shine {
+  transform: translateX(-160%) skewX(-18deg);
+  animation: ce-card-shine 6s ease-in-out infinite;
+}
+@keyframes ce-card-shine {
+  0% { transform: translateX(-160%) skewX(-18deg); }
+  40%, 100% { transform: translateX(480%) skewX(-18deg); }
+}
+.ce-badge-shine {
+  transform: translateX(-160%) skewX(-18deg);
+  animation: ce-badge-shine 4.5s ease-in-out infinite;
+}
+@keyframes ce-badge-shine {
+  0% { transform: translateX(-160%) skewX(-18deg); }
+  50%, 100% { transform: translateX(520%) skewX(-18deg); }
+}
+.ce-hero-btn-glow {
+  animation: ce-hero-btn-glow 2.6s ease-out infinite;
+}
+@keyframes ce-hero-btn-glow {
+  0% { box-shadow: 0 10px 30px rgba(124, 58, 237, 0.22), 0 0 0 0 rgba(124, 58, 237, 0.45); }
+  100% { box-shadow: 0 10px 30px rgba(124, 58, 237, 0.22), 0 0 0 18px rgba(124, 58, 237, 0); }
+}
+
 /* ---------- CTA FINAL ---------- */
 .ce-cta-bg {
   background-image: linear-gradient(115deg, #4c1d95 0%, #6d28d9 22%, #8b3fe8 42%, #b56bea 62%, #7c3aed 82%, #4c1d95 100%);
@@ -338,6 +403,12 @@ const TITLE_CSS = `
 @media (prefers-reduced-motion: reduce) {
   .ce-title-gradient,
   .ce-bar-shine,
+  .ce-hero-spark,
+  .ce-hero-ring,
+  .ce-line-pulse,
+  .ce-card-shine,
+  .ce-badge-shine,
+  .ce-hero-btn-glow,
   .ce-cta-bg,
   .ce-cta-beam,
   .ce-cta-ring,
@@ -346,6 +417,11 @@ const TITLE_CSS = `
   .ce-cta-text {
     animation: none;
   }
+  .ce-hero-spark,
+  .ce-hero-ring,
+  .ce-line-pulse,
+  .ce-card-shine,
+  .ce-badge-shine,
   .ce-cta-beam,
   .ce-cta-ring,
   .ce-cta-spark {
@@ -447,6 +523,13 @@ function FloatingModule({ module }: { module: (typeof modules)[number] }) {
             background:
               "radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 70%)",
           }}
+        />
+
+        {/* BRILLO QUE RECORRE LA TARJETA */}
+        <span
+          aria-hidden="true"
+          className="ce-card-shine pointer-events-none absolute inset-y-0 left-0 z-10 w-1/3 bg-gradient-to-r from-transparent via-primary/15 to-transparent"
+          style={{ animationDelay: `${(module.delay * 1.6).toFixed(2)}s` }}
         />
 
         <div className="relative">
@@ -582,6 +665,61 @@ function Home() {
             }}
           />
 
+          {/* AURORA EN MOVIMIENTO (se suma a los glows estáticos) */}
+          <motion.div
+            aria-hidden="true"
+            animate={{
+              x: [0, 80, -30, 0],
+              y: [0, 40, 80, 0],
+              scale: [1, 1.18, 0.94, 1],
+            }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute left-[6%] top-[8%] size-[440px] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(167,139,250,0.24) 0%, transparent 70%)",
+            }}
+          />
+
+          <motion.div
+            aria-hidden="true"
+            animate={{
+              x: [0, -70, 30, 0],
+              y: [0, -45, -80, 0],
+              scale: [1, 0.92, 1.15, 1],
+            }}
+            transition={{
+              duration: 21,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute bottom-[2%] right-[8%] size-[460px] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(232,121,249,0.2) 0%, transparent 70%)",
+            }}
+          />
+
+          {/* PARTÍCULAS DE LUZ QUE SUBEN */}
+          {HERO_SPARKS.map((spark, index) => (
+            <span
+              key={index}
+              aria-hidden="true"
+              className="ce-hero-spark pointer-events-none absolute bottom-6 rounded-full bg-primary/70 shadow-[0_0_14px_rgba(124,58,237,0.6)]"
+              style={{
+                left: spark.left,
+                width: spark.size,
+                height: spark.size,
+                animationDelay: spark.delay,
+                animationDuration: spark.duration,
+              }}
+            />
+          ))}
+
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 pb-14 pt-12 lg:min-h-[720px] lg:grid-cols-[0.92fr_1.08fr] lg:gap-3 lg:px-8 lg:pb-12 lg:pt-14">
             {/* =====================================================
                 HERO COPY
@@ -593,7 +731,12 @@ function Home() {
                 transition={{ duration: 0.5, ease: EASE }}
                 className="inline-flex"
               >
-                <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-lavender px-4 py-1.5 text-xs font-semibold text-lavender-foreground shadow-[0_0_22px_rgba(124,58,237,0.12)]">
+                <span className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/20 bg-lavender px-4 py-1.5 text-xs font-semibold text-lavender-foreground shadow-[0_0_22px_rgba(124,58,237,0.12)]">
+                  <span
+                    aria-hidden="true"
+                    className="ce-badge-shine pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                  />
+
                   <motion.span
                     animate={{
                       scale: [0.8, 1.2, 0.8],
@@ -604,9 +747,11 @@ function Home() {
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="size-1.5 rounded-full bg-primary"
+                    className="relative size-1.5 rounded-full bg-primary"
                   />
-                  Software SaaS para clínicas odontológicas
+                  <span className="relative">
+                    Software SaaS para clínicas odontológicas
+                  </span>
                 </span>
               </motion.div>
 
@@ -652,11 +797,21 @@ function Home() {
                 transition={{ duration: 0.5, delay: 0.65 }}
                 className="mt-7 flex flex-col gap-3 sm:flex-row"
               >
-                <div className="rounded-xl shadow-[0_10px_30px_rgba(124,58,237,0.22)]">
+                <div className="ce-hero-btn-glow rounded-xl shadow-[0_10px_30px_rgba(124,58,237,0.22)]">
                   <Button asChild variant="hero" size="xl">
                     <Link to="/registro">
                       Probar demo
-                      <ArrowRight className="size-4" />
+                      <motion.span
+                        animate={{ x: [0, 5, 0] }}
+                        transition={{
+                          duration: 1.4,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="inline-flex"
+                      >
+                        <ArrowRight className="size-4" />
+                      </motion.span>
                     </Link>
                   </Button>
                 </div>
@@ -740,6 +895,11 @@ function Home() {
                 <span className="absolute left-[8%] top-[15%] size-2 rounded-full bg-primary shadow-[0_0_14px_rgba(124,58,237,0.7)]" />
 
                 <span className="absolute bottom-[12%] right-[13%] size-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_14px_rgba(217,70,239,0.65)]" />
+
+                {/* Satélites extra */}
+                <span className="absolute right-[3%] top-[42%] size-1.5 rounded-full bg-violet-400 shadow-[0_0_12px_rgba(139,92,246,0.7)]" />
+
+                <span className="absolute bottom-[3%] left-[38%] size-2 rounded-full bg-purple-300 shadow-[0_0_14px_rgba(192,132,252,0.8)]" />
               </motion.div>
 
               {/* ÓRBITA INTERIOR */}
@@ -753,15 +913,43 @@ function Home() {
                 className="absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/15 sm:size-[390px] lg:size-[430px]"
               >
                 <span className="absolute left-1/2 top-[-3px] size-1.5 -translate-x-1/2 rounded-full bg-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.8)]" />
+
+                <span className="absolute bottom-[-3px] left-[30%] size-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.8)]" />
               </motion.div>
 
-              {/* CONEXIONES */}
+              {/* ÓRBITA PUNTEADA EXTRA (cerca del núcleo) */}
+              <motion.div
+                aria-hidden="true"
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 40,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+                className="pointer-events-none absolute left-1/2 top-1/2 size-[235px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/25 sm:size-[290px] lg:size-[310px]"
+              >
+                <span className="absolute left-[6%] top-[22%] size-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_12px_rgba(217,70,239,0.7)]" />
+              </motion.div>
+
+              {/* CONEXIONES (con pulsos de datos viajando) */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 h-[330px] w-[330px] -translate-x-1/2 -translate-y-1/2 sm:h-[430px] sm:w-[430px]">
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[22deg] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-40" />
+                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[22deg] overflow-hidden bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-40">
+                  <span className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                </div>
 
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -rotate-[35deg] bg-gradient-to-r from-transparent via-purple-400/40 to-transparent opacity-35" />
+                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -rotate-[35deg] overflow-hidden bg-gradient-to-r from-transparent via-purple-400/40 to-transparent opacity-35">
+                  <span
+                    className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-purple-500 to-transparent"
+                    style={{ animationDelay: "1.5s" }}
+                  />
+                </div>
 
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[82deg] bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-40" />
+                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[82deg] overflow-hidden bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-40">
+                  <span
+                    className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent"
+                    style={{ animationDelay: "3s" }}
+                  />
+                </div>
               </div>
 
               {/* NÚCLEO CENTRAL */}
@@ -776,6 +964,17 @@ function Home() {
                 }}
                 className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2"
               >
+                {/* ONDAS DE PULSO DEL NÚCLEO */}
+                <span
+                  aria-hidden="true"
+                  className="ce-hero-ring pointer-events-none absolute inset-0 rounded-full border border-primary/40"
+                />
+                <span
+                  aria-hidden="true"
+                  className="ce-hero-ring pointer-events-none absolute inset-0 rounded-full border border-primary/40"
+                  style={{ animationDelay: "2.1s" }}
+                />
+
                 <motion.div
                   animate={{
                     rotate: [0, 360],
@@ -814,7 +1013,17 @@ function Home() {
                     }}
                     className="relative flex size-[76px] items-center justify-center rounded-full bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 shadow-[0_10px_35px_rgba(124,58,237,0.35)] sm:size-[90px]"
                   >
-                    <ToothIcon className="size-9 text-white sm:size-11" />
+                    <motion.span
+                      animate={{ rotate: [-6, 6, -6] }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      className="inline-flex"
+                    >
+                      <ToothIcon className="size-9 text-white sm:size-11" />
+                    </motion.span>
 
                     <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
                   </motion.div>
@@ -844,7 +1053,10 @@ function Home() {
                 }}
                 className="absolute right-[2%] top-[2%] z-30 hidden rounded-full border border-white/80 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground shadow-[0_10px_30px_rgba(88,28,135,0.1)] sm:flex"
               >
-                <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-400" />
+                <span className="relative mr-1.5 inline-flex size-1.5 self-center">
+                  <span className="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
+                  <span className="relative inline-block size-1.5 rounded-full bg-emerald-400" />
+                </span>
                 Todo conectado
               </motion.div>
             </div>

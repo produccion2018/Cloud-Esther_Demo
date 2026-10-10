@@ -40,11 +40,22 @@ export type PlanConfig = {
   precioInicial?: number | null;
   /** 0,15 = 15 % de descuento pagando anual. */
   descuentoAnual: number;
+  /** Límites del plan. Infinity = SIN LÍMITE (el backend lo manda como null). */
   sucursales: number;
   usuariosInternos: number;
   pacientesActivos: number;
   /** Regla fija del producto: Start/Pro → 2D · Plus/Enterprise → 3D. No se edita. */
   odontograma: "2D" | "3D";
+};
+
+/** Lo que se manda al guardar un plan. En los límites, null = sin límite. */
+export type CambiosPlan = {
+  precioMensual?: number | null;
+  precioInicial?: number | null;
+  descuentoAnual?: number;
+  sucursales?: number | null;
+  usuariosInternos?: number | null;
+  pacientesActivos?: number | null;
 };
 
 /* ───────────── Clínicas clientes ───────────── */

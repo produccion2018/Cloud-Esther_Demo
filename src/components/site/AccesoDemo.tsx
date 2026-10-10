@@ -9,6 +9,7 @@ import {
   solicitarRecuperacion,
   type CredencialDemo,
 } from "@/lib/cloud-esther/auth-store";
+import { DEMO_EN_SERVIDOR, pedirEnlaceDemo } from "@/lib/cloud-esther/demo-servidor";
 
 /* Accesos del login: tarjeta con los datos del demo (solo si en este navegador se creó una
    cuenta de prueba) y la ventana de «¿Olvidaste tu contraseña?». */
@@ -264,6 +265,76 @@ export function RecuperarClave({
           )}
         </AnimatePresence>
       </motion.div>
+    </div>
+  );
+}
+
+/** «Ya tengo un demo»: para entrar desde otra computadora o si se borró el navegador.
+ *  El servidor manda un enlace por correo (siempre responde lo mismo, exista o no el demo). */
+export function YaTengoDemo() {
+  const [abierto, setAbierto] = useState(false);
+  const [email, setEmail] = useState("");
+  const [estado, setEstado] = useState<"form" | "enviando" | "listo">("form");
+  const [error, setError] = useState("");
+  if (!DEMO_EN_SERVIDOR) return null;
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="text-xs font-semibold text-primary hover:underline"
+      >
+        ¿Ya tenés un demo y entrás desde otra computadora?
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-primary/15 bg-lavender/60 p-4">
+      {estado === "listo" ? (
+        <p className="flex items-start gap-2 text-sm">
+          <MailCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span>
+            Si <b>{email}</b> tiene un demo, te llega un enlace para entrar (revisá también spam).
+          </span>
+        </p>
+      ) : (
+        <form
+          className="space-y-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setEstado("enviando");
+            const r = await pedirEnlaceDemo(email);
+            if (r.ok) setEstado("listo");
+            else {
+              setError(r.error ?? "No se pudo enviar.");
+              setEstado("form");
+            }
+          }}
+        >
+          <Label htmlFor="demo-enlace" className="text-xs font-semibold">
+            Te mandamos el enlace de tu demo por correo
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="demo-enlace"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu correo"
+              className="h-10 rounded-xl"
+            />
+            <Button type="submit" variant="hero" className="h-10 rounded-xl" disabled={estado === "enviando"}>
+              {estado === "enviando" ? <Loader2 className="size-4 animate-spin" /> : "Enviar"}
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="text-xs font-medium text-destructive">
+              {error}
+            </p>
+          )}
+        </form>
+      )}
     </div>
   );
 }

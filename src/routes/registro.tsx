@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
-import { registrarCuenta } from "@/lib/cloud-esther/auth-store";
+import { existeCuentaLocal, registrarCuenta } from "@/lib/cloud-esther/auth-store";
+import {
+  DEMO_EN_SERVIDOR,
+  PAISES_DEMO,
+  registrarDemoEnServidor,
+} from "@/lib/cloud-esther/demo-servidor";
 import { formatearPrecio, textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 
 export const Route = createFileRoute("/registro")({
@@ -40,6 +45,7 @@ function Registro() {
   const [error, setError] = useState<string | null>(null);
   const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
   const [entrando, setEntrando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
   const router = useRouter();
   // Apenas se crea la cuenta se descarga el panel, así "Continuar" entra con un solo clic.
   useEffect(() => {
@@ -72,13 +78,38 @@ function Registro() {
                 </div>
 
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
+                    if (enviando) return;
                     const form = new FormData(e.currentTarget);
                     const clinica = String(form.get("clinica") ?? "");
                     const nombre = String(form.get("contacto") ?? "");
                     const email = String(form.get("email") ?? "");
                     const passDemo = String(form.get("pass") ?? "");
+                    const pais = String(form.get("pais") ?? "");
+                    const telefono = String(form.get("telefono") ?? "");
+
+                    if (existeCuentaLocal(email)) {
+                      setError("Ya existe una cuenta con ese correo. Iniciá sesión.");
+                      return;
+                    }
+                    // Con servidor: el demo (y su tiempo) lo crea el servidor primero.
+                    if (DEMO_EN_SERVIDOR) {
+                      setEnviando(true);
+                      const srv = await registrarDemoEnServidor({
+                        nombre,
+                        email,
+                        telefono,
+                        clinica,
+                        pais,
+                        plan: mapSitePlanToPlanId(selected),
+                      });
+                      setEnviando(false);
+                      if (!srv.ok) {
+                        setError(srv.error);
+                        return;
+                      }
+                    }
 
                     const res = registrarCuenta({ clinica, nombre, email, passDemo });
                     if (!res.ok) {
@@ -120,6 +151,39 @@ function Registro() {
                         placeholder="esther.mendez@esther.com"
                       />
                     </div>
+                    {DEMO_EN_SERVIDOR && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="pais">País</Label>
+                          <select
+                            id="pais"
+                            name="pais"
+                            required
+                            defaultValue=""
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          >
+                            <option value="" disabled>
+                              Elegí tu país
+                            </option>
+                            {PAISES_DEMO.map((p) => (
+                              <option key={p.codigo} value={p.codigo}>
+                                {p.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="telefono">Teléfono / WhatsApp (opcional)</Label>
+                          <Input
+                            id="telefono"
+                            name="telefono"
+                            type="tel"
+                            maxLength={40}
+                            placeholder="+54 9 11 5555 5555"
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
                       {/* Demo: la contraseña de prueba queda visible y se recuerda en el login. */}
@@ -173,14 +237,30 @@ function Registro() {
                     </p>
                   )}
 
-                  <Button type="submit" variant="hero" size="xl" className="w-full">
-                    Crear cuenta y entrar al panel <ArrowRight className="size-4" />
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    disabled={enviando}
+                  >
+                    {enviando ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> Creando tu demo…
+                      </>
+                    ) : (
+                      <>
+                        Crear cuenta y entrar al panel <ArrowRight className="size-4" />
+                      </>
+                    )}
                   </Button>
 
                   <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-                    Cada ingreso al demo dura 30 minutos. Para el seguimiento comercial registramos
-                    cuándo entrás, cuánto tiempo usás el demo y qué módulos visitás. No registramos
-                    datos de pacientes.
+                    {DEMO_EN_SERVIDOR
+                      ? "El demo es gratis y tiene un tiempo de prueba; si necesitás más, lo pedís desde el demo."
+                      : "Cada ingreso al demo dura 30 minutos."}{" "}
+                    Para el seguimiento comercial registramos cuándo entrás, cuánto tiempo usás el
+                    demo y qué módulos visitás. No registramos datos de pacientes.
                   </p>
 
                   <p className="text-center text-xs text-muted-foreground">

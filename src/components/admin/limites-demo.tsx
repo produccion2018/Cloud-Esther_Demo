@@ -35,6 +35,118 @@ export function useGuardarConfigDemo() {
 }
 
 export function LimitesDemo() {
+  return CON_BACKEND ? <TiempoDemosNuevos /> : <LimitesDemoLocal />;
+}
+
+/** Con servidor: cada demo tiene su propio reloj (se maneja desde su detalle). Acá solo se
+ *  elige cuánto tiempo recibe cada demo NUEVO y cuántos minutos antes se le avisa. */
+function TiempoDemosNuevos() {
+  const { role } = useRole();
+  const editable = permisos.configurarDemo(role);
+  const { data } = useConfigDemo();
+  const guardar = useGuardarConfigDemo();
+  const [cantidad, setCantidad] = useState("");
+  const [unidad, setUnidad] = useState<"min" | "h" | "d">("min");
+  const [aviso, setAviso] = useState(5);
+  useEffect(() => {
+    if (!data) return;
+    const m = data.minutos;
+    if (m % 1440 === 0) {
+      setCantidad(String(m / 1440));
+      setUnidad("d");
+    } else if (m % 60 === 0) {
+      setCantidad(String(m / 60));
+      setUnidad("h");
+    } else {
+      setCantidad(String(m));
+      setUnidad("min");
+    }
+    setAviso(data.avisoMinutos);
+  }, [data]);
+  if (!data) return null;
+  const factor = unidad === "d" ? 1440 : unidad === "h" ? 60 : 1;
+  const n = Number(cantidad.replace(",", "."));
+  const minutos = Number.isFinite(n) ? Math.round(n * factor) : NaN;
+  const valido = Number.isInteger(minutos) && minutos >= 1 && minutos <= 525_600;
+  const cambiado = valido && (minutos !== data.minutos || aviso !== data.avisoMinutos);
+
+  return (
+    <Seccion
+      titulo="Tiempo de los demos nuevos"
+      descripcion="Cuánto tiempo recibe cada persona que se registra en el demo. A cada demo le podés dar más tiempo (o terminarlo) desde su detalle."
+      acciones={
+        editable && (
+          <Button
+            size="sm"
+            disabled={!cambiado || guardar.isPending}
+            onClick={() =>
+              guardar.mutate({
+                c: { ...data, minutos, avisoMinutos: aviso },
+                accion: "Cambió el tiempo de los demos nuevos",
+              })
+            }
+          >
+            Guardar cambios
+          </Button>
+        )
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1.5">
+          <span className="flex items-center gap-1.5 text-xs font-semibold">
+            <Timer className="h-3.5 w-3.5 text-primary" /> Tiempo inicial de cada demo
+          </span>
+          <div className="flex gap-2">
+            <input
+              className={INPUT}
+              inputMode="decimal"
+              disabled={!editable}
+              value={cantidad}
+              onChange={(e) => setCantidad(e.target.value.replace(/[^0-9.,]/g, ""))}
+            />
+            <select
+              className={INPUT}
+              disabled={!editable}
+              value={unidad}
+              onChange={(e) => setUnidad(e.target.value as "min" | "h" | "d")}
+            >
+              <option value="min">minutos</option>
+              <option value="h">horas</option>
+              <option value="d">días</option>
+            </select>
+          </div>
+          {!valido && (
+            <span className="block text-xs text-destructive">
+              Entre 1 minuto y 1 año (en números enteros de minutos).
+            </span>
+          )}
+        </label>
+        <label className="space-y-1.5">
+          <span className="text-xs font-semibold">Aviso antes de que termine</span>
+          <select
+            className={INPUT}
+            disabled={!editable}
+            value={aviso}
+            onChange={(e) => setAviso(Number(e.target.value))}
+          >
+            {[0, 1, 3, 5, 10, 15, 30, 60].map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? "Sin aviso" : `${m} min antes`}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {!editable && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Solo el Dueño y el Socio pueden cambiar el tiempo de los demos nuevos.
+        </p>
+      )}
+    </Seccion>
+  );
+}
+
+function LimitesDemoLocal() {
   const { role } = useRole();
   const editable = permisos.configurarDemo(role);
   const { data } = useConfigDemo();

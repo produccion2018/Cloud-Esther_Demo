@@ -18,6 +18,9 @@ import { nivelModulo } from "@/lib/cloud-esther/niveles";
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
+// Reloj del demo: solo con servidor (Etapa 3a). Sin servidor no se muestra nada.
+import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/ControlDemo";
+import { DEMO_EN_SERVIDOR } from "@/lib/cloud-esther/demo-servidor";
 import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
 import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
@@ -410,6 +413,7 @@ function PlanFooter() {
         <LogOut className="size-3.5" />
         {planContratado ? "Cerrar sesión" : "Salir del demo"}
       </Link>
+      {DEMO_EN_SERVIDOR && <ContadorDemo />}
       <button
         type="button"
         onClick={() => {
@@ -811,6 +815,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
+      {DEMO_EN_SERVIDOR && <ControlSesionDemo />}
       {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
           blanco debajo aunque el contenido sea largo) y el menú queda fijo al hacer scroll. */}
       <aside

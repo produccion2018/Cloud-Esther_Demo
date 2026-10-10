@@ -59,6 +59,7 @@ import type {
   CuentaDemo,
   EventoActividad,
   CambiosPlan,
+  CambioTiempoDemo,
   PlanConfig,
   PlanId,
   SesionAdmin,
@@ -695,13 +696,26 @@ export async function obtenerDemos(): Promise<CuentaDemo[]> {
   return copia((await db()).demos);
 }
 
+/** Con servidor, la configuración general es: tiempo de cada demo nuevo y aviso antes del cierre.
+ *  (El tiempo de cada demo se maneja uno por uno con su reloj.) */
+type ConfigDemoServidor = { minutosIniciales: number; avisoMinutos: number };
+
 export async function obtenerConfigDemo(): Promise<ConfigDemo> {
-  if (CON_BACKEND) return http("GET", "/admin/demo/config");
+  if (CON_BACKEND) {
+    const c = await http<ConfigDemoServidor>("GET", "/admin/demo/config");
+    return { limiteActivo: true, minutos: c.minutosIniciales, esperaMinutos: 0, avisoMinutos: c.avisoMinutos, exentos: [] };
+  }
   return copia((await db()).configDemo);
 }
 
 export async function guardarConfigDemo(c: ConfigDemo, accion: string) {
-  if (CON_BACKEND) return http<ConfigDemo>("PUT", "/admin/demo/config", c);
+  if (CON_BACKEND) {
+    await http<ConfigDemoServidor>("PUT", "/admin/demo/config", {
+      minutosIniciales: c.minutos,
+      avisoMinutos: c.avisoMinutos,
+    });
+    return c;
+  }
   await espera();
   const b = await db();
   b.configDemo = c;
@@ -718,9 +732,13 @@ export async function guardarConfigDemo(c: ConfigDemo, accion: string) {
 
 export async function actualizarDemo(
   id: string,
-  cambios: Partial<Pick<CuentaDemo, "estado" | "notas" | "responsable">>,
+  cambios: Partial<Pick<CuentaDemo, "estado" | "notas" | "responsable" | "responsableId">>,
 ) {
-  if (CON_BACKEND) return http<CuentaDemo>("PATCH", `/admin/demos/${id}`, cambios);
+  if (CON_BACKEND) {
+    // El servidor identifica al responsable por su id (no por el nombre)
+    const { responsable: _nombre, ...resto } = cambios;
+    return http<CuentaDemo>("PATCH", `/admin/demos/${id}`, resto);
+  }
   await espera();
   const b = await db();
   const d = b.demos.find((x) => x.id === id);
@@ -730,6 +748,25 @@ export async function actualizarDemo(
   if (cambios.estado)
     await registrar(`Marcó la demo de ${d.clinica} como «${cambios.estado}»`, "demo");
   return d;
+}
+
+/** Reloj de un demo (solo con servidor). sumar = darle X más · dejar = que le queden X (0 = terminar). */
+export async function cambiarTiempoDemo(
+  id: string,
+  c: { modo: "sumar" | "dejar"; minutos: number; motivo?: string },
+): Promise<CuentaDemo> {
+  if (!CON_BACKEND) throw new ErrorApi("El reloj de cada demo necesita el servidor conectado.");
+  return http<CuentaDemo>("POST", `/admin/demos/${id}/tiempo`, c);
+}
+
+export async function obtenerHistorialTiempoDemo(id: string): Promise<CambioTiempoDemo[]> {
+  if (!CON_BACKEND) return [];
+  return http<CambioTiempoDemo[]>("GET", `/admin/demos/${id}/tiempo`);
+}
+
+export async function atenderPedidoDemo(id: string, solicitudId: string): Promise<CuentaDemo> {
+  if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
+  return http<CuentaDemo>("PATCH", `/admin/demos/${id}/solicitudes/${solicitudId}`, {});
 }
 
 export async function obtenerActividad(): Promise<EventoActividad[]> {

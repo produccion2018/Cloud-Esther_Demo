@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Clock, Crown, LogIn, MessageSquare, Sparkles, TimerOff, UserPlus } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Crown,
+  Hourglass,
+  LogIn,
+  MessageSquare,
+  Sparkles,
+  TimerOff,
+  UserPlus,
+} from "lucide-react";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import {
   avisoDemoMs,
@@ -17,6 +27,11 @@ import {
   useModoDueno,
   useTiempoDemo,
 } from "@/lib/cloud-esther/demo-seguimiento";
+import {
+  DEMO_EN_SERVIDOR,
+  demoServidorActivo,
+  enviarPedidoDemo,
+} from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/components/cloud-esther/ControlDemo.tsx
    Control del uso del demo (30 minutos por ingreso), con cuenta o sin cuenta:
@@ -60,7 +75,11 @@ export function ContadorDemo() {
             ? "bg-amber-400/20 text-amber-700 dark:text-amber-300"
             : "bg-sidebar-accent/60 text-sidebar-foreground/75"
         }`}
-        title={`Cada ingreso al demo dura ${configDemo().minutos} minutos`}
+        title={
+          sesion && demoServidorActivo(sesion.usuario.email)
+            ? "El tiempo de tu demo lo define el equipo de Cloud Esther"
+            : `Cada ingreso al demo dura ${configDemo().minutos} minutos`
+        }
       >
         <Clock className="size-3.5" />
         Tu demo: {formatearRestante(restante)}
@@ -82,6 +101,9 @@ export function ControlSesionDemo() {
   const [espera, setEspera] = useState<number | null>(null);
   const conCuenta = sesion?.tipo === "demo" && !dueno;
   const sinCuenta = !sesion && !dueno;
+  // Demo controlado por el servidor: al vencer NO se cierra la sesión; se muestra el aviso
+  // hasta que el equipo le dé más tiempo (o contrate un plan).
+  const enServidor = conCuenta && !!sesion && demoServidorActivo(sesion.usuario.email);
 
   // Al entrar: si esta identidad está en período de espera, se muestra el aviso; si no, empieza
   // el ingreso (también para quien recorre el demo sin cuenta).
@@ -109,11 +131,20 @@ export function ControlSesionDemo() {
 
   // Vencimiento.
   useEffect(() => {
+    if (enServidor) return;
     if ((!conCuenta && !sinCuenta) || restante === null || restante > 0) return;
     terminarIngresoDemo("expiracion");
     if (conCuenta) cerrarSesion("Vencida");
     setEspera(esperaDemoHasta(identidadVisitante()));
-  }, [restante, conCuenta, sinCuenta]);
+  }, [restante, conCuenta, sinCuenta, enServidor]);
+
+  // Con servidor, el demo es con registro: así cada demo tiene su reloj y el equipo lo ve.
+  // (Las cuentas creadas antes en este navegador, sin enlace del servidor, también pasan por acá.)
+  if (DEMO_EN_SERVIDOR && !dueno && (sinCuenta || (conCuenta && !enServidor))) {
+    return <RegistroRequerido />;
+  }
+
+  if (enServidor && restante === 0) return <DemoVencidoServidor />;
 
   if (espera) {
     const hora = new Date(espera).toLocaleTimeString("es-AR", {
@@ -194,7 +225,9 @@ export function ControlSesionDemo() {
           <p className="min-w-0 flex-1 text-sm">
             <b>Tu demo termina en {formatearRestante(restante)}.</b>{" "}
             <span className="text-muted-foreground">
-              Después hay una espera para volver a entrar.
+              {enServidor
+                ? "Si necesitás más tiempo, lo vas a poder pedir desde acá."
+                : "Después hay una espera para volver a entrar."}
             </span>
           </p>
           <button type="button" onClick={() => setAvisoVisto(true)} className="btn-ce-outline">
@@ -206,4 +239,124 @@ export function ControlSesionDemo() {
   }
 
   return null;
+}
+
+/** Aviso cuando termina un demo controlado por el servidor: pedir más tiempo o ver planes.
+ *  No borra nada: si el equipo le da más tiempo, el aviso desaparece solo. */
+function DemoVencidoServidor() {
+  const [estado, setEstado] = useState<"inicio" | "enviando" | "pedido" | "error">("inicio");
+  const [error, setError] = useState("");
+  const pedirTiempo = async () => {
+    setEstado("enviando");
+    const r = await enviarPedidoDemo("extension");
+    if (r.ok) setEstado("pedido");
+    else {
+      setError(r.error ?? "No se pudo enviar el pedido.");
+      setEstado("error");
+    }
+  };
+  return (
+    <div
+      className="fixed inset-0 z-[90] grid place-items-center bg-black/55 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="demo-terminado"
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-primary/20 bg-card text-center shadow-2xl">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-pink-400/70" />
+        <div className="p-7">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <TimerOff className="size-6" />
+          </span>
+          <h2 id="demo-terminado" className="mt-4 text-xl font-bold tracking-tight">
+            Terminó el tiempo de tu demo
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Podés pedirle más tiempo al equipo de Cloud Esther o contratar un plan. Lo que cargaste
+            en el demo no se borra.
+          </p>
+          {estado === "pedido" ? (
+            <p className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-sm font-semibold text-success">
+              <CheckCircle2 className="size-4" /> Pedido enviado. Te avisamos cuando tengas más
+              tiempo.
+            </p>
+          ) : null}
+          {estado === "error" ? (
+            <p role="alert" className="mt-5 text-sm font-medium text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="mt-6 grid gap-2">
+            {estado !== "pedido" && (
+              <button
+                type="button"
+                className="btn-ce !h-10"
+                disabled={estado === "enviando"}
+                onClick={() => void pedirTiempo()}
+              >
+                <Hourglass className="size-4" />
+                {estado === "enviando" ? "Enviando…" : "Pedir más tiempo"}
+              </button>
+            )}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link
+                to={"/planes" as never}
+                onClick={() => registrarSolicitudDemo("Contratación")}
+                className="btn-ce-outline !h-10"
+              >
+                <Sparkles className="size-4" />
+                Ver planes y contratar
+              </Link>
+              <Link
+                to={"/formulario" as never}
+                onClick={() => registrarSolicitudDemo("Información comercial")}
+                className="btn-ce-outline !h-10"
+              >
+                <MessageSquare className="size-4" />
+                Pedir información
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Con servidor: para usar el demo hay que registrarse (gratis) o entrar con el enlace del demo. */
+function RegistroRequerido() {
+  return (
+    <div
+      className="fixed inset-0 z-[90] grid place-items-center bg-black/55 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="demo-registro"
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-primary/20 bg-card text-center shadow-2xl">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-pink-400/70" />
+        <div className="p-7">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Sparkles className="size-6" />
+          </span>
+          <h2 id="demo-registro" className="mt-4 text-xl font-bold tracking-tight">
+            Probá Cloud Esther gratis
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Para usar el demo dejanos tus datos: es gratis y entrás enseguida. Si ya tenés un demo,
+            entrá con tu correo.
+          </p>
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            <Link to={"/registro" as never} className="btn-ce !h-10">
+              <UserPlus className="size-4" />
+              Registrarme gratis
+            </Link>
+            <Link to={"/login" as never} className="btn-ce-outline !h-10">
+              <LogIn className="size-4" />
+              Ya tengo un demo
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

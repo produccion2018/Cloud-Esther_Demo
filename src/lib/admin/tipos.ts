@@ -117,8 +117,36 @@ export type CuentaDemo = {
   notas: string;
   /** Persona del equipo que hace el seguimiento. */
   responsable: string | null;
-  /** Pedidos hechos desde el demo (al terminar los 30 minutos o desde los botones). */
-  solicitudes?: { fecha: string; tipo: "Información comercial" | "Contratación" }[];
+  /** Pedidos hechos desde el demo (al terminar el tiempo o desde los botones). */
+  solicitudes?: {
+    fecha: string;
+    tipo: "Información comercial" | "Contratación" | "Más tiempo";
+    /** Con servidor: */
+    id?: string;
+    mensaje?: string;
+    atendida?: boolean;
+  }[];
+  /* ── Reloj del demo (solo con servidor: lo calcula el backend) ── */
+  responsableId?: string | null;
+  inicio?: string; // ISO
+  venceEl?: string; // ISO
+  restanteSegundos?: number;
+  vencido?: boolean;
+  ultimoAcceso?: string | null;
+  pedidosPendientes?: number;
+};
+
+/** Un cambio en el reloj de un demo (historial). */
+export type CambioTiempoDemo = {
+  id: string;
+  fecha: string; // ISO
+  quien: string;
+  /** inicial = al registrarse · sumar = le dieron X más · dejar = que le queden X */
+  modo: "inicial" | "sumar" | "dejar";
+  minutos: number;
+  venciaAntes: string | null;
+  venceDespues: string;
+  motivo: string;
 };
 
 /** Límites del período de prueba. Los maneja el dueño; el SaaS los lee de GET /demo/config. */

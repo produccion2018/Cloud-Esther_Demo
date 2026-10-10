@@ -28,12 +28,13 @@ import {
 import { RestrictedView } from "@/components/admin/restricted";
 import { canAccess, permisos, useRole } from "@/components/admin/role";
 import { LimitesDemo, SinLimiteCuenta } from "@/components/admin/limites-demo";
+import { RelojDemo, duracionTexto } from "@/components/admin/reloj-demo";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { actualizarDemo } from "@/lib/admin/api";
+import { CON_BACKEND, actualizarDemo } from "@/lib/admin/api";
 import { useAccion, useDemos, useEquipo } from "@/lib/admin/consultas";
 import { fecha, haceCuanto, minutosTexto, resumenDemo, type Interes } from "@/lib/admin/formato";
 import type { CuentaDemo, EstadoDemo } from "@/lib/admin/tipos";
@@ -130,7 +131,11 @@ function DemosPage() {
   return (
     <AdminShell
       title="Demos e interesados"
-      description="Quién probó Cloud Esther, cuántas veces entró, cuánto tiempo usó el demo y qué módulos miró. Cada ingreso dura 30 minutos: volver a entrar es una señal de interés."
+      description={
+        CON_BACKEND
+          ? "Quién probó Cloud Esther, cuánto tiempo le queda a cada demo, qué módulos miró y qué pidió. Desde el detalle de cada demo le das más tiempo o lo terminás."
+          : "Quién probó Cloud Esther, cuántas veces entró, cuánto tiempo usó el demo y qué módulos miró. Cada ingreso dura 30 minutos: volver a entrar es una señal de interés."
+      }
     >
       {isLoading ? (
         <Cargando />
@@ -147,7 +152,7 @@ function DemosPage() {
             <KpiCard
               label="Ingresos (30 días)"
               value={String(ingresos30.length)}
-              hint="Cada ingreso dura hasta 30 min"
+              hint={CON_BACKEND ? "Veces que entraron al demo" : "Cada ingreso dura hasta 30 min"}
               icon={<CalendarClock className="h-4 w-4" />}
             />
             <KpiCard
@@ -309,6 +314,13 @@ function DemosPage() {
                           <p className="text-xs text-muted-foreground">
                             {demo.nombre} · {demo.pais}
                           </p>
+                          {(demo.pedidosPendientes ?? 0) > 0 && (
+                            <span className="mt-1 inline-block rounded-full bg-warning/20 px-2 py-0.5 text-[10.5px] font-semibold">
+                              {demo.pedidosPendientes === 1
+                                ? "1 pedido sin atender"
+                                : `${demo.pedidosPendientes} pedidos sin atender`}
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3">
                           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
@@ -335,6 +347,18 @@ function DemosPage() {
                         </td>
                         <td className="px-5 py-3">
                           <EstadoDemoBadge estado={demo.estado} />
+                          {demo.restanteSegundos !== undefined && (
+                            <p
+                              className={cn(
+                                "mt-1 text-[11px] font-semibold",
+                                demo.vencido ? "text-destructive" : "text-success",
+                              )}
+                            >
+                              {demo.vencido
+                                ? "Demo vencido"
+                                : `Le quedan ${duracionTexto(Math.max(1, Math.floor(demo.restanteSegundos / 60)))}`}
+                            </p>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -418,7 +442,7 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
             [
               ["Ingresos", String(r.ingresos)],
               ["Tiempo total", minutosTexto(r.minutos)],
-              ["Usó los 30 min", `${r.expiraciones} veces`],
+              [CON_BACKEND ? "Agotó el tiempo" : "Usó los 30 min", `${r.expiraciones} veces`],
               ["Último ingreso", haceCuanto(r.ultimo)],
             ] as const
           ).map(([l, v]) => (
@@ -473,15 +497,25 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
               <label className="mt-3 block text-xs font-semibold text-muted-foreground">
                 Responsable
                 <select
-                  value={demo.responsable ?? ""}
-                  onChange={(e) => accion.mutate({ responsable: e.target.value || null })}
+                  value={
+                    demo.responsableId ??
+                    (equipo ?? []).find((a) => a.nombre === demo.responsable)?.id ??
+                    ""
+                  }
+                  onChange={(e) => {
+                    const elegido = (equipo ?? []).find((a) => a.id === e.target.value);
+                    accion.mutate({
+                      responsableId: elegido?.id ?? null,
+                      responsable: elegido?.nombre ?? null,
+                    });
+                  }}
                   className={cn(SELECT, "mt-1 w-full")}
                 >
                   <option value="">Sin asignar</option>
                   {(equipo ?? [])
                     .filter((a) => a.activo)
                     .map((a) => (
-                      <option key={a.id} value={a.nombre}>
+                      <option key={a.id} value={a.id}>
                         {a.nombre}
                       </option>
                     ))}
@@ -515,10 +549,14 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
           )}
         </div>
 
-        <SinLimiteCuenta email={demo.email} />
+        {CON_BACKEND ? (
+          <RelojDemo demo={demo} puedeGestionar={puedeGestionar} />
+        ) : (
+          <SinLimiteCuenta email={demo.email} />
+        )}
 
-        {/* Solicitudes */}
-        {(demo.solicitudes ?? []).length > 0 && (
+        {/* Solicitudes (sin servidor; con servidor están en el reloj, con "Marcar atendido") */}
+        {!CON_BACKEND && (demo.solicitudes ?? []).length > 0 && (
           <div>
             <p className="text-sm font-bold">Pidió contacto desde el demo</p>
             <ul className="mt-2 space-y-1.5">

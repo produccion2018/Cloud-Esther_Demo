@@ -12,8 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PublicLayout } from "@/components/site/PublicLayout";
-import { iniciarSesion } from "@/lib/cloud-esther/auth-store";
-import { RecuperarClave, TarjetaDemo, useCredencialesDemo } from "@/components/site/AccesoDemo";
+import { entrarCuentaDemoServidor, iniciarSesion } from "@/lib/cloud-esther/auth-store";
+import {
+  RecuperarClave,
+  TarjetaDemo,
+  YaTengoDemo,
+  useCredencialesDemo,
+} from "@/components/site/AccesoDemo";
+import { entrarConEnlaceDemo } from "@/lib/cloud-esther/demo-servidor";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -48,6 +54,25 @@ function Login() {
     setShowPassword(true);
     setError(null);
   };
+  // Enlace del demo que llegó por correo: /login#demo=<enlace>. Se lee una vez, se borra de la
+  // barra de direcciones y se entra al demo.
+  useEffect(() => {
+    const m = /[#&]demo=([A-Za-z0-9_-]{20,200})/.exec(window.location.hash);
+    if (!m?.[1]) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    void entrarConEnlaceDemo(m[1]).then((r) => {
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
+      entrarCuentaDemoServidor({
+        email: r.estado.email,
+        nombre: r.estado.nombre,
+        clinica: r.estado.clinica,
+      });
+      void navigate({ to: "/demo" });
+    });
+  }, [navigate]);
   // Demo: si hay una cuenta de prueba en este navegador, el ingreso ya viene completo.
   const primeraDemo = demos[0];
   useEffect(() => {
@@ -307,6 +332,10 @@ function Login() {
                     <TarjetaDemo credenciales={demos} onUsar={usarDemo} />
                   </div>
                 )}
+
+                <div className="mt-4">
+                  <YaTengoDemo />
+                </div>
 
                 {/* FORMULARIO */}
                 <form

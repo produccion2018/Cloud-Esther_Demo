@@ -1,4 +1,12 @@
 import { useEffect, useState } from "react";
+import {
+  avisoDemoServidorMs,
+  demoServidorActivo,
+  enviarEventoDemo,
+  enviarPedidoDemo,
+  restanteDemoServidorMs,
+  useEstadoDemoServidor,
+} from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/lib/cloud-esther/demo-seguimiento.ts
 
@@ -100,6 +108,18 @@ function escribir(key: string, value: unknown) {
 const nuevoId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 function enviarAlPanel(evento: EventoDemo) {
+  // Demo controlado por el servidor (Etapa 3a): la actividad va a /demo/eventos y los pedidos
+  // a /demo/solicitudes, con el enlace del demo de esta persona.
+  if (demoServidorActivo(evento.email)) {
+    if (evento.tipo === "ingreso" || evento.tipo === "modulo" || evento.tipo === "plan") {
+      enviarEventoDemo(evento.tipo, evento.detalle);
+    } else if (evento.tipo === "cierre") {
+      enviarEventoDemo("salida");
+    } else if (evento.tipo === "solicitud") {
+      void enviarPedidoDemo(evento.detalle === "Contratación" ? "contratacion" : "informacion");
+    }
+    return;
+  }
   const url = import.meta.env["VITE_PANEL_API_URL"] as string | undefined;
   if (!url || !enNavegador()) return;
   try {
@@ -136,7 +156,8 @@ export function configDemo(): ConfigDemo {
   return { ...CONFIG_DEMO_INICIAL, ...leer<Partial<ConfigDemo>>(KEY_CONFIG, {}) };
 }
 
-export const avisoDemoMs = () => configDemo().avisoMinutos * 60_000;
+export const avisoDemoMs = () =>
+  demoServidorActivo() ? avisoDemoServidorMs() : configDemo().avisoMinutos * 60_000;
 
 let configPedida = false;
 /** Trae del servidor los límites que configuró el dueño en el panel (una vez por carga). */
@@ -156,6 +177,8 @@ export function cargarConfigDemo() {
 
 /** ¿Este contacto tiene límite de tiempo? */
 function tieneLimite(email: string) {
+  // Con servidor, el tiempo lo cuenta el servidor (no hay límite por ingreso en el navegador)
+  if (demoServidorActivo(email)) return false;
   const c = configDemo();
   return c.limiteActivo && !c.exentos.map((e) => e.toLowerCase()).includes(email.toLowerCase());
 }
@@ -236,7 +259,7 @@ export function terminarIngresoDemo(motivo: "cierre" | "expiracion") {
   if (!ingreso) return;
   const minutos = Math.max(1, Math.round((Date.now() - ingreso.inicio) / 60000));
   registrar(motivo, ingreso, `${minutos} min`);
-  const esperaMs = configDemo().esperaMinutos * 60_000;
+  const esperaMs = demoServidorActivo(ingreso.email) ? 0 : configDemo().esperaMinutos * 60_000;
   if (motivo === "expiracion" && esperaMs > 0) {
     // Período de espera para esa cuenta y para este navegador.
     const hasta = Date.now() + esperaMs;
@@ -305,9 +328,18 @@ const oyentes = new Set<() => void>();
 /** Tiempo que le queda al ingreso de demo actual (null si no hay ingreso de demo en curso). */
 export function useTiempoDemo() {
   const [restante, setRestante] = useState<number | null>(null);
+  // ¿El demo de esta persona lo controla el servidor? (entonces el tiempo es el del servidor)
+  const [servidor, setServidor] = useState(false);
+  useEstadoDemoServidor(servidor);
   useEffect(() => {
     const calcular = () => {
       const ingreso = leer<IngresoActual | null>(KEY_INGRESO, null);
+      const enServidor = !!ingreso && !esModoDueno() && demoServidorActivo(ingreso.email);
+      setServidor(enServidor);
+      if (enServidor) {
+        setRestante(restanteDemoServidorMs());
+        return;
+      }
       setRestante(
         ingreso && ingreso.expira !== null && !esModoDueno() && configDemo().limiteActivo
           ? Math.max(0, ingreso.expira - Date.now())

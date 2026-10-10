@@ -143,6 +143,34 @@ export function registrarCuenta(datos: {
   return { ok: true, sesion };
 }
 
+/** ¿Ya hay en este navegador una cuenta con ese correo? */
+export function existeCuentaLocal(emailCrudo: string): boolean {
+  const email = normalizarEmail(emailCrudo);
+  return leerJSON<CuentaGuardada[]>(KEY_CUENTAS, []).some((c) => c.usuario.email === email);
+}
+
+/** Entrar al demo con el enlace que llegó por correo (demo controlado por el servidor).
+ *  Si en este navegador no había cuenta para ese correo, se crea una de demo (datos de ejemplo). */
+export function entrarCuentaDemoServidor(datos: { email: string; nombre: string; clinica: string }): Sesion {
+  const email = normalizarEmail(datos.email);
+  const cuentas = leerJSON<CuentaGuardada[]>(KEY_CUENTAS, []);
+  let cuenta = cuentas.find((c) => c.usuario.email === email);
+  if (!cuenta) {
+    const clinica: Clinica = { id: nuevoId("clinica"), nombre: capitalizarNombre(datos.clinica) };
+    cuenta = {
+      usuario: { id: nuevoId("usuario"), nombre: capitalizarNombre(datos.nombre), email, clinicId: clinica.id },
+      clinica,
+      tipo: "demo",
+    };
+    escribirJSON(KEY_CUENTAS, [...cuentas, cuenta]);
+  }
+  const sesion = normalizarSesion(cuenta) as Sesion;
+  iniciarIngresoDemo(contactoDe(sesion));
+  abrirSesionAuditoria(sesion.clinica.id, quienDe(sesion));
+  ponerSesion(sesion);
+  return sesion;
+}
+
 /* ---------- credenciales del demo ----------
    Exclusivo del entorno de demostración: se recuerda la contraseña de prueba en este navegador
    para que el usuario no tenga que volver a buscarla. Las cuentas reales NUNCA pasan por acá

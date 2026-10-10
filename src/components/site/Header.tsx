@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 
 const nav = [
   { label: "Inicio", to: "/" },
-  { label: "Planes y precios", to: "/planes" },
+  { label: "Planes", to: "/planes" },
   { label: "Nosotros", to: "/nosotros" },
 ];
 

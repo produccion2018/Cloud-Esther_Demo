@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef, type MutableRefObject } from "react";
 import { Html } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import {
@@ -24,6 +25,9 @@ interface MouthSceneProps {
   hovered: number | null;
   onSelect: (fdi: number) => void;
   onHover: (fdi: number | null) => void;
+  /** Apertura de la boca (1 = bien abierta, como siempre; menos = más cerrada). Se lee en cada
+   *  cuadro, así los gestos táctiles la cambian sin volver a dibujar toda la escena. */
+  apertura?: MutableRefObject<number>;
 }
 
 /* Texturas y tejidos se generan una sola vez y se reutilizan en cada montaje del 3D. */
@@ -54,8 +58,39 @@ const OPEN_GAP = 1.95;
 const UPPER_TILT = -0.5;
 const LOWER_TILT = 0.5;
 
-export function MouthScene({ chart, selected, hovered, onSelect, onHover }: MouthSceneProps) {
+export function MouthScene({
+  chart,
+  selected,
+  hovered,
+  onSelect,
+  onHover,
+  apertura,
+}: MouthSceneProps) {
   const { enamelMap, gumMap, tongueMap, upperGum, lowerGum, palate, tongue } = recursosEscena();
+  const arcoSup = useRef<THREE.Group>(null);
+  const arcoInf = useRef<THREE.Group>(null);
+  const lengua = useRef<THREE.Mesh>(null);
+  const piso = useRef<THREE.Mesh>(null);
+  const actual = useRef(1);
+
+  // Abre o cierra la boca de a poco hacia la apertura pedida.
+  useFrame((_, delta) => {
+    const meta = apertura?.current ?? 1;
+    if (Math.abs(meta - actual.current) < 0.001) return;
+    actual.current += (meta - actual.current) * (1 - Math.exp(-12 * delta));
+    const a = actual.current;
+    const gap = OPEN_GAP * a;
+    if (arcoSup.current) {
+      arcoSup.current.position.y = gap;
+      arcoSup.current.rotation.x = UPPER_TILT * Math.min(1.2, a);
+    }
+    if (arcoInf.current) {
+      arcoInf.current.position.y = -gap;
+      arcoInf.current.rotation.x = LOWER_TILT * Math.min(1.2, a);
+    }
+    if (lengua.current) lengua.current.position.y = -gap - 0.55;
+    if (piso.current) piso.current.position.y = -gap - 0.95;
+  });
 
   const upperPlacements = useMemo(() => computePlacements("upper"), []);
   const lowerPlacements = useMemo(() => computePlacements("lower"), []);
@@ -67,6 +102,7 @@ export function MouthScene({ chart, selected, hovered, onSelect, onHover }: Mout
 
     return (
       <group
+        ref={isUpper ? arcoSup : arcoInf}
         position={[0, isUpper ? OPEN_GAP : -OPEN_GAP, 0]}
         rotation={[isUpper ? UPPER_TILT : LOWER_TILT, 0, 0]}
       >
@@ -149,6 +185,7 @@ export function MouthScene({ chart, selected, hovered, onSelect, onHover }: Mout
 
       {/* Tongue, resting in the floor of the mouth */}
       <mesh
+        ref={lengua}
         geometry={tongue}
         position={[0, -OPEN_GAP - 0.55, -0.3]}
         rotation={[0.42, 0, 0]}
@@ -174,7 +211,12 @@ export function MouthScene({ chart, selected, hovered, onSelect, onHover }: Mout
       </mesh>
 
       {/* Soft floor of the mouth */}
-      <mesh position={[0, -OPEN_GAP - 0.95, -0.2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh
+        ref={piso}
+        position={[0, -OPEN_GAP - 0.95, -0.2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
         <circleGeometry args={[3.2, 48]} />
         <meshStandardMaterial map={gumMap} color="#b35262" roughness={0.7} />
       </mesh>

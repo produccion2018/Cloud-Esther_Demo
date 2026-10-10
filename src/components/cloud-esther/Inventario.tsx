@@ -68,6 +68,8 @@ import { TRATAMIENTOS } from "@/lib/cloud-esther/agenda-store";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* Ubicación: src/components/cloud-esther/Inventario.tsx
    Inventario por empresa: stock por sucursal, movimientos, alertas, órdenes de compra,
@@ -76,7 +78,7 @@ import { normalizarBusqueda } from "@/lib/utils";
 /* ───────────── Utilidades ───────────── */
 
 function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 function num(n: number) {
   return Number.isInteger(n)
@@ -110,8 +112,10 @@ function descargarCSV(nombre: string, filas: (string | number)[][]) {
   const a = document.createElement("a");
   a.href = url;
   a.download = nombre;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /* ───────────── Estilos y piezas ───────────── */
@@ -128,7 +132,7 @@ const CHIP = (activo: boolean) =>
   `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
     activo
       ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:bg-white hover:text-foreground"
+      : "text-muted-foreground hover:bg-card hover:text-foreground"
   }`;
 
 const NIVEL_ESTILO: Record<NivelStock, { chip: string; barra: string }> = {
@@ -670,7 +674,7 @@ export function Inventario() {
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                     seccion === s.id
                       ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      : "text-muted-foreground hover:bg-card hover:text-foreground"
                   }`}
                 >
                   <s.icon className="size-3.5" />
@@ -2374,8 +2378,7 @@ function Alertas({ ctx }: { ctx: Ctx }) {
 /* ───────────── Órdenes de compra ───────────── */
 
 function imprimirOrden(o: OrdenCompra, p: Proveedor | undefined, insumos: Insumo[]) {
-  const w = window.open("", "_blank", "width=820,height=900");
-  if (!w) return;
+  const w = documentoPDF(`orden-de-compra-${o.id}`);
   const filas = o.items
     .map((it) => {
       const i = insumos.find((x) => x.id === it.insumoId);
@@ -2541,9 +2544,9 @@ function Ordenes({ ctx, onEditar }: { ctx: Ctx; onEditar: (o: OrdenCompra) => vo
                       target="_blank"
                       rel="noreferrer"
                       aria-label="Enviar por WhatsApp"
-                      className={BTN_ICONO}
+                      className="btn-wa-icono"
                     >
-                      <MessageCircle className="size-3.5" />
+                      <IconoWhatsApp />
                     </a>
                   )}
                   <button
@@ -2796,9 +2799,9 @@ function Proveedores({ ctx }: { ctx: Ctx }) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="WhatsApp"
-                  className={BTN_ICONO}
+                  className="btn-wa-icono"
                 >
-                  <MessageCircle className="size-3.5" />
+                  <IconoWhatsApp />
                 </a>
                 <a
                   href={`tel:${p.telefono.replace(/[^\d+]/g, "")}`}

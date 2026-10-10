@@ -251,8 +251,10 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `odontograma-3d-${(pacienteNombre ?? pacienteId).replace(/\s+/g, "-").toLowerCase()}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     onToast("Informe del odontograma descargado");
   };
 
@@ -381,7 +383,7 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
                 className={`rounded-[28px] bg-gradient-to-b from-primary/[0.08] via-primary/[0.025] to-transparent p-1 ${ampliado ? "min-h-[55vh]" : ""}`}
               >
                 <div
-                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[calc(100vh-240px)] min-h-[600px]"}`}
+                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[72dvh] min-h-[460px] sm:h-[calc(100vh-240px)] sm:min-h-[600px]"}`}
                 >
                   <Limite3D onReintentar={() => setIntento3D((n) => n + 1)}>
                     <Suspense fallback={<Cargando3D />}>
@@ -518,7 +520,7 @@ function Hero3D({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">{acciones}</div>
+        <div className="flex flex-wrap gap-2">{acciones}</div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -548,7 +550,7 @@ function Hero3D({
             role="tab"
             aria-selected={herramienta === id}
             onClick={() => onHerramienta(id)}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${herramienta === id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground dark:hover:bg-card"}`}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${herramienta === id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground dark:hover:bg-card"}`}
           >
             <I className="size-3.5" />
             {l}

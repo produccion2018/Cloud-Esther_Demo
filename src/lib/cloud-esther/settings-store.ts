@@ -40,6 +40,27 @@ export const FONT_SIZE_PX: Record<FontSize, string> = {
   lg: "18px",
 };
 
+/** Datos de la clínica (por empresa). Vacíos hasta que la clínica los complete.
+ *  TODO backend: GET/PUT /clinicas/:id (el país debe ser uno de los «países seleccionados»). */
+export interface DatosClinica {
+  nombre: string;
+  identificacionFiscal: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  /** Código ISO del país (AR, UY, CL…). */
+  pais: string;
+}
+
+export const DATOS_CLINICA_VACIOS: DatosClinica = {
+  nombre: "",
+  identificacionFiscal: "",
+  direccion: "",
+  telefono: "",
+  email: "",
+  pais: "",
+};
+
 export interface ClinicSettings {
   darkModePage: boolean;
   darkModeSidebar: boolean;
@@ -51,6 +72,7 @@ export interface ClinicSettings {
   auditLogEnabled: boolean;
   /** Días que se conservan los registros de auditoría. */
   auditRetentionDays: number;
+  datosClinica: DatosClinica;
 }
 
 export const DEFAULT_SETTINGS: ClinicSettings = {
@@ -63,6 +85,7 @@ export const DEFAULT_SETTINGS: ClinicSettings = {
   advancedSecurityEnabled: false,
   auditLogEnabled: true,
   auditRetentionDays: 365,
+  datosClinica: DATOS_CLINICA_VACIOS,
 };
 
 /* Los ajustes (colores, modo oscuro, etc.) se guardan por empresa de la sesión:
@@ -89,7 +112,12 @@ export function cargarSettings(clinicId: string): ClinicSettings {
   try {
     const raw = window.localStorage.getItem(clave(clinicId));
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const guardados = JSON.parse(raw) as Partial<ClinicSettings>;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...guardados,
+      datosClinica: { ...DATOS_CLINICA_VACIOS, ...(guardados.datosClinica ?? {}) },
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }

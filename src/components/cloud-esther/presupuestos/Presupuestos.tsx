@@ -309,7 +309,7 @@ export function Presupuestos() {
                   type="button"
                   onClick={() => setSeccion(s.id)}
                   aria-pressed={seccion === s.id}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${seccion === s.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${seccion === s.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
                 >
                   <s.icon className="size-3.5" />
                   {s.label}
@@ -522,9 +522,9 @@ function Tarjeta({ ctx, f }: { ctx: Ctx; f: Fila }) {
         </div>
         {ev === "Vencido" && <Pill clase={ESTILO.Vencido}>Vencido</Pill>}
       </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-lg font-bold text-primary">{ars(tot.final)}</p>
-        <p className="text-right text-[10.5px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-2 gap-y-0.5">
+        <p className="whitespace-nowrap text-lg font-bold text-primary">{ars(tot.final)}</p>
+        <p className="min-w-0 text-left text-[10.5px] text-muted-foreground sm:text-right">
           {tot.cuotas > 1 ? `${tot.cuotas} × ${ars(tot.cuota)}` : (tot.plan?.nombre ?? "Sin plan")}
           <br />
           {esperando !== null ? `Enviado hace ${esperando} d` : fecha(f.p.fecha)}
@@ -1671,7 +1671,7 @@ function Editor({
                   <button
                     type="button"
                     onClick={() => agregar(a)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/85 px-2 py-1.5 text-left text-[11px] hover:bg-white"
+                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/85 px-2 py-1.5 text-left text-[11px] hover:bg-card"
                   >
                     <span className="truncate">{a.nombre}</span>
                     <b className="shrink-0 text-primary">{ars(a.precio)}</b>

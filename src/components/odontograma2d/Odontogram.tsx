@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, History, Lock, MousePointerClick } from "lucide-react";
+import { ClipboardList, Download, History, Lock, MousePointerClick, Printer } from "lucide-react";
 import { Tooth } from "./Tooth";
-import { PLANS, planLevel, type PlanId } from "@/lib/cloud-esther/data";
+import { type PlanId } from "@/lib/cloud-esther/data";
+import { nivelModulo } from "@/lib/cloud-esther/niveles";
 import { cargarTratamientos, guardarTratamiento } from "@/lib/odontogram/historial";
 import {
   Q1,
@@ -29,6 +30,7 @@ import {
   type Tool,
   type ToothState,
 } from "@/lib/odontograma2d/types";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 const WIDTH: Record<ToothDef["type"], string> = {
   // Ancho proporcional por tipo de pieza: las 16 piezas de cada arcada entran siempre en el
@@ -42,14 +44,20 @@ const WIDTH: Record<ToothDef["type"], string> = {
 const EMPTY: ToothState = { surfaces: {}, whole: [] };
 
 /* ───────── Funciones según el plan ─────────
-   Regla comercial: el Odontograma 2D está completo y sin bloqueos en los 4 planes.
-   El 3D se habilita aparte, desde Plus o como módulo adicional (ver OdontogramaGate). */
-const PLAN_COMPLETO: PlanId = "inicial";
-const HERRAMIENTAS_BASICAS: Tool[] = ["caries", "obturacion", "extraccion", "ausente", "borrar"];
+   Start: hallazgos esenciales sobre la dentición permanente, notas por pieza y resumen.
+   Pro: todos los hallazgos, dentición temporal o mixta, historial de evolución, impresión y
+   exportación. Sin audio ni IA: eso es del Odontograma 3D (Plus y Enterprise).
+   Las funciones que no corresponden al plan no se muestran. */
+const HERRAMIENTAS_BASICAS: Tool[] = [
+  "caries",
+  "obturacion",
+  "sellante",
+  "extraccion",
+  "ausente",
+  "borrar",
+];
 
-function herramientaHabilitada(plan: PlanId, tool: Tool) {
-  return planLevel(plan) >= planLevel(PLAN_COMPLETO) || HERRAMIENTAS_BASICAS.includes(tool);
-}
+type Denticion = "permanente" | "temporal" | "mixta";
 
 /* Guardado local por clínica (tenant) y paciente, para que no se crucen datos
    entre empresas. TODO backend: reemplazar por la API de odontogramas. */
@@ -152,7 +160,8 @@ export function Odontogram({
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
   const [historial, setHistorial] = useState<EntradaHistorial[]>([]);
   const [nota, setNota] = useState("");
-  const completo = planLevel(plan) >= planLevel(PLAN_COMPLETO);
+  const completo = nivelModulo("odontograma", plan) !== "basico";
+  const [denticion, setDenticion] = useState<Denticion>("permanente");
 
   // Carga lo guardado de este paciente al montar o al cambiar de paciente/clínica.
   useEffect(() => {
@@ -197,8 +206,8 @@ export function Odontogram({
 
   // Si el plan baja y la herramienta elegida ya no está incluida, vuelve a Caries.
   useEffect(() => {
-    if (!herramientaHabilitada(plan, tool)) setTool("caries");
-  }, [plan, tool]);
+    if (!completo && !HERRAMIENTAS_BASICAS.includes(tool)) setTool("caries");
+  }, [completo, tool]);
 
   const key = odontogramKey(tenantId, patientId);
   const state: OdontogramState = store[tenantId]?.[patientId] ?? {};
@@ -355,7 +364,54 @@ export function Odontogram({
     </div>
   );
 
-  const tools: Tool[] = [...SURFACE_FINDINGS, ...WHOLE_FINDINGS, "borrar"];
+  const tools: Tool[] = [...SURFACE_FINDINGS, ...WHOLE_FINDINGS, "borrar"].filter(
+    (t) => completo || HERRAMIENTAS_BASICAS.includes(t as Tool),
+  ) as Tool[];
+  const verPermanente = !completo || denticion !== "temporal";
+  const verTemporal = completo && denticion !== "permanente";
+
+  const exportar = () => {
+    const celda = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [
+      "Pieza,Ubicación,Hallazgo,Nota",
+      ...findings.map((f) =>
+        [
+          f.fdi,
+          f.detail,
+          f.finding,
+          cargarTratamientos(odontogramKey(tenantId, patientId))[Number(f.fdi)] ?? "",
+        ]
+          .map(celda)
+          .join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `odontograma-2d-${patientName.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    onToast?.("Hallazgos descargados");
+  };
+
+  const imprimir = () => {
+    const w = documentoPDF(`odontograma-2d-${patientName}`);
+    onToast?.("Descargando el odontograma en PDF");
+    const filas = findings
+      .map((f) => `<tr><td>${f.fdi}</td><td>${f.detail}</td><td>${f.finding}</td></tr>`)
+      .join("");
+    w.document
+      .write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Odontograma 2D</title>
+      <style>body{font-family:system-ui,sans-serif;padding:32px;color:#1f1535}h1{font-size:20px;margin:0}
+      p{color:#6b6280;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+      th,td{border-bottom:1px solid #e7e3f0;padding:8px;text-align:left}th{background:#f6f3ff}</style></head>
+      <body><h1>Odontograma 2D · ${patientName}</h1><p>${new Date().toLocaleDateString("es-AR")} · ${stats.total} hallazgos en ${stats.teethAffected} piezas</p>
+      <table><thead><tr><th>Pieza</th><th>Ubicación</th><th>Hallazgo</th></tr></thead><tbody>${filas || '<tr><td colspan="3">Sin hallazgos registrados.</td></tr>'}</tbody></table>
+      <script>window.onload=()=>window.print()</script></body></html>`);
+    w.document.close();
+  };
 
   return (
     <div key={key} className="space-y-6">
@@ -368,103 +424,116 @@ export function Odontogram({
               Elegí una herramienta y tocá la superficie de la pieza.
             </p>
           </div>
-          <button
-            onClick={clearAll}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Limpiar odontograma
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {completo && (
+              <>
+                <div
+                  className="flex rounded-lg border border-border p-0.5"
+                  role="group"
+                  aria-label="Dentición"
+                >
+                  {(["permanente", "temporal", "mixta"] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDenticion(d)}
+                      aria-pressed={denticion === d}
+                      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors ${
+                        denticion === d
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={imprimir}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Printer className="h-3.5 w-3.5" /> Imprimir
+                </button>
+                <button
+                  type="button"
+                  onClick={exportar}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Download className="h-3.5 w-3.5" /> Exportar
+                </button>
+              </>
+            )}
+            <button
+              onClick={clearAll}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Limpiar odontograma
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {tools.map((t) => {
             const active = tool === t;
-            const habilitada = herramientaHabilitada(plan, t);
             const color = t === "borrar" ? "var(--muted-foreground)" : FINDING_COLOR_VAR[t];
             const nombre = t === "borrar" ? "Borrar" : FINDING_LABELS[t];
             return (
               <button
                 key={t}
                 type="button"
-                onClick={() => {
-                  if (!habilitada) {
-                    onToast?.(`${nombre} requiere plan ${PLANS[PLAN_COMPLETO].name} o superior`);
-                    return;
-                  }
-                  setTool(t);
-                }}
+                onClick={() => setTool(t)}
                 aria-pressed={active}
-                aria-disabled={!habilitada}
-                title={
-                  habilitada ? undefined : `Disponible desde el plan ${PLANS[PLAN_COMPLETO].name}`
-                }
                 className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                  !habilitada
-                    ? "cursor-not-allowed border-dashed border-border text-muted-foreground/60"
-                    : active
-                      ? "border-primary bg-primary/15 text-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_18%,transparent)]"
-                      : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  active
+                    ? "border-primary bg-primary/15 text-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_18%,transparent)]"
+                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
                 }`}
               >
-                {habilitada ? (
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                ) : (
-                  <Lock className="h-3 w-3" />
-                )}
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
                 {nombre}
               </button>
             );
           })}
         </div>
-        {!completo && (
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            Plan {PLANS[plan].name}: odontograma básico. Con {PLANS[PLAN_COMPLETO].name} o superior
-            se habilitan todos los hallazgos y la dentición temporal.
-          </p>
-        )}
       </div>
 
       {/* Odontograma */}
       <div className="card-clinic p-3 sm:p-5 lg:p-6">
         <div className="space-y-5">
           <ArchLabel>Arcada superior (Maxilar)</ArchLabel>
-          {renderArch([...Q1, ...Q2], "Arcada superior permanente")}
-          {completo && renderArch([...Q5, ...Q6], "Arcada superior temporal", true)}
+          {verPermanente && renderArch([...Q1, ...Q2], "Arcada superior permanente")}
+          {verTemporal && renderArch([...Q5, ...Q6], "Arcada superior temporal", true)}
           <div className="h-px bg-border" />
-          {completo && renderArch([...Q8, ...Q7], "Arcada inferior temporal", true)}
-          {renderArch([...Q4, ...Q3], "Arcada inferior permanente")}
+          {verTemporal && renderArch([...Q8, ...Q7], "Arcada inferior temporal", true)}
+          {verPermanente && renderArch([...Q4, ...Q3], "Arcada inferior permanente")}
           <ArchLabel>Arcada inferior (Mandíbula)</ArchLabel>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${completo ? "lg:grid-cols-2" : ""}`}>
         {/* Pieza seleccionada */}
         <PiezaSeleccionada
           fdi={seleccionada}
           estado={seleccionada ? (state[seleccionada] ?? EMPTY) : EMPTY}
           nota={nota}
           onNota={guardarNota}
-          notasHabilitadas={completo}
-          planNecesario={PLANS[PLAN_COMPLETO].name}
+          notasHabilitadas
+          planNecesario=""
         />
 
-        {/* Historial / evolución */}
-        <div className="card-clinic p-4 sm:p-5">
-          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
-            <History className="h-4 w-4 text-primary" />
-            Historial / Evolución {seleccionada ? `· pieza ${seleccionada}` : ""}
-          </h2>
-          {!completo ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              El historial de evolución está disponible desde el plan {PLANS[PLAN_COMPLETO].name}.
-            </p>
-          ) : (
+        {/* Historial / evolución (desde Pro) */}
+        {completo && (
+          <div className="card-clinic p-4 sm:p-5">
+            <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+              <History className="h-4 w-4 text-primary" />
+              Historial / Evolución {seleccionada ? `· pieza ${seleccionada}` : ""}
+            </h2>
             <HistorialLista
               entradas={seleccionada ? historial.filter((e) => e.fdi === seleccionada) : historial}
               porPieza={!!seleccionada}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -509,15 +578,17 @@ export function Odontogram({
       <section className="card-clinic p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold">Referencias / Leyenda</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {(Object.keys(FINDING_LABELS) as (keyof typeof FINDING_LABELS)[]).map((k) => (
-            <div key={k} className="flex items-center gap-2 text-xs">
-              <span
-                className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: FINDING_COLOR_VAR[k] }}
-              />
-              <span className="text-muted-foreground">{FINDING_LABELS[k]}</span>
-            </div>
-          ))}
+          {(Object.keys(FINDING_LABELS) as (keyof typeof FINDING_LABELS)[])
+            .filter((k) => completo || HERRAMIENTAS_BASICAS.includes(k as Tool))
+            .map((k) => (
+              <div key={k} className="flex items-center gap-2 text-xs">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: FINDING_COLOR_VAR[k] }}
+                />
+                <span className="text-muted-foreground">{FINDING_LABELS[k]}</span>
+              </div>
+            ))}
         </div>
       </section>
     </div>

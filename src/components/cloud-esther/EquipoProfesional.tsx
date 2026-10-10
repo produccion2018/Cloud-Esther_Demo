@@ -211,23 +211,28 @@ function BotonAccion({
   label,
   onClick,
   danger,
+  compacto,
 }: {
   icon?: IconType
   label: string
   onClick: () => void
   danger?: boolean
+  /** En celular muestra solo el ícono (tarjetas de a dos). */
+  compacto?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-sm transition-colors ${
+      title={label}
+      aria-label={label}
+      className={`flex items-center gap-1.5 rounded-lg border text-xs font-medium shadow-sm transition-colors ${compacto ? "px-2 py-1.5 sm:px-3" : "px-3 py-1.5"} ${
         danger
           ? "border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10"
           : "border-border bg-background hover:bg-primary/5"
       }`}
     >
       {Icon && <Icon className="size-3.5" />}
-      {label}
+      {compacto ? <span className="hidden sm:inline">{label}</span> : label}
     </button>
   )
 }
@@ -340,6 +345,9 @@ export function EquipoProfesional() {
   const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
   const { turnos } = storeAgenda.usar()
   const [vista, setVista] = useState<VistaEquipo>("integrantes")
+  // El portal del profesional es exclusivo de Enterprise.
+  const { plan: planEquipo } = useCloudEsther()
+  const vistas = VISTAS.filter((v) => v.id !== "portal" || planEquipo === "grupo")
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<FilterKey>("todos")
   const [selected, setSelected] = useState<TeamMember | null>(null)
@@ -412,8 +420,10 @@ export function EquipoProfesional() {
     const a = document.createElement("a")
     a.href = url
     a.download = `equipo-${hoyStr}.csv`
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     showToast(`${members.length} integrantes exportados`)
   }
 
@@ -597,13 +607,13 @@ export function EquipoProfesional() {
           </div>
 
           <nav className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5" aria-label="Vistas del equipo">
-            {VISTAS.map((v) => (
+            {vistas.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setVista(v.id)}
                 aria-pressed={vista === v.id}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                  vista === v.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"
+                  vista === v.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               >
                 <v.icon className="size-3.5" />
@@ -621,7 +631,7 @@ export function EquipoProfesional() {
         {vista === "desempeno" && <DesempenoEquipo />}
         {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
         {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}
-        {vista === "portal" && <PortalEquipoMonitor onToast={showToast} />}
+        {vista === "portal" && planEquipo === "grupo" && <PortalEquipoMonitor onToast={showToast} />}
         {vista === "integrantes" && (
           <div className="space-y-3">
             <div className="card-grad flex flex-col gap-2.5 p-2.5 lg:flex-row lg:items-center">
@@ -653,7 +663,7 @@ export function EquipoProfesional() {
             {filtered.length === 0 ? (
               <p className="card-grad py-10 text-center text-sm text-muted-foreground">No se encontraron integrantes con ese filtro.</p>
             ) : (
-              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              <ul data-movil="1col" className="grid grid-cols-2 gap-2.5 sm:gap-3 2xl:grid-cols-3">
                 {filtered.map((m) => {
                   const role = ROLE_META[m.role]
                   const RoleIcon = role.icon
@@ -666,18 +676,18 @@ export function EquipoProfesional() {
                   return (
                     <li
                       key={m.id}
-                      className={`card-grad group flex cursor-pointer flex-col p-4 transition-all hover:-translate-y-0.5 ${m.status === "inactivo" ? "opacity-60" : ""}`}
+                      className={`card-grad group relative flex min-w-0 cursor-pointer flex-col p-3 transition-all hover:-translate-y-0.5 sm:p-4 ${m.status === "inactivo" ? "opacity-60" : ""}`}
                       onClick={() => openDetail(m)}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex flex-col items-start gap-2 sm:flex-row sm:gap-3">
                         <span className="relative">
-                          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-violet-400 text-sm font-bold text-white shadow-[0_8px_18px_-8px_rgba(124,58,237,0.7)]">
+                          <span className="grid size-10 shrink-0 place-items-center rounded-2xl sm:size-12 bg-gradient-to-br from-primary to-violet-400 text-sm font-bold text-white shadow-[0_8px_18px_-8px_rgba(124,58,237,0.7)]">
                             {initials(m)}
                           </span>
                           <span className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-white ${ausencia ? "bg-amber-400" : STATUS_META[m.status].dot}`} />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                          <p className="flex flex-wrap items-center gap-1.5 text-[13px] font-semibold sm:text-sm">
                             {fullName(m) || m.email}
                             <StatusBadge status={m.status} />
                           </p>
@@ -690,7 +700,7 @@ export function EquipoProfesional() {
                           </p>
                           {!!m.specialties?.length && <p className="mt-1 truncate text-[11px] text-muted-foreground">{m.specialties.join(" · ")}</p>}
                         </div>
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="absolute right-3 top-3 flex gap-1 sm:static" onClick={(e) => e.stopPropagation()}>
                           {m.phone && (
                             <a href={`tel:${m.phone.replace(/[^\d+]/g, "")}`} className="grid size-8 place-items-center rounded-full border border-primary/12 bg-white text-muted-foreground hover:bg-primary/10 hover:text-primary" aria-label="Llamar" title={m.phone}>
                               <Phone className="size-3.5" />
@@ -704,8 +714,8 @@ export function EquipoProfesional() {
                         </div>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
-                        <div className="rounded-xl bg-white/80 px-1 py-1.5">
+                      <div className="mt-3 grid grid-cols-2 gap-1.5 text-center sm:grid-cols-3">
+                        <div className="col-span-2 rounded-xl bg-white/80 px-1 py-1.5 sm:col-span-1">
                           <p className="text-[10px] text-muted-foreground">Hoy</p>
                           <p className="text-xs font-bold">{ausencia ? ausencia.tipo : hoyDia ? `${hoyDia.start}–${hoyDia.end}` : "No trabaja"}</p>
                         </div>
@@ -722,7 +732,8 @@ export function EquipoProfesional() {
                       {m.role === "odontologo" && hoyDia && !ausencia && (
                         <div className="mt-2.5">
                           <div className="flex justify-between text-[10.5px]">
-                            <span className="text-muted-foreground">{proximo ? `Próximo: ${proximo.hora} ${proximo.paciente}` : deHoy.length ? "Sin más turnos hoy" : "Agenda libre hoy"}</span>
+                            <span className="hidden truncate text-muted-foreground sm:inline">{proximo ? `Próximo: ${proximo.hora} ${proximo.paciente}` : deHoy.length ? "Sin más turnos hoy" : "Agenda libre hoy"}</span>
+                            <span className="text-muted-foreground sm:hidden">Ocupación</span>
                             <span className="font-semibold">{ocupacion}% ocupada</span>
                           </div>
                           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
@@ -732,17 +743,17 @@ export function EquipoProfesional() {
                       )}
 
                       <div className="min-h-3 flex-1" />
-                      <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-primary/10 pt-2.5" onClick={(e) => e.stopPropagation()}>
-                        <BotonAccion icon={Eye} label="Perfil" onClick={() => openDetail(m)} />
-                        <BotonAccion icon={Pencil} label="Editar" onClick={() => openEdit(m)} />
-                        <BotonAccion icon={CalendarDays} label="Horario" onClick={() => openDetail(m, "agenda")} />
+                      <div className="mt-2 flex flex-wrap items-center justify-start gap-1 border-t border-primary/10 pt-2.5 sm:justify-end sm:gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <BotonAccion icon={Eye} label="Perfil" onClick={() => openDetail(m)} compacto />
+                        <BotonAccion icon={Pencil} label="Editar" onClick={() => openEdit(m)} compacto />
+                        <BotonAccion icon={CalendarDays} label="Horario" onClick={() => openDetail(m, "agenda")} compacto />
                         {conPermisos && (
-                          <BotonAccion icon={ShieldCheck} label="Permisos" onClick={() => openDetail(m, "permisos")} />
+                          <BotonAccion icon={ShieldCheck} label="Permisos" onClick={() => openDetail(m, "permisos")} compacto />
                         )}
                         {m.status === "inactivo" ? (
-                          <BotonAccion icon={UserCheck} label="Activar" onClick={() => activate(m)} />
+                          <BotonAccion icon={UserCheck} label="Activar" onClick={() => activate(m)} compacto />
                         ) : (
-                          <BotonAccion icon={UserX} label="Desactivar" danger onClick={() => setConfirmDeactivate(m)} />
+                          <BotonAccion icon={UserX} label="Desactivar" danger onClick={() => setConfirmDeactivate(m)} compacto />
                         )}
                       </div>
                     </li>

@@ -97,6 +97,7 @@ import {
   facturaPendiente,
   useSuscripcion,
 } from "@/components/cloud-esther/facturacion/MiPlan";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
    Facturación electrónica según el país fiscal de la clínica, cobros (se registran en la cuenta
@@ -487,7 +488,7 @@ export function Facturacion() {
                   type="button"
                   onClick={() => setSeccion(s.id)}
                   aria-pressed={seccion === s.id}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${seccion === s.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${seccion === s.id ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
                 >
                   <s.icon className="size-3.5" />
                   {s.label}
@@ -685,9 +686,9 @@ function Resumen({ ctx }: { ctx: Ctx }) {
               <ul className="mt-3 space-y-2.5">
                 {medios.map(([k, v]) => (
                   <li key={k}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span>{k}</span>
-                      <b>{ctx.$(v)}</b>
+                    <div className="mb-1 flex flex-wrap justify-between gap-x-2 text-xs">
+                      <span className="min-w-0">{k}</span>
+                      <b className="whitespace-nowrap">{ctx.$(v)}</b>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-primary/10">
                       <div
@@ -1414,7 +1415,7 @@ function Emitir({
                         },
                       ])
                     }
-                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/85 px-2 py-1.5 text-left text-[11px] hover:bg-white"
+                    className="flex w-full items-center justify-between gap-2 rounded-lg bg-white/85 px-2 py-1.5 text-left text-[11px] hover:bg-card"
                   >
                     <span className="truncate">{a.nombre}</span>
                     <b className="shrink-0 text-primary">{ctx.$(a.precio)}</b>
@@ -1609,9 +1610,9 @@ function Detalle({ ctx, id, onClose }: { ctx: Ctx; id: string; onClose: () => vo
             href={wa(c.cliente.telefono, texto)}
             target="_blank"
             rel="noreferrer"
-            className={BTN_SECUNDARIO}
+            className="btn-wa"
           >
-            <MessageCircle className="size-4" /> WhatsApp
+            <IconoWhatsApp /> WhatsApp
           </a>
         )}
         {c.cliente.email && (

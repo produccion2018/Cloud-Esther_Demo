@@ -73,7 +73,7 @@ export async function descargarExcel(nombreArchivo: string, hojas: HojaExcel[]) 
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Lee la primera hoja (xlsx) o un CSV y devuelve una fila por objeto usando la cabecera. */

@@ -12,4 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // En Vercel (variable VERCEL=1 en sus builds) se compila con el preset de Vercel: genera
+  // .vercel/output con las páginas, los archivos estáticos y la función del servidor.
+  ...(process.env["VERCEL"] ? { nitro: { preset: "vercel" } } : {}),
 });

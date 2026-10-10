@@ -19,8 +19,10 @@ import {
   type TeamRole,
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
+import { PermisosPortalEditor } from "@/components/cloud-esther/portales/PermisosPortalEditor";
 
 /** Los cambios de permisos quedan siempre en la auditoría de la clínica. */
 function auditarPermiso(accion: string) {
@@ -418,7 +420,7 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
             [
               "3",
               "Revisá la cobertura",
-              "Abajo ves cuántos odontólogos hay en cada hora de la semana.",
+              "Abajo ves en cada hora cuántos odontólogos quedan libres y quiénes atienden.",
             ],
           ].map(([n, t, d]) => (
             <li
@@ -601,7 +603,46 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
   );
 }
 
-/* Cobertura semanal: cuántos odontólogos atienden en cada franja horaria (descontando descansos). */
+/* Cobertura semanal: en cada hora de la semana, cuántos odontólogos están en horario, cuántos
+   ya tienen un paciente agendado (Agenda) y cuántos quedan libres para dar turnos.
+   El color indica la disponibilidad (libres sobre el total de odontólogos activos):
+   verde = alta, ámbar = media, rojo = baja o completo, gris rayado = nadie atiende. */
+type NivelCobertura = "alta" | "media" | "baja" | "cerrado";
+
+const NIVELES_COBERTURA: Record<
+  NivelCobertura,
+  { titulo: string; celda: string; chip: string; punto: string }
+> = {
+  alta: {
+    titulo: "Alta disponibilidad",
+    celda:
+      "bg-emerald-100 text-emerald-900 ring-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100 dark:ring-emerald-500/40",
+    chip: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-100",
+    punto: "bg-emerald-500",
+  },
+  media: {
+    titulo: "Disponibilidad media",
+    celda:
+      "bg-amber-100 text-amber-900 ring-amber-300 dark:bg-amber-500/20 dark:text-amber-100 dark:ring-amber-500/40",
+    chip: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100",
+    punto: "bg-amber-500",
+  },
+  baja: {
+    titulo: "Baja disponibilidad o completo",
+    celda:
+      "bg-rose-100 text-rose-900 ring-rose-300 dark:bg-rose-500/20 dark:text-rose-100 dark:ring-rose-500/40",
+    chip: "bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-100",
+    punto: "bg-rose-500",
+  },
+  cerrado: {
+    titulo: "Nadie atiende",
+    celda:
+      "bg-[repeating-linear-gradient(135deg,transparent_0_5px,rgba(100,116,139,0.12)_5px_7px)] bg-muted/40 text-muted-foreground ring-border",
+    chip: "bg-muted text-muted-foreground",
+    punto: "bg-slate-400",
+  },
+};
+
 function CoberturaSemanal({ miembros }: { miembros: TeamMember[] }) {
   const DIAS: ScheduleDay["day"][] = [
     "Lunes",
@@ -612,85 +653,210 @@ function CoberturaSemanal({ miembros }: { miembros: TeamMember[] }) {
     "Sábado",
   ];
   const HORAS = Array.from({ length: 13 }, (_, i) => 8 + i); // 08 a 20
+  const { turnos } = storeAgenda.usar();
   const odontologos = miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
+  const total = odontologos.length;
+
+  // Fechas de la semana en curso (lunes a sábado); el domingo muestra la semana que empieza.
+  const [hoy, setHoy] = useState<Date | null>(null);
+  useEffect(() => setHoy(new Date()), []);
+  const lunes = (() => {
+    const d = hoy ? new Date(hoy) : new Date(2026, 0, 5);
+    const dia = d.getDay();
+    d.setDate(d.getDate() + (dia === 0 ? 1 : 1 - dia));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+  const fechas = DIAS.map((_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return d;
+  });
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hoyIdx = hoy ? fechas.findIndex((f) => iso(f) === iso(hoy)) : -1;
+  const horaActual = hoy?.getHours() ?? -1;
+
   const aMin = (h?: string) => {
     const [a = 0, b = 0] = (h ?? "").split(":").map(Number);
     return a * 60 + b;
   };
-  const quienes = (dia: ScheduleDay["day"], hora: number) =>
-    odontologos.filter((m) => {
+
+  const celda = (di: number, hora: number) => {
+    const dia = DIAS[di] as ScheduleDay["day"];
+    const fecha = iso(fechas[di] as Date);
+    const t = hora * 60 + 30;
+    const enHorario: TeamMember[] = [];
+    const enPausa: TeamMember[] = [];
+    for (const m of odontologos) {
       const d = m.schedule.find((x) => x.day === dia);
-      if (!d?.active) return false;
-      const t = hora * 60 + 30;
-      const enDescanso =
-        d.breakStart && d.breakEnd && t >= aMin(d.breakStart) && t < aMin(d.breakEnd);
-      return t >= aMin(d.start) && t < aMin(d.end) && !enDescanso;
-    });
-  const max = Math.max(1, odontologos.length);
-  const huecos = DIAS.flatMap((d) =>
-    HORAS.filter((h) => h >= 9 && h < 19 && quienes(d, h).length === 0).map(
+      if (!d?.active || t < aMin(d.start) || t >= aMin(d.end)) continue;
+      if (d.breakStart && d.breakEnd && t >= aMin(d.breakStart) && t < aMin(d.breakEnd))
+        enPausa.push(m);
+      else enHorario.push(m);
+    }
+    const turnosHora = turnos.filter(
+      (x) => x.fecha === fecha && x.estado !== "Cancelada" && Number(x.hora.slice(0, 2)) === hora,
+    );
+    const atendiendo = enHorario.filter((m) => turnosHora.some((x) => x.odontologo === nombre(m)));
+    const libres = enHorario.filter((m) => !atendiendo.includes(m));
+    const r = total ? libres.length / total : 0;
+    const nivel: NivelCobertura =
+      enHorario.length === 0 ? "cerrado" : r >= 0.6 ? "alta" : r >= 0.3 ? "media" : "baja";
+    return { dia, fecha, hora, enHorario, enPausa, atendiendo, libres, turnosHora, nivel };
+  };
+
+  const [sel, setSel] = useState<{ di: number; hora: number } | null>(null);
+  const elegido = sel ?? { di: Math.max(0, hoyIdx), hora: Math.min(20, Math.max(9, horaActual)) };
+  const det = celda(elegido.di, elegido.hora);
+  const fueraDeHorario = odontologos.filter(
+    (m) => !det.enHorario.includes(m) && !det.enPausa.includes(m),
+  );
+
+  const huecos = DIAS.flatMap((d, di) =>
+    HORAS.filter((h) => h >= 9 && h < 19 && celda(di, h).nivel === "cerrado").map(
       (h) => `${d.slice(0, 3)} ${h}h`,
     ),
   );
+  const fechaCorta = (d: Date) => d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+  const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+  // Mismos cortes que el color de cada casillero (60 % y 30 % del equipo libre).
+  const limiteAlta = Math.max(1, Math.ceil(total * 0.6));
+  const limiteMedia = Math.max(1, Math.ceil(total * 0.3));
+  const rango = (desde: number, hasta: number) =>
+    hasta <= desde ? `${desde} libre${desde === 1 ? "" : "s"}` : `${desde} a ${hasta} libres`;
+
   return (
     <div className={CARD}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold">¿Cuántos odontólogos atienden en cada horario?</p>
-          <p className="text-xs text-muted-foreground">
-            Cada casillero es una hora de la semana y el número indica cuántos odontólogos atienden.
-            Vacío = nadie atiende: la Agenda no ofrece turnos ahí. Pasá el mouse para ver quiénes.
+        <div className="min-w-0">
+          <p className="text-base font-semibold">Disponibilidad de odontólogos por horario</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Semana del {fechaCorta(fechas[0] as Date)} al {fechaCorta(fechas[5] as Date)} · {total}{" "}
+            odontólogo{total === 1 ? "" : "s"} activo{total === 1 ? "" : "s"}. Tocá un casillero
+            para ver quién atiende.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          Menos
-          {[0, 0.34, 0.67, 1].map((v) => (
-            <span
-              key={v}
-              className="size-3 rounded"
-              style={{
-                background: v ? `rgba(124,58,237,${0.15 + v * 0.75})` : "rgba(124,58,237,0.05)",
-              }}
-            />
-          ))}
-          Más
-        </div>
       </div>
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[640px] border-separate border-spacing-1 text-[10px]">
+
+      {/* Qué significa cada casillero y cada color */}
+      <div className="mt-3 grid gap-2 rounded-2xl bg-muted/30 p-3 text-[11px] ring-1 ring-border/60">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-11 w-12 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100">
+            <span className="text-center leading-none">
+              <span className="block text-sm font-bold">2</span>
+              <span className="mt-1 flex justify-center gap-0.5">
+                <span className="size-1.5 rounded-full bg-emerald-600" />
+                <span className="size-1.5 rounded-full bg-emerald-600" />
+                <span className="size-1.5 rounded-full bg-primary" />
+              </span>
+            </span>
+          </span>
+          <p className="leading-snug text-muted-foreground">
+            <b className="text-foreground">Número</b> = odontólogos libres para dar turnos en esa
+            hora.{" "}
+            <span className="whitespace-nowrap">
+              <span className="inline-block size-2 rounded-full bg-emerald-600 align-middle" />{" "}
+              libre
+            </span>{" "}
+            ·{" "}
+            <span className="whitespace-nowrap">
+              <span className="inline-block size-2 rounded-full bg-primary align-middle" />{" "}
+              atendiendo un turno
+            </span>
+          </p>
+        </div>
+        <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-4" data-movil="1col">
+          {(
+            [
+              ["alta", `${limiteAlta} o más libres`],
+              ["media", rango(limiteMedia, limiteAlta - 1)],
+              ["baja", limiteMedia > 1 ? rango(0, limiteMedia - 1) : "0 libres (completo)"],
+              ["cerrado", "fuera de horario"],
+            ] as const
+          ).map(([n, d]) => (
+            <li
+              key={n}
+              className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold ${NIVELES_COBERTURA[n].chip}`}
+            >
+              <span className={`size-2.5 shrink-0 rounded-full ${NIVELES_COBERTURA[n].punto}`} />
+              <span className="min-w-0 leading-tight">
+                {NIVELES_COBERTURA[n].titulo.replace(" o completo", "")}
+                <span className="block text-[10px] font-medium opacity-75">{d}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_300px]">
+        <table className="w-full table-fixed border-separate border-spacing-[3px] text-[11px]">
           <thead>
             <tr>
-              <th />
-              {HORAS.map((h) => (
-                <th key={h} className="font-medium text-muted-foreground">
-                  {String(h).padStart(2, "0")}
+              <th className="w-11 sm:w-14" />
+              {DIAS.map((d, i) => (
+                <th
+                  key={d}
+                  className={`pb-1 text-center font-semibold ${i === hoyIdx ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  <span className="block text-[11px] sm:text-xs">{d.slice(0, 3)}</span>
+                  <span className="block text-[10px] font-medium opacity-80">
+                    {(fechas[i] as Date).getDate()}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {DIAS.map((d) => (
-              <tr key={d}>
-                <td className="pr-2 text-xs font-medium">{d.slice(0, 3)}</td>
-                {HORAS.map((h) => {
-                  const q = quienes(d, h);
+            {HORAS.map((h) => (
+              <tr key={h}>
+                <th
+                  scope="row"
+                  className={`pr-1 text-right text-[10px] font-semibold tabular-nums sm:text-[11px] ${h === horaActual ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  {hh(h)}
+                </th>
+                {DIAS.map((d, di) => {
+                  const c = celda(di, h);
+                  const activo = elegido.di === di && elegido.hora === h;
+                  const etiqueta =
+                    c.nivel === "cerrado"
+                      ? `${d} ${hh(h)}: nadie atiende`
+                      : `${d} ${hh(h)}: ${c.libres.length} libre${c.libres.length === 1 ? "" : "s"}, ${c.atendiendo.length} atendiendo, de ${total} odontólogos. ${NIVELES_COBERTURA[c.nivel].titulo}`;
                   return (
-                    <td
-                      key={h}
-                      title={
-                        q.length
-                          ? `${d} ${h}:00 · ${q.map(nombre).join(", ")}`
-                          : `${d} ${h}:00 · sin odontólogos`
-                      }
-                      className="h-7 rounded-md text-center font-semibold"
-                      style={{
-                        background: q.length
-                          ? `rgba(124,58,237,${0.15 + (q.length / max) * 0.75})`
-                          : "rgba(124,58,237,0.05)",
-                        color: q.length / max > 0.5 ? "white" : "rgb(91,33,182)",
-                      }}
-                    >
-                      {q.length || ""}
+                    <td key={d} className="p-0">
+                      <button
+                        type="button"
+                        onClick={() => setSel({ di, hora: h })}
+                        aria-label={etiqueta}
+                        aria-pressed={activo}
+                        title={etiqueta}
+                        className={`flex h-10 w-full flex-col items-center justify-center rounded-lg ring-1 transition sm:h-11 ${NIVELES_COBERTURA[c.nivel].celda} ${activo ? "outline outline-2 outline-offset-1 outline-primary" : ""}`}
+                      >
+                        {c.nivel === "cerrado" ? (
+                          <span className="text-xs opacity-60">—</span>
+                        ) : (
+                          <>
+                            <span className="text-[13px] font-bold leading-none sm:text-sm">
+                              {c.libres.length}
+                            </span>
+                            <span className="mt-1 flex max-w-full justify-center gap-[3px] overflow-hidden px-0.5">
+                              {c.libres.map((m) => (
+                                <span
+                                  key={m.id}
+                                  className="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-300"
+                                />
+                              ))}
+                              {c.atendiendo.map((m) => (
+                                <span
+                                  key={m.id}
+                                  className="size-1.5 shrink-0 rounded-full bg-primary"
+                                />
+                              ))}
+                            </span>
+                          </>
+                        )}
+                      </button>
                     </td>
                   );
                 })}
@@ -698,13 +864,89 @@ function CoberturaSemanal({ miembros }: { miembros: TeamMember[] }) {
             ))}
           </tbody>
         </table>
+
+        {/* Detalle del casillero elegido */}
+        <div
+          className="h-fit rounded-2xl bg-background/70 p-3.5 ring-1 ring-primary/15"
+          aria-live="polite"
+        >
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            {det.dia} {(fechas[elegido.di] as Date).getDate()} · {hh(det.hora)} a {hh(det.hora + 1)}
+          </p>
+          <p
+            className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${NIVELES_COBERTURA[det.nivel].chip}`}
+          >
+            <span className={`size-2 rounded-full ${NIVELES_COBERTURA[det.nivel].punto}`} />
+            {det.nivel === "cerrado"
+              ? "Nadie atiende: la Agenda no ofrece turnos"
+              : det.libres.length === 0
+                ? "Completo: todos atendiendo"
+                : NIVELES_COBERTURA[det.nivel].titulo.replace(" o completo", "")}
+          </p>
+          <dl className="mt-3 space-y-2.5 text-xs">
+            <GrupoCobertura
+              titulo={`Libres para turnos (${det.libres.length})`}
+              punto="bg-emerald-600"
+              nombres={det.libres.map(nombre)}
+            />
+            <GrupoCobertura
+              titulo={`Atendiendo (${det.atendiendo.length})`}
+              punto="bg-primary"
+              nombres={det.atendiendo.map((m) => {
+                const t = det.turnosHora.find((x) => x.odontologo === nombre(m));
+                return t ? `${nombre(m)} · ${t.hora} ${t.paciente}` : nombre(m);
+              })}
+            />
+            {det.enPausa.length > 0 && (
+              <GrupoCobertura
+                titulo={`En pausa (${det.enPausa.length})`}
+                punto="bg-amber-500"
+                nombres={det.enPausa.map(nombre)}
+              />
+            )}
+            <GrupoCobertura
+              titulo={`No atiende a esa hora (${fueraDeHorario.length})`}
+              punto="bg-slate-400"
+              nombres={fueraDeHorario.map(nombre)}
+            />
+          </dl>
+          <Link
+            to={"/demo/agenda" as never}
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            <Clock className="size-3.5" /> Ver la Agenda
+          </Link>
+        </div>
       </div>
+
       {huecos.length > 0 && (
-        <p className="mt-2 text-[11px] text-amber-700">
+        <p className="mt-3 rounded-xl bg-amber-500/10 px-3 py-2 text-[11px] text-amber-800 ring-1 ring-amber-500/25 dark:text-amber-200">
           Franjas sin odontólogo entre 9 y 19 h: {huecos.slice(0, 8).join(", ")}
           {huecos.length > 8 ? ` y ${huecos.length - 8} más` : ""}.
         </p>
       )}
+    </div>
+  );
+}
+
+function GrupoCobertura({
+  titulo,
+  punto,
+  nombres,
+}: {
+  titulo: string;
+  punto: string;
+  nombres: string[];
+}) {
+  return (
+    <div>
+      <dt className="flex items-center gap-1.5 font-semibold text-foreground">
+        <span className={`size-2 rounded-full ${punto}`} />
+        {titulo}
+      </dt>
+      <dd className="mt-0.5 pl-3.5 text-muted-foreground">
+        {nombres.length ? nombres.join(" · ") : "—"}
+      </dd>
     </div>
   );
 }
@@ -851,6 +1093,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
           </ul>
         </div>
       </div>
+      <PermisosPortalEditor miembro={miembro} onCambio={auditarPermiso} />
       <MatrizAccesos miembros={miembros} seleccionado={miembro.id} onElegir={setSeleccionado} />
     </div>
   );

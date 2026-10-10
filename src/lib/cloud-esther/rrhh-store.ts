@@ -1509,7 +1509,7 @@ export function insightsRRHH(): InsightRRHH[] {
 }
 
 function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 function fechaCorta(iso: string) {
   return iso.slice(0, 10).split("-").reverse().join("/");

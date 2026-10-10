@@ -45,6 +45,8 @@ export type EstherAIProps = {
   context?: EstherContext;
   onAction?: (action: EstherQuickAction) => void;
   variant?: "panel" | "compact";
+  /** Dentro de un portal que ya tiene su propio encabezado: sin título grande ni Contact Center. */
+  embebido?: boolean;
 };
 
 const SEL =
@@ -87,6 +89,7 @@ export function EstherAI({
   context,
   onAction,
   variant = "panel",
+  embebido = false,
 }: EstherAIProps) {
   // Quién pregunta y sobre qué: la IA responde solo lo que ese usuario puede ver.
   const { plan } = useCloudEsther();
@@ -94,7 +97,9 @@ export function EstherAI({
   const { usuario } = useSesion();
   const navigate = useNavigate();
   const [pacienteId, setPacienteId] = useState<number | undefined>(undefined);
-  const [rol, setRol] = useState<RolIA>("admin");
+  const [rol, setRol] = useState<RolIA>(() =>
+    context?.rol && context.rol in ROL_IA_LABEL ? (context.rol as RolIA) : "admin",
+  );
   const [sede, setSede] = useState("Todas");
   const [herramienta, setHerramienta] = useState<"imagen" | "sonrisa" | null>(null);
   const [aviso, setAviso] = useState("");
@@ -103,7 +108,7 @@ export function EstherAI({
   const sedes = sucursalesDelPlan(plan === "grupo");
   const conN8n = useConN8n();
   const n8n = storeN8n.usar();
-  const nombreUsuario = usuario?.nombre ?? "Jesús Méndez";
+  const nombreUsuario = context?.usuario ?? usuario?.nombre ?? "Jesús Méndez";
   const primerNombre = nombreUsuario.split(" ")[0] ?? "";
   const esther = useEstherAI({
     context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId, n8n: conN8n },
@@ -178,7 +183,9 @@ export function EstherAI({
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
           <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
           <div className="relative p-5 md:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-5">
+            <div
+              className={`flex flex-wrap items-start justify-between gap-5 ${embebido ? "hidden" : ""}`}
+            >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
@@ -222,7 +229,7 @@ export function EstherAI({
                     role="tab"
                     aria-selected={modo === id}
                     onClick={() => setModo(id)}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${modo === id ? "text-primary-foreground shadow-[var(--shadow-glow)]" : "text-muted-foreground hover:bg-white hover:text-foreground"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${modo === id ? "text-primary-foreground shadow-[var(--shadow-glow)]" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
                     style={modo === id ? { background: "var(--gradient-esther)" } : {}}
                   >
                     <I className="size-3.5" />
@@ -233,7 +240,9 @@ export function EstherAI({
             </div>
 
             {modo === "asistente" && (
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
+              <div
+                className={`${embebido ? "" : "mt-5"} grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]`}
+              >
                 <Selector
                   etiqueta="Paciente en contexto"
                   value={pacienteId ? String(pacienteId) : ""}

@@ -38,6 +38,7 @@ import {
   type TipoEventoPortal,
 } from "@/lib/cloud-esther/portal-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { useTablasApilables } from "@/lib/tablas-movil";
 
 /* Ubicación: src/components/cloud-esther/PortalMonitor.tsx
 
@@ -283,7 +284,7 @@ function PortalMonitor() {
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                     vista === v.id
                       ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      : "text-muted-foreground hover:bg-card hover:text-foreground"
                   }`}
                 >
                   <v.icon className="size-3.5" />
@@ -336,6 +337,9 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
   const [filtro, setFiltro] = useState<"" | EstadoAcceso | "Sin acceso">("");
   const [verCodigo, setVerCodigo] = useState<number | null>(null);
   const texto = normalizarBusqueda(busqueda);
+  // En el celular la tabla de accesos se ve como tarjetas.
+  const tablaRef = useRef<HTMLDivElement>(null);
+  useTablasApilables(tablaRef);
 
   const lista = pacientes
     .filter((p) => p.estado === "Activo")
@@ -415,7 +419,7 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
       </div>
 
       <div className="card-grad overflow-hidden">
-        <div className="overflow-x-auto">
+        <div ref={tablaRef} className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-sm">
             <thead className="bg-primary/[0.04] text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
@@ -589,8 +593,10 @@ function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = "actividad-portal.csv";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     onToast(`${lista.length} movimientos exportados`);
   };
 

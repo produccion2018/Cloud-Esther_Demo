@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* Piezas compartidas del módulo de Recursos Humanos (mismo lenguaje visual que Marketing e Inventario). */
 
@@ -27,7 +28,7 @@ export type Ctx = {
 };
 
 export function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 export function fecha(iso: string) {
   return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—";
@@ -58,13 +59,14 @@ export function descargarCSV(nombre: string, filas: (string | number)[][]) {
   const a = document.createElement("a");
   a.href = url;
   a.download = nombre;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
-/** Abre una ventana con HTML listo para imprimir o guardar como PDF. */
+/** Descarga el documento como PDF (A4), listo para guardar, enviar o imprimir. */
 export function imprimirHTML(tituloDoc: string, cuerpo: string) {
-  const w = window.open("", "_blank", "width=820,height=900");
-  if (!w) return;
+  const w = documentoPDF(tituloDoc);
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${tituloDoc}</title>
 <style>body{font-family:system-ui,sans-serif;color:#1f1b2e;padding:32px;font-size:13px}h1{color:#6d28d9;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px}table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid #e9e3fb;text-align:left}th{background:#f5f1ff}.r{text-align:right}.tot td{font-weight:700;color:#6d28d9;font-size:15px}.meta{display:flex;justify-content:space-between;gap:24px;margin-top:12px}.firma{margin-top:60px;display:flex;justify-content:space-between}.firma span{border-top:1px solid #999;padding-top:6px;width:40%;text-align:center}</style>
 </head><body>${cuerpo}<script>window.onload=()=>window.print()</script></body></html>`);
@@ -83,7 +85,7 @@ export const CHIP = (activo: boolean) =>
   `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
     activo
       ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:bg-white hover:text-foreground"
+      : "text-muted-foreground hover:bg-card hover:text-foreground"
   }`;
 
 export const ROL_LABEL: Record<TeamMember["role"], string> = {

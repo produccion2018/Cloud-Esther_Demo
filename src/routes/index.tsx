@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { Reveal } from "@/components/site/Reveal";
+import { PortalesEnterprise } from "@/components/site/PortalesEnterprise";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -848,6 +849,11 @@ function Home() {
             </div>
           </div>
         </section>
+
+        {/* =========================================================
+            PORTALES (exclusivo Enterprise)
+        ========================================================= */}
+        <PortalesEnterprise />
 
         {/* =========================================================
             FAQ

@@ -1,0 +1,48 @@
+{
+  "name": "Cloud Esther",
+  "short_name": "Cloud Esther",
+  "description": "Gestión en la nube para clínicas dentales: agenda, pacientes, historia clínica y más.",
+  "id": "/",
+  "start_url": "/acceso-prueba?origen=app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#faf9ff",
+  "theme_color": "#6d28d9",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["medical", "business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Panel de la clínica",
+      "short_name": "Clínica",
+      "url": "/demo?origen=app",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portal del profesional",
+      "short_name": "Profesional",
+      "url": "/equipo?origen=app",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portal del paciente",
+      "short_name": "Paciente",
+      "url": "/portal?origen=app",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Panel del propietario",
+      "short_name": "Propietario",
+      "url": "/admin?origen=app",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

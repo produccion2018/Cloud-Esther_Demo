@@ -1,0 +1,695 @@
+import { PAISES_BASE } from "@/lib/paises";
+import type {
+  Anticipo,
+  Asistencia,
+  Ausencia,
+  CasoAtencion,
+  Contrato,
+  DocumentoInterno,
+  Empleado,
+  Gasto,
+  Incidente,
+  IntentoFallido,
+  Liquidacion,
+  Notificacion,
+  PaisOperacion,
+  PagoNomina,
+  Proveedor,
+  SesionPanel,
+  TareaInterna,
+  TicketSoporte,
+} from "./tipos-empresa";
+
+/* Ubicación: src/lib/admin/datos-ejemplo-empresa.ts
+   DATOS DE EJEMPLO de los módulos internos (sin backend). El panel los muestra con la
+   etiqueta «Datos de ejemplo»; con VITE_ADMIN_API_URL se usan los del servidor. */
+
+const DIA = 86_400_000;
+const hace = (d: number, h = 0) => new Date(Date.now() - d * DIA - h * 3_600_000).toISOString();
+const dia = (d: number) => new Date(Date.now() - d * DIA).toISOString().slice(0, 10);
+const mes = (offset = 0) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + offset);
+  return d.toISOString().slice(0, 7);
+};
+
+export const EMPLEADOS_INICIALES: Empleado[] = [
+  {
+    id: "emp-1",
+    nombre: "Lucas Pereyra",
+    documento: "30.111.222",
+    cargo: "Desarrollador full stack",
+    area: "Desarrollo",
+    ingreso: dia(420),
+    contratacion: "Relación de dependencia",
+    sueldoBase: 1_450_000,
+    moneda: "ARS",
+    jornadaHoras: 40,
+    horario: "Lun a Vie 9 a 18",
+    estado: "Activo",
+    email: "lucas@cloudesther.com",
+    telefono: "+54 9 11 5555-0101",
+  },
+  {
+    id: "emp-2",
+    nombre: "Micaela Ruiz",
+    documento: "35.444.555",
+    cargo: "Soporte a clínicas",
+    area: "Soporte",
+    ingreso: dia(210),
+    contratacion: "Relación de dependencia",
+    sueldoBase: 950_000,
+    moneda: "ARS",
+    jornadaHoras: 36,
+    horario: "Lun a Vie 10 a 17",
+    estado: "Activo",
+    email: "micaela@cloudesther.com",
+    telefono: "+54 9 11 5555-0102",
+  },
+  {
+    id: "emp-3",
+    nombre: "Tomás Acosta",
+    documento: "38.777.888",
+    cargo: "Ejecutivo comercial",
+    area: "Comercial",
+    ingreso: dia(95),
+    contratacion: "Monotributo / factura",
+    sueldoBase: 800_000,
+    moneda: "ARS",
+    jornadaHoras: 30,
+    horario: "Lun a Vie 9 a 15",
+    estado: "Activo",
+    email: "tomas@cloudesther.com",
+    telefono: "+54 9 11 5555-0103",
+  },
+];
+
+export const ASISTENCIAS_INICIALES: Asistencia[] = [
+  {
+    id: "as-1",
+    empleadoId: "emp-1",
+    fecha: dia(1),
+    entrada: "09:02",
+    salida: "18:10",
+    horasExtra: 0,
+    tipo: "Presente",
+    observaciones: "",
+  },
+  {
+    id: "as-2",
+    empleadoId: "emp-2",
+    fecha: dia(1),
+    entrada: "10:25",
+    salida: "17:00",
+    horasExtra: 0,
+    tipo: "Llegada tarde",
+    observaciones: "Avisó por demora de transporte",
+  },
+  {
+    id: "as-3",
+    empleadoId: "emp-3",
+    fecha: dia(1),
+    entrada: "",
+    salida: "",
+    horasExtra: 0,
+    tipo: "Ausente justificado",
+    observaciones: "Visita a clínica en La Plata",
+  },
+  {
+    id: "as-4",
+    empleadoId: "emp-1",
+    fecha: dia(2),
+    entrada: "08:55",
+    salida: "20:00",
+    horasExtra: 2,
+    tipo: "Presente",
+    observaciones: "Despliegue de versión",
+  },
+];
+
+export const AUSENCIAS_INICIALES: Ausencia[] = [
+  {
+    id: "au-1",
+    empleadoId: "emp-2",
+    tipo: "Vacaciones",
+    desde: dia(-20),
+    hasta: dia(-13),
+    estado: "Aprobada",
+    observaciones: "",
+  },
+  {
+    id: "au-2",
+    empleadoId: "emp-1",
+    tipo: "Licencia por estudio",
+    desde: dia(-5),
+    hasta: dia(-4),
+    estado: "Solicitada",
+    observaciones: "Examen final",
+  },
+];
+
+export const DOCUMENTOS_INICIALES: DocumentoInterno[] = [
+  {
+    id: "doc-1",
+    titulo: "Contrato laboral — Lucas Pereyra",
+    categoria: "Contrato laboral",
+    empleadoId: "emp-1",
+    fecha: dia(420),
+    vence: null,
+    archivo: "contrato-lucas.pdf",
+  },
+  {
+    id: "doc-2",
+    titulo: "Política de seguridad de la información",
+    categoria: "Política interna",
+    empleadoId: null,
+    fecha: dia(120),
+    vence: dia(-245),
+    archivo: "politica-seguridad.pdf",
+  },
+];
+
+export const LIQUIDACIONES_INICIALES: Liquidacion[] = [
+  {
+    id: "liq-1",
+    empleadoId: "emp-1",
+    periodo: mes(-1),
+    jurisdiccion: "Argentina — relación de dependencia",
+    conceptos: [
+      { id: "c1", nombre: "Sueldo base", tipo: "Haber", importe: 1_450_000 },
+      { id: "c2", nombre: "Horas extra", tipo: "Haber", importe: 72_000 },
+      {
+        id: "c3",
+        nombre: "Aportes (jubilación, obra social, ley 19.032)",
+        tipo: "Descuento",
+        importe: 258_740,
+      },
+    ],
+    estado: "Aprobada",
+    creada: hace(5),
+  },
+  {
+    id: "liq-2",
+    empleadoId: "emp-2",
+    periodo: mes(-1),
+    jurisdiccion: "Argentina — relación de dependencia",
+    conceptos: [
+      { id: "c1", nombre: "Sueldo base", tipo: "Haber", importe: 950_000 },
+      {
+        id: "c2",
+        nombre: "Aportes (jubilación, obra social, ley 19.032)",
+        tipo: "Descuento",
+        importe: 161_500,
+      },
+      { id: "c3", nombre: "Anticipo", tipo: "Descuento", importe: 100_000 },
+    ],
+    estado: "Aprobada",
+    creada: hace(5),
+  },
+];
+
+export const PAGOS_NOMINA_INICIALES: PagoNomina[] = [
+  {
+    id: "pn-1",
+    liquidacionId: "liq-1",
+    empleadoId: "emp-1",
+    periodo: mes(-1),
+    importe: 1_263_260,
+    fecha: dia(2),
+    metodo: "Transferencia",
+    referencia: "TRF-88213",
+    observaciones: "",
+  },
+  {
+    id: "pn-2",
+    liquidacionId: "liq-2",
+    empleadoId: "emp-2",
+    periodo: mes(-1),
+    importe: 400_000,
+    fecha: dia(2),
+    metodo: "Transferencia",
+    referencia: "TRF-88214",
+    observaciones: "Primer pago parcial",
+  },
+];
+
+export const ANTICIPOS_INICIALES: Anticipo[] = [
+  {
+    id: "an-1",
+    empleadoId: "emp-2",
+    periodo: mes(-1),
+    importe: 100_000,
+    fecha: dia(20),
+    observaciones: "Pedido por mudanza",
+  },
+];
+
+export const PROVEEDORES_INICIALES: Proveedor[] = [
+  {
+    id: "prov-1",
+    nombre: "Nube Hosting S.A.",
+    rubro: "Servidores y base de datos",
+    contacto: "Mesa de ayuda",
+    email: "soporte@nubehosting.com",
+    telefono: "",
+  },
+  {
+    id: "prov-2",
+    nombre: "Estudio Contable Ríos",
+    rubro: "Contabilidad",
+    contacto: "Graciela Ríos",
+    email: "graciela@estudiorios.com",
+    telefono: "+54 11 4444-1200",
+  },
+];
+
+export const GASTOS_INICIALES: Gasto[] = [
+  {
+    id: "g-1",
+    fecha: dia(3),
+    categoria: "Infraestructura y servidores",
+    descripcion: "Servidores y base de datos (mes)",
+    proveedorId: "prov-1",
+    importe: 420,
+    moneda: "USD",
+    comprobante: "FC-A 0001-00012345",
+    estado: "Pagado",
+  },
+  {
+    id: "g-2",
+    fecha: dia(6),
+    categoria: "Servicios profesionales",
+    descripcion: "Honorarios contables",
+    proveedorId: "prov-2",
+    importe: 180_000,
+    moneda: "ARS",
+    comprobante: "FC-C 0002-00000981",
+    estado: "Pendiente",
+  },
+  {
+    id: "g-3",
+    fecha: dia(12),
+    categoria: "Marketing",
+    descripcion: "Campaña en redes",
+    proveedorId: null,
+    importe: 250,
+    moneda: "USD",
+    comprobante: "",
+    estado: "Pagado",
+  },
+];
+
+export const CONTRATOS_INICIALES: Contrato[] = [
+  {
+    id: "ct-1",
+    titulo: "Servicio de hosting",
+    contraparte: "Nube Hosting S.A.",
+    tipo: "Proveedor",
+    inicio: dia(300),
+    fin: dia(-25),
+    importe: 420,
+    estado: "Por renovar",
+  },
+  {
+    id: "ct-2",
+    titulo: "Servicio contable",
+    contraparte: "Estudio Contable Ríos",
+    tipo: "Proveedor",
+    inicio: dia(200),
+    fin: null,
+    importe: 180_000,
+    estado: "Vigente",
+  },
+];
+
+export const TICKETS_SOPORTE_INICIALES: TicketSoporte[] = [
+  {
+    id: "T-1042",
+    asunto: "No pueden emitir facturas desde el módulo",
+    descripcion: "Al confirmar la factura aparece un error y no se genera el comprobante.",
+    clinica: "Dental Care Patagonia",
+    categoria: "Error del sistema",
+    prioridad: "Alta",
+    estado: "En progreso",
+    responsable: "Soporte Técnico",
+    abierto: hace(0, 5),
+    resuelto: null,
+    notasInternas: [
+      {
+        fecha: hace(0, 3),
+        autor: "Soporte Técnico",
+        texto: "Reproducido. Falta el punto de venta en su configuración.",
+      },
+    ],
+    historial: [
+      { fecha: hace(0, 5), autor: "Sistema", cambio: "Ticket creado" },
+      { fecha: hace(0, 4), autor: "Soporte Técnico", cambio: "Estado: En progreso" },
+    ],
+  },
+  {
+    id: "T-1041",
+    asunto: "Consulta sobre importar pacientes desde Excel",
+    descripcion: "Quieren migrar 1.200 pacientes de su sistema anterior.",
+    clinica: "Clínica Dental Sonrisas",
+    categoria: "Consulta",
+    prioridad: "Media",
+    estado: "En revisión",
+    responsable: null,
+    abierto: hace(1),
+    resuelto: null,
+    notasInternas: [],
+    historial: [{ fecha: hace(1), autor: "Sistema", cambio: "Ticket creado" }],
+  },
+  {
+    id: "T-1040",
+    asunto: "Agregar un usuario más (llegaron al límite)",
+    descripcion: "Plus: 40 usuarios internos ocupados. Piden capacidad adicional.",
+    clinica: "Sonríe Clínicas",
+    categoria: "Facturación",
+    prioridad: "Media",
+    estado: "Nuevo",
+    responsable: null,
+    abierto: hace(1, 6),
+    resuelto: null,
+    notasInternas: [],
+    historial: [{ fecha: hace(1, 6), autor: "Sistema", cambio: "Ticket creado" }],
+  },
+  {
+    id: "T-1039",
+    asunto: "Configurar WhatsApp para recordatorios",
+    descripcion: "",
+    clinica: "Centro Odontológico Palermo",
+    categoria: "Integraciones",
+    prioridad: "Baja",
+    estado: "Resuelto",
+    responsable: "Soporte Técnico",
+    abierto: hace(4),
+    resuelto: hace(3),
+    notasInternas: [],
+    historial: [
+      { fecha: hace(4), autor: "Sistema", cambio: "Ticket creado" },
+      { fecha: hace(3), autor: "Soporte Técnico", cambio: "Estado: Resuelto" },
+    ],
+  },
+];
+
+export const INCIDENTES_INICIALES: Incidente[] = [
+  {
+    id: "inc-1",
+    titulo: "Lentitud al abrir la Agenda",
+    impacto: "Medio",
+    estado: "Resuelto",
+    inicio: hace(6, 3),
+    fin: hace(6, 1),
+    descripcion: "Consulta pesada en la base de datos. Se agregó un índice.",
+  },
+];
+
+export const TAREAS_INICIALES: TareaInterna[] = [
+  {
+    id: "ta-1",
+    titulo: "Renovar contrato de hosting",
+    responsable: "Dueño Cloud Esther",
+    vence: dia(-20),
+    estado: "Pendiente",
+  },
+  {
+    id: "ta-2",
+    titulo: "Preparar demo para Grupo Odonto Sur",
+    responsable: "Socio Cloud Esther",
+    vence: dia(-3),
+    estado: "En curso",
+  },
+];
+
+export const NOTIFICACIONES_INICIALES: Notificacion[] = [
+  {
+    id: "n-1",
+    fecha: hace(0, 1),
+    categoria: "Comercial",
+    prioridad: "Alta",
+    titulo: "Nueva solicitud comercial",
+    detalle: "Sonríe Ya pidió información desde el demo.",
+    enlace: "/admin/demos",
+    leida: false,
+    archivada: false,
+  },
+  {
+    id: "n-2",
+    fecha: hace(0, 3),
+    categoria: "Clínicas",
+    prioridad: "Media",
+    titulo: "Nueva cuenta de demo",
+    detalle: "Sonríe Ya empezó a probar el plan Plus.",
+    enlace: "/admin/demos",
+    leida: false,
+    archivada: false,
+  },
+  {
+    id: "n-3",
+    fecha: hace(1),
+    categoria: "Pagos",
+    prioridad: "Alta",
+    titulo: "Pago pendiente vencido",
+    detalle: "Dental Care Patagonia lleva 9 días en mora.",
+    enlace: "/admin/pagos",
+    leida: false,
+    archivada: false,
+  },
+  {
+    id: "n-4",
+    fecha: hace(1, 4),
+    categoria: "Suscripciones",
+    prioridad: "Media",
+    titulo: "Suscripción próxima a vencer",
+    detalle: "Consultorio Dr. Aguirre renueva en 2 días.",
+    enlace: "/admin/pagos",
+    leida: true,
+    archivada: false,
+  },
+  {
+    id: "n-5",
+    fecha: hace(2),
+    categoria: "Soporte",
+    prioridad: "Alta",
+    titulo: "Ticket de prioridad alta",
+    detalle: "T-1042: no pueden emitir facturas.",
+    enlace: "/admin/soporte",
+    leida: true,
+    archivada: false,
+  },
+  {
+    id: "n-6",
+    fecha: hace(3),
+    categoria: "Pagos",
+    prioridad: "Baja",
+    titulo: "Pago registrado",
+    detalle: "Grupo Odonto Sur pagó su suscripción.",
+    enlace: "/admin/pagos",
+    leida: true,
+    archivada: false,
+  },
+  {
+    id: "n-7",
+    fecha: hace(5),
+    categoria: "Sistema",
+    prioridad: "Baja",
+    titulo: "Mantenimiento programado",
+    detalle: "Actualización de servidores el domingo de 3 a 4 h.",
+    enlace: null,
+    leida: true,
+    archivada: false,
+  },
+];
+
+export const SESIONES_INICIALES: SesionPanel[] = [
+  {
+    id: "ses-ej-1",
+    usuario: "Socio Cloud Esther",
+    email: "socio@cloudesther.com",
+    rol: "partner",
+    inicio: hace(0, 6),
+    ultimaActividad: hace(0, 5),
+    fin: hace(0, 5),
+    cierre: "Manual",
+    dispositivo: "Computadora · macOS",
+    navegador: "Safari",
+  },
+  {
+    id: "ses-ej-2",
+    usuario: "Soporte Técnico",
+    email: "soporte@cloudesther.com",
+    rol: "support",
+    inicio: hace(1, 3),
+    ultimaActividad: hace(1, 1),
+    fin: hace(1, 0.5),
+    cierre: "Inactividad",
+    dispositivo: "Computadora · Windows",
+    navegador: "Chrome",
+  },
+  {
+    id: "ses-ej-3",
+    usuario: "Dueño Cloud Esther",
+    email: "dueno@cloudesther.com",
+    rol: "owner",
+    inicio: hace(2, 4),
+    ultimaActividad: hace(2, 2),
+    fin: hace(2, 2),
+    cierre: "Manual",
+    dispositivo: "Celular · iOS",
+    navegador: "Safari",
+  },
+];
+
+export const INTENTOS_INICIALES: IntentoFallido[] = [
+  {
+    id: "int-ej-1",
+    fecha: hace(0, 9),
+    email: "soporte@cloudesther.com",
+    motivo: "Contraseña incorrecta",
+    dispositivo: "Computadora · Windows",
+    navegador: "Chrome",
+  },
+  {
+    id: "int-ej-2",
+    fecha: hace(3, 2),
+    email: "admin@gmail.com",
+    motivo: "Correo sin acceso al panel",
+    dispositivo: "Computadora · Linux",
+    navegador: "Firefox",
+  },
+];
+
+/* Países de ejemplo: la lista compartida con la configuración de cada clínica. */
+export const PAISES_INICIALES: PaisOperacion[] = PAISES_BASE;
+
+/* Datos de ejemplo de Atención a clínicas (secretaría de Cloud Esther). */
+const haceH = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+const enDias = (d: number) => {
+  const f = new Date(Date.now() + d * 86_400_000);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+};
+
+export const ATENCION_CLINICAS_INICIAL: CasoAtencion[] = [
+  {
+    id: "AT-2031",
+    clinica: "Clínica Dental Sonrisas",
+    tipo: "Consulta",
+    canal: "WhatsApp",
+    asunto: "Cómo dar de alta una nueva sucursal",
+    detalle: "La directora quiere sumar la sede de Lanús y pregunta si cambia el plan.",
+    contacto: "Carolina Benítez",
+    prioridad: "Media",
+    estado: "En curso",
+    responsable: "Secretaría",
+    creado: haceH(5),
+    proximoSeguimiento: enDias(1),
+    ticket: null,
+    mensajes: [
+      {
+        fecha: haceH(5),
+        autor: "Carolina Benítez",
+        texto: "Hola, queremos sumar otra sucursal. ¿Cómo lo hacemos?",
+        interno: false,
+      },
+      {
+        fecha: haceH(4),
+        autor: "Secretaría",
+        texto: "Le paso la guía y coordino una llamada con comercial.",
+        interno: true,
+      },
+    ],
+    historial: [{ fecha: haceH(5), autor: "Secretaría", cambio: "Caso creado" }],
+  },
+  {
+    id: "AT-2030",
+    clinica: "Estética Dental Belgrano",
+    tipo: "Solicitud administrativa",
+    canal: "Email",
+    asunto: "Pide plan de pagos por la deuda pendiente",
+    detalle: "Tienen 15 días de mora. Solicitan pagar en dos cuotas.",
+    contacto: "Martín González",
+    prioridad: "Alta",
+    estado: "Esperando a la clínica",
+    responsable: "Dueño Cloud Esther",
+    creado: haceH(28),
+    proximoSeguimiento: enDias(0),
+    ticket: null,
+    mensajes: [],
+    historial: [{ fecha: haceH(28), autor: "Secretaría", cambio: "Caso creado" }],
+  },
+  {
+    id: "AT-2029",
+    clinica: "Dental Care Patagonia",
+    tipo: "Incidencia",
+    canal: "Teléfono",
+    asunto: "No pueden emitir facturas",
+    detalle: "Llamaron por el error al confirmar facturas. Se derivó a Soporte técnico.",
+    contacto: "Recepción",
+    prioridad: "Alta",
+    estado: "En curso",
+    responsable: "Soporte Técnico",
+    creado: haceH(30),
+    proximoSeguimiento: enDias(0),
+    ticket: "T-1042",
+    mensajes: [],
+    historial: [
+      { fecha: haceH(30), autor: "Secretaría", cambio: "Caso creado" },
+      { fecha: haceH(29), autor: "Secretaría", cambio: "Derivado a Soporte técnico (T-1042)" },
+    ],
+  },
+  {
+    id: "AT-2028",
+    clinica: "Grupo Odonto Sur",
+    tipo: "Llamada",
+    canal: "Teléfono",
+    asunto: "Llamada de bienvenida al plan Enterprise",
+    detalle: "Se repasaron módulos, accesos del equipo y el Portal administrativo.",
+    contacto: "Florencia Díaz",
+    prioridad: "Baja",
+    estado: "Resuelto",
+    responsable: "Secretaría",
+    creado: haceH(72),
+    proximoSeguimiento: null,
+    ticket: null,
+    mensajes: [],
+    historial: [
+      { fecha: haceH(72), autor: "Secretaría", cambio: "Llamada registrada" },
+      { fecha: haceH(71), autor: "Secretaría", cambio: "Estado: Resuelto" },
+    ],
+  },
+  {
+    id: "AT-2027",
+    clinica: "OdontoKids Salta",
+    tipo: "Seguimiento",
+    canal: "WhatsApp",
+    asunto: "Cuenta suspendida: ofrecer reactivación",
+    detalle: "Contactar para conocer el motivo y ofrecer reactivar con plan Start.",
+    contacto: "Julián Ortega",
+    prioridad: "Media",
+    estado: "Nuevo",
+    responsable: null,
+    creado: haceH(50),
+    proximoSeguimiento: enDias(-1),
+    ticket: null,
+    mensajes: [],
+    historial: [{ fecha: haceH(50), autor: "Sistema", cambio: "Caso creado" }],
+  },
+  {
+    id: "AT-2026",
+    clinica: "Consultorio Dr. Aguirre",
+    tipo: "Mensaje interno",
+    canal: "Chat",
+    asunto: "Revisar migración de pacientes antes del viernes",
+    detalle: "Nota interna del equipo: validar el archivo de pacientes que enviaron.",
+    contacto: "—",
+    prioridad: "Media",
+    estado: "En curso",
+    responsable: "Soporte Técnico",
+    creado: haceH(10),
+    proximoSeguimiento: enDias(3),
+    ticket: null,
+    mensajes: [],
+    historial: [{ fecha: haceH(10), autor: "Secretaría", cambio: "Caso creado" }],
+  },
+];

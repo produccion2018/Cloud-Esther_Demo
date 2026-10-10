@@ -56,6 +56,7 @@ import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/Marketing.tsx
 
@@ -116,7 +117,7 @@ function formatearFecha(iso: string) {
   return iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
 }
 function ars(n: number) {
-  return `$ ${Math.round(n).toLocaleString("es-AR")}`;
+  return `$\u00a0${Math.round(n).toLocaleString("es-AR")}`;
 }
 function hace(iso: string) {
   const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -485,7 +486,7 @@ export default function Marketing() {
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                     seccion === s.id
                       ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      : "text-muted-foreground hover:bg-card hover:text-foreground"
                   }`}
                 >
                   <s.icon className="size-3.5" />
@@ -848,8 +849,10 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `leads-${hoyISO()}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     ctx.onToast(`${lista.length} leads exportados`);
   };
 
@@ -1332,9 +1335,9 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
                 )}
                 target="_blank"
                 rel="noreferrer"
-                className={BTN_SECUNDARIO}
+                className="btn-wa"
               >
-                <MessageCircle className="size-3.5" /> WhatsApp
+                <IconoWhatsApp /> WhatsApp
               </a>
             )}
             {l.etapa !== "Convertido" && (
@@ -2307,7 +2310,7 @@ function Referidos({ ctx }: { ctx: Ctx }) {
                       <button
                         type="button"
                         onClick={() => ctx.abrirLead(l.id)}
-                        className="flex w-full items-center gap-2 rounded-xl bg-white/70 px-2.5 py-2 text-left ring-1 ring-primary/10 transition-colors hover:bg-white"
+                        className="flex w-full items-center gap-2 rounded-xl bg-white/70 px-2.5 py-2 text-left ring-1 ring-primary/10 transition-colors hover:bg-card"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-semibold">{l.nombre}</span>

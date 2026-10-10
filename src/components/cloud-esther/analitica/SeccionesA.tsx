@@ -37,6 +37,7 @@ import {
 } from "@/components/cloud-esther/analitica/graficos";
 import { M } from "@/components/cloud-esther/analitica/Analitica";
 import { BTN_PRIMARIO, BTN_SECUNDARIO, Mini, Pill } from "@/components/cloud-esther/rrhh/ui";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Secciones de Analítica: Pacientes, Agenda y ocupación, Profesionales. */
 
@@ -303,12 +304,12 @@ export function Pacientes({ ctx }: { ctx: CtxBI }) {
                 </span>
                 {p.telefono && (
                   <a
-                    className={BTN_SECUNDARIO}
+                    className="btn-wa"
                     target="_blank"
                     rel="noreferrer"
                     href={`https://wa.me/${p.telefono.replace(/[^\d]/g, "")}?text=${encodeURIComponent(`Hola ${p.nombre}, hace un tiempo que no te vemos en la clínica. ¿Querés que te reservemos un turno de control?`)}`}
                   >
-                    <MessageCircle className="size-4" /> WhatsApp
+                    <IconoWhatsApp /> WhatsApp
                   </a>
                 )}
               </li>

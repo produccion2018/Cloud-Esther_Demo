@@ -239,10 +239,10 @@ const MINI_DATO_CARD =
   "rounded-xl border border-primary/12 bg-gradient-to-br from-white to-primary/[0.035] px-3 py-2.5 shadow-[0_6px_18px_-16px_rgba(124,58,237,0.4)] transition-all duration-200 hover:border-primary/25 hover:bg-primary/[0.045]";
 
 const INPUT =
-  "h-10 w-full rounded-xl border border-primary/10 bg-white/80 px-3.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white focus:ring-4 focus:ring-primary/10";
+  "h-10 w-full rounded-xl border border-primary/10 bg-white/80 px-3.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white dark:focus:bg-card focus:ring-4 focus:ring-primary/10";
 
 const TEXTAREA =
-  "min-h-20 w-full resize-y rounded-xl border border-primary/10 bg-white/80 px-3.5 py-2.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white focus:ring-4 focus:ring-primary/10";
+  "min-h-20 w-full resize-y rounded-xl border border-primary/10 bg-white/80 px-3.5 py-2.5 text-sm outline-none shadow-[0_4px_16px_-14px_rgba(124,58,237,0.35)] transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:bg-white dark:focus:bg-card focus:ring-4 focus:ring-primary/10";
 
 const BTN_PRIMARIO =
   "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
@@ -1137,7 +1137,7 @@ function CarpetaPaciente({
 
         {/* Contenido */}
 
-        <div className="min-w-0 p-4">
+        <div className={`min-w-0 sm:p-4 ${seccion === "resumen" ? "p-4" : "p-2"}`}>
           {seccion === "resumen" ? (
             <ResumenPaciente
               paciente={paciente}
@@ -1416,9 +1416,11 @@ function PacientesInner() {
 
     a.href = url;
     a.download = "pacientes.csv";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
 
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
     show(
       "Descargando pacientes.csv",

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import {
   SUCURSALES as SUCURSALES_AGENDA,
@@ -62,6 +63,7 @@ import {
   PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -317,6 +319,8 @@ type NotaVoz = {
   audioUrl: string;
   transcripcion: string;
   estadoTranscripcion: "Pendiente de integración" | "Transcrita";
+  /** Pieza dental (FDI) cuando se grabó desde el Odontograma 3D. */
+  piezas?: string;
 };
 
 type NotaRapida = {
@@ -1296,7 +1300,7 @@ function formatearFecha(iso: string) {
 }
 
 function formatearMonto(n: number) {
-  return `$ ${n.toLocaleString("es-AR")}`;
+  return `$\u00a0${n.toLocaleString("es-AR")}`;
 }
 
 function formatearTamano(bytes: number) {
@@ -2083,7 +2087,7 @@ function NotaClinicaForm({
   );
 }
 
-function NotaVozRecorder({
+export function NotaVozRecorder({
   profesional,
   onSave,
   onToast,
@@ -2268,6 +2272,8 @@ function NotaRapidaForm({
 }
 
 function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
+  // Notas de voz (grabación y transcripción): solo en planes con IA (Plus y Enterprise).
+  const conIA = useConIA();
   const [abierto, setAbierto] = useState(false);
   const [vozAbierta, setVozAbierta] = useState(false);
   const [rapidaAbierta, setRapidaAbierta] = useState(false);
@@ -2301,7 +2307,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-sm lg:col-span-2">
+        <div
+          className={`rounded-2xl border border-primary/10 bg-card p-3 shadow-sm ${conIA ? "lg:col-span-2" : "lg:col-span-3"}`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold">Notas clínicas</p>
@@ -2310,7 +2318,9 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              {conIA && (
+                <BotonMini icon={Mic} label="Nota de voz" onClick={() => setVozAbierta(true)} />
+              )}
               <BotonMini
                 icon={Plus}
                 label="Nota clínica"
@@ -2340,6 +2350,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             </Field>
           </div>
         </div>
+        {conIA && (
         <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.06] to-card p-3 shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
             Notas de voz
@@ -2355,6 +2366,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
             Grabá una nota de voz y queda guardada en la ficha para escucharla cuando quieras.
           </p>
         </div>
+        )}
       </div>
 
       {notas.length === 0 ? (
@@ -2372,7 +2384,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{n.motivoConsulta}</p>
                     {n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
                       {formatearFecha(n.fecha)} · {n.hora}
                     </span>
                   </div>
@@ -2439,7 +2451,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
         </ul>
       )}
 
-      {datos.notasVoz.length > 0 && (
+      {conIA && datos.notasVoz.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Notas de voz guardadas</p>
           {datos.notasVoz.map((v) => (
@@ -2450,6 +2462,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                   {formatearFecha(v.fecha)} · {v.hora}
                 </span>
                 <Badge tono="gris">{v.estadoTranscripcion}</Badge>
+                {v.piezas && <Badge tono="primary">Pieza {v.piezas}</Badge>}
                 <span className="text-[11px] text-muted-foreground">
                   {v.profesional} · {v.duracionSegundos}s
                 </span>
@@ -2473,12 +2486,12 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
         {datos.notasRapidas.length === 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">Sin notas rápidas.</p>
         ) : (
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-2 @2xl:grid-cols-2">
             {datos.notasRapidas.map((n) => (
               <div key={n.id} className="rounded-xl border border-border bg-background p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <Badge tono="primary">{n.tipo}</Badge>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground">
                     {formatearFecha(n.fecha)} · {n.hora}
                   </span>
                 </div>
@@ -2525,6 +2538,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
       )}
       {vozAbierta && (
         <Modal title="Nota de voz" onClose={() => setVozAbierta(false)}>
+          {/* Solo se abre desde el botón, que existe únicamente en planes con IA. */}
           <NotaVozRecorder
             profesional={datos.profesionales[0]?.nombre ?? ""}
             onToast={onToast}
@@ -2891,8 +2905,7 @@ function imprimirHistoria(datos: Registros, paciente: string) {
   <h2>Notas clínicas</h2>${notas || "<p class='meta'>Sin notas clínicas.</p>"}
   <h2>Evoluciones</h2>${evoluciones || "<p class='meta'>Sin evoluciones.</p>"}
   <script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`historia-clinica-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
@@ -2950,10 +2963,14 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           <ul className="space-y-2.5">
             {lista.map((e) => (
               <li key={e.id} className={`${ITEM} flex items-start gap-3`}>
-                <div className="w-20 shrink-0">
+                <div className="hidden w-20 shrink-0 sm:block">
                   <p className="text-sm font-bold">{formatearFecha(e.fecha)}</p>
                 </div>
                 <div className="min-w-0 flex-1">
+                  {/* En el celular la fecha va arriba, en la misma línea del registro. */}
+                  <p className="whitespace-nowrap text-xs font-bold text-primary sm:hidden">
+                    {formatearFecha(e.fecha)}
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{e.motivo}</p>
                     {e.pieza && <Badge tono="primary">Pieza {e.pieza}</Badge>}
@@ -3328,8 +3345,15 @@ function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente })
             >
               {paso}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {hecho && fecha ? formatearFecha(fecha) : " "}
+            <p className="truncate whitespace-nowrap text-[10px] text-muted-foreground tabular-nums">
+              {hecho && fecha ? (
+                <>
+                  <span className="hidden @lg:inline">{formatearFecha(fecha)}</span>
+                  <span className="@lg:hidden">{formatearFecha(fecha).slice(0, 5)}</span>
+                </>
+              ) : (
+                " "
+              )}
             </p>
           </li>
         );
@@ -3357,8 +3381,7 @@ function imprimirPlanTratamiento(lista: TratamientoPaciente[], paciente: string)
   <tbody>${filas}</tbody><tfoot><tr><td colspan="5">Total estimado</td><td class="n">${escapar(formatearMonto(total))}</td></tr></tfoot></table>
   <p class="meta" style="margin-top:12px">Los valores y la cantidad de sesiones son estimados y pueden cambiar según la evolución clínica.</p>
   <div class="firma"><p>Firma del profesional</p><p>Conformidad del paciente</p></div><script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`plan-de-tratamiento-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
@@ -3525,7 +3548,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 @2xl:grid-cols-4">
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(activos)}
@@ -3607,7 +3630,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
           No hay tratamientos que coincidan.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2.5 @4xl:grid-cols-2">
           {lista.map((t) => {
             const hechas = t.sesiones?.length ?? 0;
             const plan = t.sesionesPlan ?? 1;
@@ -3617,12 +3640,21 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             return (
               <li key={t.id} className="card-grad flex flex-col p-4">
                 <div className="flex items-start gap-3">
-                  <span className={`${CIRCULO_ICONO} size-10`}>
+                  {/* En el celular el ícono decorativo se oculta: el ancho queda para los datos. */}
+                  <span className={`${CIRCULO_ICONO} size-10 max-sm:hidden`}>
                     <Stethoscope className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{t.nombre}</p>
+                    {/* Nombre e importe en la misma fila; debajo, los estados en una sola línea. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 text-sm font-semibold">{t.nombre}</p>
+                      {(t.costo ?? 0) > 0 && (
+                        <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums">
+                          {formatearMonto(t.costo ?? 0)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {t.pieza && <Badge tono="primary">Pieza {t.pieza}</Badge>}
                       <Badge tono={TONO_TRATAMIENTO[t.estado]}>{t.estado}</Badge>
                       {!cerrado && (
@@ -3642,11 +3674,6 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       )}
                     </p>
                   </div>
-                  {(t.costo ?? 0) > 0 && (
-                    <span className="shrink-0 text-sm font-bold">
-                      {formatearMonto(t.costo ?? 0)}
-                    </span>
-                  )}
                 </div>
 
                 <PasosTratamiento tratamiento={t} />
@@ -4540,34 +4567,9 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
 }
 
 /* TODO backend: reemplazar por GET /pacientes/:id/recetas/:recetaId/pdf (PDF firmado digitalmente).
-   Mientras tanto se abre el diálogo de impresión del navegador (opción "Guardar como PDF"). */
+   Mientras tanto se genera y descarga un PDF en el navegador. */
 function imprimirReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  const win = iframe.contentWindow;
-  const doc = win?.document;
-  if (!win || !doc) {
-    iframe.remove();
-    return;
-  }
-  doc.open();
-  doc.write(htmlReceta(r, contexto));
-  doc.close();
-
-  const limpiar = () => iframe.remove();
-  win.onafterprint = limpiar;
-  window.setTimeout(() => {
-    win.focus();
-    win.print();
-  }, 250);
-  window.setTimeout(limpiar, 120000);
+  void descargarPDF(htmlReceta(r, contexto), `receta-${r.numero}`);
 }
 
 function RecetaVisor({
@@ -4679,7 +4681,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
   const descargar = (r: RecetaPaciente) => {
     imprimirReceta(r, contexto);
-    onToast(`${r.numero}: elegí "Guardar como PDF" para descargarla`);
+    onToast(`${r.numero}: descargando la receta en PDF`);
   };
 
   return (
@@ -5607,7 +5609,7 @@ function GaleriaTab({
                   type="button"
                   onClick={() => onVer(s.id)}
                   aria-label={`Ver ${s.tipo}`}
-                  className="group relative h-[92px] w-[112px] shrink-0 overflow-hidden rounded-lg border border-border/80 bg-muted/30 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-[118px]"
+                  className="group relative h-[84px] w-[84px] shrink-0 overflow-hidden rounded-lg border border-border/80 bg-muted/30 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-[92px] sm:w-[118px]"
                 >
                   {tieneArchivo && esImagen(s.archivoNombre) ? (
                     <img
@@ -5640,14 +5642,17 @@ function GaleriaTab({
                 <div className="min-w-0 flex-1 py-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold leading-5 text-foreground">
+                      <p className="line-clamp-2 text-[13px] font-semibold leading-5 text-foreground">
                         {s.tipo}
                       </p>
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                        {[formatearFecha(s.fecha), s.zona].filter(Boolean).join(" · ")}
+                        <span className="whitespace-nowrap">{formatearFecha(s.fecha)}</span>
+                        {s.zona ? ` · ${s.zona}` : ""}
                       </p>
                     </div>
-                    <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
+                    <span className="shrink-0 whitespace-nowrap">
+                      <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
+                    </span>
                   </div>
 
                   <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
@@ -6177,7 +6182,7 @@ function DiagnosticoTab({
       </div>
 
       {/* Resumen */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-3">
         <ResumenCuenta
           etiqueta="Total"
           valor={String(datos.diagnosticos.length)}
@@ -6652,6 +6657,8 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [simulacionAbierta, setSimulacionAbierta] = useState(false);
   const [tab, setTab] = useState<"galeria" | "comparar" | "simulacion">("galeria");
+  // La simulación estética usa IA: solo en Plus y Enterprise.
+  const conIA = useConIA();
   const lista = [...datos.fotografias].sort((a, b) =>
     `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
   );
@@ -6665,14 +6672,16 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
       <div className="rounded-xl border border-border/80 bg-card p-1 shadow-sm">
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+        <div className={`grid grid-cols-1 gap-1 ${conIA ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           {(
             [
               ["galeria", "Galería"],
               ["comparar", "Antes / Después"],
               ["simulacion", "Simulación estética"],
             ] as const
-          ).map(([id, label]) => (
+          )
+            .filter(([id]) => conIA || id !== "simulacion")
+            .map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -6734,7 +6743,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
           </div>
         ))}
       {tab === "comparar" && <CompararFotografias fotografias={lista} />}
-      {tab === "simulacion" && (
+      {conIA && tab === "simulacion" && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -6882,6 +6891,9 @@ type TabEstudios =
   "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
+  // mediciones, vínculo con tratamientos y diagnóstico.
+  const conDiagnostico = useNivel("estudios").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [tab, setTab] = useState<TabEstudios>("galeria");
   const [visorId, setVisorId] = useState<number | null>(null);
@@ -6893,26 +6905,34 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const informados = datos.estudios.filter((s) => s.estadoInforme === "Informado").length;
   const activos = datos.diagnosticos.filter((d) => d.estado === "Activo").length;
 
-  const TABS: { id: TabEstudios; label: string; icon: LucideIcon }[] = [
+  const TODAS: { id: TabEstudios; label: string; icon: LucideIcon; avanzado?: boolean }[] = [
     { id: "galeria", label: "Galería", icon: Images },
     { id: "fotografias", label: "Fotografías", icon: Camera },
-    { id: "comparar", label: "Comparar", icon: GitCompare },
-    { id: "anotaciones", label: "Mediciones", icon: Ruler },
-    { id: "vinculados", label: "Tratamiento", icon: Link2 },
-    { id: "diagnostico", label: "Diagnóstico", icon: Activity },
+    { id: "comparar", label: "Comparar", icon: GitCompare, avanzado: true },
+    { id: "anotaciones", label: "Mediciones", icon: Ruler, avanzado: true },
+    { id: "vinculados", label: "Tratamiento", icon: Link2, avanzado: true },
+    { id: "diagnostico", label: "Diagnóstico", icon: Activity, avanzado: true },
   ];
+  const TABS = TODAS.filter((t) => conDiagnostico || !t.avanzado);
+  const tabVisible = TABS.some((t) => t.id === tab) ? tab : "galeria";
 
   return (
     <div className="space-y-3">
       <Encabezado
         icon={Images}
-        titulo="Estudios y diagnóstico por imagen"
-        descripcion="Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+        titulo={conDiagnostico ? "Estudios y diagnóstico por imagen" : "Estudios clínicos"}
+        descripcion={
+          conDiagnostico
+            ? "Radiografías, tomografías y fotografías clínicas con comparación, mediciones y diagnóstico."
+            : "Radiografías, tomografías y fotografías clínicas del paciente, ordenadas por fecha."
+        }
         etiquetaBoton="Cargar estudio"
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
+      <div
+        className={`grid grid-cols-2 gap-2.5 ${conDiagnostico ? "@2xl:grid-cols-3 @4xl:grid-cols-5" : "@2xl:grid-cols-3"}`}
+      >
         <ResumenCuenta etiqueta="Estudios" valor={String(datos.estudios.length)} icon={Images} />
         <ResumenCuenta
           etiqueta="Informados"
@@ -6926,23 +6946,27 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={Clock3}
           tono={datos.estudios.length - informados > 0 ? "text-amber-600" : ""}
         />
-        <ResumenCuenta
-          etiqueta="Mediciones"
-          valor={String(datos.anotaciones.length)}
-          icon={Ruler}
-        />
-        <ResumenCuenta
-          etiqueta="Diagnósticos activos"
-          valor={String(activos)}
-          icon={Activity}
-          tono="text-primary"
-        />
+        {conDiagnostico && (
+          <>
+            <ResumenCuenta
+              etiqueta="Mediciones"
+              valor={String(datos.anotaciones.length)}
+              icon={Ruler}
+            />
+            <ResumenCuenta
+              etiqueta="Diagnósticos activos"
+              valor={String(activos)}
+              icon={Activity}
+              tono="text-primary"
+            />
+          </>
+        )}
       </div>
 
       <div className="card-grad p-1">
-        <div className="grid grid-cols-2 gap-1 md:grid-cols-6">
+        <div className={`grid grid-cols-2 gap-1 ${conDiagnostico ? "md:grid-cols-6" : ""}`}>
           {TABS.map((t) => {
-            const activa = tab === t.id;
+            const activa = tabVisible === t.id;
             return (
               <button
                 key={t.id}
@@ -6962,7 +6986,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         </div>
       </div>
 
-      {tab === "galeria" && (
+      {tabVisible === "galeria" && (
         <GaleriaTab
           estudios={lista}
           onVer={setVisorId}
@@ -6975,15 +6999,15 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           }}
         />
       )}
-      {tab === "fotografias" && (
+      {tabVisible === "fotografias" && (
         <FotografiasSec datos={datos} cambiar={cambiar} onToast={onToast} contexto={contexto} />
       )}
-      {tab === "comparar" && <CompararTab estudios={datos.estudios} />}
-      {tab === "anotaciones" && (
+      {tabVisible === "comparar" && <CompararTab estudios={datos.estudios} />}
+      {tabVisible === "anotaciones" && (
         <AnotacionesTab datos={datos} cambiar={cambiar} onToast={onToast} onVer={setVisorId} />
       )}
-      {tab === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
-      {tab === "diagnostico" && (
+      {tabVisible === "vinculados" && <VinculadosTab datos={datos} cambiar={cambiar} onToast={onToast} />}
+      {tabVisible === "diagnostico" && (
         <DiagnosticoTab datos={datos} cambiar={cambiar} onToast={onToast} />
       )}
 
@@ -7689,20 +7713,22 @@ function ResumenCuenta({
   tono?: string;
 }) {
   return (
-    <div className="card-grad flex min-h-[80px] items-start justify-between gap-2 p-3.5">
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    // Etiqueta e ícono arriba; el valor usa todo el ancho y nunca se parte (fecha · hora, $ 35.000).
+    <div className="card-grad @container flex min-h-[76px] min-w-0 flex-col gap-1.5 p-2.5 sm:min-h-[80px] sm:p-3.5">
+      <div className="flex items-start justify-between gap-1.5">
+        <p className="min-w-0 text-[9.5px] font-semibold uppercase leading-tight tracking-[0.02em] text-muted-foreground sm:text-[10px] sm:tracking-[0.08em]">
           {etiqueta}
         </p>
-        <p
-          className={`mt-1.5 text-lg font-bold leading-tight tracking-tight ${tono ?? "text-foreground"}`}
-        >
-          {valor}
-        </p>
+        <span className="hidden size-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary @[8.5rem]:grid sm:size-8 sm:rounded-xl">
+          <Icon className="size-3 sm:size-4" />
+        </span>
       </div>
-      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-        <Icon className="size-4" />
-      </span>
+      <p
+        className={`mt-auto whitespace-nowrap font-bold leading-tight tracking-tight tabular-nums ${tono ?? "text-foreground"}`}
+        style={{ fontSize: `clamp(11px, calc(100cqi / ${Math.max(1, valor.length * 0.62).toFixed(2)}), 18px)` }}
+      >
+        {valor}
+      </p>
     </div>
   );
 }
@@ -7731,7 +7757,7 @@ function CuentaSec({ datos, cambiar, onToast }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-3">
         <ResumenCuenta etiqueta="Cargos" valor={formatearMonto(cargos)} icon={ReceiptText} />
         <ResumenCuenta
           etiqueta="Pagos y créditos"
@@ -8119,8 +8145,15 @@ function PasosLaboratorio({ trabajo }: { trabajo: TrabajoLaboratorio }) {
             >
               {estado}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {hecho && fecha ? formatearFecha(fecha) : " "}
+            <p className="truncate whitespace-nowrap text-[10px] text-muted-foreground tabular-nums">
+              {hecho && fecha ? (
+                <>
+                  <span className="hidden @lg:inline">{formatearFecha(fecha)}</span>
+                  <span className="@lg:hidden">{formatearFecha(fecha).slice(0, 5)}</span>
+                </>
+              ) : (
+                " "
+              )}
             </p>
           </li>
         );
@@ -8141,14 +8174,16 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
   ${fila("Laboratorio", t.proveedor)}${fila("Profesional", t.profesional ?? "")}${fila("Fecha de envío", formatearFecha(t.fechaEnvio))}
   ${fila("Entrega estimada", t.fechaEntregaEstimada ? formatearFecha(t.fechaEntregaEstimada) : "")}${fila("Especificaciones", t.notas)}</table>
   <p class="firma">Firma y sello del profesional</p><script>window.onload=()=>{window.print()}</script></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return false;
+  const w = documentoPDF(`orden-de-laboratorio-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
 }
 
 function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  // Start: registrar trabajos y su estado. Pro en adelante: seguimiento por pasos, avisos de
+  // demora, costos, filtros y orden imprimible para el laboratorio.
+  const conSeguimiento = useNivel("laboratorio").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
@@ -8206,7 +8241,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         onAgregar={() => setAbierto(true)}
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-2.5 ${conSeguimiento ? "@2xl:grid-cols-4" : ""}`}>
         <ResumenCuenta
           etiqueta="En curso"
           valor={String(enProceso)}
@@ -8219,20 +8254,24 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           icon={PackageCheck}
           tono="text-emerald-600"
         />
-        <ResumenCuenta
-          etiqueta="Demorados"
-          valor={String(demorados)}
-          icon={Clock3}
-          tono={demorados ? "text-destructive" : ""}
-        />
-        <ResumenCuenta
-          etiqueta="Costo total"
-          valor={formatearMonto(costoTotal)}
-          icon={CircleDollarSign}
-        />
+        {conSeguimiento && (
+          <>
+            <ResumenCuenta
+              etiqueta="Demorados"
+              valor={String(demorados)}
+              icon={Clock3}
+              tono={demorados ? "text-destructive" : ""}
+            />
+            <ResumenCuenta
+              etiqueta="Costo total"
+              valor={formatearMonto(costoTotal)}
+              icon={CircleDollarSign}
+            />
+          </>
+        )}
       </div>
 
-      {todos.length > 0 && (
+      {conSeguimiento && todos.length > 0 && (
         <div className="card-grad flex flex-wrap gap-1.5 p-2">
           {FILTROS.map((f) => (
             <button
@@ -8264,25 +8303,33 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           No hay trabajos con ese estado.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2.5 @4xl:grid-cols-2">
           {lista.map((t) => {
             const aviso = avisoEntrega(t);
             return (
               <li key={t.id} className="card-grad p-4">
                 <div className="flex items-start gap-3">
-                  <span className={`${CIRCULO_ICONO} size-10`}>
+                  <span className={`${CIRCULO_ICONO} size-10 max-sm:hidden`}>
                     <FlaskConical className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{t.tipo}</p>
+                    {/* Trabajo e importe en la misma fila; debajo, pieza y estados. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 text-sm font-semibold">{t.tipo}</p>
+                      {conSeguimiento && t.costo > 0 && (
+                        <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums">
+                          {formatearMonto(t.costo)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {t.pieza && (
                         <Badge tono="primary">
                           {/^\d/.test(t.pieza) ? `Pieza ${t.pieza}` : t.pieza}
                         </Badge>
                       )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
-                      {aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                      {conSeguimiento && aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       {t.material && <span>{t.material}</span>}
@@ -8294,12 +8341,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                     </p>
                   </div>
-                  {t.costo > 0 && (
-                    <span className="shrink-0 text-sm font-bold">{formatearMonto(t.costo)}</span>
-                  )}
                 </div>
 
-                <PasosLaboratorio trabajo={t} />
+                {conSeguimiento && <PasosLaboratorio trabajo={t} />}
 
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -8329,14 +8373,16 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       onClick={() => cambiarEstado(t, "Entregado")}
                     />
                   )}
-                  <BotonMini
-                    icon={Printer}
-                    label="Orden"
-                    onClick={() => {
-                      if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
-                        onToast("Permití las ventanas emergentes para imprimir");
-                    }}
-                  />
+                  {conSeguimiento && (
+                    <BotonMini
+                      icon={Printer}
+                      label="Orden"
+                      onClick={() => {
+                        if (!imprimirOrdenLaboratorio(t, contexto?.paciente ?? "Paciente"))
+                          onToast("Permití las ventanas emergentes para imprimir");
+                      }}
+                    />
+                  )}
                   <BotonMini icon={PencilLine} label="Editar" onClick={() => setEditar(t)} />
                   <BotonBorrar
                     etiqueta="Eliminar trabajo de laboratorio"
@@ -8412,6 +8458,7 @@ function TimelinePaciente({
 }) {
   // Se muestran los más recientes; el resto se despliega con "Ver todos" para no dejar la ficha tan larga.
   const [verTodos, setVerTodos] = useState(false);
+  const conIA = useConIA();
   type Evento = {
     id: string;
     fecha: string;
@@ -8453,7 +8500,7 @@ function TimelinePaciente({
         seccion: "historia" as SeccionRegistros,
         tono: "primary" as Tono,
       })),
-      ...datos.notasVoz.map((n) => ({
+      ...(conIA ? datos.notasVoz : []).map((n) => ({
         id: `voz-${n.id}`,
         fecha: n.fecha,
         hora: n.hora,
@@ -8542,7 +8589,9 @@ function TimelinePaciente({
             Historial central del paciente, ordenado cronológicamente.
           </p>
         </div>
-        <Badge tono="primary">{eventos.length} eventos</Badge>
+        <span className="shrink-0 whitespace-nowrap">
+          <Badge tono="primary">{eventos.length} eventos</Badge>
+        </span>
       </div>
       {eventos.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">Todavía no hay actividad registrada.</p>
@@ -8844,7 +8893,7 @@ function AlertasPaciente({
           <span className="font-semibold">Sin alertas activas.</span> El seguimiento está al día.
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-2 @xl:grid-cols-2 @4xl:grid-cols-1 @6xl:grid-cols-2">
           {alertas.map((x) => (
             <button
               key={x.id}
@@ -9031,19 +9080,22 @@ function PiezaContexto({
             key={g.id}
             type="button"
             onClick={() => setAbierto(g.id)}
-            className="group flex items-center gap-2.5 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35"
+            className="group flex min-w-0 flex-col gap-1 rounded-xl border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.06] p-2.5 text-left shadow-[0_6px_16px_-14px_rgba(124,58,237,0.5)] transition-all hover:-translate-y-0.5 hover:border-primary/35"
           >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-              <g.icon className="size-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-lg font-bold leading-tight">{g.valor}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">
-                {g.label}
+            {/* Misma estructura en todas: cifra e ícono arriba, etiqueta y «Ver» abajo. */}
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-lg font-bold leading-tight tabular-nums">{g.valor}</span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                <g.icon className="size-3.5" />
               </span>
             </span>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-              Ver
+            <span className="flex items-end justify-between gap-2">
+              <span className="min-w-0 text-[11px] leading-tight text-muted-foreground">
+                {g.label}
+              </span>
+              <span className="hidden shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground @md:inline">
+                Ver
+              </span>
             </span>
           </button>
         ))}
@@ -9150,7 +9202,7 @@ function ResumenPaciente({
   const inicialesPaciente = iniciales(contexto.paciente) || "PA";
   return (
     <>
-      <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-4 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
+      <section className="relative mb-4 overflow-hidden rounded-[26px] border border-primary/12 bg-gradient-to-br from-white via-card to-primary/[0.045] p-3 shadow-[0_16px_38px_-28px_rgba(124,58,237,0.34)] sm:p-5">
         <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full bg-primary/8 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-primary/[0.045] blur-3xl" />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
@@ -9186,7 +9238,7 @@ function ResumenPaciente({
             </span>
           </div>
         </div>
-        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 @2xl:grid-cols-3 @4xl:grid-cols-5">
           <ResumenCuenta
             etiqueta="Tratamientos activos"
             valor={String(tratamientosActivos)}
@@ -9216,11 +9268,11 @@ function ResumenPaciente({
           />
         </div>
       </section>
-      <div className="mb-4 grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 items-stretch gap-3 @4xl:grid-cols-2">
         <AlertasPaciente datos={datos} onSeccion={onSeccion} />
         <PiezaContexto datos={datos} onSeccion={onSeccion} />
       </div>
-      <div className="mb-4 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.25fr_.75fr]">
+      <div className="mb-4 grid grid-cols-1 items-start gap-3 @4xl:grid-cols-[1.25fr_.75fr]">
         <TimelinePaciente datos={datos} onSeccion={onSeccion} />
         <AuditoriaSec datos={datos} />
       </div>
@@ -9253,7 +9305,10 @@ export function SeccionPaciente({
   };
   const props = { datos: datosConAgenda, cambiar, onToast, contexto, onSeccion: setSeccionActiva };
   return (
-    <div className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4">
+    <div
+      data-ficha
+      className="relative isolate overflow-hidden rounded-[30px] border border-primary/10 bg-gradient-to-b from-[#fbfaff] via-background to-background p-2.5 shadow-[0_18px_50px_-34px_rgba(124,58,237,0.32)] sm:p-4"
+    >
       {/* Fondo visual del módulo Paciente: suave, clínico y alineado al lenguaje violeta del SaaS. */}
       <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-primary/[0.07] blur-3xl" />
       <div className="pointer-events-none absolute -right-24 top-12 size-80 rounded-full bg-primary/[0.055] blur-3xl" />
@@ -9270,7 +9325,9 @@ export function SeccionPaciente({
         }}
       />
 
-      <div className="relative z-10">
+      {/* @container: las grillas de la ficha se acomodan al ancho real de la ficha (que en la
+          carpeta del paciente es más angosta que la pantalla), no al de la ventana. */}
+      <div className="@container relative z-10">
         <Datalists />
         <ResumenPaciente datos={datosConAgenda} contexto={contexto} onSeccion={setSeccionActiva} />
         <div id="seccion-ficha" className="scroll-mt-4" />

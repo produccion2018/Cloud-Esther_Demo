@@ -6,11 +6,13 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { escucharInstalacion, registrarServiceWorker } from "../lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -34,7 +36,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -76,8 +78,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "theme-color", content: "#7c3aed" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#6d28d9" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      // PWA: se instala y se abre como aplicación (Android, iPhone, tablet y PC).
+      { name: "application-name", content: "Cloud Esther" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Cloud Esther" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "format-detection", content: "telephone=no" },
       { title: "Cloud Esther — Software de gestión para clínicas odontológicas" },
       {
         name: "description",
@@ -107,6 +116,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      // use-credentials: las direcciones de cada deploy de Vercel piden inicio de sesión; sin
+      // credenciales el navegador recibe 401 al leer el manifest y no ofrece instalar la app.
+      { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
+    ],
+    // PWA: se guarda el aviso de instalación de Android/Chrome aunque llegue antes de que la
+    // app termine de cargar (si no, el botón «Instalar app» no lo encontraría).
+    scripts: [
+      {
+        children:
+          "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__ceInstalar=e;});",
+      },
     ],
   }),
 
@@ -118,7 +138,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>
@@ -132,6 +152,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // PWA: aviso de instalación del navegador y service worker (una sola vez).
+  useEffect(() => {
+    escucharInstalacion();
+    registrarServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

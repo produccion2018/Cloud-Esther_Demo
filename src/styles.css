@@ -58,6 +58,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-primary-deep: var(--primary-deep);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -341,10 +347,18 @@
    ahí directamente por var(--card), var(--background), etc.
    ───────────────────────────────────────────────────────────── */
 
+/* Solo fondos blancos (casi) opacos: los brillos translúcidos (bg-white/10…/40) sobre botones
+   y tarjetas de color se dejan como están. */
 .dark :is(
   [class~="bg-white"],
-  [class^="bg-white/"],
-  [class*=" bg-white/"]
+  [class~="bg-white/50"],
+  [class~="bg-white/60"],
+  [class~="bg-white/70"],
+  [class~="bg-white/75"],
+  [class~="bg-white/80"],
+  [class~="bg-white/85"],
+  [class~="bg-white/90"],
+  [class~="bg-white/95"]
 ):not([class*="dark:bg-"]):not([role="switch"] *) {
   background-color: color-mix(in oklab, var(--card) 92%, transparent);
 }
@@ -1155,4 +1169,550 @@
   [class~="divide-stone-300"]
 ) > :not(:last-child) {
   border-color: var(--border);
+}
+
+/* ═════════════ Panel del dueño (/admin) ═════════════
+   Paleta propia del panel. Solo se aplica mientras el panel está abierto
+   (admin.tsx pone data-app="panel" en <html>), así no cambia nada del SaaS. */
+html[data-app="panel"] {
+  --radius: 0.875rem;
+  --background: oklch(0.985 0.005 300);
+  --foreground: oklch(0.22 0.05 295);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.05 295);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.05 295);
+  --primary: oklch(0.52 0.22 295);
+  --primary-foreground: oklch(0.99 0.005 300);
+  --primary-glow: oklch(0.68 0.19 305);
+  --primary-deep: oklch(0.34 0.16 291);
+  --secondary: oklch(0.955 0.018 300);
+  --secondary-foreground: oklch(0.34 0.16 291);
+  --muted: oklch(0.962 0.012 300);
+  --muted-foreground: oklch(0.55 0.04 292);
+  --accent: oklch(0.94 0.035 300);
+  --accent-foreground: oklch(0.34 0.16 291);
+  --destructive: oklch(0.58 0.22 22);
+  --destructive-foreground: oklch(0.99 0.005 300);
+  --success: oklch(0.62 0.16 156);
+  --success-foreground: oklch(0.99 0.005 300);
+  --warning: oklch(0.79 0.16 82);
+  --warning-foreground: oklch(0.28 0.07 60);
+  --border: oklch(0.91 0.018 300);
+  --input: oklch(0.91 0.018 300);
+  --ring: oklch(0.52 0.22 295);
+  --chart-1: oklch(0.52 0.22 295);
+  --chart-2: oklch(0.68 0.19 305);
+  --chart-3: oklch(0.62 0.16 156);
+  --chart-4: oklch(0.79 0.16 82);
+  --chart-5: oklch(0.58 0.22 22);
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--primary-deep),
+    var(--primary) 55%,
+    var(--primary-glow)
+  );
+  --gradient-surface: linear-gradient(160deg, oklch(0.99 0.008 300), oklch(0.96 0.02 300));
+  --shadow-card:
+    0 1px 2px oklch(0.34 0.16 291 / 0.06), 0 12px 32px -18px oklch(0.34 0.16 291 / 0.35);
+  --shadow-elegant: 0 20px 60px -24px oklch(0.34 0.16 291 / 0.45);
+  --sidebar: oklch(0.26 0.09 291);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.68 0.19 305);
+  --sidebar-primary-foreground: oklch(0.18 0.06 291);
+  --sidebar-accent: oklch(0.33 0.11 293);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.68 0.19 305);
+}
+html[data-app="panel"].dark {
+  --background: oklch(0.16 0.03 292);
+  --foreground: oklch(0.95 0.012 300);
+  --card: oklch(0.21 0.04 292);
+  --card-foreground: oklch(0.95 0.012 300);
+  --popover: oklch(0.22 0.04 292);
+  --popover-foreground: oklch(0.95 0.012 300);
+  --primary: oklch(0.7 0.17 300);
+  --primary-foreground: oklch(0.16 0.05 292);
+  --primary-glow: oklch(0.76 0.15 308);
+  --primary-deep: oklch(0.5 0.2 292);
+  --secondary: oklch(0.27 0.045 292);
+  --secondary-foreground: oklch(0.95 0.012 300);
+  --muted: oklch(0.26 0.04 292);
+  --muted-foreground: oklch(0.72 0.035 295);
+  --accent: oklch(0.3 0.06 295);
+  --accent-foreground: oklch(0.95 0.012 300);
+  --destructive: oklch(0.68 0.19 22);
+  --destructive-foreground: oklch(0.98 0.005 300);
+  --success: oklch(0.72 0.15 156);
+  --success-foreground: oklch(0.16 0.04 156);
+  --warning: oklch(0.8 0.15 82);
+  --warning-foreground: oklch(0.86 0.12 85);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.7 0.17 300);
+  --chart-1: oklch(0.7 0.17 300);
+  --chart-2: oklch(0.76 0.15 308);
+  --chart-3: oklch(0.72 0.15 156);
+  --chart-4: oklch(0.8 0.15 82);
+  --chart-5: oklch(0.68 0.19 22);
+  --gradient-surface: linear-gradient(160deg, oklch(0.21 0.04 292), oklch(0.18 0.035 292));
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 12px 32px -18px oklch(0 0 0 / 0.6);
+  --shadow-elegant: 0 20px 60px -24px oklch(0 0 0 / 0.7);
+  --sidebar: oklch(0.13 0.03 292);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.7 0.17 300);
+  --sidebar-primary-foreground: oklch(0.16 0.05 292);
+  --sidebar-accent: oklch(0.22 0.05 292);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.7 0.17 300);
+}
+html[data-app="panel"][data-lateral="medianoche"] {
+  --sidebar: oklch(0.2 0.04 270);
+  --sidebar-accent: oklch(0.28 0.06 270);
+}
+html[data-app="panel"][data-lateral="grafito"] {
+  --sidebar: oklch(0.22 0.01 290);
+  --sidebar-accent: oklch(0.3 0.015 290);
+}
+html[data-app="panel"][data-lateral="ciruela"] {
+  --sidebar: oklch(0.28 0.1 335);
+  --sidebar-accent: oklch(0.35 0.12 335);
+}
+html[data-app="panel"][data-lateral="claro"] {
+  --sidebar: oklch(0.975 0.012 300);
+  --sidebar-foreground: oklch(0.3 0.08 292);
+  --sidebar-primary: oklch(0.52 0.22 295);
+  --sidebar-primary-foreground: oklch(0.99 0.005 300);
+  --sidebar-accent: oklch(0.93 0.03 300);
+  --sidebar-border: oklch(0.9 0.02 300);
+}
+
+/* ═════════════ Celular y modo aplicación (PWA) ═════════════ */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+a,
+button,
+[role="button"],
+summary,
+label {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* En el celular los campos usan 16px: iPhone no hace zoom al escribir. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+/* Abierta como app instalada: sin rebote del navegador ni selección accidental del menú. */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+  }
+  nav,
+  header {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* ═════════════ Modo oscuro: tonos pastel ═════════════
+   Muchas pantallas usan fondos claros de color (bg-rose-50, bg-amber-100, bordes -200) y texto
+   oscuro (-700/-800) pensados para el tema claro. En modo oscuro esos tonos pasan a ser
+   translúcidos sobre la tarjeta y el texto se aclara, así ninguna alerta, etiqueta o banner
+   queda como una caja clara. Las clases dark: propias de cada componente siguen mandando. */
+.dark {
+  --color-red-50: color-mix(in oklab, var(--color-red-500) 13%, transparent);
+  --color-red-100: color-mix(in oklab, var(--color-red-500) 20%, transparent);
+  --color-red-200: color-mix(in oklab, var(--color-red-500) 34%, transparent);
+  --color-red-700: var(--color-red-300);
+  --color-red-800: var(--color-red-300);
+  --color-red-900: var(--color-red-300);
+  --color-orange-50: color-mix(in oklab, var(--color-orange-500) 13%, transparent);
+  --color-orange-100: color-mix(in oklab, var(--color-orange-500) 20%, transparent);
+  --color-orange-200: color-mix(in oklab, var(--color-orange-500) 34%, transparent);
+  --color-orange-700: var(--color-orange-300);
+  --color-orange-800: var(--color-orange-300);
+  --color-orange-900: var(--color-orange-300);
+  --color-amber-50: color-mix(in oklab, var(--color-amber-500) 13%, transparent);
+  --color-amber-100: color-mix(in oklab, var(--color-amber-500) 20%, transparent);
+  --color-amber-200: color-mix(in oklab, var(--color-amber-500) 34%, transparent);
+  --color-amber-700: var(--color-amber-300);
+  --color-amber-800: var(--color-amber-300);
+  --color-amber-900: var(--color-amber-300);
+  --color-yellow-50: color-mix(in oklab, var(--color-yellow-500) 13%, transparent);
+  --color-yellow-100: color-mix(in oklab, var(--color-yellow-500) 20%, transparent);
+  --color-yellow-200: color-mix(in oklab, var(--color-yellow-500) 34%, transparent);
+  --color-yellow-700: var(--color-yellow-300);
+  --color-yellow-800: var(--color-yellow-300);
+  --color-yellow-900: var(--color-yellow-300);
+  --color-lime-50: color-mix(in oklab, var(--color-lime-500) 13%, transparent);
+  --color-lime-100: color-mix(in oklab, var(--color-lime-500) 20%, transparent);
+  --color-lime-200: color-mix(in oklab, var(--color-lime-500) 34%, transparent);
+  --color-lime-700: var(--color-lime-300);
+  --color-lime-800: var(--color-lime-300);
+  --color-lime-900: var(--color-lime-300);
+  --color-green-50: color-mix(in oklab, var(--color-green-500) 13%, transparent);
+  --color-green-100: color-mix(in oklab, var(--color-green-500) 20%, transparent);
+  --color-green-200: color-mix(in oklab, var(--color-green-500) 34%, transparent);
+  --color-green-700: var(--color-green-300);
+  --color-green-800: var(--color-green-300);
+  --color-green-900: var(--color-green-300);
+  --color-emerald-50: color-mix(in oklab, var(--color-emerald-500) 13%, transparent);
+  --color-emerald-100: color-mix(in oklab, var(--color-emerald-500) 20%, transparent);
+  --color-emerald-200: color-mix(in oklab, var(--color-emerald-500) 34%, transparent);
+  --color-emerald-700: var(--color-emerald-300);
+  --color-emerald-800: var(--color-emerald-300);
+  --color-emerald-900: var(--color-emerald-300);
+  --color-teal-50: color-mix(in oklab, var(--color-teal-500) 13%, transparent);
+  --color-teal-100: color-mix(in oklab, var(--color-teal-500) 20%, transparent);
+  --color-teal-200: color-mix(in oklab, var(--color-teal-500) 34%, transparent);
+  --color-teal-700: var(--color-teal-300);
+  --color-teal-800: var(--color-teal-300);
+  --color-teal-900: var(--color-teal-300);
+  --color-cyan-50: color-mix(in oklab, var(--color-cyan-500) 13%, transparent);
+  --color-cyan-100: color-mix(in oklab, var(--color-cyan-500) 20%, transparent);
+  --color-cyan-200: color-mix(in oklab, var(--color-cyan-500) 34%, transparent);
+  --color-cyan-700: var(--color-cyan-300);
+  --color-cyan-800: var(--color-cyan-300);
+  --color-cyan-900: var(--color-cyan-300);
+  --color-sky-50: color-mix(in oklab, var(--color-sky-500) 13%, transparent);
+  --color-sky-100: color-mix(in oklab, var(--color-sky-500) 20%, transparent);
+  --color-sky-200: color-mix(in oklab, var(--color-sky-500) 34%, transparent);
+  --color-sky-700: var(--color-sky-300);
+  --color-sky-800: var(--color-sky-300);
+  --color-sky-900: var(--color-sky-300);
+  --color-blue-50: color-mix(in oklab, var(--color-blue-500) 13%, transparent);
+  --color-blue-100: color-mix(in oklab, var(--color-blue-500) 20%, transparent);
+  --color-blue-200: color-mix(in oklab, var(--color-blue-500) 34%, transparent);
+  --color-blue-700: var(--color-blue-300);
+  --color-blue-800: var(--color-blue-300);
+  --color-blue-900: var(--color-blue-300);
+  --color-indigo-50: color-mix(in oklab, var(--color-indigo-500) 13%, transparent);
+  --color-indigo-100: color-mix(in oklab, var(--color-indigo-500) 20%, transparent);
+  --color-indigo-200: color-mix(in oklab, var(--color-indigo-500) 34%, transparent);
+  --color-indigo-700: var(--color-indigo-300);
+  --color-indigo-800: var(--color-indigo-300);
+  --color-indigo-900: var(--color-indigo-300);
+  --color-violet-50: color-mix(in oklab, var(--color-violet-500) 13%, transparent);
+  --color-violet-100: color-mix(in oklab, var(--color-violet-500) 20%, transparent);
+  --color-violet-200: color-mix(in oklab, var(--color-violet-500) 34%, transparent);
+  --color-violet-700: var(--color-violet-300);
+  --color-violet-800: var(--color-violet-300);
+  --color-violet-900: var(--color-violet-300);
+  --color-purple-50: color-mix(in oklab, var(--color-purple-500) 13%, transparent);
+  --color-purple-100: color-mix(in oklab, var(--color-purple-500) 20%, transparent);
+  --color-purple-200: color-mix(in oklab, var(--color-purple-500) 34%, transparent);
+  --color-purple-700: var(--color-purple-300);
+  --color-purple-800: var(--color-purple-300);
+  --color-purple-900: var(--color-purple-300);
+  --color-fuchsia-50: color-mix(in oklab, var(--color-fuchsia-500) 13%, transparent);
+  --color-fuchsia-100: color-mix(in oklab, var(--color-fuchsia-500) 20%, transparent);
+  --color-fuchsia-200: color-mix(in oklab, var(--color-fuchsia-500) 34%, transparent);
+  --color-fuchsia-700: var(--color-fuchsia-300);
+  --color-fuchsia-800: var(--color-fuchsia-300);
+  --color-fuchsia-900: var(--color-fuchsia-300);
+  --color-pink-50: color-mix(in oklab, var(--color-pink-500) 13%, transparent);
+  --color-pink-100: color-mix(in oklab, var(--color-pink-500) 20%, transparent);
+  --color-pink-200: color-mix(in oklab, var(--color-pink-500) 34%, transparent);
+  --color-pink-700: var(--color-pink-300);
+  --color-pink-800: var(--color-pink-300);
+  --color-pink-900: var(--color-pink-300);
+  --color-rose-50: color-mix(in oklab, var(--color-rose-500) 13%, transparent);
+  --color-rose-100: color-mix(in oklab, var(--color-rose-500) 20%, transparent);
+  --color-rose-200: color-mix(in oklab, var(--color-rose-500) 34%, transparent);
+  --color-rose-700: var(--color-rose-300);
+  --color-rose-800: var(--color-rose-300);
+  --color-rose-900: var(--color-rose-300);
+  --color-slate-50: color-mix(in oklab, var(--color-slate-500) 13%, transparent);
+  --color-slate-100: color-mix(in oklab, var(--color-slate-500) 20%, transparent);
+  --color-slate-200: color-mix(in oklab, var(--color-slate-500) 34%, transparent);
+  --color-gray-50: color-mix(in oklab, var(--color-gray-500) 13%, transparent);
+  --color-gray-100: color-mix(in oklab, var(--color-gray-500) 20%, transparent);
+  --color-gray-200: color-mix(in oklab, var(--color-gray-500) 34%, transparent);
+  --color-zinc-50: color-mix(in oklab, var(--color-zinc-500) 13%, transparent);
+  --color-zinc-100: color-mix(in oklab, var(--color-zinc-500) 20%, transparent);
+  --color-zinc-200: color-mix(in oklab, var(--color-zinc-500) 34%, transparent);
+  --color-neutral-50: color-mix(in oklab, var(--color-neutral-500) 13%, transparent);
+  --color-neutral-100: color-mix(in oklab, var(--color-neutral-500) 20%, transparent);
+  --color-neutral-200: color-mix(in oklab, var(--color-neutral-500) 34%, transparent);
+  --color-stone-50: color-mix(in oklab, var(--color-stone-500) 13%, transparent);
+  --color-stone-100: color-mix(in oklab, var(--color-stone-500) 20%, transparent);
+  --color-stone-200: color-mix(in oklab, var(--color-stone-500) 34%, transparent);
+}
+
+/* ═════════════ Tablas en el celular ═════════════
+   Con useTablasApilables (src/lib/tablas-movil.ts) cada celda lleva la etiqueta de su columna.
+   En pantallas chicas cada fila pasa a ser una tarjeta «etiqueta: valor», sin scroll horizontal. */
+@media (max-width: 639px) {
+  table.tabla-apilable {
+    min-width: 0 !important;
+    width: 100%;
+  }
+  table.tabla-apilable thead {
+    display: none;
+  }
+  table.tabla-apilable,
+  table.tabla-apilable tbody,
+  table.tabla-apilable tr,
+  table.tabla-apilable td {
+    display: block;
+  }
+  table.tabla-apilable tr {
+    margin: 0.625rem 0.75rem;
+    padding: 0.375rem 0;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--card);
+  }
+  table.tabla-apilable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 0.875rem !important;
+    border: 0 !important;
+    text-align: right;
+    min-height: 2.25rem;
+  }
+  table.tabla-apilable td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+  table.tabla-apilable td[data-label=""]::before {
+    display: none;
+  }
+  /* La primera columna es el título de la tarjeta: ocupa todo el ancho y sin etiqueta. */
+  table.tabla-apilable td:first-child {
+    display: block;
+    text-align: left;
+  }
+  table.tabla-apilable td:first-child::before {
+    display: none;
+  }
+  table.tabla-apilable td:empty {
+    display: none;
+  }
+}
+
+/* Menú lateral en modo oscuro para los que no traen paleta propia (portales del Plan 4).
+   El panel de la clínica y el panel del dueño definen la suya y no se ven afectados. */
+.dark {
+  --sidebar: oklch(0.15 0.03 292);
+  --sidebar-foreground: oklch(0.94 0.02 300);
+  --sidebar-primary: oklch(0.72 0.17 300);
+  --sidebar-primary-foreground: oklch(0.16 0.05 292);
+  --sidebar-accent: oklch(0.23 0.05 292);
+  --sidebar-accent-foreground: oklch(0.98 0.01 300);
+  --sidebar-border: oklch(1 0 0 / 9%);
+}
+
+/* ───────── Botón WhatsApp premium (verde de marca + logo) ───────── */
+@utility btn-wa {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0 1.05rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, #2fe07a 0%, #25d366 45%, #128c7e 100%);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow:
+    0 10px 22px -12px rgba(18, 140, 126, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow:
+      0 16px 30px -14px rgba(18, 140, 126, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  & svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+  }
+}
+
+/* Versión solo ícono (botones redondos de acciones). */
+@utility btn-wa-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2fe07a 0%, #25d366 45%, #128c7e 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgba(18, 140, 126, 0.9);
+  transition: transform 0.15s, filter 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+  }
+  & svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+/* ───────── Botones de ícono de la barra superior de los portales ───────── */
+@utility btn-icono-portal {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+  color: var(--color-primary);
+  box-shadow: 0 10px 24px -16px rgba(124, 58, 237, 0.9);
+  transition: transform 0.18s, box-shadow 0.18s, color 0.18s, background 0.18s;
+  &:hover {
+    transform: translateY(-2px);
+    color: #fff;
+    background:
+      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
+      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+    box-shadow: 0 16px 30px -14px rgba(124, 58, 237, 0.95);
+  }
+  &[aria-expanded="true"] {
+    color: #fff;
+    background:
+      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
+      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+  }
+  & svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}
+
+/* ───────── Panel de la clínica en celular: tarjetas de a dos ─────────
+   En pantallas chicas, las grillas de tarjetas que en tablet/PC ya muestran varias columnas
+   pasan de una columna interminable a 2 + 2. No afecta formularios, tablas ni gráficos, y
+   cualquier grilla puede quedar en una columna con data-movil="1col". Tablet y PC no cambian.
+   La ficha clínica del paciente (data-ficha: historia, seguimientos, timeline, tratamientos,
+   recetas, estudios, laboratorio…) queda afuera: sus tarjetas tienen filas de datos (fecha,
+   hora, estado, importe) que en media pantalla se apilaban letra por letra. */
+@media (max-width: 639.98px) {
+  .panel-clinica
+    .grid:not([data-ficha] .grid):is([class*="sm:grid-cols-"], [class*="md:grid-cols-"]):not(
+      [class~="grid-cols-2"],
+      [class~="grid-cols-3"],
+      [class~="grid-cols-4"],
+      [data-movil="1col"]
+    ):has(> :is([class*="rounded-"], .card-grad), > li > :is([class*="rounded-"], .card-grad)):not(
+      :has(input, select, textarea, table, canvas, .recharts-wrapper, [data-movil="1col"])
+    ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  /* Dentro de esas tarjetas: nada se sale ni se corta. */
+  .panel-clinica .grid:not([data-ficha] .grid) > *,
+  .panel-clinica .grid:not([data-ficha] .grid) > li > * {
+    min-width: 0;
+  }
+  .panel-clinica
+    :is(
+      .grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad),
+      .grid:not([data-ficha] .grid) > li > :is([class*="rounded-"], .card-grad)
+    ) {
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  /* Títulos en mayúscula de las tarjetas: menos separación entre letras para que no se corten. */
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    .uppercase {
+    letter-spacing: 0.04em;
+  }
+  /* Filas de acciones dentro de tarjetas angostas: bajan de renglón en vez de salirse. */
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    .flex:has(> button, > a) {
+    flex-wrap: wrap;
+  }
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(button, a) {
+    max-width: 100%;
+  }
+  /* Cifras grandes más compactas para que entren completas en media pantalla. */
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.text-3xl, .text-2xl) {
+    font-size: clamp(1rem, 4.6vw, 1.5rem);
+    line-height: 1.2;
+  }
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    .text-xl {
+    font-size: clamp(1rem, 4.6vw, 1.25rem);
+  }
+  .panel-clinica
+    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(
+      [class*="text-[24px]"],
+      [class*="text-[26px]"],
+      [class*="text-[27px]"],
+      [class*="text-[28px]"],
+      [class*="text-[30px]"],
+      [class*="text-[32px]"]
+    ) {
+    font-size: clamp(0.95rem, 4.2vw, 1.5rem);
+    line-height: 1.15;
+  }
+  /* Tarjeta de indicador (título + ícono + cifra): el ícono pasa a la esquina y la cifra usa
+     todo el ancho, así el importe se ve completo ($ 1.284.000) en media pantalla. */
+  .panel-clinica
+    .grid:not([data-ficha] .grid)
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between {
+    display: block;
+  }
+  .panel-clinica
+    .grid:not([data-ficha] .grid)
+    > :is([class*="rounded-"], .card-grad):has(> .relative.flex.items-start.justify-between) {
+    padding: 0.875rem;
+  }
+  .panel-clinica
+    .grid:not([data-ficha] .grid)
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between
+    > :is(span, div).shrink-0:last-child {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+  .panel-clinica
+    .grid:not([data-ficha] .grid)
+    > :is([class*="rounded-"], .card-grad)
+    > .relative.flex.items-start.justify-between
+    > .min-w-0
+    > :first-child {
+    padding-right: 1.875rem;
+  }
 }

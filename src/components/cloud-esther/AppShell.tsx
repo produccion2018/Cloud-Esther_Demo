@@ -1,11 +1,12 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Lock, LogOut, Menu } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MODULES,
   availableIn,
+  etiquetaModulo,
   incluidoEnPlan,
   planLevel,
   ModuleIcon,
@@ -13,6 +14,7 @@ import {
   useCloudEsther,
   type PlanId,
 } from "@/lib/cloud-esther/data";
+import { nivelModulo } from "@/lib/cloud-esther/niveles";
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
@@ -24,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
+import { vieneDeAccesoPrueba, volverSiEsPrueba } from "@/lib/acceso-prueba";
+import { BotonInstalarApp } from "@/components/cloud-esther/InstalarApp";
 
 const GROUPS = [
   "Clínico",
@@ -83,7 +87,10 @@ export function BrandMark({ className }: { className?: string }) {
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link to={"/demo" as never} className="flex items-center gap-2.5">
-      <BrandMark className="size-9 shrink-0" />
+      <span className="relative shrink-0">
+        <span aria-hidden className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 opacity-40 blur-md" />
+        <BrandMark className="relative size-9" />
+      </span>
       {!compact && (
         <span className="leading-tight">
           <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
@@ -183,7 +190,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
 
         return (
           <div key={group}>
-            <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+            <p className="flex items-center gap-2 px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
               {group}
             </p>
             <ul className="space-y-0.5">
@@ -200,7 +208,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                     <li key={m.id}>
                       <div className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-sidebar-foreground/35">
                         <ModuleIcon name={m.icon} className="size-4 shrink-0" />
-                        <span className="truncate">{m.label}</span>
+                        <span className="truncate">{etiquetaModulo(m, plan)}</span>
                         <Lock className="ml-auto size-3" />
                       </div>
                     </li>
@@ -218,18 +226,18 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                           to={m.path as never}
                           onClick={onNavigate}
                           className={cn(
-                            "group flex items-center gap-2.5 rounded-lg px-2 py-2 pr-9 text-sm transition-colors",
+                            "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 pr-9 text-sm transition-all",
                             active
-                              ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                              ? "bg-gradient-to-r from-primary to-fuchsia-500 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                              : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                             off && "opacity-40",
                           )}
                         >
                           <ModuleIcon
                             name={m.icon}
-                            className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                            className={cn("size-4 shrink-0", active ? "text-white" : "text-primary")}
                           />
-                          <span className="truncate">{m.label}</span>
+                          <span className="truncate">{etiquetaModulo(m, plan)}</span>
                           {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
                             <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
                               Adicional
@@ -241,7 +249,11 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                         </Link>
                         <button
                           type="button"
-                          aria-label={isOpen ? `Contraer ${m.label}` : `Desplegar ${m.label}`}
+                          aria-label={
+                            isOpen
+                              ? `Contraer ${etiquetaModulo(m, plan)}`
+                              : `Desplegar ${etiquetaModulo(m, plan)}`
+                          }
                           aria-expanded={isOpen}
                           onClick={() => toggle(m.id, isOpen)}
                           className={cn(
@@ -278,18 +290,18 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                       to={m.path as never}
                       onClick={onNavigate}
                       className={cn(
-                        "group flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors",
+                        "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all",
                         active
-                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                          ? "bg-gradient-to-r from-primary to-fuchsia-500 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                          : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                         off && "opacity-40",
                       )}
                     >
                       <ModuleIcon
                         name={m.icon}
-                        className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                        className={cn("size-4 shrink-0", active ? "text-white" : "text-primary")}
                       />
-                      <span className="truncate">{m.label}</span>
+                      <span className="truncate">{etiquetaModulo(m, plan)}</span>
                       {extras.includes(m.id) && !incluidoEnPlan(m, plan) && (
                         <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
                           Adicional
@@ -330,15 +342,17 @@ function EmpresaActiva() {
   if (!usuario || !clinica) return null;
 
   return (
-    <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
+    <div className="relative mx-3 mb-3 flex items-center gap-2.5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]">
+      <span aria-hidden className="pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-white/15 blur-xl" />
+      <span className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 text-[11px] font-bold ring-1 ring-white/30">
         {iniciales(clinica.nombre)}
       </span>
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate font-display text-sm font-semibold text-sidebar-foreground">
-          {clinica.nombre}
+      <div className="relative min-w-0 flex-1 leading-tight">
+        <p className="truncate font-display text-sm font-bold">{clinica.nombre}</p>
+        <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-white/80">
+          <span className="size-1.5 shrink-0 rounded-full bg-[#6ee7b7] shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+          {usuario.nombre}
         </p>
-        <p className="truncate text-[11px] text-sidebar-foreground/55">{usuario.nombre}</p>
       </div>
     </div>
   );
@@ -384,7 +398,13 @@ function PlanFooter() {
       </div>
       <Link
         to={"/" as never}
-        onClick={() => cerrarSesion()}
+        onClick={(e) => {
+          cerrarSesion();
+          if (vieneDeAccesoPrueba()) {
+            e.preventDefault();
+            volverSiEsPrueba();
+          }
+        }}
         className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       >
         <LogOut className="size-3.5" />
@@ -412,37 +432,243 @@ function PlanFooter() {
 
 function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="px-4 py-4">
-        <Logo />
+    <div className="relative flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(168,85,247,0.22),transparent_48%),radial-gradient(circle_at_100%_55%,rgba(236,72,153,0.10),transparent_42%),radial-gradient(circle_at_0%_100%,rgba(99,102,241,0.12),transparent_45%)]"
+      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="px-4 py-4">
+          <Logo />
+        </div>
+        <EmpresaActiva />
+        <NavList onNavigate={onNavigate} />
+        <PlanFooter />
       </div>
-      <EmpresaActiva />
-      <NavList onNavigate={onNavigate} />
-      <PlanFooter />
     </div>
   );
 }
 
-function MobileHeader({ sidebarStyle }: { sidebarStyle: React.CSSProperties }) {
+function MobileHeader({
+  sidebarStyle,
+  menu,
+  setMenu,
+  titulo,
+}: {
+  sidebarStyle: React.CSSProperties;
+  menu: boolean;
+  setMenu: (v: boolean) => void;
+  titulo: string;
+}) {
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border/80 bg-background/85 px-3 py-2.5 backdrop-blur-xl lg:hidden">
-      <Sheet>
+    <header className="sticky top-0 z-30 flex items-center gap-2.5 bg-background/80 px-3 pb-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] shadow-[0_10px_30px_-24px_rgba(124,58,237,0.6)] backdrop-blur-xl lg:hidden">
+      <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
+      <Sheet open={menu} onOpenChange={setMenu}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <Menu className="size-5" />
-          </Button>
+          <button type="button" className="btn-icono-portal" aria-label="Abrir menú">
+            <Menu />
+          </button>
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="w-[280px] border-sidebar-border bg-sidebar p-0"
+          className="w-[86vw] max-w-[300px] border-sidebar-border bg-sidebar p-0"
           style={sidebarStyle}
         >
           <SheetTitle className="sr-only">Navegación</SheetTitle>
-          <SidebarInner />
+          <SidebarInner onNavigate={() => setMenu(false)} />
         </SheetContent>
       </Sheet>
-      <Logo compact />
+      <span className="max-[379px]:hidden">
+        <Logo compact />
+      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="truncate font-display text-[15px] font-bold tracking-tight">{titulo}</p>
+        <p className="truncate text-[9.5px] font-semibold uppercase tracking-[0.12em] text-primary/80">Panel de la clínica</p>
+      </div>
+      <CampanaMovil />
+      <UsuarioMovil />
     </header>
+  );
+}
+
+/* Campana del encabezado en el celular: avisos sin leer y acceso directo a Notificaciones. */
+function CampanaMovil() {
+  const { sinLeer } = useNotificaciones();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  return (
+    <Link
+      to={"/demo/notificaciones" as never}
+      aria-label={montado && sinLeer > 0 ? `Notificaciones: ${sinLeer} sin leer` : "Notificaciones"}
+      className="relative grid size-9 shrink-0 place-items-center rounded-full bg-card text-muted-foreground shadow-sm ring-1 ring-primary/15 transition-colors hover:text-primary"
+    >
+      <Bell className="size-[18px]" />
+      {montado && sinLeer > 0 && (
+        <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-white ring-2 ring-background">
+          {sinLeer > 9 ? "9+" : sinLeer}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/* Usuario de la sesión arriba a la derecha (como en la PC), compacto para el celular.
+   Al tocarlo abre su menú: portales, configuración y salir. */
+function UsuarioMovil() {
+  const { usuario, clinica } = useSesion();
+  const { plan, planContratado } = useCloudEsther();
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = (e: Event) => {
+      // El diálogo de «Instalar app» se abre fuera del menú: tocarlo no lo cierra.
+      if ((e.target as Element | null)?.closest?.("[role=dialog]")) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
+    };
+    document.addEventListener("pointerdown", cerrar);
+    return () => document.removeEventListener("pointerdown", cerrar);
+  }, [abierto]);
+  const nombre = usuario?.nombre ?? "Invitado";
+  const primerNombre = nombre.split(/\s+/)[0] ?? nombre;
+  const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = [
+    { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },
+    { href: "/equipo", titulo: "Portal del profesional", icon: Stethoscope, enterprise: true },
+    { href: "/demo/configuracion", titulo: "Configuración", icon: Settings },
+    { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", icon: ShieldCheck },
+  ];
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-haspopup="menu"
+        aria-label={`Usuario: ${nombre}`}
+        className="flex max-w-[7.5rem] items-center gap-1.5 rounded-full bg-card py-1 pl-1 pr-2 shadow-sm ring-1 ring-primary/15 min-[400px]:max-w-[9rem]"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-[10.5px] font-bold text-white">
+          {iniciales(nombre)}
+        </span>
+        <span className="min-w-0 text-left leading-tight">
+          <span className="block truncate text-[11.5px] font-semibold text-foreground">{primerNombre}</span>
+          <span className="block truncate text-[9px] text-muted-foreground">Dueño/a</span>
+        </span>
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-2xl border border-primary/15 bg-card text-foreground shadow-2xl"
+        >
+          <div className="bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white">
+            <p className="truncate font-display text-sm font-bold">{nombre}</p>
+            <p className="truncate text-[11px] text-white/80">
+              {clinica ? `Dueño/a · ${clinica.nombre}` : "Dueño/a"}
+            </p>
+          </div>
+          <ul className="p-1.5">
+            {items
+              .filter((it) => !it.enterprise || plan === "grupo")
+              .map((it) => (
+                <li key={it.href}>
+                  <a
+                    role="menuitem"
+                    href={it.href}
+                    onClick={() => setAbierto(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <it.icon className="size-4 text-primary" />
+                    {it.titulo}
+                  </a>
+                </li>
+              ))}
+            <li>
+              <BotonInstalarApp className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/5" />
+            </li>
+            <li className="mt-1 border-t border-primary/10 pt-1">
+              <Link
+                role="menuitem"
+                to={"/" as never}
+                onClick={(e) => {
+                  cerrarSesion();
+                  if (vieneDeAccesoPrueba()) {
+                    e.preventDefault();
+                    volverSiEsPrueba();
+                  }
+                }}
+                className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-destructive hover:bg-destructive/5"
+              >
+                <LogOut className="size-4" />
+                {planContratado ? "Cerrar sesión" : "Salir del demo"}
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Barra inferior en el celular: navegación tipo aplicación con los accesos más usados.
+   «Más» abre el menú completo con todos los módulos del plan. */
+function BarraInferior({ onMas }: { onMas: () => void }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sinLeer } = useNotificaciones();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  const items = [
+    { to: "/demo", label: "Inicio", icon: LayoutDashboard },
+    { to: "/demo/agenda", label: "Agenda", icon: CalendarDays },
+    { to: "/demo/pacientes", label: "Pacientes", icon: Users },
+    { to: "/demo/notificaciones", label: "Avisos", icon: Bell },
+  ];
+  return (
+    <nav
+      aria-label="Accesos rápidos"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/10 bg-background/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_30px_-22px_rgba(124,58,237,0.55)] backdrop-blur-xl lg:hidden"
+    >
+      <div className="mx-auto grid max-w-md grid-cols-5">
+        {items.map((it) => {
+          const activo = it.to === "/demo" ? pathname === "/demo" : pathname.startsWith(it.to);
+          return (
+            <Link
+              key={it.to}
+              to={it.to as never}
+              aria-current={activo ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition-colors",
+                activo ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-7 w-12 place-items-center rounded-full transition-colors",
+                  activo && "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]",
+                )}
+              >
+                <it.icon className="size-5" />
+              </span>
+              {it.label}
+              {it.to === "/demo/notificaciones" && montado && sinLeer > 0 && (
+                <span className="absolute right-[22%] top-1.5 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
+                  {sinLeer > 9 ? "9+" : sinLeer}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onMas}
+          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold text-muted-foreground"
+        >
+          <span className="grid h-7 w-12 place-items-center rounded-full">
+            <MoreHorizontal className="size-5" />
+          </span>
+          Más
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -518,10 +744,11 @@ function ModuloNoIncluido({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { clinic, plan } = useCloudEsther();
+  const { clinic, plan, planListo } = useCloudEsther();
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const modulo = moduloDeRuta(pathname);
+  const [menuMovil, setMenuMovil] = useState(false);
   storeModulosExtra.usar(); // al comprar un módulo, se desbloquea en el momento
   const subBloqueada = SUBRUTAS_PLAN.find(
     (x) =>
@@ -535,15 +762,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const irAl2D = bloqueado?.id === "odontograma3d" && odontogramaDelPlan(plan) === "2d";
   const moduloIA = MODULES.find((m) => m.id === "ia");
   // Módulos que recorre una cuenta de demo (para medir el interés desde el panel admin).
-  const etiquetaModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
+  const nombreModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
   const { clinicId } = useSesion();
   const auditarModulos = settings.auditLogEnabled;
   useEffect(() => {
-    if (!etiquetaModulo) return;
-    registrarModuloDemo(etiquetaModulo);
+    if (!nombreModulo) return;
+    registrarModuloDemo(nombreModulo);
     // Auditoría de la clínica: actividad de la sesión y (si está activado) accesos a módulos.
-    if (clinicId) registrarActividadAuditoria(clinicId, etiquetaModulo, auditarModulos);
-  }, [etiquetaModulo, clinicId, auditarModulos]);
+    if (clinicId) registrarActividadAuditoria(clinicId, nombreModulo, auditarModulos);
+  }, [nombreModulo, clinicId, auditarModulos]);
 
   // El motor 3D pesa: en los planes con Odontograma 3D se descarga en segundo plano apenas
   // el navegador está libre, así el odontograma aparece rápido cuando se abre.
@@ -556,7 +783,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (w.requestIdleCallback) w.requestIdleCallback(precargar, { timeout: 4000 });
     else window.setTimeout(precargar, 2500);
   }, [plan]);
-  const iaDisponible = !!moduloIA && availableIn(moduloIA, plan);
+  // Hasta leer el plan guardado no se muestra Esther (evita un destello de IA en Start o Pro).
+  const iaDisponible = planListo && !!moduloIA && availableIn(moduloIA, plan);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.darkModePage);
@@ -571,10 +799,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [settings.darkModePage, settings.fontSize]);
 
-  const colorHex = SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed";
+  // El color del menú lateral se elige desde Pro; en Start se usa el violeta de la marca.
+  const conColorMenu = nivelModulo("configuracion", plan) !== "basico";
+  const colorHex = conColorMenu
+    ? (SIDEBAR_COLORS.find((c) => c.id === settings.sidebarColor)?.hex ?? "#7c3aed")
+    : "#7c3aed";
   const sidebarStyle = buildSidebarPalette(
     colorHex,
-    settings.darkModeSidebar || settings.darkModePage,
+    (conColorMenu && settings.darkModeSidebar) || settings.darkModePage,
   );
 
   return (
@@ -590,9 +822,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileHeader sidebarStyle={sidebarStyle} />
-        <main className="min-w-0 flex-1">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_12%_0%,rgba(124,58,237,0.14),transparent_45%),radial-gradient(circle_at_88%_6%,rgba(236,72,153,0.10),transparent_40%)]"
+        />
+        <MobileHeader
+          sidebarStyle={sidebarStyle}
+          menu={menuMovil}
+          setMenu={setMenuMovil}
+          titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
+        />
+        {/* En el celular se deja lugar para la barra inferior. */}
+        <main className="panel-clinica relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (
@@ -610,10 +852,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
+      <BarraInferior onMas={() => setMenuMovil(true)} />
       {/* Esther a mano en todos los módulos, solo en planes con IA (Plus y Enterprise). */}
       {iaDisponible &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
+        // El Odontograma 2D (Start y Pro) no lleva IA ni audio: eso es del 3D.
+        modulo?.id !== "odontograma" &&
         // RRHH ya tiene su propia Esther (especializada en el equipo) en el mismo lugar.
         !pathname.startsWith("/demo/rrhh") && (
           <EstherFlotante

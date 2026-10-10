@@ -168,6 +168,8 @@ type Props = {
 };
 
 function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props) {
+  // El Odontograma 3D usa la misma presentación que el Portal 3D premium (tarjetas también en PC).
+  const tarjetas3D = seccion === "odontograma-3d";
   const { message, show } = useToast();
   const { pacientes, activoId, setActivoId } = usePacientes();
   const registros = useRegistrosPacientes();
@@ -371,78 +373,130 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     </div>
                   </div>
                 ) : (
-                  <ul className="divide-y divide-primary/10">
-                    {resultados.map((p) => (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          onClick={() => elegir(p)}
-                          className={`${FILA_RESULTADO} gap-4 px-6 py-4 hover:bg-primary/[0.035] sm:px-7`}
-                        >
-                          <Avatar paciente={p} className="size-11 text-sm" />
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="truncate text-sm font-bold text-foreground">
+                  <ul
+                    data-movil="1col"
+                    className={
+                      tarjetas3D
+                        ? "grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-2 sm:gap-3 sm:p-5 xl:grid-cols-3"
+                        : "grid grid-cols-2 gap-2.5 p-3 sm:block sm:divide-y sm:divide-primary/10 sm:p-0"
+                    }
+                  >
+                    {resultados.map((p) => {
+                      const r = registros.de(p.id);
+                      const ult = ultimaConsulta(r);
+                      const alertas = alertasMedicas(r);
+                      const n = cantidadSeccion(r, seccion);
+                      const resumen =
+                        seccion === "historia"
+                          ? ult
+                            ? `Última consulta ${fechaCorta(ult.fecha)}`
+                            : "Sin consultas"
+                          : n
+                            ? `${n} ${n === 1 ? "registro" : "registros"}`
+                            : "Sin registros";
+                      return (
+                        <li key={p.id} className="min-w-0">
+                          {/* Celular (y siempre en el 3D): tarjeta como en el Portal 3D premium. */}
+                          <button
+                            type="button"
+                            onClick={() => elegir(p)}
+                            className={`group relative flex h-full w-full min-w-0 flex-col items-start gap-2 overflow-hidden rounded-2xl border border-primary/10 bg-card p-3 text-left shadow-[0_10px_26px_-22px_rgba(124,58,237,0.7)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md ${tarjetas3D ? "sm:flex-row sm:items-center sm:gap-3 sm:p-3.5" : "sm:hidden"}`}
+                          >
+                            <span
+                              className={`flex w-full items-center gap-2.5 ${tarjetas3D ? "sm:w-auto" : ""}`}
+                            >
+                              <Avatar
+                                paciente={p}
+                                className="size-10 bg-gradient-to-br from-primary to-fuchsia-500 text-sm font-bold !text-white !ring-0 sm:size-11"
+                              />
+                              {alertas[0] && (
+                                <span
+                                  className="ml-auto grid size-6 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+                                  title={alertas[0]}
+                                >
+                                  <AlertTriangle className="size-3" />
+                                </span>
+                              )}
+                            </span>
+                            <span className="block w-full min-w-0 sm:flex-1">
+                              <span className="block truncate text-sm font-bold text-foreground">
                                 {p.nombre} {p.apellido}
-                              </p>
-                              <BadgeEstado estado={p.estado} />
-                            </div>
+                              </span>
+                              <span className="block truncate text-[11px] text-muted-foreground">
+                                DNI {formatearDocumento(p.documento)}
+                              </span>
+                              <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                                <BadgeEstado estado={p.estado} />
+                              </span>
+                              <span className="mt-1.5 flex items-center justify-between gap-1.5 text-[11px]">
+                                <span className="truncate font-medium text-foreground/70">
+                                  {etiquetaObraSocial(p.obraSocial)}
+                                </span>
+                                <ChevronRight className="size-3.5 shrink-0 text-primary" />
+                              </span>
+                              <span className="mt-0.5 block truncate text-[10.5px] text-muted-foreground">
+                                {resumen}
+                              </span>
+                            </span>
+                          </button>
+                          {!tarjetas3D && (
+                            <button
+                              type="button"
+                              onClick={() => elegir(p)}
+                              className={`${FILA_RESULTADO} hidden gap-4 px-6 py-4 hover:bg-primary/[0.035] sm:flex sm:px-7`}
+                            >
+                              <Avatar paciente={p} className="size-11 text-sm" />
 
-                            <p className="mt-1 truncate text-xs text-muted-foreground">
-                              DNI {formatearDocumento(p.documento)}
-                              {p.telefono ? `  ·  ${p.telefono}` : ""}
-                            </p>
-                          </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="truncate text-sm font-bold text-foreground">
+                                    {p.nombre} {p.apellido}
+                                  </p>
+                                  <BadgeEstado estado={p.estado} />
+                                </div>
 
-                          {(() => {
-                            const r = registros.de(p.id);
-                            const ult = ultimaConsulta(r);
-                            const alertas = alertasMedicas(r);
-                            const n = cantidadSeccion(r, seccion);
-                            return (
-                              <>
-                                {alertas[0] && (
-                                  <span className="hidden shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 md:inline-flex">
-                                    <AlertTriangle className="size-3" />
-                                    {alertas[0]}
-                                  </span>
-                                )}
-                                <span className="hidden w-[200px] shrink-0 text-right text-xs md:block">
-                                  {seccion === "historia" ? (
-                                    ult ? (
-                                      <>
-                                        <span className="block font-semibold text-foreground/85">
-                                          Última consulta {fechaCorta(ult.fecha)}
-                                        </span>
-                                        <span className="block truncate text-muted-foreground">
-                                          {ult.motivo || `${n} registros`}
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        Sin consultas registradas
+                                <p className="mt-1 truncate text-xs text-muted-foreground">
+                                  DNI {formatearDocumento(p.documento)}
+                                  {p.telefono ? `  ·  ${p.telefono}` : ""}
+                                </p>
+                              </div>
+
+                              {alertas[0] && (
+                                <span className="hidden shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-inset ring-rose-200 md:inline-flex">
+                                  <AlertTriangle className="size-3" />
+                                  {alertas[0]}
+                                </span>
+                              )}
+                              <span className="hidden w-[200px] shrink-0 text-right text-xs md:block">
+                                {seccion === "historia" ? (
+                                  ult ? (
+                                    <>
+                                      <span className="block font-semibold text-foreground/85">
+                                        Última consulta {fechaCorta(ult.fecha)}
                                       </span>
-                                    )
+                                      <span className="block truncate text-muted-foreground">
+                                        {ult.motivo || `${n} registros`}
+                                      </span>
+                                    </>
                                   ) : (
                                     <span className="text-muted-foreground">
-                                      {n
-                                        ? `${n} ${n === 1 ? "registro" : "registros"}`
-                                        : "Sin registros"}
+                                      Sin consultas registradas
                                     </span>
-                                  )}
-                                </span>
-                                <BadgeObraSocial paciente={p} />
-                              </>
-                            );
-                          })()}
+                                  )
+                                ) : (
+                                  <span className="text-muted-foreground">{resumen}</span>
+                                )}
+                              </span>
+                              <BadgeObraSocial paciente={p} />
 
-                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.045] text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
-                            <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.045] text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
+                                <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                              </span>
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </section>
@@ -450,12 +504,24 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
           ) : (
             <>
               {/* Ficha compacta del paciente elegido */}
-              <div className={`${FICHA_PACIENTE} mt-5`}>
-                <div className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden />
+              <div
+                className={`${FICHA_PACIENTE} mt-5 !rounded-[28px] !border-primary/10 shadow-[0_16px_40px_-28px_rgba(124,58,237,0.7)]`}
+              >
+                <div
+                  className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400"
+                  aria-hidden
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-gradient-to-br from-primary/15 to-fuchsia-500/10 blur-2xl"
+                />
 
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3.5">
-                    <Avatar paciente={activo} className="size-14 text-lg" />
+                    <Avatar
+                      paciente={activo}
+                      className="size-14 !rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-lg font-bold !text-white shadow-lg !ring-0"
+                    />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-lg font-bold leading-tight text-foreground">
@@ -498,7 +564,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
               </div>
 
               {/* Sección */}
-              <div className="mt-4 rounded-2xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]">
+              <div className="mt-4 rounded-3xl border border-primary/10 bg-card p-3 shadow-[0_12px_32px_-26px_rgba(124,58,237,0.55)] sm:p-5">
                 {seccion === "odontograma" || seccion === "odontograma-3d" ? (
                   <OdontogramaGate
                     key={`${activo.id}-${seccion}`}

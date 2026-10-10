@@ -62,13 +62,16 @@ export const plans: Plan[] = [
       "Dashboard",
       "Agenda y turnos",
       "Gestión de pacientes",
-      "Gestión clínica",
       "Historia clínica",
       "Odontograma 2D",
-      "Recetas y tratamientos",
+      "Recetas",
+      "Tratamientos",
+      "Equipo: integrantes, especialidades y horarios",
       "Estudios clínicos",
-      "Finanzas y facturación básica",
-      "Notificaciones y recordatorios básicos",
+      "Laboratorio básico",
+      "Comunicación básica",
+      "Configuración con modo oscuro",
+      "Notificaciones",
     ],
   },
 
@@ -84,17 +87,18 @@ export const plans: Plan[] = [
     modules: "Módulos esenciales + gestión",
     features: [
       "Todo lo del plan Start",
-      "Odontograma 2D",
+      "Odontograma 2D completo: dentición temporal y mixta, historial y exportación",
+      "Agenda avanzada: vista mensual, bloqueos y lista de espera",
       "Comunicación con pacientes",
       "Presupuestos",
       "Pagos y facturación avanzada",
       "Estudios y diagnóstico",
-      "Laboratorio",
+      "Laboratorio avanzado",
       "Analítica y reportes",
       "Documentos",
       "Notificaciones avanzadas",
       "Integraciones básicas",
-      "Configuración básica",
+      "Configuración: modo oscuro y color del menú",
     ],
     featured: true,
   },
@@ -112,6 +116,8 @@ export const plans: Plan[] = [
     features: [
       "Todo lo del plan Pro",
       "Odontograma 3D con rayos X y simulador de sonrisa",
+      "Notas de voz y audio clínico",
+      "Agenda completa con recordatorios automáticos",
       "Estudios y diagnóstico avanzado",
       "Comunicación avanzada con pacientes",
       "Marketing y captación",
@@ -138,6 +144,8 @@ export const plans: Plan[] = [
     modules: "Todos los módulos",
     features: [
       "Todo lo del plan Plus",
+      "Portal del paciente",
+      "Portal del profesional",
       "Hasta 5 empresas por cuenta corporativa",
       "Administración multiempresa",
       "Gestión centralizada de sucursales",
@@ -191,15 +199,30 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   { feature: "Dashboard", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Agenda y turnos", values: ["✓", "✓", "✓", "✓"] },
+  {
+    feature: "Agenda y turnos",
+    values: ["Esencial", "Avanzada", "Completa", "Completa"],
+  },
+
+  {
+    feature: "Recordatorios automáticos de turnos",
+    values: ["—", "—", "✓", "✓"],
+  },
 
   { feature: "Pacientes", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Gestión clínica", values: ["✓", "✓", "✓", "✓"] },
+  { feature: "Tratamientos", values: ["✓", "✓", "✓", "✓"] },
+
+  { feature: "Recetas", values: ["✓", "✓", "✓", "✓"] },
+
+  {
+    feature: "Equipo: integrantes, especialidades y horarios",
+    values: ["✓", "✓", "✓", "✓"],
+  },
 
   { feature: "Historia clínica", values: ["✓", "✓", "✓", "✓"] },
 
-  { feature: "Odontograma 2D", values: ["✓", "✓", "—", "—"] },
+  { feature: "Odontograma 2D", values: ["Esencial", "Completo", "—", "—"] },
 
   { feature: "Odontograma 3D", values: ["—", "—", "✓", "✓"] },
 
@@ -209,8 +232,8 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Estudios y diagnóstico",
-    values: ["✓", "✓", "✓", "✓"],
+    feature: "Estudios",
+    values: ["Estudios clínicos", "Estudios y diagnóstico", "✓", "✓"],
   },
 
   {
@@ -218,13 +241,13 @@ export const comparison: { feature: string; values: string[] }[] = [
     values: ["—", "—", "✓", "✓"],
   },
 
-  { feature: "Laboratorio", values: ["—", "✓", "✓", "✓"] },
+  { feature: "Laboratorio", values: ["Básico", "Avanzado", "Avanzado", "Avanzado"] },
 
-  { feature: "Finanzas", values: ["Básicas", "✓", "✓", "✓"] },
+  { feature: "Finanzas", values: ["—", "—", "✓", "✓"] },
 
   {
     feature: "Facturación y pagos",
-    values: ["Básica", "Avanzada", "Avanzada", "Avanzada"],
+    values: ["—", "Avanzada", "Avanzada", "Avanzada"],
   },
 
   { feature: "Presupuestos", values: ["—", "✓", "✓", "✓"] },
@@ -241,7 +264,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Comunicación",
-    values: ["—", "✓", "Avanzada", "Avanzada"],
+    values: ["Básica", "Con pacientes", "Avanzada", "Avanzada"],
   },
 
   {
@@ -270,6 +293,16 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
+    feature: "Notas de voz y audio clínico",
+    values: ["—", "—", "✓", "✓"],
+  },
+
+  {
+    feature: "Rayos X con IA y simulador de sonrisa",
+    values: ["—", "—", "✓", "✓"],
+  },
+
+  {
     feature: "Documentos",
     values: ["—", "✓", "✓", "Avanzados"],
   },
@@ -286,7 +319,7 @@ export const comparison: { feature: string; values: string[] }[] = [
 
   {
     feature: "Configuración",
-    values: ["Básica", "Básica", "Avanzada", "Avanzada"],
+    values: ["Modo oscuro", "Modo oscuro y menú", "Avanzada", "Avanzada"],
   },
 
   {
@@ -305,8 +338,13 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Portal de pacientes",
-    values: ["—", "—", "—", "—"],
+    feature: "Portal del paciente",
+    values: ["—", "—", "—", "✓"],
+  },
+
+  {
+    feature: "Portal del profesional",
+    values: ["—", "—", "—", "✓"],
   },
 
   {

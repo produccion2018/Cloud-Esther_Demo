@@ -108,13 +108,13 @@ function NavLink({
       activeOptions={{ exact }}
       onMouseEnter={() => onHover(to)}
       onFocus={() => onHover(to)}
-      className="group relative rounded-xl px-4 py-2.5 text-[15px] font-medium text-foreground/65 transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 data-[status=active]:font-semibold data-[status=active]:text-foreground"
+      className="group relative rounded-xl px-4 py-2.5 text-[15px] font-semibold text-foreground/70 transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 data-[status=active]:text-foreground"
     >
       {hovered === to && <HoverPill />}
 
       <span className="relative z-10">{label}</span>
 
-      <span className="pointer-events-none absolute bottom-1 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 scale-x-0 rounded-full bg-primary opacity-0 shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100 group-data-[status=active]:scale-x-100 group-data-[status=active]:opacity-100" />
+      <span className="pointer-events-none absolute bottom-0.5 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 scale-x-0 rounded-full bg-primary opacity-0 shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100 group-data-[status=active]:scale-x-100 group-data-[status=active]:opacity-100" />
     </Link>
   );
 }
@@ -130,10 +130,26 @@ export function Header() {
     const onScroll = () => setScrolled(window.scrollY > 12);
 
     onScroll();
-    window.addEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!featuresOpen && !open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFeaturesOpen(false);
+        setOpen(false);
+        setMobileFeaturesOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [featuresOpen, open]);
 
   const closeMenu = () => {
     setOpen(false);
@@ -165,7 +181,7 @@ export function Header() {
               <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
             </span>
 
-            <span className="font-display text-[17px] font-bold tracking-tight">
+            <span className="font-display text-xl font-extrabold tracking-tight">
               Cloud <span className="text-primary">Esther</span>
             </span>
           </Link>
@@ -200,11 +216,12 @@ export function Header() {
               <button
                 type="button"
                 aria-expanded={featuresOpen}
+                aria-haspopup="true"
                 onClick={() => setFeaturesOpen((value) => !value)}
-                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[15px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[15px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                   featuresOpen
-                    ? "font-semibold text-foreground"
-                    : "font-medium text-foreground/65 hover:text-foreground"
+                    ? "text-foreground"
+                    : "text-foreground/70 hover:text-foreground"
                 }`}
               >
                 {hovered === "features" && <HoverPill />}
@@ -218,7 +235,7 @@ export function Header() {
                 />
 
                 <span
-                  className={`pointer-events-none absolute bottom-1 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 ${
+                  className={`pointer-events-none absolute bottom-0.5 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 ${
                     featuresOpen
                       ? "scale-x-100 opacity-100"
                       : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100"
@@ -229,6 +246,7 @@ export function Header() {
               <AnimatePresence>
                 {featuresOpen && (
                   <motion.div
+                    style={{ x: "-50%" }}
                     initial={{ opacity: 0, y: 8, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.97 }}
@@ -236,49 +254,47 @@ export function Header() {
                       duration: 0.2,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="absolute left-1/2 top-full mt-3 w-[310px] -translate-x-1/2 overflow-hidden rounded-2xl border border-primary/10 bg-background/95 p-2 shadow-[0_20px_55px_rgba(88,28,135,0.16)] backdrop-blur-2xl"
+                    className="absolute left-1/2 top-full w-[310px] pt-3"
                   >
-                    <div className="px-3 pb-2 pt-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                        Todo lo que necesitás
-                      </p>
-                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-primary/10 bg-background/95 p-2 shadow-[0_20px_55px_rgba(88,28,135,0.16)] backdrop-blur-2xl">
+                      <div className="px-3 pb-2 pt-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                          Todo lo que necesitás
+                        </p>
+                      </div>
 
-                    <div className="space-y-1">
-                      {featureItems.map((item) => {
-                        const Icon = item.icon;
+                      <div className="space-y-1">
+                        {featureItems.map((item) => {
+                          const Icon = item.icon;
 
-                        return (
-                          <Link
-                            key={item.label}
-                            to="/caracteristicas"
-                            onClick={closeMenu}
-                            className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 hover:bg-lavender"
-                          >
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-[0_5px_16px_rgba(124,58,237,0.2)]">
-                              <Icon className="size-4" />
-                            </span>
-
-                            <span className="min-w-0">
-                              <span className="block text-sm font-semibold text-foreground">
-                                {item.label}
-                              </span>
-
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {item.description}
-                              </span>
-                            </span>
-
-                            <motion.span
-                              initial={{ opacity: 0, x: -4 }}
-                              whileHover={{ opacity: 1, x: 0 }}
-                              className="ml-auto text-primary"
+                          return (
+                            <Link
+                              key={item.label}
+                              to="/caracteristicas"
+                              onClick={closeMenu}
+                              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 hover:bg-lavender focus-visible:bg-lavender focus-visible:outline-none"
                             >
-                              →
-                            </motion.span>
-                          </Link>
-                        );
-                      })}
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-[0_5px_16px_rgba(124,58,237,0.2)]">
+                                <Icon className="size-4" />
+                              </span>
+
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-foreground">
+                                  {item.label}
+                                </span>
+
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {item.description}
+                                </span>
+                              </span>
+
+                              <span className="ml-auto -translate-x-1 text-primary opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+                                →
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -303,11 +319,16 @@ export function Header() {
               DESKTOP ACTIONS
           ===================================================== */}
           <div className="hidden items-center gap-2 xl:flex">
+            <span
+              aria-hidden="true"
+              className="mr-2 h-6 w-px bg-border/80"
+            />
+
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="rounded-xl px-3.5 text-muted-foreground transition-all hover:bg-lavender/70 hover:text-foreground"
+              className="h-10 rounded-xl px-3.5 text-[15px] font-semibold text-foreground/70 transition-all hover:bg-lavender/70 hover:text-foreground"
             >
               <Link to="/login">Iniciar sesión</Link>
             </Button>
@@ -316,7 +337,7 @@ export function Header() {
               asChild
               variant="outlineBrand"
               size="sm"
-              className="rounded-xl px-4 transition-all duration-200 hover:-translate-y-0.5"
+              className="h-10 rounded-xl px-4 text-[15px] font-semibold transition-all duration-200 hover:-translate-y-0.5"
             >
               <Link to="/demostracion">Contratar servicio</Link>
             </Button>
@@ -325,7 +346,7 @@ export function Header() {
               asChild
               variant="hero"
               size="sm"
-              className="rounded-xl px-5 shadow-[0_8px_24px_rgba(124,58,237,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(124,58,237,0.32)]"
+              className="h-10 rounded-xl px-5 text-[15px] font-semibold shadow-[0_8px_24px_rgba(124,58,237,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(124,58,237,0.32)]"
             >
               <Link to="/registro">Probar demo</Link>
             </Button>
@@ -387,7 +408,7 @@ export function Header() {
                   to="/"
                   onClick={closeMenu}
                   activeOptions={{ exact: true }}
-                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:font-semibold data-[status=active]:text-foreground"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                 >
                   Inicio
                 </Link>
@@ -398,10 +419,10 @@ export function Header() {
                   onClick={() =>
                     setMobileFeaturesOpen((value) => !value)
                   }
-                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] transition-all duration-200 ${
+                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
                     mobileFeaturesOpen
-                      ? "bg-lavender font-semibold text-foreground"
-                      : "font-medium text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                      ? "bg-lavender text-foreground"
+                      : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
                   }`}
                 >
                   <span>Características</span>
@@ -445,7 +466,7 @@ export function Header() {
                     key={item.to}
                     to={item.to as never}
                     onClick={closeMenu}
-                    className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:font-semibold data-[status=active]:text-foreground"
+                    className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                   >
                     {item.label}
                   </Link>
@@ -467,9 +488,7 @@ export function Header() {
                     onClick={closeMenu}
                     className="w-full rounded-xl"
                   >
-                    <Link to="/demostracion">
-                      Contratar servicio
-                    </Link>
+                    <Link to="/demostracion">Contratar servicio</Link>
                   </Button>
 
                   <Button

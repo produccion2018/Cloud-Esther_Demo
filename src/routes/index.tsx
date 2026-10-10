@@ -168,6 +168,18 @@ const faqs = [
   },
 ];
 
+/* Partículas de luz que suben en el CTA final */
+const CTA_SPARKS = [
+  { left: "6%", size: 6, delay: "0s", duration: "7s" },
+  { left: "17%", size: 4, delay: "2.2s", duration: "6s" },
+  { left: "29%", size: 8, delay: "4.1s", duration: "8s" },
+  { left: "41%", size: 5, delay: "1.1s", duration: "6.5s" },
+  { left: "54%", size: 7, delay: "3.3s", duration: "7.5s" },
+  { left: "66%", size: 4, delay: "0.6s", duration: "6s" },
+  { left: "78%", size: 6, delay: "2.8s", duration: "7s" },
+  { left: "90%", size: 5, delay: "4.8s", duration: "8s" },
+];
+
 /* =========================================================
    LOGO — DIENTE
 ========================================================= */
@@ -243,7 +255,7 @@ function AnimatedLine({
 }
 
 /* =========================================================
-   ANIMACIÓN DEL TÍTULO (CSS liviano, respeta reduced-motion)
+   ANIMACIONES CSS (livianas, respetan reduced-motion)
 ========================================================= */
 const TITLE_CSS = `
 .ce-title-gradient {
@@ -266,8 +278,79 @@ const TITLE_CSS = `
   from { transform: translateX(-120%); }
   to { transform: translateX(380%); }
 }
+
+/* ---------- CTA FINAL ---------- */
+.ce-cta-bg {
+  background-image: linear-gradient(115deg, #4c1d95 0%, #6d28d9 22%, #8b3fe8 42%, #b56bea 62%, #7c3aed 82%, #4c1d95 100%);
+  background-size: 300% 100%;
+  background-position: 0% 50%;
+  animation: ce-cta-flow 12s ease-in-out infinite alternate;
+}
+@keyframes ce-cta-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+.ce-cta-beam {
+  transform: translateX(-150%) skewX(-20deg);
+  animation: ce-cta-beam 5.5s ease-in-out infinite;
+}
+@keyframes ce-cta-beam {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  60%, 100% { transform: translateX(520%) skewX(-20deg); }
+}
+.ce-cta-ring {
+  animation: ce-cta-ring 3s ease-out infinite;
+}
+@keyframes ce-cta-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.ce-cta-spark {
+  opacity: 0;
+  animation: ce-cta-rise 7s linear infinite;
+}
+@keyframes ce-cta-rise {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.85; }
+  100% { transform: translateY(-300px) scale(1.1); opacity: 0; }
+}
+.ce-cta-btn-glow {
+  animation: ce-cta-btn-glow 2.4s ease-out infinite;
+}
+@keyframes ce-cta-btn-glow {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+  100% { box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+}
+.ce-cta-text {
+  background-image: linear-gradient(110deg, #ffffff 0%, #ffffff 35%, #f5c2ff 50%, #ffffff 65%, #ffffff 100%);
+  background-size: 250% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ce-cta-text 4.5s ease-in-out infinite alternate;
+}
+@keyframes ce-cta-text {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ce-title-gradient, .ce-bar-shine { animation: none; }
+  .ce-title-gradient,
+  .ce-bar-shine,
+  .ce-cta-bg,
+  .ce-cta-beam,
+  .ce-cta-ring,
+  .ce-cta-spark,
+  .ce-cta-btn-glow,
+  .ce-cta-text {
+    animation: none;
+  }
+  .ce-cta-beam,
+  .ce-cta-ring,
+  .ce-cta-spark {
+    display: none;
+  }
 }
 `;
 
@@ -890,30 +973,149 @@ function Home() {
         ========================================================= */}
         <section className="px-5 pb-16 lg:px-8 lg:pb-20">
           <Reveal>
-            <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#5520a0] via-[#7c3aed] to-[#b56bea] px-6 py-12 text-center shadow-[0_25px_70px_rgba(88,28,135,0.22)] sm:px-10 lg:py-14">
-              <div
+            <div className="ce-cta-bg relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] px-6 py-12 text-center shadow-[0_25px_70px_rgba(88,28,135,0.22)] sm:px-10 lg:py-14">
+              {/* BLOBS DE LUZ (flotan en loop) */}
+              <motion.div
+                animate={{
+                  x: [0, 50, -20, 0],
+                  y: [0, 30, 55, 0],
+                  scale: [1, 1.18, 0.94, 1],
+                }}
+                transition={{
+                  duration: 14,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 className="pointer-events-none absolute -left-32 -top-32 size-[380px] rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 70%)",
+                }}
+              />
+
+              <motion.div
+                animate={{
+                  x: [0, -55, 25, 0],
+                  y: [0, -35, -60, 0],
+                  scale: [1, 0.92, 1.16, 1],
+                }}
+                transition={{
+                  duration: 16,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute -bottom-32 -right-32 size-[400px] rounded-full"
                 style={{
                   background:
                     "radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)",
                 }}
               />
 
-              <div
-                className="pointer-events-none absolute -bottom-32 -right-32 size-[400px] rounded-full"
+              <motion.div
+                animate={{
+                  opacity: [0.25, 0.6, 0.25],
+                  scale: [0.9, 1.15, 0.9],
+                }}
+                transition={{
+                  duration: 7,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%)",
+                    "radial-gradient(circle, rgba(232,121,249,0.3) 0%, transparent 65%)",
                 }}
               />
 
+              {/* HAZ DE LUZ QUE BARRE EL BANNER */}
+              <span
+                aria-hidden="true"
+                className="ce-cta-beam pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+              />
+
+              {/* DIENTES FLOTANTES DE FONDO */}
+              <motion.div
+                aria-hidden="true"
+                animate={{ y: [0, -16, 0], rotate: [-10, 8, -10] }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute left-[6%] top-[16%] hidden text-white/15 sm:block"
+              >
+                <ToothIcon className="size-14" />
+              </motion.div>
+
+              <motion.div
+                aria-hidden="true"
+                animate={{ y: [0, 18, 0], rotate: [12, -8, 12] }}
+                transition={{
+                  duration: 10,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="pointer-events-none absolute bottom-[12%] right-[7%] hidden text-white/15 sm:block"
+              >
+                <ToothIcon className="size-20" />
+              </motion.div>
+
+              {/* PARTÍCULAS QUE SUBEN */}
+              {CTA_SPARKS.map((spark, index) => (
+                <span
+                  key={index}
+                  aria-hidden="true"
+                  className="ce-cta-spark pointer-events-none absolute bottom-2 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.9)]"
+                  style={{
+                    left: spark.left,
+                    width: spark.size,
+                    height: spark.size,
+                    animationDelay: spark.delay,
+                    animationDuration: spark.duration,
+                  }}
+                />
+              ))}
+
               <div className="relative">
-                <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  <ShieldCheck className="size-5" />
+                {/* ESCUDO CON ONDAS DE PULSO */}
+                <div className="relative mx-auto size-12">
+                  <span
+                    aria-hidden="true"
+                    className="ce-cta-ring pointer-events-none absolute inset-0 rounded-2xl border border-white/50"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="ce-cta-ring pointer-events-none absolute inset-0 rounded-2xl border border-white/50"
+                    style={{ animationDelay: "1.5s" }}
+                  />
+
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{
+                      duration: 3.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="relative flex size-12 items-center justify-center rounded-2xl bg-white/15 text-white shadow-[0_0_30px_rgba(255,255,255,0.25)]"
+                  >
+                    <motion.span
+                      animate={{ scale: [1, 1.15, 1] }}
+                      transition={{
+                        duration: 2.4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      className="inline-flex"
+                    >
+                      <ShieldCheck className="size-5" />
+                    </motion.span>
+                  </motion.div>
                 </div>
 
                 <h2 className="mx-auto mt-5 max-w-3xl text-3xl font-bold tracking-tight text-white lg:text-4xl">
-                  Empezá a gestionar tu clínica con Cloud Esther
+                  Empezá a gestionar tu clínica con{" "}
+                  <span className="ce-cta-text">Cloud Esther</span>
                 </h2>
 
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/75 lg:text-base">
@@ -922,16 +1124,28 @@ function Home() {
                 </p>
 
                 <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Button
-                    asChild
-                    size="xl"
-                    className="rounded-xl bg-white text-primary shadow-lg shadow-black/10 hover:bg-white/90"
-                  >
-                    <Link to="/registro">
-                      Probar demo
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  </Button>
+                  <div className="ce-cta-btn-glow rounded-xl">
+                    <Button
+                      asChild
+                      size="xl"
+                      className="w-full rounded-xl bg-white text-primary shadow-lg shadow-black/10 hover:bg-white/90"
+                    >
+                      <Link to="/registro">
+                        Probar demo
+                        <motion.span
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{
+                            duration: 1.4,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                          className="inline-flex"
+                        >
+                          <ArrowRight className="size-4" />
+                        </motion.span>
+                      </Link>
+                    </Button>
+                  </div>
 
                   <Button
                     asChild

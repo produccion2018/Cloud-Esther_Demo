@@ -82,14 +82,41 @@ type Stat = {
   decimals?: number;
   prefix?: string;
   suffix?: string;
+  /** Porcentaje al que llega la barra de progreso (0 a 100) */
+  fill: number;
   v: string;
 };
 
 const stats: Stat[] = [
-  { icon: Building2, to: 320, prefix: "+", v: "clínicas usando Cloud Esther" },
-  { icon: CalendarCheck, to: 1.2, decimals: 1, suffix: "M", v: "turnos gestionados" },
-  { icon: ThumbsUp, to: 98, suffix: "%", v: "satisfacción del equipo" },
-  { icon: Clock, to: 24, suffix: "/7", v: "disponibilidad en la nube" },
+  {
+    icon: Building2,
+    to: 320,
+    prefix: "+",
+    fill: 86,
+    v: "clínicas usando Cloud Esther",
+  },
+  {
+    icon: CalendarCheck,
+    to: 1.2,
+    decimals: 1,
+    suffix: "M",
+    fill: 72,
+    v: "turnos gestionados",
+  },
+  {
+    icon: ThumbsUp,
+    to: 98,
+    suffix: "%",
+    fill: 98,
+    v: "satisfacción del equipo",
+  },
+  {
+    icon: Clock,
+    to: 24,
+    suffix: "/7",
+    fill: 100,
+    v: "disponibilidad en la nube",
+  },
 ];
 
 /* ---------------------------------------------------------------
@@ -160,52 +187,110 @@ function AnimatedChars({
 }
 
 /* ---------------------------------------------------------------
-   Contador animado: arranca en 0 cuando entra en pantalla y sube
-   hasta el valor final (una sola vez).
+   Tarjeta de número con contador.
+   - Cada vez que la tarjeta entra en pantalla, cuenta desde 0 hasta
+     el valor final y llena la barra de progreso.
+   - Si salís de la pantalla y volvés (subís y bajás el scroll),
+     vuelve a arrancar desde cero.
 ---------------------------------------------------------------- */
-function Counter({
-  to,
-  decimals = 0,
-  prefix = "",
-  suffix = "",
-  duration = 2.2,
-  delay = 0,
-}: {
-  to: number;
-  decimals?: number;
-  prefix?: string;
-  suffix?: string;
-  duration?: number;
-  delay?: number;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+function StatCard({ stat, index }: { stat: Stat; index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { margin: "-80px" });
   const reduceMotion = useReducedMotion();
+
+  const { to, decimals = 0, prefix = "", suffix = "", fill } = stat;
+  const Icon = stat.icon;
 
   const value = useMotionValue(0);
   const text = useTransform(
     value,
     (v) => `${prefix}${v.toFixed(decimals)}${suffix}`,
   );
+  const barWidth = useTransform(value, (v) => `${(v / to) * fill}%`);
 
   useEffect(() => {
-    if (!inView) return;
+    if (!inView) {
+      value.set(0);
+      return undefined;
+    }
 
     if (reduceMotion) {
       value.set(to);
-      return;
+      return undefined;
     }
 
+    value.set(0);
+
     const controls = animate(value, to, {
-      duration,
-      delay,
+      duration: 2.2,
+      delay: 0.15 + index * 0.12,
       ease: [0.16, 1, 0.3, 1],
     });
 
     return () => controls.stop();
-  }, [inView, reduceMotion, to, duration, delay, value]);
+  }, [inView, reduceMotion, to, index, value]);
 
-  return <motion.span ref={ref}>{text}</motion.span>;
+  return (
+    <div
+      ref={ref}
+      className="group relative h-full overflow-hidden rounded-3xl border border-border/70 bg-card p-7 shadow-[0_12px_40px_rgba(88,28,135,0.06)] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_24px_60px_rgba(124,58,237,0.16)]"
+    >
+      {/* Línea de color superior (se dibuja al pasar el mouse) */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-primary via-violet-500 to-fuchsia-400 transition-transform duration-500 group-hover:scale-x-100" />
+
+      {/* Mancha de luz decorativa */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full opacity-70 transition-opacity duration-500 group-hover:opacity-100"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(124,58,237,0.16) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Brillo que cruza la tarjeta al pasar el mouse */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/10 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full"
+      />
+
+      <div className="relative">
+        {/* Ícono */}
+        <motion.span
+          animate={{ y: [0, -4, 0] }}
+          transition={{
+            duration: 4,
+            delay: index * 0.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="relative flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_10px_26px_rgba(124,58,237,0.32)]"
+        >
+          <Icon className="size-5" />
+
+          <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/25 via-transparent to-transparent" />
+        </motion.span>
+
+        {/* Número */}
+        <p className="text-gradient mt-6 font-display text-5xl font-bold tabular-nums tracking-tight">
+          <motion.span>{text}</motion.span>
+        </p>
+
+        {/* Descripción */}
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {stat.v}
+        </p>
+
+        {/* Barra de progreso que se llena mientras cuenta */}
+        <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
+          <motion.div
+            style={{ width: barWidth }}
+            className="h-full rounded-full bg-gradient-to-r from-primary via-violet-500 to-fuchsia-400 shadow-[0_0_12px_rgba(124,58,237,0.45)]"
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Nosotros() {
@@ -595,10 +680,25 @@ function Nosotros() {
         </section>
 
         {/* =========================================================
-            NÚMEROS — SIN CARDS
+            NÚMEROS — TARJETAS CON CONTADOR
         ========================================================= */}
         <section className="relative overflow-hidden bg-background">
-          <div className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-24">
+          {/* Luz ambiental que respira detrás de las tarjetas */}
+          <motion.div
+            aria-hidden="true"
+            animate={{
+              opacity: [0.06, 0.16, 0.06],
+              scale: [0.95, 1.1, 0.95],
+            }}
+            transition={{
+              duration: 9,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute left-1/2 top-[55%] size-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[120px]"
+          />
+
+          <div className="relative mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-24">
             <Reveal className="mx-auto max-w-2xl text-center">
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
                 Cloud Esther en números
@@ -609,43 +709,12 @@ function Nosotros() {
               </h2>
             </Reveal>
 
-            <div className="relative mt-14">
-              <div className="absolute left-0 right-0 top-0 hidden h-px bg-border sm:block" />
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4">
-                {stats.map((stat, index) => (
-                  <Reveal
-                    key={stat.v}
-                    delay={index * 0.1}
-                    className="relative border-b border-border py-8 sm:border-r sm:px-8 sm:last:border-r-0 sm:nth-[3]:border-r-0 lg:border-b-0 lg:border-r"
-                  >
-                    <motion.p
-                      animate={{
-                        y: [0, -3, 0],
-                      }}
-                      transition={{
-                        duration: 4,
-                        delay: index * 0.6,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="text-gradient font-display text-5xl font-bold tracking-tight"
-                    >
-                      <Counter
-                        to={stat.to}
-                        decimals={stat.decimals}
-                        prefix={stat.prefix}
-                        suffix={stat.suffix}
-                        delay={index * 0.12}
-                      />
-                    </motion.p>
-
-                    <p className="mt-3 max-w-[180px] text-sm leading-6 text-muted-foreground">
-                      {stat.v}
-                    </p>
-                  </Reveal>
-                ))}
-              </div>
+            <div className="relative mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {stats.map((stat, index) => (
+                <Reveal key={stat.v} delay={index * 0.1} className="h-full">
+                  <StatCard stat={stat} index={index} />
+                </Reveal>
+              ))}
             </div>
 
             {/* =====================================================

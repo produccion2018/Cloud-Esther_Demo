@@ -16,7 +16,7 @@ import {
   problemaClaveDemo,
   registrarDemoEnServidor,
 } from "@/lib/cloud-esther/demo-servidor";
-import { formatearPrecio, textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
+import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -79,7 +79,7 @@ function Registro() {
                     Probá Cloud Esther con tu propia clínica.
                   </h1>
                   <p className="mt-4 text-muted-foreground">
-                    Creá tu cuenta y explorá la plataforma.
+                    Demo gratis: creá tu cuenta de prueba y explorá la plataforma. No se cobra nada.
                   </p>
                 </div>
 
@@ -242,7 +242,19 @@ function Registro() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Seleccioná tu plan</Label>
+                    <Label>¿Qué plan querés probar?</Label>
+                    <p className="-mt-1 text-[11px] text-muted-foreground">
+                      Es solo para el demo gratis: no se cobra nada.{" "}
+                      ¿Ya querés contratar?{" "}
+                      <Link
+                        to="/demostracion"
+                        search={{ plan: selected }}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Contratar servicio
+                      </Link>
+                      .
+                    </p>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {plans.map((p) => (
                         <motion.button
@@ -257,9 +269,6 @@ function Registro() {
                           }`}
                         >
                           <span className="block text-sm font-semibold">{p.name}</span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {formatearPrecio(config[mapSitePlanToPlanId(p.id)].precioMensual)} / mes
-                          </span>
                           <span className="mt-1.5 block text-[11px] leading-4 text-foreground/80">
                             {textoLimites(config[mapSitePlanToPlanId(p.id)]).pacientes}
                           </span>
@@ -287,7 +296,7 @@ function Registro() {
                       </>
                     ) : (
                       <>
-                        Crear cuenta y entrar al panel <ArrowRight className="size-4" />
+                        Crear mi demo gratis <ArrowRight className="size-4" />
                       </>
                     )}
                   </Button>

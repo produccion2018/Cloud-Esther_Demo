@@ -87,6 +87,44 @@ export type Clinica = {
     minutosIA: number;
   };
   ultimoAcceso: string | null; // ISO
+  /** Dirección web de la clínica (cloudesther.com/<slug>). Solo con backend. */
+  slug?: string;
+  /** Solicitud de contratación con la que se activó (si vino de la web). */
+  contratacionId?: string | null;
+};
+
+/* ───────────── Contrataciones (formulario «Contratar servicio») ─────────────
+   Es DISTINTO del demo: la clínica pide contratar. Llega al panel; la ven Dueño, Socio y
+   Secretaría. Después de revisar y cobrar, el Dueño o el Socio aprietan «Activar». */
+
+export type EstadoContratacion = "pendiente" | "activada" | "rechazada";
+
+export type Contratacion = {
+  id: string;
+  /** Número para hablar con el cliente: CT-1A2B3C */
+  codigo: string;
+  fecha: string; // ISO
+  estado: EstadoContratacion;
+  clinica: string;
+  pais: string;
+  paisNombre: string;
+  ciudad: string;
+  contacto: { nombre: string; email: string; telefono: string };
+  plan: PlanId;
+  ciclo: "Mensual" | "Anual";
+  modulos: string[];
+  sucursales: string;
+  profesionales: string;
+  comentarios: string;
+  /** Notas internas del equipo */
+  notas: string;
+  /** Si el mismo correo probó el demo */
+  demo: { id: string; verificado: boolean; ingresosUsados: number } | null;
+  clinicaId: string | null;
+  resueltaEl: string | null; // ISO
+  resueltaPor: string | null;
+  /** Referencia del pago (activada) o motivo (rechazada) */
+  nota: string;
 };
 
 /* ───────────── Demos (espejo de lo que hacen en el demo) ───────────── */

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle2,
   Clock,
@@ -31,6 +31,8 @@ import {
   DEMO_EN_SERVIDOR,
   demoServidorActivo,
   enviarPedidoDemo,
+  estadoDemoServidor,
+  olvidarDemoServidor,
 } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/components/cloud-esther/ControlDemo.tsx
@@ -84,6 +86,11 @@ export function ContadorDemo() {
         <Clock className="size-3.5" />
         Tu demo: {formatearRestante(restante)}
       </p>
+      {sesion && demoServidorActivo(sesion.usuario.email) && estadoDemoServidor() && (
+        <p className="mt-1 text-center text-[10.5px] font-semibold text-sidebar-foreground/70">
+          Ingreso {estadoDemoServidor()?.ingresosUsados} de {estadoDemoServidor()?.ingresosPermitidos}
+        </p>
+      )}
       <p className="mt-1 text-center text-[10px] leading-snug text-sidebar-foreground/50">
         Registramos el uso del demo (tiempo y módulos) para el seguimiento comercial. No se
         registran datos de pacientes.
@@ -145,6 +152,7 @@ export function ControlSesionDemo() {
   }
 
   if (enServidor && restante === 0) return <DemoVencidoServidor />;
+  if (enServidor && estadoDemoServidor()?.bloqueo === "ingresos") return <LimiteIngresosServidor />;
 
   if (espera) {
     const hora = new Date(espera).toLocaleTimeString("es-AR", {
@@ -342,8 +350,8 @@ function RegistroRequerido() {
             Probá Cloud Esther gratis
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Para usar el demo dejanos tus datos: es gratis y entrás enseguida. Si ya tenés un demo,
-            entrá con tu correo.
+            Para usar el demo, iniciá sesión con tu correo y tu contraseña (si estuviste 2 horas sin
+            usarlo, la sesión se cierra). Si todavía no tenés un demo, registrate gratis.
           </p>
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <Link to={"/registro" as never} className="btn-ce !h-10">
@@ -352,8 +360,112 @@ function RegistroRequerido() {
             </Link>
             <Link to={"/login" as never} className="btn-ce-outline !h-10">
               <LogIn className="size-4" />
-              Ya tengo un demo
+              Iniciar sesión
             </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Usó todos los ingresos del demo: puede pedir autorización al equipo (con un motivo).
+ *  No borra nada: si el equipo lo autoriza, el aviso desaparece solo. */
+function LimiteIngresosServidor() {
+  const navigate = useNavigate();
+  const [motivo, setMotivo] = useState("");
+  const [estado, setEstado] = useState<"inicio" | "enviando" | "pedido" | "error">("inicio");
+  const [error, setError] = useState("");
+  const pedir = async () => {
+    setEstado("enviando");
+    const r = await enviarPedidoDemo("ingresos", motivo.trim() || undefined);
+    if (r.ok) setEstado("pedido");
+    else {
+      setError(r.error ?? "No se pudo enviar el pedido.");
+      setEstado("error");
+    }
+  };
+  return (
+    <div
+      className="fixed inset-0 z-[90] grid place-items-center bg-black/55 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="demo-limite"
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-primary/20 bg-card text-center shadow-2xl">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-pink-400/70" />
+        <div className="p-7">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Hourglass className="size-6" />
+          </span>
+          <h2 id="demo-limite" className="mt-4 text-xl font-bold tracking-tight">
+            Usaste todos tus ingresos
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Has alcanzado el límite de ingresos disponibles para el demo. Si necesitás continuar
+            probando la plataforma, solicitá una autorización al equipo administrador.
+          </p>
+          {estado === "pedido" ? (
+            <p className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-sm font-semibold text-success">
+              <CheckCircle2 className="size-4" /> Pedido enviado. Cuando el equipo lo autorice, vas a
+              poder seguir desde acá.
+            </p>
+          ) : (
+            <textarea
+              aria-label="Motivo"
+              value={motivo}
+              maxLength={500}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Contanos para qué necesitás seguir probando (opcional)"
+              className="mt-5 h-20 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm"
+            />
+          )}
+          {estado === "error" ? (
+            <p role="alert" className="mt-3 text-sm font-medium text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="mt-5 grid gap-2">
+            {estado !== "pedido" && (
+              <button
+                type="button"
+                className="btn-ce !h-10"
+                disabled={estado === "enviando"}
+                onClick={() => void pedir()}
+              >
+                <Hourglass className="size-4" />
+                {estado === "enviando" ? "Enviando…" : "Solicitar autorización"}
+              </button>
+            )}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link
+                to={"/planes" as never}
+                onClick={() => registrarSolicitudDemo("Contratación")}
+                className="btn-ce-outline !h-10"
+              >
+                <Sparkles className="size-4" />
+                Ver planes y contratar
+              </Link>
+              <Link
+                to={"/formulario" as never}
+                onClick={() => registrarSolicitudDemo("Información comercial")}
+                className="btn-ce-outline !h-10"
+              >
+                <MessageSquare className="size-4" />
+                Pedir información
+              </Link>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                olvidarDemoServidor();
+                cerrarSesion("Manual");
+                void navigate({ to: "/login" });
+              }}
+              className="mt-1 text-xs font-semibold text-muted-foreground hover:underline"
+            >
+              Salir del demo
+            </button>
           </div>
         </div>
       </div>

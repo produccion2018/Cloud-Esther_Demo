@@ -103,6 +103,13 @@ export function RecuperarClave({
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     setEstado("enviando");
+    // Con servidor: el demo no recupera contraseña; le llega un enlace para entrar
+    if (DEMO_EN_SERVIDOR) {
+      await pedirEnlaceDemo(email);
+      setDemo(null);
+      setEstado("listo");
+      return;
+    }
     const r = await solicitarRecuperacion(email);
     setDemo(r.demo);
     setEstado("listo");
@@ -224,15 +231,23 @@ export function RecuperarClave({
                     <h2 className="text-xl font-bold tracking-tight">Revisá tu correo</h2>
                     <p className="mt-1.5 text-sm text-muted-foreground">
                       Si <b className="text-foreground">{email}</b> corresponde a una cuenta de
-                      Cloud Esther, vas a recibir un enlace para crear una contraseña nueva.
+                      Cloud Esther, vas a recibir un enlace para{" "}
+                      {DEMO_EN_SERVIDOR ? "entrar a tu demo." : "crear una contraseña nueva."}
                     </p>
                   </div>
                   <ol className="space-y-2 text-sm">
-                    {[
-                      "Abrí el correo de Cloud Esther (revisá también spam o promociones).",
-                      "Tocá «Crear nueva contraseña». El enlace vence en 30 minutos.",
-                      "Elegí la contraseña nueva y volvé a iniciar sesión.",
-                    ].map((t, i) => (
+                    {(DEMO_EN_SERVIDOR
+                      ? [
+                          "Abrí el correo de Cloud Esther (revisá también spam o promociones).",
+                          "Tocá «Entrar al demo». El enlace vence en 48 horas y se usa una sola vez.",
+                          "Entrar con el enlace cuenta como uno de tus ingresos.",
+                        ]
+                      : [
+                          "Abrí el correo de Cloud Esther (revisá también spam o promociones).",
+                          "Tocá «Crear nueva contraseña». El enlace vence en 30 minutos.",
+                          "Elegí la contraseña nueva y volvé a iniciar sesión.",
+                        ]
+                    ).map((t, i) => (
                       <li key={t} className="flex gap-2.5">
                         <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                           {i + 1}

@@ -120,11 +120,14 @@ export type CuentaDemo = {
   /** Pedidos hechos desde el demo (al terminar el tiempo o desde los botones). */
   solicitudes?: {
     fecha: string;
-    tipo: "Información comercial" | "Contratación" | "Más tiempo";
+    tipo: "Información comercial" | "Contratación" | "Más tiempo" | "Más ingresos";
     /** Con servidor: */
     id?: string;
     mensaje?: string;
     atendida?: boolean;
+    /** pendiente · autorizada · denegada · atendida */
+    estado?: string;
+    nota?: string;
   }[];
   /* ── Reloj del demo (solo con servidor: lo calcula el backend) ── */
   responsableId?: string | null;
@@ -134,6 +137,27 @@ export type CuentaDemo = {
   vencido?: boolean;
   ultimoAcceso?: string | null;
   pedidosPendientes?: number;
+  /* ── Ingresos (5 + autorizados) y verificación del correo (con servidor) ── */
+  ingresosUsados?: number;
+  ingresosPermitidos?: number;
+  verificado?: boolean;
+  /** Otros demos registrados desde la misma conexión (señal, no prueba) */
+  mismaConexion?: number;
+  autorizaciones?: AutorizacionDemo[];
+};
+
+/** Ingresos extra autorizados a un demo (se pueden revocar). */
+export type AutorizacionDemo = {
+  id: string;
+  fecha: string;
+  quien: string;
+  cantidad: number;
+  motivo: string;
+  pedidoId: string | null;
+  revocada: boolean;
+  revocadaEl: string | null;
+  revocadaPor: string | null;
+  motivoRevocacion: string | null;
 };
 
 /** Un cambio en el reloj de un demo (historial). */

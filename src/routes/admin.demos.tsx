@@ -328,7 +328,12 @@ function DemosPage() {
                           </span>
                         </td>
                         <td className="px-3 py-3 text-center text-base font-bold tabular-nums">
-                          {r.ingresos}
+                          {demo.ingresosPermitidos !== undefined
+                            ? `${demo.ingresosUsados ?? 0}/${demo.ingresosPermitidos}`
+                            : r.ingresos}
+                          {demo.verificado === false && (
+                            <p className="text-[10.5px] font-semibold text-muted-foreground">sin confirmar</p>
+                          )}
                         </td>
                         <td className="px-3 py-3">
                           <p className="font-semibold">{minutosTexto(r.minutos)}</p>

@@ -360,5 +360,16 @@ export function useTiempoDemo() {
 
 export function formatearRestante(ms: number) {
   const s = Math.ceil(ms / 1000);
+  // Demos largos (los da el equipo desde el panel): en horas o días
+  if (s >= 86_400) {
+    const d = Math.floor(s / 86_400);
+    const h = Math.floor((s % 86_400) / 3600);
+    return `${d} ${d === 1 ? "día" : "días"}${h ? ` ${h} h` : ""}`;
+  }
+  if (s >= 3600) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return `${h} h ${String(m).padStart(2, "0")} min`;
+  }
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }

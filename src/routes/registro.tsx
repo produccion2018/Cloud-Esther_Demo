@@ -12,6 +12,8 @@ import { existeCuentaLocal, registrarCuenta } from "@/lib/cloud-esther/auth-stor
 import {
   DEMO_EN_SERVIDOR,
   PAISES_DEMO,
+  pedirEnlaceDemo,
+  problemaClaveDemo,
   registrarDemoEnServidor,
 } from "@/lib/cloud-esther/demo-servidor";
 import { formatearPrecio, textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
@@ -46,6 +48,9 @@ function Registro() {
   const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
   const [entrando, setEntrando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  // Con servidor: correo al que mandamos la bienvenida (y estado del "reenviar")
+  const [correoEnviado, setCorreoEnviado] = useState("");
+  const [reenvio, setReenvio] = useState<"" | "enviando" | "listo">("");
   const router = useRouter();
   // Apenas se crea la cuenta se descarga el panel, así "Continuar" entra con un solo clic.
   useEffect(() => {
@@ -89,12 +94,14 @@ function Registro() {
                     const pais = String(form.get("pais") ?? "");
                     const telefono = String(form.get("telefono") ?? "");
 
-                    if (existeCuentaLocal(email)) {
-                      setError("Ya existe una cuenta con ese correo. Iniciá sesión.");
-                      return;
-                    }
-                    // Con servidor: el demo (y su tiempo) lo crea el servidor primero.
+                    // Con servidor: el demo lo crea el servidor y NO se entra todavía. Le llega
+                    // el correo de bienvenida con el botón para confirmar el correo y entrar.
                     if (DEMO_EN_SERVIDOR) {
+                      const problema = problemaClaveDemo(passDemo);
+                      if (problema) {
+                        setError(problema);
+                        return;
+                      }
                       setEnviando(true);
                       const srv = await registrarDemoEnServidor({
                         nombre,
@@ -103,12 +110,24 @@ function Registro() {
                         clinica,
                         pais,
                         plan: mapSitePlanToPlanId(selected),
+                        clave: passDemo,
                       });
                       setEnviando(false);
                       if (!srv.ok) {
                         setError(srv.error);
                         return;
                       }
+                      setError(null);
+                      setStoredPlan(mapSitePlanToPlanId(selected));
+                      setCuenta({ nombre, clinica });
+                      setCorreoEnviado(srv.email);
+                      setSent(true);
+                      return;
+                    }
+
+                    if (existeCuentaLocal(email)) {
+                      setError("Ya existe una cuenta con ese correo. Iniciá sesión.");
+                      return;
                     }
 
                     const res = registrarCuenta({ clinica, nombre, email, passDemo });
@@ -190,16 +209,18 @@ function Registro() {
                       <Input
                         id="pass"
                         name="pass"
-                        type="text"
+                        type={DEMO_EN_SERVIDOR ? "password" : "text"}
                         required
-                        autoComplete="off"
+                        minLength={DEMO_EN_SERVIDOR ? 8 : undefined}
+                        autoComplete={DEMO_EN_SERVIDOR ? "new-password" : "off"}
                         spellCheck={false}
                         placeholder="Ej.: Demo2026"
                         className="font-mono"
                       />
                       <p className="text-[11px] text-muted-foreground">
-                        Es tu contraseña de prueba: la vas a ver tal cual (con mayúsculas) al volver
-                        a entrar al demo.
+                        {DEMO_EN_SERVIDOR
+                          ? "Al menos 8 caracteres, con letras y números. La vas a usar para volver a entrar al demo."
+                          : "Es tu contraseña de prueba: la vas a ver tal cual (con mayúsculas) al volver a entrar al demo."}
                       </p>
                     </div>
                   </div>
@@ -257,7 +278,7 @@ function Registro() {
 
                   <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
                     {DEMO_EN_SERVIDOR
-                      ? "El demo es gratis y tiene un tiempo de prueba; si necesitás más, lo pedís desde el demo."
+                      ? "El demo es gratis, con un tiempo de prueba y 5 ingresos; si necesitás más, lo pedís desde el demo."
                       : "Cada ingreso al demo dura 30 minutos."}{" "}
                     Para el seguimiento comercial registramos cuándo entrás, cuánto tiempo usás el
                     demo y qué módulos visitás. No registramos datos de pacientes.
@@ -291,6 +312,50 @@ function Registro() {
                   Revisá tu correo electrónico
                 </h1>
                 <p className="mt-3 text-muted-foreground">Te enviamos un correo de confirmación.</p>
+
+                {DEMO_EN_SERVIDOR ? (
+                  <div className="mx-auto mt-8 max-w-md space-y-4 text-left">
+                    <p className="text-sm">
+                      Le mandamos a <b>{correoEnviado}</b> un correo de bienvenida de Cloud Esther.
+                    </p>
+                    <ol className="space-y-2 text-sm">
+                      {[
+                        "Abrí el correo (revisá también spam o promociones).",
+                        "Tocá «Confirmar mi correo y entrar»: ahí empieza tu demo.",
+                        "Después entrás con tu correo y tu contraseña (tenés 5 ingresos).",
+                      ].map((t, i) => (
+                        <li key={t} className="flex gap-2.5">
+                          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                            {i + 1}
+                          </span>
+                          <span className="text-muted-foreground">{t}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outlineBrand"
+                        disabled={reenvio !== ""}
+                        onClick={async () => {
+                          setReenvio("enviando");
+                          await pedirEnlaceDemo(correoEnviado);
+                          setReenvio("listo");
+                        }}
+                      >
+                        {reenvio === "listo"
+                          ? "Correo reenviado"
+                          : reenvio === "enviando"
+                            ? "Reenviando…"
+                            : "No me llegó: reenviar"}
+                      </Button>
+                      <Link to="/login" className="text-sm font-semibold text-primary hover:underline">
+                        Ya lo confirmé: iniciar sesión
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                <>
 
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
@@ -343,6 +408,8 @@ function Registro() {
                     </>
                   )}
                 </Button>
+                </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

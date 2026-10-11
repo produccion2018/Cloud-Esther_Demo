@@ -33,7 +33,22 @@ export type EstadoDemoServidor = {
   restanteSegundos: number;
   vencido: boolean;
   avisoMinutos: number;
+  /** Ingresos: 5 de base + los que autorice el equipo */
+  ingresosUsados: number;
+  ingresosPermitidos: number;
+  /** Por qué está frenado: se terminó el tiempo o no le quedan ingresos */
+  bloqueo: "tiempo" | "ingresos" | null;
 };
+
+/** Reglas de la contraseña del demo (las mismas que valida el servidor). */
+export function problemaClaveDemo(clave: string): string | null {
+  if (clave.length < 8) return "La contraseña tiene que tener al menos 8 caracteres.";
+  if (clave.length > 128) return "La contraseña es demasiado larga.";
+  if (!/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(clave) || !/[0-9]/.test(clave)) {
+    return "La contraseña tiene que combinar letras y números.";
+  }
+  return null;
+}
 
 type Guardado = { email: string; token: string };
 const KEY = "cloud-esther:demo:servidor";
@@ -66,8 +81,6 @@ let estado: EstadoDemoServidor | null = null;
  *  Así no importa si la hora de la computadora está mal. */
 let venceLocal: number | null = null;
 const oyentes = new Set<() => void>();
-/** El primer «ingreso» lo anota el servidor al registrarse: el navegador no lo repite. */
-let omitirProximoIngreso = false;
 const avisar = () => oyentes.forEach((o) => o());
 
 function ponerEstado(e: EstadoDemoServidor | null) {
@@ -101,7 +114,8 @@ async function textoError(r: Response) {
 
 /* ───────────── Acciones ───────────── */
 
-/** Registrarse en el demo: el servidor arranca el reloj. */
+/** Registrarse en el demo: NO entra todavía. Le llega el correo de bienvenida con el botón
+ *  para confirmar el correo y entrar (ahí arranca el reloj). */
 export async function registrarDemoEnServidor(datos: {
   nombre: string;
   email: string;
@@ -109,42 +123,53 @@ export async function registrarDemoEnServidor(datos: {
   clinica: string;
   pais: string;
   plan?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+  clave: string;
+}): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
   try {
     const r = await pedir("POST", "/demo/registro", datos);
     if (!r.ok) return { ok: false, error: await textoError(r) };
-    const res = (await r.json()) as { token: string; demo: EstadoDemoServidor };
-    guardar({ email: datos.email.trim().toLowerCase(), token: res.token });
-    omitirProximoIngreso = true; // el servidor ya anotó este primer ingreso
-    ponerEstado(res.demo);
-    return { ok: true };
+    const res = (await r.json()) as { email: string };
+    return { ok: true, email: res.email };
   } catch {
     return { ok: false, error: "No pudimos conectarnos. Probá de nuevo en unos segundos." };
   }
 }
 
-/** Entrar con el enlace que llegó por correo (/login#demo=...). */
-export async function entrarConEnlaceDemo(
-  token: string,
-): Promise<{ ok: true; estado: EstadoDemoServidor } | { ok: false; error: string }> {
+type Entrada = { ok: true; estado: EstadoDemoServidor } | { ok: false; error: string };
+
+async function guardarEntrada(r: Response): Promise<Entrada> {
+  const res = (await r.json()) as { token: string; demo: EstadoDemoServidor };
+  guardar({ email: res.demo.email, token: res.token });
+  ponerEstado(res.demo);
+  return { ok: true, estado: res.demo };
+}
+
+/** Entrar al demo con correo y contraseña (cuenta como 1 ingreso). */
+export async function iniciarSesionDemoServidor(email: string, clave: string): Promise<Entrada> {
   try {
-    const r = await pedir("GET", "/demo/estado", undefined, token);
-    if (!r.ok) {
-      return {
-        ok: false,
-        error:
-          r.status === 401
-            ? "El enlace no es válido o ya venció. Pedí uno nuevo con «Ya tengo un demo»."
-            : await textoError(r),
-      };
-    }
-    const e = (await r.json()) as EstadoDemoServidor;
-    guardar({ email: e.email, token });
-    ponerEstado(e);
-    return { ok: true, estado: e };
+    const r = await pedir("POST", "/demo/ingresar", { email, clave });
+    if (!r.ok) return { ok: false, error: await textoError(r) };
+    return await guardarEntrada(r);
   } catch {
     return { ok: false, error: "No pudimos conectarnos. Probá de nuevo en unos segundos." };
   }
+}
+
+/** Entrar con el enlace del correo (/login#demo=...): confirma el correo la primera vez. */
+export async function entrarConEnlaceDemo(token: string): Promise<Entrada> {
+  try {
+    const r = await pedir("POST", "/demo/enlace", { token });
+    if (!r.ok) return { ok: false, error: await textoError(r) };
+    return await guardarEntrada(r);
+  } catch {
+    return { ok: false, error: "No pudimos conectarnos. Probá de nuevo en unos segundos." };
+  }
+}
+
+/** Cerrar la sesión del demo en este navegador. */
+export function olvidarDemoServidor() {
+  guardar(null);
+  ponerEstado(null);
 }
 
 /** «Ya tengo un demo»: el servidor manda un enlace por correo (siempre responde igual). */
@@ -181,10 +206,8 @@ export async function actualizarEstadoDemo(): Promise<EstadoDemoServidor | null>
 export function enviarEventoDemo(tipo: "ingreso" | "modulo" | "plan" | "salida", detalle?: string) {
   const g = leerGuardado();
   if (!DEMO_EN_SERVIDOR || !g) return;
-  if (tipo === "ingreso" && omitirProximoIngreso) {
-    omitirProximoIngreso = false;
-    return;
-  }
+  // Los ingresos los cuenta el servidor al abrir la sesión: el navegador no los manda
+  if (tipo === "ingreso") return;
   try {
     void fetch(`${API_URL}/demo/eventos`, {
       method: "POST",
@@ -199,7 +222,7 @@ export function enviarEventoDemo(tipo: "ingreso" | "modulo" | "plan" | "salida",
 
 /** Pedidos al equipo: más tiempo, información comercial o contratar. */
 export async function enviarPedidoDemo(
-  tipo: "extension" | "informacion" | "contratacion",
+  tipo: "extension" | "ingresos" | "informacion" | "contratacion",
   mensaje?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const g = leerGuardado();
@@ -215,6 +238,11 @@ export async function enviarPedidoDemo(
 /** Lo que falta (ms) según el servidor; null si todavía no se sabe. */
 export function restanteDemoServidorMs(): number | null {
   return venceLocal === null ? null : Math.max(0, venceLocal - Date.now());
+}
+
+/** Estado completo que dio el servidor (null si todavía no se sabe). */
+export function estadoDemoServidor(): EstadoDemoServidor | null {
+  return estado;
 }
 
 export function avisoDemoServidorMs(): number {

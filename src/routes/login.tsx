@@ -19,7 +19,11 @@ import {
   YaTengoDemo,
   useCredencialesDemo,
 } from "@/components/site/AccesoDemo";
-import { entrarConEnlaceDemo } from "@/lib/cloud-esther/demo-servidor";
+import {
+  DEMO_EN_SERVIDOR,
+  entrarConEnlaceDemo,
+  iniciarSesionDemoServidor,
+} from "@/lib/cloud-esther/demo-servidor";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -47,6 +51,7 @@ function Login() {
   const [pass, setPass] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [recuperar, setRecuperar] = useState(false);
+  const [entrandoDemo, setEntrandoDemo] = useState(false);
   const demos = useCredencialesDemo();
   const usarDemo = (c: { email: string; pass: string }) => {
     setEmail(c.email);
@@ -74,7 +79,7 @@ function Login() {
     });
   }, [navigate]);
   // Demo: si hay una cuenta de prueba en este navegador, el ingreso ya viene completo.
-  const primeraDemo = demos[0];
+  const primeraDemo = DEMO_EN_SERVIDOR ? undefined : demos[0];
   useEffect(() => {
     if (!primeraDemo) return;
     setEmail((e) => e || primeraDemo.email);
@@ -327,7 +332,7 @@ function Login() {
                 </div>
 
                 {/* DATOS DEL DEMO (solo si se creó una cuenta de prueba en este navegador) */}
-                {demos.length > 0 && (
+                {!DEMO_EN_SERVIDOR && demos.length > 0 && (
                   <div className="mt-6">
                     <TarjetaDemo credenciales={demos} onUsar={usarDemo} />
                   </div>
@@ -340,8 +345,26 @@ function Login() {
                 {/* FORMULARIO */}
                 <form
                   className="mt-7 space-y-4.5"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
+                    // Con servidor: la contraseña y los ingresos los controla el servidor
+                    if (DEMO_EN_SERVIDOR) {
+                      setEntrandoDemo(true);
+                      const srv = await iniciarSesionDemoServidor(email, pass);
+                      setEntrandoDemo(false);
+                      if (!srv.ok) {
+                        setError(srv.error);
+                        return;
+                      }
+                      entrarCuentaDemoServidor({
+                        email: srv.estado.email,
+                        nombre: srv.estado.nombre,
+                        clinica: srv.estado.clinica,
+                      });
+                      setError(null);
+                      void navigate({ to: "/demo" });
+                      return;
+                    }
                     const res = iniciarSesion(email, pass);
                     if (!res.ok) {
                       setError(res.error);
@@ -478,9 +501,10 @@ function Login() {
                         type="submit"
                         variant="hero"
                         size="xl"
+                        disabled={entrandoDemo}
                         className="h-11 w-full rounded-xl text-sm font-semibold"
                       >
-                        Ingresar
+                        {entrandoDemo ? "Ingresando…" : "Ingresar"}
                         <ArrowRight className="size-4" />
                       </Button>
                     </motion.div>

@@ -259,7 +259,11 @@ export function useEstadoDemoServidor(activo: boolean) {
     const refrescar = () => setTick((t) => t + 1);
     oyentes.add(refrescar);
     void actualizarEstadoDemo();
-    const cadaMinuto = window.setInterval(() => void actualizarEstadoDemo(), 60_000);
+    // Solo mientras la pestaña está a la vista: una pestaña olvidada en segundo plano no
+    // mantiene la sesión abierta (a las 2 horas sin uso se cierra).
+    const cadaMinuto = window.setInterval(() => {
+      if (document.visibilityState === "visible") void actualizarEstadoDemo();
+    }, 60_000);
     const cadaSegundo = window.setInterval(refrescar, 1000);
     const alVolver = () => void actualizarEstadoDemo();
     window.addEventListener("focus", alVolver);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle2,
   Clock,
@@ -32,6 +32,7 @@ import {
   demoServidorActivo,
   enviarPedidoDemo,
   estadoDemoServidor,
+  olvidarDemoServidor,
 } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/components/cloud-esther/ControlDemo.tsx
@@ -371,6 +372,7 @@ function RegistroRequerido() {
 /** Usó todos los ingresos del demo: puede pedir autorización al equipo (con un motivo).
  *  No borra nada: si el equipo lo autoriza, el aviso desaparece solo. */
 function LimiteIngresosServidor() {
+  const navigate = useNavigate();
   const [motivo, setMotivo] = useState("");
   const [estado, setEstado] = useState<"inicio" | "enviando" | "pedido" | "error">("inicio");
   const [error, setError] = useState("");
@@ -453,6 +455,17 @@ function LimiteIngresosServidor() {
                 Pedir información
               </Link>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                olvidarDemoServidor();
+                cerrarSesion("Manual");
+                void navigate({ to: "/login" });
+              }}
+              className="mt-1 text-xs font-semibold text-muted-foreground hover:underline"
+            >
+              Salir del demo
+            </button>
           </div>
         </div>
       </div>

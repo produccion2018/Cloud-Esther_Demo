@@ -19,7 +19,8 @@ import type { Contratacion, EstadoContratacion } from "@/lib/admin/tipos";
    SOLICITUDES DE CONTRATACIÓN (formulario «Contratar servicio» de la web). Es distinto del demo.
    · Las ven el Dueño, el Socio y la Secretaría (y les llega un correo con cada una).
    · Todos pueden escribir notas internas.
-   · «Activar» (después de revisar y cobrar) y «Rechazar»: solo el Dueño y el Socio. */
+   · «Activar» (después de revisar y cobrar) y «Rechazar»: también la Secretaría
+     (decisión de Camilo, 11 oct 20:44). Soporte no las ve. */
 
 const ESTADO: Record<EstadoContratacion, { texto: string; tono: "alerta" | "ok" | "neutro" }> = {
   pendiente: { texto: "Pendiente de revisión y pago", tono: "alerta" },
@@ -29,7 +30,7 @@ const ESTADO: Record<EstadoContratacion, { texto: string; tono: "alerta" | "ok" 
 
 export function SolicitudesContratacion() {
   const { role } = useRole();
-  const { data, isLoading } = useContrataciones();
+  const { data, isLoading } = useContrataciones(permisos.verContrataciones(role));
   const [filtro, setFiltro] = useState<"pendiente" | "todas">("pendiente");
   const [abierta, setAbierta] = useState<string | null>(null);
 
@@ -104,6 +105,8 @@ export function SolicitudesContratacion() {
         <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-lg">
           {seleccionada && (
             <DetalleContratacion
+              // Si otra persona cambia las notas, el detalle se actualiza (no se pisan)
+              key={`${seleccionada.id}:${seleccionada.notas}:${seleccionada.estado}`}
               c={seleccionada}
               puedeActivar={permisos.activarContrataciones(role)}
             />

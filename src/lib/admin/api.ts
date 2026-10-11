@@ -90,8 +90,8 @@ import type {
    GET    /admin/clinicas                                            → Clinica[]
    GET    /admin/contrataciones                                      → Contratacion[]
    PATCH  /admin/contrataciones/:id { notas }                        → Contratacion
-   POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion (Dueño/Socio)
-   POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion (Dueño/Socio)
+   POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion
+   POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
    GET    /admin/demos                                               → CuentaDemo[]
    PATCH  /admin/demos/:id               { estado?, notas?, responsable? } → CuentaDemo
@@ -683,7 +683,7 @@ export async function guardarNotasContratacion(a: { id: string; notas: string })
   return http("PATCH", `/admin/contrataciones/${a.id}`, { notas: a.notas });
 }
 
-/** ACTIVAR (Dueño y Socio): después de revisar y cobrar. Crea la clínica. */
+/** ACTIVAR (Dueño, Socio y Secretaría): después de revisar y cobrar. Crea la clínica. */
 export async function activarContratacion(a: {
   id: string;
   referenciaPago?: string;
@@ -695,7 +695,7 @@ export async function activarContratacion(a: {
   });
 }
 
-/** RECHAZAR (Dueño y Socio), con motivo. */
+/** RECHAZAR (Dueño, Socio y Secretaría), con motivo. */
 export async function rechazarContratacion(a: { id: string; motivo: string }): Promise<Contratacion> {
   if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
   return http("POST", `/admin/contrataciones/${a.id}/rechazar`, { motivo: a.motivo });

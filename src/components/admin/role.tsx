@@ -75,8 +75,9 @@ export const permisos = {
   gestionarDemos: (r: AdminRole) => r !== "support",
   /** Ver las contrataciones y escribir notas: Dueño, Socio y Secretaría. */
   verContrataciones: (r: AdminRole) => r !== "support",
-  /** Botón «Activar» (y «Rechazar») de una contratación: solo Dueño y Socio. */
-  activarContrataciones: (r: AdminRole) => accesoTotal(r),
+  /** Botón «Activar» (y «Rechazar») de una contratación: Dueño, Socio y Secretaría
+   *  (decisión de Camilo, 11 oct 20:44). */
+  activarContrataciones: (r: AdminRole) => r !== "support",
   /** Sueldos e importes de nómina: solo Dueño y Socio. */
   verSueldos: (r: AdminRole) => accesoTotal(r),
   gestionarTickets: (r: AdminRole) => accesoTotal(r) || r === "support" || r === "customer-care",

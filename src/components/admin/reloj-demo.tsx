@@ -1,9 +1,27 @@
-import { CheckCircle2, Hourglass, History, Plus, TimerOff, TimerReset } from "lucide-react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  Hourglass,
+  History,
+  LogIn,
+  Plus,
+  TimerOff,
+  TimerReset,
+  Undo2,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { INPUT } from "./formularios";
 import { Button } from "@/components/ui/button";
-import { atenderPedidoDemo, cambiarTiempoDemo } from "@/lib/admin/api";
+import {
+  atenderPedidoDemo,
+  autorizarIngresosDemo,
+  cambiarTiempoDemo,
+  denegarPedidoDemo,
+  revocarAutorizacionDemo,
+} from "@/lib/admin/api";
 import { useAccion, useHistorialTiempoDemo } from "@/lib/admin/consultas";
 import { fecha } from "@/lib/admin/formato";
 import type { CuentaDemo } from "@/lib/admin/tipos";
@@ -85,11 +103,7 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
           ? "Demo terminado"
           : `Ahora le quedan ${duracionTexto(c.minutos)}`,
   );
-  const atender = useAccion(
-    (solicitudId: string) => atenderPedidoDemo(demo.id, solicitudId),
-    ["demos"],
-    "Pedido marcado como atendido",
-  );
+
 
   const n = Number(cantidad.replace(",", "."));
   const minutos = Number.isFinite(n) ? Math.round(n * FACTOR[unidad]) : NaN;
@@ -102,7 +116,6 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
   });
 
   const vencido = restante !== null ? restante === 0 : !!demo.vencido;
-  const pedidos = (demo.solicitudes ?? []).filter((s) => s.id);
 
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-4">
@@ -224,48 +237,9 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
         </div>
       )}
 
-      {/* Pedidos hechos desde el demo */}
-      {pedidos.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-            Pedidos desde el demo
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {pedidos.map((p) => (
-              <li
-                key={p.id}
-                className={cn(
-                  "rounded-xl px-3 py-2 text-xs",
-                  p.atendida ? "bg-muted/60 text-muted-foreground" : "bg-warning/15",
-                )}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold">
-                    {p.tipo} · {fecha(p.fecha, true)}
-                  </span>
-                  {p.atendida ? (
-                    <span className="inline-flex items-center gap-1 text-success">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Atendido
-                    </span>
-                  ) : (
-                    puedeGestionar && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={atender.isPending}
-                        onClick={() => p.id && atender.mutate(p.id)}
-                      >
-                        Marcar atendido
-                      </Button>
-                    )
-                  )}
-                </div>
-                {p.mensaje && <p className="mt-1 text-foreground/80">«{p.mensaje}»</p>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <IngresosDemo demo={demo} puedeGestionar={puedeGestionar} />
+
+      <PedidosDemo demo={demo} puedeGestionar={puedeGestionar} />
 
       {/* Historial del reloj */}
       <div className="mt-4">
@@ -302,6 +276,329 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ───────────── Ingresos: 5 de base + autorizados ───────────── */
+
+function IngresosDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestionar: boolean }) {
+  const [cantidad, setCantidad] = useState("5");
+  const [motivo, setMotivo] = useState("");
+  const [revocando, setRevocando] = useState<string | null>(null);
+  const [motivoRevocar, setMotivoRevocar] = useState("");
+  const autorizar = useAccion(
+    (c: { cantidad: number; motivo?: string }) => autorizarIngresosDemo(demo.id, c),
+    ["demos"],
+    (c) => `Autorizaste ${c.cantidad} ${c.cantidad === 1 ? "ingreso" : "ingresos"} más`,
+  );
+  const revocar = useAccion(
+    (c: { id: string; motivo?: string }) => revocarAutorizacionDemo(demo.id, c.id, c.motivo),
+    ["demos"],
+    "Autorización revocada",
+  );
+  if (demo.ingresosPermitidos === undefined) return null;
+  const usados = demo.ingresosUsados ?? 0;
+  const permitidos = demo.ingresosPermitidos;
+  const n = Number(cantidad);
+  const valido = Number.isInteger(n) && n >= 1 && n <= 100;
+  const conMotivo = (c: number) => ({ cantidad: c, ...(motivo.trim() ? { motivo: motivo.trim() } : {}) });
+
+  return (
+    <div className="mt-4 rounded-xl border border-border/70 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-sm font-bold">
+          <LogIn className="h-4 w-4 text-primary" /> Ingresos: {usados} de {permitidos}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {demo.verificado ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+              <BadgeCheck className="h-3.5 w-3.5" /> Correo confirmado
+            </span>
+          ) : (
+            <span className="rounded-full bg-warning/20 px-2 py-0.5 text-[11px] font-semibold">
+              Falta confirmar el correo
+            </span>
+          )}
+          {usados >= permitidos && (
+            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+              Sin ingresos
+            </span>
+          )}
+        </div>
+      </div>
+      {(demo.mismaConexion ?? 0) > 0 && (
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-warning/15 px-2.5 py-1.5 text-[11px]">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          Hay {demo.mismaConexion} {demo.mismaConexion === 1 ? "demo más" : "demos más"} registrados
+          desde la misma conexión. Puede ser otra persona de la misma red (no es una prueba).
+        </p>
+      )}
+
+      {puedeGestionar && (
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {[1, 3, 5].map((c) => (
+              <Button
+                key={c}
+                size="sm"
+                variant="outline"
+                disabled={autorizar.isPending}
+                onClick={() => autorizar.mutate(conMotivo(c))}
+              >
+                +{c} {c === 1 ? "ingreso" : "ingresos"}
+              </Button>
+            ))}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[110px_1fr_auto]">
+            <input
+              aria-label="Cantidad de ingresos"
+              className={INPUT}
+              inputMode="numeric"
+              value={cantidad}
+              onChange={(e) => setCantidad(e.target.value.replace(/[^0-9]/g, ""))}
+            />
+            <input
+              aria-label="Motivo"
+              className={INPUT}
+              maxLength={300}
+              placeholder="Motivo (opcional)"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+            <Button disabled={!valido || autorizar.isPending} onClick={() => autorizar.mutate(conMotivo(n))}>
+              <Plus className="mr-1 h-4 w-4" /> Autorizar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {(demo.autorizaciones ?? []).length > 0 && (
+        <ul className="mt-3 space-y-1.5">
+          {(demo.autorizaciones ?? []).map((a) => (
+            <li
+              key={a.id}
+              className={cn(
+                "rounded-xl px-3 py-2 text-xs",
+                a.revocada ? "bg-muted/60 text-muted-foreground line-through decoration-1" : "bg-primary/[0.05]",
+              )}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold">
+                  +{a.cantidad} {a.cantidad === 1 ? "ingreso" : "ingresos"} · {a.quien} ·{" "}
+                  {fecha(a.fecha, true)}
+                </span>
+                {!a.revocada && puedeGestionar && revocando !== a.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRevocando(a.id);
+                      setMotivoRevocar("");
+                    }}
+                    className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" /> Revocar
+                  </button>
+                )}
+              </div>
+              {a.motivo && <p className="mt-0.5">«{a.motivo}»</p>}
+              {a.revocada && (
+                <p className="mt-0.5 no-underline">
+                  Revocada por {a.revocadaPor} {a.revocadaEl ? `· ${fecha(a.revocadaEl, true)}` : ""}
+                  {a.motivoRevocacion ? ` · «${a.motivoRevocacion}»` : ""}
+                </p>
+              )}
+              {revocando === a.id && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    aria-label="Motivo de la revocación"
+                    className={cn(INPUT, "h-8 flex-1")}
+                    maxLength={300}
+                    placeholder="Motivo (opcional)"
+                    value={motivoRevocar}
+                    onChange={(e) => setMotivoRevocar(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={revocar.isPending}
+                    onClick={() => {
+                      revocar.mutate({ id: a.id, ...(motivoRevocar.trim() ? { motivo: motivoRevocar.trim() } : {}) });
+                      setRevocando(null);
+                    }}
+                  >
+                    Sí, revocar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setRevocando(null)}>
+                    No
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ───────────── Pedidos desde el demo: autorizar, denegar o marcar atendido ───────────── */
+
+const ESTADO_PEDIDO: Record<string, { texto: string; clase: string }> = {
+  pendiente: { texto: "Pendiente", clase: "bg-warning/20" },
+  autorizada: { texto: "Autorizado", clase: "bg-success/10 text-success" },
+  denegada: { texto: "Denegado", clase: "bg-destructive/10 text-destructive" },
+  atendida: { texto: "Atendido", clase: "bg-muted text-muted-foreground" },
+};
+
+function PedidosDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestionar: boolean }) {
+  const pedidos = (demo.solicitudes ?? []).filter((s) => s.id);
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [cantidad, setCantidad] = useState("5");
+  const [unidad, setUnidad] = useState<"h" | "d">("d");
+  const [nota, setNota] = useState("");
+
+  const ingresos = useAccion(
+    (c: { cantidad: number; motivo?: string; solicitudId: string }) => autorizarIngresosDemo(demo.id, c),
+    ["demos"],
+    "Pedido autorizado",
+  );
+  const tiempo = useAccion(
+    (c: { minutos: number; motivo?: string; solicitudId: string }) =>
+      cambiarTiempoDemo(demo.id, { modo: "sumar", ...c }),
+    ["demos"],
+    "Pedido autorizado",
+  );
+  const denegar = useAccion(
+    (c: { solicitudId: string; motivo?: string }) => denegarPedidoDemo(demo.id, c.solicitudId, c.motivo),
+    ["demos"],
+    "Pedido denegado",
+  );
+  const atender = useAccion(
+    (solicitudId: string) => atenderPedidoDemo(demo.id, solicitudId),
+    ["demos"],
+    "Pedido marcado como atendido",
+  );
+  if (pedidos.length === 0) return null;
+  const ocupado = ingresos.isPending || tiempo.isPending || denegar.isPending || atender.isPending;
+  const motivo = () => (nota.trim() ? { motivo: nota.trim() } : {});
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        Pedidos desde el demo
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {pedidos.map((p) => {
+          const est = ESTADO_PEDIDO[p.estado ?? (p.atendida ? "atendida" : "pendiente")] ?? ESTADO_PEDIDO["pendiente"]!;
+          const pendiente = (p.estado ?? (p.atendida ? "atendida" : "pendiente")) === "pendiente";
+          const esAutorizable = p.tipo === "Más ingresos" || p.tipo === "Más tiempo";
+          const n = Number(cantidad);
+          const valido = Number.isInteger(n) && n >= 1 && n <= (p.tipo === "Más ingresos" ? 100 : 365);
+          return (
+            <li key={p.id} className="rounded-xl border border-border/70 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold">
+                  {p.tipo} · {fecha(p.fecha, true)}
+                </span>
+                <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", est.clase)}>
+                  {est.texto}
+                </span>
+              </div>
+              {p.mensaje && <p className="mt-1 text-foreground/80">«{p.mensaje}»</p>}
+              {p.nota && <p className="mt-1 text-muted-foreground">Respuesta: «{p.nota}»</p>}
+
+              {pendiente && puedeGestionar && abierto !== p.id && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {esAutorizable ? (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setAbierto(p.id ?? null);
+                          setCantidad(p.tipo === "Más ingresos" ? "5" : "1");
+                          setUnidad("d");
+                          setNota("");
+                        }}
+                      >
+                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Autorizar o denegar…
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled={ocupado} onClick={() => p.id && atender.mutate(p.id)}>
+                      Marcar atendido
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {pendiente && puedeGestionar && abierto === p.id && p.id && (
+                <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">Autorizar</span>
+                    <input
+                      aria-label="Cantidad"
+                      className={cn(INPUT, "h-8 w-20")}
+                      inputMode="numeric"
+                      value={cantidad}
+                      onChange={(e) => setCantidad(e.target.value.replace(/[^0-9]/g, ""))}
+                    />
+                    {p.tipo === "Más ingresos" ? (
+                      <span>ingresos</span>
+                    ) : (
+                      <select
+                        aria-label="Unidad"
+                        className={cn(INPUT, "h-8 w-24")}
+                        value={unidad}
+                        onChange={(e) => setUnidad(e.target.value as "h" | "d")}
+                      >
+                        <option value="h">horas</option>
+                        <option value="d">días</option>
+                      </select>
+                    )}
+                  </div>
+                  <input
+                    aria-label="Motivo"
+                    className={cn(INPUT, "h-8")}
+                    maxLength={300}
+                    placeholder="Motivo o respuesta (opcional; se guarda en el historial)"
+                    value={nota}
+                    onChange={(e) => setNota(e.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      size="sm"
+                      disabled={!valido || ocupado}
+                      onClick={() => {
+                        const id = p.id as string;
+                        if (p.tipo === "Más ingresos") ingresos.mutate({ cantidad: n, solicitudId: id, ...motivo() });
+                        else tiempo.mutate({ minutos: n * (unidad === "d" ? 1440 : 60), solicitudId: id, ...motivo() });
+                        setAbierto(null);
+                      }}
+                    >
+                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Autorizar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={ocupado}
+                      onClick={() => {
+                        denegar.mutate({ solicitudId: p.id as string, ...motivo() });
+                        setAbierto(null);
+                      }}
+                    >
+                      <XCircle className="mr-1 h-3.5 w-3.5" /> Denegar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setAbierto(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

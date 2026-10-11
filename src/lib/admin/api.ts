@@ -753,7 +753,7 @@ export async function actualizarDemo(
 /** Reloj de un demo (solo con servidor). sumar = darle X más · dejar = que le queden X (0 = terminar). */
 export async function cambiarTiempoDemo(
   id: string,
-  c: { modo: "sumar" | "dejar"; minutos: number; motivo?: string },
+  c: { modo: "sumar" | "dejar"; minutos: number; motivo?: string; solicitudId?: string },
 ): Promise<CuentaDemo> {
   if (!CON_BACKEND) throw new ErrorApi("El reloj de cada demo necesita el servidor conectado.");
   return http<CuentaDemo>("POST", `/admin/demos/${id}/tiempo`, c);
@@ -767,6 +767,28 @@ export async function obtenerHistorialTiempoDemo(id: string): Promise<CambioTiem
 export async function atenderPedidoDemo(id: string, solicitudId: string): Promise<CuentaDemo> {
   if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
   return http<CuentaDemo>("PATCH", `/admin/demos/${id}/solicitudes/${solicitudId}`, {});
+}
+
+export async function denegarPedidoDemo(id: string, solicitudId: string, motivo?: string): Promise<CuentaDemo> {
+  if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
+  return http<CuentaDemo>("PATCH", `/admin/demos/${id}/solicitudes/${solicitudId}`, {
+    decision: "denegar",
+    ...(motivo ? { motivo } : {}),
+  });
+}
+
+/** Autorizar ingresos extra (opcional: respondiendo un pedido). */
+export async function autorizarIngresosDemo(
+  id: string,
+  c: { cantidad: number; motivo?: string; solicitudId?: string },
+): Promise<CuentaDemo> {
+  if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
+  return http<CuentaDemo>("POST", `/admin/demos/${id}/ingresos`, c);
+}
+
+export async function revocarAutorizacionDemo(id: string, autorizacionId: string, motivo?: string): Promise<CuentaDemo> {
+  if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
+  return http<CuentaDemo>("POST", `/admin/demos/${id}/ingresos/${autorizacionId}/revocar`, motivo ? { motivo } : {});
 }
 
 export async function obtenerActividad(): Promise<EventoActividad[]> {

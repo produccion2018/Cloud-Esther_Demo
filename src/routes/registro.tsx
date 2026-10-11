@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { MailCheck, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { MailCheck, ArrowRight, Sparkles, Loader2, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ function Registro() {
   const [cuenta, setCuenta] = useState<{ nombre: string; clinica: string } | null>(null);
   const [entrando, setEntrando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [verClave, setVerClave] = useState(false);
   // Con servidor: correo al que mandamos la bienvenida (y estado del "reenviar")
   const [correoEnviado, setCorreoEnviado] = useState("");
   const [reenvio, setReenvio] = useState<"" | "enviando" | "listo">("");
@@ -192,12 +193,15 @@ function Registro() {
                           </select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="telefono">Teléfono / WhatsApp (opcional)</Label>
+                          <Label htmlFor="telefono">Teléfono / WhatsApp</Label>
                           <Input
                             id="telefono"
                             name="telefono"
                             type="tel"
+                            required
                             maxLength={40}
+                            minLength={7}
+                            inputMode="tel"
                             placeholder="+54 9 11 5555 5555"
                           />
                         </div>
@@ -206,17 +210,29 @@ function Registro() {
                     <div className="space-y-2">
                       <Label htmlFor="pass">Contraseña</Label>
                       {/* Demo: la contraseña de prueba queda visible y se recuerda en el login. */}
+                      <div className="relative">
                       <Input
                         id="pass"
                         name="pass"
-                        type={DEMO_EN_SERVIDOR ? "password" : "text"}
+                        type={DEMO_EN_SERVIDOR && !verClave ? "password" : "text"}
                         required
                         minLength={DEMO_EN_SERVIDOR ? 8 : undefined}
                         autoComplete={DEMO_EN_SERVIDOR ? "new-password" : "off"}
                         spellCheck={false}
                         placeholder="Ej.: Demo2026"
-                        className="font-mono"
+                        className="pr-11 font-mono"
                       />
+                      {DEMO_EN_SERVIDOR && (
+                        <button
+                          type="button"
+                          onClick={() => setVerClave((v) => !v)}
+                          aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-lavender hover:text-primary"
+                        >
+                          {verClave ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground">
                         {DEMO_EN_SERVIDOR
                           ? "Al menos 8 caracteres, con letras y números. La vas a usar para volver a entrar al demo."

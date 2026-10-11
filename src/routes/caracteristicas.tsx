@@ -1,5 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   CalendarCheck,
   Users,
@@ -9,15 +14,34 @@ import {
   ShieldCheck,
   ArrowRight,
   Bot,
+  CalendarDays,
+  Clock,
+  Bell,
+  UserCheck,
+  FileText,
+  Activity,
+  Globe,
+  ClipboardList,
+  Microscope,
+  FolderOpen,
+  FlaskConical,
+  ReceiptText,
+  CreditCard,
+  Calculator,
+  Landmark,
+  BarChart3,
+  Megaphone,
+  Package,
+  UserCog,
+  Network,
+  KeyRound,
+  Lock,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PanelEstherIA } from "@/components/site/PanelEstherIA";
-import {
-  Reveal,
-  StaggerGroup,
-  StaggerItem,
-} from "@/components/site/Reveal";
+import { Reveal } from "@/components/site/Reveal";
 
 export const Route = createFileRoute("/caracteristicas")({
   head: () => ({
@@ -46,65 +70,185 @@ const categories = [
   {
     icon: CalendarCheck,
     title: "Agenda",
+    tagline: "Que ningún turno se pierda.",
+    description:
+      "Organizá la agenda de toda la clínica, evitá superposiciones y reducí las ausencias con avisos automáticos a tus pacientes.",
     items: [
-      "Agenda y gestión de citas",
-      "Turnos",
-      "Recordatorios",
-      "Disponibilidad profesional",
+      {
+        icon: CalendarDays,
+        name: "Agenda y gestión de citas",
+        desc: "Vista diaria, semanal y por profesional, con alta de turnos en segundos.",
+      },
+      {
+        icon: Clock,
+        name: "Turnos",
+        desc: "Reservas, reprogramaciones y cancelaciones sin superposiciones.",
+      },
+      {
+        icon: Bell,
+        name: "Recordatorios",
+        desc: "Avisos automáticos por WhatsApp, SMS o correo antes de cada turno.",
+      },
+      {
+        icon: UserCheck,
+        name: "Disponibilidad profesional",
+        desc: "Cada profesional define sus días, horarios y bloqueos.",
+      },
     ],
   },
   {
     icon: Users,
     title: "Pacientes",
+    tagline: "Toda la información en un solo lugar.",
+    description:
+      "Fichas completas, historia clínica y seguimiento para conocer a cada paciente y mantener el vínculo en el tiempo.",
     items: [
-      "Gestión de pacientes",
-      "Historia clínica",
-      "Seguimiento",
-      "Portal del paciente",
+      {
+        icon: Users,
+        name: "Gestión de pacientes",
+        desc: "Fichas con datos de contacto, obra social y sucursal.",
+      },
+      {
+        icon: FileText,
+        name: "Historia clínica",
+        desc: "Odontograma, evolución y antecedentes siempre a mano.",
+      },
+      {
+        icon: Activity,
+        name: "Seguimiento",
+        desc: "Controles pendientes y pacientes inactivos para retomar el contacto.",
+      },
+      {
+        icon: Globe,
+        name: "Portal del paciente",
+        desc: "Tus pacientes ven turnos, recetas y documentos desde su celular.",
+      },
     ],
   },
   {
     icon: Stethoscope,
     title: "Gestión clínica",
+    tagline: "Del diagnóstico al alta, ordenado.",
+    description:
+      "Seguí cada tratamiento con sus etapas, estudios y documentos, y coordiná el trabajo con el laboratorio.",
     items: [
-      "Tratamientos",
-      "Estudios y diagnóstico",
-      "Documentos",
-      "Laboratorio",
+      {
+        icon: ClipboardList,
+        name: "Tratamientos",
+        desc: "Planes con etapas, estado y evolución de cada paciente.",
+      },
+      {
+        icon: Microscope,
+        name: "Estudios y diagnóstico",
+        desc: "Galería de imágenes, comparación de estudios y anotaciones.",
+      },
+      {
+        icon: FolderOpen,
+        name: "Documentos",
+        desc: "Recetas, consentimientos y archivos del paciente, ordenados.",
+      },
+      {
+        icon: FlaskConical,
+        name: "Laboratorio",
+        desc: "Pedidos con seguimiento de estado y fecha de entrega.",
+      },
     ],
   },
   {
     icon: Wallet,
     title: "Administración",
+    tagline: "Tus ingresos, bajo control.",
+    description:
+      "Presupuestá, cobrá y facturá sin planillas sueltas, con el movimiento de caja siempre claro.",
     items: [
-      "Facturación",
-      "Pagos",
-      "Presupuestos",
-      "Caja / Finanzas",
+      {
+        icon: ReceiptText,
+        name: "Facturación",
+        desc: "Comprobantes e ingresos de la clínica en un solo lugar.",
+      },
+      {
+        icon: CreditCard,
+        name: "Pagos",
+        desc: "Cobros, cuenta corriente y saldos por paciente.",
+      },
+      {
+        icon: Calculator,
+        name: "Presupuestos",
+        desc: "Presupuestos claros que tu paciente puede revisar y aprobar.",
+      },
+      {
+        icon: Landmark,
+        name: "Caja / Finanzas",
+        desc: "Ingresos, egresos y cierre de caja diario.",
+      },
     ],
   },
   {
     icon: Building2,
     title: "Gestión empresarial",
+    tagline: "Hacé crecer tu clínica con datos.",
+    description:
+      "Herramientas para dirigir el negocio: indicadores, equipo, stock y varias sucursales desde un único panel.",
     items: [
-      "Analítica",
-      "Marketing",
-      "Inventario",
-      "Recursos Humanos",
-      "Administración multiempresa",
+      {
+        icon: BarChart3,
+        name: "Analítica",
+        desc: "Indicadores de turnos, ingresos y rendimiento de la clínica.",
+      },
+      {
+        icon: Megaphone,
+        name: "Marketing",
+        desc: "Campañas y recontacto de pacientes para sumar consultas.",
+      },
+      {
+        icon: Package,
+        name: "Inventario",
+        desc: "Insumos con control de stock y alertas de reposición.",
+      },
+      {
+        icon: UserCog,
+        name: "Recursos Humanos",
+        desc: "Equipo, asistencia, vacaciones y nómina.",
+      },
+      {
+        icon: Network,
+        name: "Administración multiempresa",
+        desc: "Varias sucursales o empresas gestionadas desde un solo lugar.",
+      },
     ],
   },
   {
     icon: ShieldCheck,
     title: "Seguridad",
+    tagline: "Cada dato, protegido.",
+    description:
+      "Definí quién ve y quién hace qué, y dejá registro de cada acción dentro de la plataforma.",
     items: [
-      "Usuarios",
-      "Permisos",
-      "Control de accesos",
-      "Auditoría",
+      {
+        icon: Users,
+        name: "Usuarios",
+        desc: "Altas y bajas del equipo con sus roles asignados.",
+      },
+      {
+        icon: KeyRound,
+        name: "Permisos",
+        desc: "Qué ve y qué puede hacer cada rol: profesional, recepción, administración.",
+      },
+      {
+        icon: Lock,
+        name: "Control de accesos",
+        desc: "Acceso ordenado a la información sensible de tus pacientes.",
+      },
+      {
+        icon: ScrollText,
+        name: "Auditoría",
+        desc: "Registro de las acciones realizadas dentro del sistema.",
+      },
     ],
   },
 ];
+
+const AUTOPLAY_MS = 7000;
 
 const titleLines = [
   "Todo el poder de tu clínica,",
@@ -157,6 +301,206 @@ function AnimatedLetters({
         </motion.span>
       ))}
     </span>
+  );
+}
+
+/* =========================================================
+   EXPLORADOR DE MÓDULOS (lista + panel de detalle)
+========================================================= */
+function ModulosExplorer() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  // Rotación automática: se frena al pasar el mouse por encima.
+  useEffect(() => {
+    if (paused || reduceMotion) return undefined;
+
+    const id = window.setTimeout(() => {
+      setActive((prev) => (prev + 1) % categories.length);
+    }, AUTOPLAY_MS);
+
+    return () => window.clearTimeout(id);
+  }, [active, paused, reduceMotion]);
+
+  const current = categories[active];
+  const CurrentIcon = current.icon;
+
+  return (
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      className="grid gap-4 lg:grid-cols-[0.82fr_1.38fr] lg:gap-6"
+    >
+      {/* LISTA DE MÓDULOS */}
+      <div
+        role="tablist"
+        aria-label="Módulos de Cloud Esther"
+        className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-2 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+      >
+        {categories.map((cat, index) => {
+          const Icon = cat.icon;
+          const isActive = index === active;
+
+          return (
+            <button
+              key={cat.title}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActive(index)}
+              className={`group relative shrink-0 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:w-full lg:shrink ${
+                isActive
+                  ? "border-primary/30 bg-card shadow-[0_14px_36px_rgba(124,58,237,0.14)]"
+                  : "border-transparent bg-card/40 hover:border-primary/15 hover:bg-card/80"
+              }`}
+            >
+              <span
+                className={`pointer-events-none absolute right-3 top-0.5 text-4xl font-extrabold leading-none transition-colors duration-300 ${
+                  isActive ? "text-primary/[0.12]" : "text-primary/[0.06]"
+                }`}
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+
+              <span className="relative flex items-center gap-3">
+                <span
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(124,58,237,0.3)]"
+                      : "bg-lavender text-primary"
+                  }`}
+                >
+                  <Icon className="size-5" />
+                </span>
+
+                <span className="min-w-0 pr-8">
+                  <span className="block whitespace-nowrap text-sm font-semibold lg:text-base">
+                    {cat.title}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {cat.items.length} herramientas
+                  </span>
+                </span>
+
+                <ArrowRight
+                  className={`ml-auto hidden size-4 shrink-0 text-primary transition-all duration-300 lg:block ${
+                    isActive
+                      ? "translate-x-0 opacity-100"
+                      : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60"
+                  }`}
+                />
+              </span>
+
+              {/* Barra de progreso de la rotación automática */}
+              {isActive && !paused && !reduceMotion && (
+                <motion.span
+                  key={`progress-${active}`}
+                  aria-hidden="true"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: AUTOPLAY_MS / 1000, ease: "linear" }}
+                  style={{ originX: 0 }}
+                  className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-brand"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* PANEL DE DETALLE */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-card/80 p-6 shadow-[0_20px_60px_rgba(88,28,135,0.08)] backdrop-blur-sm sm:p-8 lg:min-h-[430px]">
+        <div className="pointer-events-none absolute -right-24 -top-24 size-[300px] rounded-full bg-primary/10 blur-[90px]" />
+        <div className="pointer-events-none absolute -bottom-28 -left-20 size-[260px] rounded-full bg-violet-300/10 blur-[90px]" />
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            role="tabpanel"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
+          >
+            {/* Número grande de fondo */}
+            <span className="pointer-events-none absolute right-0 top-0 text-8xl font-extrabold leading-none text-primary/[0.07] sm:text-9xl">
+              {String(active + 1).padStart(2, "0")}
+            </span>
+
+            <div className="relative">
+              <div className="flex items-center gap-3">
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_12px_28px_rgba(124,58,237,0.32)]">
+                  <CurrentIcon className="size-6" />
+                </span>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                    Módulo {String(active + 1).padStart(2, "0")}
+                  </p>
+                  <h3 className="text-xl font-bold tracking-tight sm:text-2xl">
+                    {current.title}
+                  </h3>
+                </div>
+              </div>
+
+              <p className="mt-5 text-lg font-semibold leading-snug text-foreground">
+                {current.tagline}
+              </p>
+
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {current.description}
+              </p>
+
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                {current.items.map((item, itemIndex) => {
+                  const ItemIcon = item.icon;
+
+                  return (
+                    <motion.li
+                      key={item.name}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.4,
+                        delay: 0.08 + itemIndex * 0.06,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="flex gap-3 rounded-2xl border border-border/70 bg-background/70 p-3.5 transition-colors duration-300 hover:border-primary/30"
+                    >
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-lavender text-primary">
+                        <ItemIcon className="size-4" />
+                      </span>
+
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{item.name}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Button asChild variant="hero" size="lg">
+                  <Link to="/registro">
+                    Probar demo
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+
+                <Button asChild variant="outlineBrand" size="lg">
+                  <Link to="/planes">Ver planes</Link>
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
@@ -461,122 +805,9 @@ function Caracteristicas() {
           </div>
         </Reveal>
 
-        <StaggerGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((cat, index) => (
-            <StaggerItem key={cat.title}>
-              <motion.div
-                whileHover={{
-                  y: -6,
-                  rotate: -0.4,
-                  scale: 1.015,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 22,
-                }}
-                className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-[0_18px_40px_rgba(124,58,237,0.14)]"
-              >
-                {/* Número */}
-                <span className="pointer-events-none absolute right-4 top-1 text-6xl font-extrabold leading-none text-primary/[0.08] transition-all duration-500 group-hover:scale-110 group-hover:text-primary/[0.14]">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
-                {/* Glow */}
-                <div className="pointer-events-none absolute -right-10 -top-10 size-24 rounded-full bg-primary/10 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-                {/* Brillo en barrido al pasar el mouse */}
-                <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-
-                {/* Borde con resplandor sutil */}
-                <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 shadow-[inset_0_0_0_1px_rgba(124,58,237,0.35)] transition-opacity duration-500 group-hover:opacity-100" />
-
-                <div className="relative flex items-center gap-3">
-                  {/* Icono */}
-                  <motion.span
-                    animate={{
-                      y: [0, -3, 0],
-                    }}
-                    transition={{
-                      default: { type: "spring", stiffness: 300, damping: 20 },
-                      y: {
-                        duration: 2.6 + index * 0.15,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      },
-                    }}
-                    whileHover={{
-                      rotate: -6,
-                      scale: 1.12,
-                    }}
-                    className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground"
-                  >
-                    <motion.span
-                      animate={{
-                        scale: [1, 1.15, 1],
-                        opacity: [0.3, 0.12, 0.3],
-                      }}
-                      transition={{
-                        duration: 2.8,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="pointer-events-none absolute inset-0 rounded-xl bg-primary blur-md"
-                    />
-
-                    <cat.icon className="relative size-5" />
-                  </motion.span>
-
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold lg:text-base">
-                      {cat.title}
-                    </h3>
-
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {cat.items.length} herramientas
-                    </p>
-                  </div>
-
-                  <motion.span
-                    animate={{
-                      x: [0, 3, 0],
-                    }}
-                    transition={{
-                      duration: 1.8,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="ml-auto translate-x-1 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
-                  >
-                    <ArrowRight className="size-4" />
-                  </motion.span>
-                </div>
-
-                {/* Lista desplegable al hover */}
-                <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-300 group-hover:grid-rows-[1fr] group-hover:opacity-100">
-                  <div className="overflow-hidden">
-                    <div className="mt-3 border-t border-border/60 pt-3">
-                      <ul className="space-y-1.5">
-                        {cat.items.map((item) => (
-                          <li
-                            key={item}
-                            className="flex items-center gap-2 text-xs text-muted-foreground"
-                          >
-                            <span className="size-1 rounded-full bg-primary/70" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Línea inferior */}
-                <div className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-30 bg-gradient-to-r from-primary to-brand opacity-40 transition-all duration-500 group-hover:scale-x-100 group-hover:opacity-100" />
-              </motion.div>
-            </StaggerItem>
-          ))}
-        </StaggerGroup>
+        <Reveal>
+          <ModulosExplorer />
+        </Reveal>
       </section>
 
       {/* =========================================================

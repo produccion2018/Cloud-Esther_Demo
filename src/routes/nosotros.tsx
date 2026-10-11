@@ -127,6 +127,18 @@ const stats: Stat[] = [
 const BEAM_CYCLE = 7;
 const BEAM_WIDTH = 18; // % del ancho del contenedor (w-[18%])
 
+/* Partículas flotantes de fondo en Misión / Visión */
+const MV_PARTICLES = [
+  { left: "8%", top: "22%", size: 6, delay: 0, duration: 7 },
+  { left: "18%", top: "72%", size: 4, delay: 1.4, duration: 8 },
+  { left: "31%", top: "34%", size: 5, delay: 2.8, duration: 6.5 },
+  { left: "44%", top: "82%", size: 4, delay: 0.7, duration: 7.5 },
+  { left: "57%", top: "14%", size: 5, delay: 3.6, duration: 8 },
+  { left: "69%", top: "66%", size: 6, delay: 2.1, duration: 7 },
+  { left: "81%", top: "28%", size: 4, delay: 4.2, duration: 6.5 },
+  { left: "92%", top: "78%", size: 5, delay: 1.1, duration: 8 },
+];
+
 /* ---------------------------------------------------------------
    Texto animado letra por letra.
    - Agrupa por palabras para que nunca se corte una palabra a la
@@ -183,6 +195,227 @@ function AnimatedChars({
         </Fragment>
       ))}
     </>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Título de Misión / Visión.
+   - Cada palabra entra con rotación y desenfoque cuando aparece en
+     pantalla.
+   - Desde "highlightFrom" las palabras llevan un degradé violeta
+     que se mueve en loop infinito.
+---------------------------------------------------------------- */
+function AnimatedTitle({
+  text,
+  highlightFrom,
+  delay = 0,
+  className = "",
+}: {
+  text: string;
+  highlightFrom: number;
+  delay?: number;
+  className?: string;
+}) {
+  const words = text.split(" ");
+
+  return (
+    <h2
+      className={`mt-7 text-3xl font-bold tracking-tight lg:text-4xl ${className}`}
+    >
+      <span className="sr-only">{text}</span>
+
+      <span aria-hidden="true" className="block [perspective:800px]">
+        {words.map((word, i) => {
+          const highlighted = i >= highlightFrom;
+
+          return (
+            <Fragment key={`${word}-${i}`}>
+              <motion.span
+                initial={{
+                  opacity: 0,
+                  y: 30,
+                  rotateX: -60,
+                  filter: "blur(8px)",
+                }}
+                whileInView={{
+                  opacity: 1,
+                  y: 0,
+                  rotateX: 0,
+                  filter: "blur(0px)",
+                }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{
+                  duration: 0.7,
+                  delay: delay + i * 0.1,
+                  ease: EASE,
+                }}
+                style={{ transformOrigin: "50% 100%" }}
+                className="inline-block"
+              >
+                {highlighted ? (
+                  <motion.span
+                    animate={{
+                      backgroundPosition: ["0% center", "200% center"],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-brand),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent"
+                  >
+                    {word}
+                  </motion.span>
+                ) : (
+                  word
+                )}
+              </motion.span>
+              {i < words.length - 1 && " "}
+            </Fragment>
+          );
+        })}
+      </span>
+    </h2>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Ícono circular con ondas de pulso.
+---------------------------------------------------------------- */
+function PulseIcon({
+  icon: Icon,
+  delay = 0,
+}: {
+  icon: typeof Target;
+  delay?: number;
+}) {
+  return (
+    <div className="relative size-12 shrink-0">
+      <motion.span
+        aria-hidden="true"
+        animate={{ scale: [1, 2.1], opacity: [0.5, 0] }}
+        transition={{
+          duration: 3,
+          delay,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+        className="pointer-events-none absolute inset-0 rounded-full border border-primary/40"
+      />
+      <motion.span
+        aria-hidden="true"
+        animate={{ scale: [1, 2.1], opacity: [0.5, 0] }}
+        transition={{
+          duration: 3,
+          delay: delay + 1.5,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+        className="pointer-events-none absolute inset-0 rounded-full border border-primary/40"
+      />
+
+      <motion.span
+        animate={{
+          boxShadow: [
+            "0 0 0 rgba(124,58,237,0)",
+            "0 0 28px rgba(124,58,237,0.38)",
+            "0 0 0 rgba(124,58,237,0)",
+          ],
+        }}
+        transition={{
+          duration: 4,
+          delay,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-700 text-white"
+      >
+        <motion.span
+          animate={{ rotate: [-8, 8, -8], scale: [1, 1.08, 1] }}
+          transition={{
+            duration: 5,
+            delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="inline-flex"
+        >
+          <Icon className="size-5" />
+        </motion.span>
+
+        <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
+      </motion.span>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Conexión central entre Misión y Visión.
+---------------------------------------------------------------- */
+function CenterLink() {
+  return (
+    <div className="relative mx-auto hidden h-56 w-10 lg:block">
+      {/* Línea */}
+      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-primary/30 to-transparent" />
+
+      {/* Punto de luz que viaja de arriba hacia abajo */}
+      <motion.span
+        animate={{ y: ["-10%", "1080%"], opacity: [0, 1, 1, 0] }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute left-1/2 top-0 size-2 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_16px_rgba(124,58,237,0.85)]"
+      />
+
+      {/* Nodo central */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <motion.span
+          aria-hidden="true"
+          animate={{ scale: [1, 2.6], opacity: [0.5, 0] }}
+          transition={{
+            duration: 3.2,
+            repeat: Infinity,
+            ease: "easeOut",
+          }}
+          className="pointer-events-none absolute inset-0 rounded-full border border-primary/40"
+        />
+
+        <motion.span
+          animate={{ rotate: 360 }}
+          transition={{
+            duration: 14,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="relative flex size-9 items-center justify-center rounded-full border border-dashed border-primary/35 bg-card shadow-[0_8px_24px_rgba(124,58,237,0.15)]"
+        >
+          <span className="size-2.5 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" />
+        </motion.span>
+      </div>
+
+      {/* Nodos en los extremos */}
+      <motion.span
+        animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1.15, 0.85] }}
+        transition={{
+          duration: 2.4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute left-1/2 top-0 size-2 -translate-x-1/2 rounded-full bg-primary/60"
+      />
+      <motion.span
+        animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1.15, 0.85] }}
+        transition={{
+          duration: 2.4,
+          delay: 1.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute bottom-0 left-1/2 size-2 -translate-x-1/2 rounded-full bg-primary/60"
+      />
+    </div>
   );
 }
 
@@ -411,6 +644,7 @@ function Nosotros() {
             MISIÓN + VISIÓN — SIN CARDS
         ========================================================= */}
         <section className="relative overflow-hidden bg-background">
+          {/* Glow central que respira */}
           <motion.div
             animate={{
               opacity: [0.05, 0.13, 0.05],
@@ -424,128 +658,207 @@ function Nosotros() {
             className="pointer-events-none absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[120px]"
           />
 
+          {/* Órbitas giratorias de fondo */}
+          <motion.div
+            aria-hidden="true"
+            animate={{ rotate: 360 }}
+            transition={{
+              duration: 60,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="pointer-events-none absolute left-1/2 top-1/2 hidden size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/10 lg:block"
+          >
+            <span className="absolute left-[10%] top-[16%] size-2 rounded-full bg-primary/50 shadow-[0_0_14px_rgba(124,58,237,0.6)]" />
+            <span className="absolute bottom-[14%] right-[8%] size-1.5 rounded-full bg-fuchsia-400/60 shadow-[0_0_12px_rgba(217,70,239,0.6)]" />
+          </motion.div>
+
+          <motion.div
+            aria-hidden="true"
+            animate={{ rotate: -360 }}
+            transition={{
+              duration: 42,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="pointer-events-none absolute left-1/2 top-1/2 hidden size-[430px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10 lg:block"
+          >
+            <span className="absolute left-1/2 top-[-3px] size-1.5 -translate-x-1/2 rounded-full bg-violet-400/70 shadow-[0_0_12px_rgba(139,92,246,0.7)]" />
+          </motion.div>
+
+          {/* Partículas flotantes */}
+          {MV_PARTICLES.map((p, index) => (
+            <motion.span
+              key={index}
+              aria-hidden="true"
+              animate={{
+                y: [0, -34, 0],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: p.duration,
+                delay: p.delay,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="pointer-events-none absolute rounded-full bg-primary/60 shadow-[0_0_12px_rgba(124,58,237,0.55)]"
+              style={{
+                left: p.left,
+                top: p.top,
+                width: p.size,
+                height: p.size,
+              }}
+            />
+          ))}
+
           <div className="relative mx-auto max-w-6xl px-5 py-20 lg:px-8 lg:py-24">
-            <div className="grid gap-16 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-14">
+            <div className="grid gap-16 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-10">
               {/* MISIÓN */}
               <Reveal>
-                <div className="relative">
-                  <div className="flex items-center gap-4">
-                    <motion.span
-                      animate={{
-                        boxShadow: [
-                          "0 0 0 rgba(124,58,237,0)",
-                          "0 0 25px rgba(124,58,237,0.25)",
-                          "0 0 0 rgba(124,58,237,0)",
-                        ],
-                      }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 text-white"
-                    >
-                      <Target className="size-5" />
-                    </motion.span>
-
-                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                      Nuestra misión
-                    </span>
-                  </div>
-
-                  <h2 className="mt-7 text-3xl font-bold tracking-tight lg:text-4xl">
-                    Hacer simple lo complejo.
-                  </h2>
-
-                  <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
-                    Ayudar a las clínicas a centralizar su gestión y trabajar
-                    de manera más eficiente.
-                  </p>
-
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 22,
+                  }}
+                  className="relative"
+                >
+                  {/* Ícono de fondo gigante, apenas visible */}
                   <motion.div
-                    animate={{
-                      width: ["15%", "55%", "15%"],
-                      opacity: [0.35, 0.8, 0.35],
-                    }}
+                    aria-hidden="true"
+                    animate={{ y: [0, -12, 0], rotate: [0, 6, 0] }}
                     transition={{
-                      duration: 5,
+                      duration: 9,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="mt-7 h-px rounded-full bg-gradient-to-r from-primary to-transparent"
-                  />
-                </div>
+                    className="pointer-events-none absolute -left-10 -top-14 text-primary/[0.05]"
+                  >
+                    <Target className="size-56" strokeWidth={1} />
+                  </motion.div>
+
+                  <div className="relative">
+                    <div className="flex items-center gap-4">
+                      <PulseIcon icon={Target} />
+
+                      <motion.span
+                        initial={{ opacity: 0, x: -14 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true, margin: "-60px" }}
+                        transition={{ duration: 0.6, delay: 0.15, ease: EASE }}
+                        className="text-xs font-bold uppercase tracking-[0.18em] text-primary"
+                      >
+                        Nuestra misión
+                      </motion.span>
+                    </div>
+
+                    <AnimatedTitle
+                      text="Hacer simple lo complejo."
+                      highlightFrom={3}
+                      delay={0.2}
+                    />
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-60px" }}
+                      transition={{ duration: 0.7, delay: 0.7, ease: EASE }}
+                      className="mt-5 max-w-lg text-base leading-7 text-muted-foreground"
+                    >
+                      Ayudar a las clínicas a centralizar su gestión y
+                      trabajar de manera más eficiente.
+                    </motion.p>
+
+                    <div className="relative mt-7 h-px w-full max-w-[280px] overflow-hidden rounded-full bg-primary/10">
+                      <motion.span
+                        animate={{ x: ["-100%", "260%"] }}
+                        transition={{
+                          duration: 3.6,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-transparent via-primary to-transparent"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
               </Reveal>
 
               {/* CONEXIÓN CENTRAL */}
-              <div className="relative hidden h-40 w-px lg:block">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/25 to-transparent" />
-
-                <motion.span
-                  animate={{
-                    y: ["-20%", "120%"],
-                    opacity: [0, 1, 0],
-                  }}
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute left-1/2 size-2 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_16px_rgba(124,58,237,0.8)]"
-                />
-              </div>
+              <CenterLink />
 
               {/* VISIÓN */}
               <Reveal delay={0.12}>
-                <div className="relative lg:text-right">
-                  <div className="flex items-center gap-4 lg:justify-end">
-                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                      Nuestra visión
-                    </span>
-
-                    <motion.span
-                      animate={{
-                        boxShadow: [
-                          "0 0 0 rgba(124,58,237,0)",
-                          "0 0 25px rgba(124,58,237,0.25)",
-                          "0 0 0 rgba(124,58,237,0)",
-                        ],
-                      }}
-                      transition={{
-                        duration: 4,
-                        delay: 1.2,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 text-white"
-                    >
-                      <Eye className="size-5" />
-                    </motion.span>
-                  </div>
-
-                  <h2 className="mt-7 text-3xl font-bold tracking-tight lg:text-4xl">
-                    Una nueva forma de gestionar.
-                  </h2>
-
-                  <p className="mt-5 ml-auto max-w-lg text-base leading-7 text-muted-foreground">
-                    Construir una plataforma integral para la gestión moderna
-                    de clínicas odontológicas.
-                  </p>
-
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 22,
+                  }}
+                  className="relative lg:text-right"
+                >
+                  {/* Ícono de fondo gigante, apenas visible */}
                   <motion.div
-                    animate={{
-                      width: ["15%", "55%", "15%"],
-                      opacity: [0.35, 0.8, 0.35],
-                    }}
+                    aria-hidden="true"
+                    animate={{ y: [0, 12, 0], rotate: [0, -6, 0] }}
                     transition={{
-                      duration: 5,
-                      delay: 1.2,
+                      duration: 10,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="ml-auto mt-7 h-px rounded-full bg-gradient-to-l from-primary to-transparent"
-                  />
-                </div>
+                    className="pointer-events-none absolute -right-10 -top-14 text-primary/[0.05]"
+                  >
+                    <Eye className="size-56" strokeWidth={1} />
+                  </motion.div>
+
+                  <div className="relative">
+                    <div className="flex items-center gap-4 lg:justify-end">
+                      <motion.span
+                        initial={{ opacity: 0, x: 14 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true, margin: "-60px" }}
+                        transition={{ duration: 0.6, delay: 0.3, ease: EASE }}
+                        className="text-xs font-bold uppercase tracking-[0.18em] text-primary"
+                      >
+                        Nuestra visión
+                      </motion.span>
+
+                      <PulseIcon icon={Eye} delay={1.2} />
+                    </div>
+
+                    <AnimatedTitle
+                      text="Una nueva forma de gestionar."
+                      highlightFrom={4}
+                      delay={0.35}
+                    />
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-60px" }}
+                      transition={{ duration: 0.7, delay: 0.9, ease: EASE }}
+                      className="mt-5 max-w-lg text-base leading-7 text-muted-foreground lg:ml-auto"
+                    >
+                      Construir una plataforma integral para la gestión
+                      moderna de clínicas odontológicas.
+                    </motion.p>
+
+                    <div className="relative mt-7 h-px w-full max-w-[280px] overflow-hidden rounded-full bg-primary/10 lg:ml-auto">
+                      <motion.span
+                        animate={{ x: ["260%", "-100%"] }}
+                        transition={{
+                          duration: 3.6,
+                          delay: 1.2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-transparent via-primary to-transparent"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
               </Reveal>
             </div>
           </div>

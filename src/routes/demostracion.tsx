@@ -22,13 +22,18 @@ import {
   type SolicitudContratacion,
   type SolicitudGuardada,
 } from "@/lib/contratacion";
+import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
 
 /* La ruta se mantiene en /demostracion para no romper enlaces existentes, pero la página es
    la de contratación: el demo se prueba desde «Probar demo» (/registro). */
 export const Route = createFileRoute("/demostracion")({
-  validateSearch: (search: Record<string, unknown>): { plan?: string } => {
+  validateSearch: (search: Record<string, unknown>): { plan?: string; ciclo?: "mensual" | "anual" } => {
     const plan = search["plan"];
-    return typeof plan === "string" ? { plan } : {};
+    const ciclo = search["ciclo"];
+    return {
+      ...(typeof plan === "string" ? { plan } : {}),
+      ...(ciclo === "mensual" || ciclo === "anual" ? { ciclo } : {}),
+    };
   },
   head: () => ({
     meta: [
@@ -69,16 +74,19 @@ const SELECT =
   "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none";
 
 function Contratacion() {
-  const { plan: planInicial } = Route.useSearch();
+  const { plan: planInicial, ciclo: cicloInicial } = Route.useSearch();
   const [plan, setPlan] = useState(
     plans.some((p) => p.id === planInicial)
       ? (planInicial as string)
       : (plans.find((p) => p.featured)?.id ?? plans[0]?.id ?? ""),
   );
   const [modulos, setModulos] = useState<string[]>([]);
-  const [periodo, setPeriodo] = useState<SolicitudContratacion["periodo"]>("Mensual");
+  const [periodo, setPeriodo] = useState<SolicitudContratacion["periodo"]>(
+    cicloInicial === "anual" ? "Anual" : "Mensual",
+  );
   const [enviando, setEnviando] = useState(false);
   const [listo, setListo] = useState<SolicitudGuardada | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const elegido = plans.find((p) => p.id === plan);
 
   const toggle = (m: string) =>
@@ -88,22 +96,34 @@ function Contratacion() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
+    if (v("telefono").replace(/[^0-9]/g, "").length < 7) {
+      setError("Escribí un teléfono completo (con código de área).");
+      return;
+    }
+    setError(null);
     setEnviando(true);
     const r = await enviarSolicitudContratacion({
-      plan: elegido?.name ?? plan,
+      plan,
+      planNombre: elegido?.name ?? plan,
       modulos,
       periodo,
       clinica: v("clinica"),
       pais: v("pais"),
+      ciudad: v("ciudad"),
       sucursales: v("sucursales"),
       profesionales: v("profesionales"),
       contacto: v("contacto"),
       email: v("email"),
       telefono: v("telefono"),
       comentarios: v("comentarios"),
+      web: v("web"),
     });
     setEnviando(false);
-    setListo(r);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    setListo(r.solicitud);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -169,7 +189,7 @@ function Contratacion() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
                 onSubmit={(e) => void enviar(e)}
-                className="card-premium space-y-7 p-6 lg:p-8"
+                className="card-premium relative space-y-7 p-6 lg:p-8"
               >
                 <fieldset className="space-y-3">
                   <legend className="text-sm font-semibold">1. Plan</legend>
@@ -266,20 +286,19 @@ function Contratacion() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pais">País</Label>
-                      <select id="pais" name="pais" className={SELECT} defaultValue="Argentina">
-                        {[
-                          "Argentina",
-                          "Chile",
-                          "Colombia",
-                          "España",
-                          "México",
-                          "Perú",
-                          "Uruguay",
-                          "Otro",
-                        ].map((o) => (
-                          <option key={o}>{o}</option>
+                      <select id="pais" name="pais" required className={SELECT} defaultValue="AR">
+                        {PAISES_DEMO.map((p) => (
+                          <option key={p.codigo} value={p.codigo}>
+                            {p.nombre}
+                          </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="ciudad">
+                        Ciudad <span className="font-normal text-muted-foreground">(opcional)</span>
+                      </Label>
+                      <Input id="ciudad" name="ciudad" maxLength={80} placeholder="Buenos Aires" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="sucursales">Sucursales</Label>
@@ -321,9 +340,18 @@ function Contratacion() {
                       <Input
                         id="telefono"
                         name="telefono"
+                        type="tel"
                         required
+                        maxLength={40}
+                        pattern="[+]?[0-9 ()\-.]+"
+                        title="Solo números, espacios, guiones y el signo +"
                         placeholder="+54 11 5555 5555"
                       />
+                    </div>
+                    {/* Campo trampa para robots: las personas no lo ven */}
+                    <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                      <label htmlFor="web">No completar</label>
+                      <input id="web" name="web" tabIndex={-1} autoComplete="off" />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="comentarios">Comentarios</Label>
@@ -331,11 +359,18 @@ function Contratacion() {
                         id="comentarios"
                         name="comentarios"
                         rows={3}
+                        maxLength={1000}
                         placeholder="¿Usás otro sistema hoy? ¿Necesitás migrar historias clínicas?"
                       />
                     </div>
                   </div>
                 </fieldset>
+
+                {error && (
+                  <p role="alert" className="text-sm font-medium text-destructive">
+                    {error}
+                  </p>
+                )}
 
                 <Button
                   type="submit"
@@ -374,12 +409,12 @@ function Contratacion() {
                 </motion.span>
                 <h2 className="mt-6 text-2xl font-bold">¡Solicitud de contratación recibida!</h2>
                 <p className="mt-3 max-w-md text-muted-foreground">
-                  Registramos tu pedido del plan <b className="text-foreground">{listo.plan}</b>
-                  {listo.modulos.length
-                    ? ` con ${listo.modulos.length} módulo${listo.modulos.length === 1 ? "" : "s"} adicional${listo.modulos.length === 1 ? "" : "es"}`
-                    : ""}{" "}
-                  (número {listo.id}). Un asesor te escribe a {listo.email} para confirmar la
-                  propuesta y coordinar la activación.
+                  Registramos tu pedido del plan <b className="text-foreground">{listo.planNombre}</b>
+                  {listo.modulos
+                    ? ` con ${listo.modulos} módulo${listo.modulos === 1 ? "" : "s"} adicional${listo.modulos === 1 ? "" : "es"}`
+                    : ""}
+                  . Te mandamos un correo a {listo.email} con el número de solicitud. Un asesor te
+                  escribe para confirmar la propuesta, coordinar el pago y activar tu clínica.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-2">
                   <Button asChild variant="hero" size="lg">

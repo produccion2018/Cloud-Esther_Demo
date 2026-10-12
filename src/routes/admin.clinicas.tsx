@@ -3,6 +3,7 @@ import { Building2, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide
 import { useState } from "react";
 
 import { BarraUso, Cargando, KpiCard, Seccion, StatusBadge, Vacio } from "@/components/admin/bits";
+import { SolicitudesContratacion } from "@/components/admin/contrataciones";
 import { Campo, INPUT } from "@/components/admin/formularios";
 import { permisos, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
@@ -64,6 +65,9 @@ function ClinicsPage() {
       title="Clínicas clientes"
       description="Todas las empresas que usan Cloud Esther: plan, uso contra los límites del plan, estado de pago y último acceso."
     >
+      {/* Contrataciones que llegan de la web: arriba de todo, para no perderlas */}
+      <SolicitudesContratacion />
+
       {isLoading ? (
         <Cargando />
       ) : (
@@ -98,7 +102,7 @@ function ClinicsPage() {
 
           <Seccion
             titulo="Listado de clínicas"
-            descripcion="Tocá una clínica para ver el detalle."
+            descripcion="Clínicas activadas. Tocá una clínica para ver el detalle."
             sinPadding
           >
             <div className="flex flex-wrap gap-2 border-b border-border/60 px-5 py-3">
@@ -168,7 +172,7 @@ function ClinicsPage() {
                           <td className="px-5 py-3">
                             <p className="font-semibold">{c.nombre}</p>
                             <p className="text-xs text-muted-foreground">
-                              {c.ciudad} · cliente desde {fecha(c.clienteDesde)}
+                              {c.ciudad ? `${c.ciudad} · ` : ""}cliente desde {fecha(c.clienteDesde)}
                             </p>
                           </td>
                           <td className="px-3 py-3">
@@ -258,7 +262,7 @@ function DetalleClinica({
           {c.nombre}
         </SheetTitle>
         <p className="text-sm opacity-90">
-          {c.ciudad}, {c.pais}
+          {[c.ciudad, c.pais].filter(Boolean).join(", ")}
         </p>
         <div className="mt-3">
           <StatusBadge status={c.estadoPago} />

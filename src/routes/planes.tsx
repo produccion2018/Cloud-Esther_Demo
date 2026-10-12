@@ -1152,11 +1152,13 @@ function Planes() {
           />
 
           <div className="relative">
+            {/* Elegir un plan = CONTRATAR (el demo gratis se prueba desde «Probar demo») */}
             <PlanGrid
-              onSelect={(plan) =>
+              cta="Contratar este plan"
+              onSelect={(plan, ciclo) =>
                 navigate({
-                  to: "/registro",
-                  search: { plan: plan.id },
+                  to: "/demostracion",
+                  search: { plan: plan.id, ciclo },
                 })
               }
             />

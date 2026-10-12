@@ -98,10 +98,6 @@ function Contratacion() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
-    if (v("telefono").replace(/[^0-9]/g, "").length < 7) {
-      setError("Escribí un teléfono completo (con código de área).");
-      return;
-    }
     setError(null);
     setEnviando(true);
     const r = await enviarSolicitudContratacion({

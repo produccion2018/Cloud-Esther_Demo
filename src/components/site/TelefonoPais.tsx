@@ -21,7 +21,13 @@ export function TelefonoPais({
 }) {
   const [numero, setNumero] = useState("");
   const prefijo = PAISES_DEMO.find((p) => p.codigo === pais)?.prefijo;
-  const limpio = numero.replace(/[^0-9 ()\-.]/g, "");
+  // Si la persona escribe el código del país ("+54 11…"), se saca: ya va fijo adelante
+  let limpio = numero.replace(/[^0-9+ ()\-.]/g, "");
+  if (prefijo && limpio.trim().startsWith("+")) {
+    limpio = limpio.trim().slice(1).trimStart();
+    if (limpio.startsWith(prefijo)) limpio = limpio.slice(prefijo.length).trimStart();
+  }
+  limpio = limpio.replace(/\+/g, "");
   return (
     <div>
       <div className="flex">

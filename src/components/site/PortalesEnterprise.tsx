@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { Fragment, useEffect, useState } from "react";
 import {
   ArrowRight,
   BellRing,
   CalendarCheck2,
+  Check,
   ClipboardList,
   Clock,
   CreditCard,
@@ -33,6 +35,7 @@ type Portal = {
   acento: string;
   usuario: string;
   rol: string;
+  chip: string;
   filas: { icon: LucideIcon; titulo: string; detalle: string }[];
   beneficios: string[];
 };
@@ -44,8 +47,9 @@ const PORTALES: Portal[] = [
     bajada: "Tus pacientes entran desde el celular con su DNI y un código.",
     icon: UserRound,
     acento: "from-fuchsia-400 to-violet-500",
-    usuario: "Lucía Paz",
+    usuario: "Thiago Velez Penagos",
     rol: "Paciente",
+    chip: "Turno confirmado",
     filas: [
       { icon: CalendarCheck2, titulo: "Próximo turno", detalle: "Jueves 10:30 · Limpieza" },
       { icon: Pill, titulo: "Receta disponible", detalle: "Amoxicilina 500 mg" },
@@ -64,8 +68,9 @@ const PORTALES: Portal[] = [
     bajada: "Odontólogos, asistentes y secretaría, en el celular o la PC.",
     icon: Stethoscope,
     acento: "from-violet-400 to-indigo-500",
-    usuario: "Dra. Laura Martínez",
+    usuario: "Dra. Mireya Becerra",
     rol: "Odontóloga",
+    chip: "Fichaje registrado",
     filas: [
       { icon: Clock, titulo: "Agenda de hoy", detalle: "8 turnos · próximo 09:30" },
       { icon: ClipboardList, titulo: "Ficha del paciente", detalle: "Historia y odontograma" },
@@ -80,8 +85,89 @@ const PORTALES: Portal[] = [
   },
 ];
 
+/* =========================================================
+   TEXTO ANIMADO LETRA POR LETRA (con ola infinita opcional)
+========================================================= */
+function AnimatedWords({
+  text,
+  startDelay = 0,
+  wave = false,
+}: {
+  text: string;
+  startDelay?: number;
+  wave?: boolean;
+}) {
+  const reduce = useReducedMotion();
+  const words = text.split(" ");
+  let counter = 0;
+
+  return (
+    <>
+      {words.map((word, wi) => (
+        <Fragment key={`${word}-${wi}`}>
+          <span className="inline-block whitespace-nowrap">
+            {word.split("").map((char, ci) => {
+              const i = counter;
+              counter += 1;
+
+              return (
+                <motion.span
+                  key={`${char}-${ci}`}
+                  initial={{ opacity: 0, y: 28, rotateX: -70, filter: "blur(6px)" }}
+                  whileInView={{ opacity: 1, y: 0, rotateX: 0, filter: "blur(0px)" }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{
+                    duration: 0.6,
+                    delay: startDelay + i * 0.03,
+                    ease: EASE,
+                  }}
+                  className="inline-block"
+                >
+                  {wave && !reduce ? (
+                    <motion.span
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{
+                        duration: 1.2,
+                        delay: 1.5 + i * 0.09,
+                        repeat: Infinity,
+                        repeatDelay: 3.2,
+                        ease: "easeInOut",
+                      }}
+                      className="inline-block"
+                    >
+                      {char}
+                    </motion.span>
+                  ) : (
+                    char
+                  )}
+                </motion.span>
+              );
+            })}
+          </span>
+          {wi < words.length - 1 ? " " : null}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
 function Telefono({ portal, indice }: { portal: Portal; indice: number }) {
   const Icono = portal.icon;
+  const reduce = useReducedMotion();
+  const [activo, setActivo] = useState(0);
+  const total = portal.filas.length;
+
+  // El resaltado recorre las filas en loop infinito
+  useEffect(() => {
+    if (reduce) return undefined;
+
+    const id = window.setInterval(() => {
+      setActivo((prev) => (prev + 1) % total);
+    }, 2200);
+
+    return () => window.clearInterval(id);
+  }, [reduce, total]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 60, rotate: indice === 0 ? -6 : 6 }}
@@ -90,51 +176,117 @@ function Telefono({ portal, indice }: { portal: Portal; indice: number }) {
       transition={{ duration: 0.9, delay: 0.15 + indice * 0.15, ease: EASE }}
       className="relative mx-auto w-[230px] sm:w-[250px]"
     >
+      {/* Resplandor que respira */}
       <motion.div
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 5 + indice, repeat: Infinity, ease: "easeInOut" }}
-        className="rounded-[2.2rem] border border-white/20 bg-white/10 p-2 shadow-[0_30px_80px_-20px_rgba(15,5,40,0.75)] backdrop-blur"
+        aria-hidden
+        animate={reduce ? undefined : { opacity: [0.35, 0.75, 0.35], scale: [0.92, 1.12, 0.92] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: indice * 1.2 }}
+        className="pointer-events-none absolute -inset-8 rounded-full bg-fuchsia-500/30 blur-3xl"
+      />
+
+      <motion.div
+        animate={reduce ? undefined : { y: [0, -10, 0], rotate: [0, 1.4, 0, -1.4, 0] }}
+        transition={{ duration: 5 + indice * 2, repeat: Infinity, ease: "easeInOut" }}
+        className="relative rounded-[2.2rem] border border-white/20 bg-white/10 p-2 shadow-[0_30px_80px_-20px_rgba(15,5,40,0.75)] backdrop-blur"
       >
         <div className="overflow-hidden rounded-[1.8rem] bg-white text-[#1f1535]">
-          <div className={`bg-gradient-to-br ${portal.acento} px-4 pb-5 pt-6 text-white`}>
+          <div className={`relative overflow-hidden bg-gradient-to-br ${portal.acento} px-4 pb-5 pt-6 text-white`}>
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/40" />
             <div className="flex items-center gap-2.5">
-              <span className="grid size-9 place-items-center rounded-xl bg-white/20">
-                <Icono className="size-4.5" />
+              <span className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-white/20">
+                <motion.span
+                  aria-hidden
+                  animate={reduce ? undefined : { scale: [1, 1.6], opacity: [0.6, 0] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+                  className="absolute inset-0 rounded-xl border border-white/70"
+                />
+                <Icono className="relative size-4.5" />
               </span>
               <div className="min-w-0 leading-tight">
                 <p className="truncate text-[13px] font-bold">{portal.usuario}</p>
                 <p className="text-[10.5px] text-white/80">{portal.rol}</p>
               </div>
             </div>
+
+            {/* Destello que barre el encabezado */}
+            <motion.span
+              aria-hidden
+              initial={{ x: "-150%" }}
+              animate={reduce ? undefined : { x: ["-150%", "450%"] }}
+              transition={{
+                duration: 3.6,
+                repeat: Infinity,
+                repeatDelay: 2.4,
+                ease: "easeInOut",
+                delay: indice * 1.4,
+              }}
+              style={{ skewX: -20 }}
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+            />
           </div>
           <ul className="space-y-2 p-3">
-            {portal.filas.map((f, i) => (
-              <motion.li
-                key={f.titulo}
-                initial={{ opacity: 0, x: indice === 0 ? -16 : 16 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.5 + indice * 0.15 + i * 0.1, ease: EASE }}
-                className="flex items-center gap-2.5 rounded-xl border border-violet-100 bg-violet-50/60 px-2.5 py-2"
-              >
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white text-violet-600 shadow-sm">
-                  <f.icon className="size-3.5" />
-                </span>
-                <span className="min-w-0 leading-tight">
-                  <span className="block truncate text-[11.5px] font-semibold">{f.titulo}</span>
-                  <span className="block truncate text-[10px] text-[#6b6280]">{f.detalle}</span>
-                </span>
-              </motion.li>
-            ))}
+            {portal.filas.map((f, i) => {
+              const esActivo = i === activo;
+
+              return (
+                <motion.li
+                  key={f.titulo}
+                  initial={{ opacity: 0, x: indice === 0 ? -16 : 16 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.5 + indice * 0.15 + i * 0.1, ease: EASE }}
+                  className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-all duration-500 ${
+                    esActivo
+                      ? "scale-[1.04] border-violet-300 bg-violet-100 shadow-[0_10px_24px_-10px_rgba(124,58,237,0.55)]"
+                      : "border-violet-100 bg-violet-50/60"
+                  }`}
+                >
+                  <span
+                    className={`grid size-7 shrink-0 place-items-center rounded-lg shadow-sm transition-all duration-500 ${
+                      esActivo
+                        ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
+                        : "bg-white text-violet-600"
+                    }`}
+                  >
+                    <f.icon className="size-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate text-[11.5px] font-semibold">{f.titulo}</span>
+                    <span className="block truncate text-[10px] text-[#6b6280]">{f.detalle}</span>
+                  </span>
+                  {esActivo && (
+                    <motion.span
+                      aria-hidden
+                      animate={reduce ? undefined : { scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
+                      className="size-1.5 shrink-0 rounded-full bg-fuchsia-500"
+                    />
+                  )}
+                </motion.li>
+              );
+            })}
           </ul>
         </div>
+
+        {/* Chip flotante */}
+        <motion.div
+          animate={reduce ? undefined : { y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: indice * 0.8 + 0.6 }}
+          className="absolute -right-4 top-[46%] hidden items-center gap-1.5 rounded-full border border-white/30 bg-white px-3 py-1.5 text-[11px] font-semibold text-violet-700 shadow-xl shadow-violet-900/30 sm:flex"
+        >
+          <span className="grid size-4 place-items-center rounded-full bg-emerald-500">
+            <Check className="size-2.5 text-white" strokeWidth={4} />
+          </span>
+          {portal.chip}
+        </motion.div>
       </motion.div>
     </motion.div>
   );
 }
 
 export function PortalesEnterprise() {
+  const reduce = useReducedMotion();
+
   return (
     <section className="relative overflow-hidden bg-[#1a0b3d] py-20 text-white lg:py-24">
       {/* Fondo animado */}
@@ -172,10 +324,14 @@ export function PortalesEnterprise() {
             <Crown className="size-3.5" /> Exclusivo del plan Enterprise
           </span>
           <h2 className="mt-5 text-3xl font-bold tracking-tight lg:text-[2.6rem] lg:leading-tight">
-            Tu clínica, también en el bolsillo de{" "}
-            <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-amber-200 bg-clip-text text-transparent">
-              pacientes y profesionales
-            </span>
+            <AnimatedWords text="Tu clínica, también en el bolsillo de" />{" "}
+            <motion.span
+              animate={reduce ? undefined : { backgroundPosition: ["0% center", "200% center"] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+              className="inline-block bg-[linear-gradient(90deg,#f0abfc_0%,#ddd6fe_25%,#fde68a_50%,#ddd6fe_75%,#f0abfc_100%)] bg-[length:200%_auto] bg-clip-text text-transparent"
+            >
+              <AnimatedWords text="pacientes y profesionales" startDelay={0.9} wave />
+            </motion.span>
           </h2>
           <p className="mt-4 text-white/70">
             Dos portales conectados con la agenda, la historia clínica y la facturación. Cada uno
@@ -197,11 +353,20 @@ export function PortalesEnterprise() {
                 <h3 className="mt-3 text-xl font-bold">{portal.titulo}</h3>
                 <p className="mt-1.5 text-sm text-white/70">{portal.bajada}</p>
                 <ul className="mt-4 space-y-2">
-                  {portal.beneficios.map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-sm text-white/85">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gradient-to-r from-fuchsia-300 to-violet-300" />
+                  {portal.beneficios.map((b, bi) => (
+                    <motion.li
+                      key={b}
+                      whileHover={{ x: 4 }}
+                      className="flex items-start gap-2 text-sm text-white/85"
+                    >
+                      <motion.span
+                        aria-hidden
+                        animate={reduce ? undefined : { scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
+                        transition={{ duration: 2.2, repeat: Infinity, delay: bi * 0.5, ease: "easeInOut" }}
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gradient-to-r from-fuchsia-300 to-violet-300"
+                      />
                       {b}
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               </Reveal>

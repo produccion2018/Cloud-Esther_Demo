@@ -58,6 +58,8 @@ type AdditionalModule = (typeof additionalModules)[number];
    - Funciona con cualquier cantidad de módulos.
    - Hasta 9 módulos: arcada en desktop. Si hay más, se usa la
      lista de dientes en todas las pantallas.
+   - Cada módulo se puede agregar/quitar (estado local por ahora).
+     Para el backend: usar la prop onToggleModule.
 ========================================================= */
 const TOOTH_PATH =
   "M23 14 C17.5 14 14 18 14 23.5 C14 28 15.6 31 17 35.5 C18.6 40.5 18.6 47 20.6 50 C22.2 52.4 25.2 51.6 26 48.4 C27 44.4 28.4 40.6 32 40.6 C35.6 40.6 37 44.4 38 48.4 C38.8 51.6 41.8 52.4 43.4 50 C45.4 47 45.4 40.5 47 35.5 C48.4 31 50 28 50 23.5 C50 18 46.5 14 41 14 C37.6 14 35 15.6 32 15.6 C29 15.6 26.4 14 23 14 Z";
@@ -179,12 +181,16 @@ function ToothShape({
 function AdditionalModulesTeeth({
   modules,
   onConsult,
+  onToggleModule,
 }: {
   modules: AdditionalModule[];
   onConsult: () => void;
+  /** Hook para conectar al backend: se llama al agregar o quitar un módulo */
+  onToggleModule?: (module: AdditionalModule, selected: boolean) => void;
 }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
   const reduceMotion = useReducedMotion();
 
   const total = modules.length;
@@ -202,9 +208,24 @@ function AdditionalModulesTeeth({
     return () => window.clearTimeout(id);
   }, [active, paused, reduceMotion, total]);
 
+  const toggleModule = (module: AdditionalModule) => {
+    const id = String(module.id);
+    const willSelect = !selected.includes(id);
+
+    setSelected((prev) =>
+      willSelect ? [...prev, id] : prev.filter((item) => item !== id),
+    );
+
+    if (onToggleModule) onToggleModule(module, willSelect);
+  };
+
   if (total === 0) return null;
 
   const current = modules[safeActive];
+  const currentSelected = selected.includes(String(current.id));
+  const selectedModules = modules.filter((module) =>
+    selected.includes(String(module.id)),
+  );
   const centerY = ARCH_PAD_TOP + ARCH_TOOTH_H * 0.5;
 
   const goPrev = () => setActive((safeActive - 1 + total) % total);
@@ -249,6 +270,7 @@ function AdditionalModulesTeeth({
           {modules.map((module, index) => {
             const point = archPoint(index, total);
             const isActive = index === safeActive;
+            const isSelected = selected.includes(String(module.id));
             const uid = `arch-${safeId(module.id)}-${index}`;
 
             const spring = {
@@ -353,38 +375,44 @@ function AdditionalModulesTeeth({
                     >
                       <ToothShape
                         uid={uid}
-                        active={isActive}
+                        active={isActive || isSelected}
                         wave={
-                          isActive || reduceMotion ? null : { index, total }
+                          isActive || isSelected || reduceMotion
+                            ? null
+                            : { index, total }
                         }
                         className="size-full drop-shadow-[0_10px_18px_rgba(124,58,237,0.22)]"
                       />
 
                       <span className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2">
-                        <motion.span
-                          animate={
-                            isActive || reduceMotion
-                              ? { scale: 1 }
-                              : { scale: [1, 1.25, 1] }
-                          }
-                          transition={
-                            isActive || reduceMotion
-                              ? { duration: 0.2 }
-                              : {
-                                  duration: 2.2,
-                                  delay: index * 0.2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut",
-                                }
-                          }
-                          className="inline-flex"
-                        >
-                          <Plus
-                            className={`size-5 transition-colors duration-300 ${
-                              isActive ? "text-white" : "text-primary"
-                            }`}
-                          />
-                        </motion.span>
+                        {isSelected ? (
+                          <Check className="size-5 text-white" />
+                        ) : (
+                          <motion.span
+                            animate={
+                              isActive || reduceMotion
+                                ? { scale: 1 }
+                                : { scale: [1, 1.25, 1] }
+                            }
+                            transition={
+                              isActive || reduceMotion
+                                ? { duration: 0.2 }
+                                : {
+                                    duration: 2.2,
+                                    delay: index * 0.2,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                  }
+                            }
+                            className="inline-flex"
+                          >
+                            <Plus
+                              className={`size-5 transition-colors duration-300 ${
+                                isActive ? "text-white" : "text-primary"
+                              }`}
+                            />
+                          </motion.span>
+                        )}
                       </span>
                     </span>
                   </span>
@@ -405,7 +433,7 @@ function AdditionalModulesTeeth({
 
       {/* LISTA DE DIENTES (mobile, o si hay muchos módulos) */}
       <ul
-        className={`grid gap-x-10 ${
+        className={`grid gap-x-6 gap-y-3 ${
           archMode
             ? "sm:grid-cols-2 lg:hidden"
             : "sm:grid-cols-2 lg:grid-cols-3"
@@ -413,6 +441,7 @@ function AdditionalModulesTeeth({
       >
         {modules.map((module, index) => {
           const uid = `list-${safeId(module.id)}-${index}`;
+          const isSelected = selected.includes(String(module.id));
 
           return (
             <motion.li
@@ -425,51 +454,108 @@ function AdditionalModulesTeeth({
                 delay: Math.min(index * 0.05, 0.3),
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="flex gap-4 border-b border-border/60 py-5 last:border-0"
+              className="list-none"
             >
-              <motion.span
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : { y: [0, -5, 0], rotate: [0, 3, -3, 0] }
-                }
-                transition={{
-                  duration: 3.4 + (index % 3) * 0.5,
-                  delay: index * 0.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="relative block h-[58px] w-[54px] shrink-0"
+              <div
+                className={`group relative flex gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-gradient-to-br hover:from-lavender/70 hover:to-card hover:shadow-[0_18px_40px_-16px_rgba(124,58,237,0.45)] ${
+                  isSelected
+                    ? "border-primary/50 bg-lavender/60 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.4)]"
+                    : "border-transparent"
+                }`}
               >
-                <ToothShape
-                  uid={uid}
-                  active
-                  className="size-full drop-shadow-[0_8px_14px_rgba(124,58,237,0.22)]"
+                {/* Resplandor de fondo en hover */}
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-primary/15 blur-2xl transition-opacity duration-500 group-hover:opacity-100 ${
+                    isSelected ? "opacity-100" : "opacity-0"
+                  }`}
                 />
-                <Plus className="absolute left-1/2 top-[34%] size-4 -translate-x-1/2 -translate-y-1/2 text-white" />
-              </motion.span>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-base font-semibold">{module.name}</h3>
+                {/* Destello que cruza la tarjeta en hover */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+                />
 
-                  <span className="shrink-0 rounded-full border border-border/70 bg-muted/50 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
-                    Adicional
-                  </span>
+                <motion.span
+                  animate={
+                    reduceMotion
+                      ? undefined
+                      : { y: [0, -5, 0], rotate: [0, 3, -3, 0] }
+                  }
+                  transition={{
+                    duration: 3.4 + (index % 3) * 0.5,
+                    delay: index * 0.2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="relative block h-[58px] w-[54px] shrink-0"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute -inset-2 rounded-full bg-primary/30 blur-xl transition-opacity duration-300 group-hover:opacity-100 ${
+                      isSelected ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+
+                  <ToothShape
+                    uid={uid}
+                    active
+                    className="relative size-full drop-shadow-[0_8px_14px_rgba(124,58,237,0.22)] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110"
+                  />
+
+                  {isSelected ? (
+                    <Check className="absolute left-1/2 top-[34%] size-4 -translate-x-1/2 -translate-y-1/2 text-white" />
+                  ) : (
+                    <Plus className="absolute left-1/2 top-[34%] size-4 -translate-x-1/2 -translate-y-1/2 text-white transition-transform duration-300 group-hover:rotate-90" />
+                  )}
+                </motion.span>
+
+                <div className="relative min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-base font-semibold">{module.name}</h3>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleModule(module)}
+                      aria-pressed={isSelected}
+                      aria-label={
+                        isSelected
+                          ? `Quitar ${module.name}`
+                          : `Agregar ${module.name}`
+                      }
+                      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                        isSelected
+                          ? "border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-500/30"
+                          : "border-border/70 bg-muted/50 text-muted-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:border-primary/40"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="size-3" strokeWidth={3} />
+                          Agregado
+                        </>
+                      ) : (
+                        "Adicional"
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    {module.description}
+                  </p>
+
+                  {(module.price || module.billing) && (
+                    <p className="mt-3 text-sm">
+                      <span className="text-lg font-bold text-foreground">
+                        {module.price}
+                      </span>{" "}
+                      <span className="text-[11px] text-muted-foreground">
+                        {module.billing}
+                      </span>
+                    </p>
+                  )}
                 </div>
-
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  {module.description}
-                </p>
-
-                <p className="mt-3 text-sm">
-                  <span className="text-lg font-bold text-foreground">
-                    {module.price}
-                  </span>{" "}
-                  <span className="text-[11px] text-muted-foreground">
-                    {module.billing}
-                  </span>
-                </p>
               </div>
             </motion.li>
           );
@@ -518,26 +604,55 @@ function AdditionalModulesTeeth({
                 </div>
 
                 <div className="flex flex-col items-start gap-4 md:items-end md:text-right">
-                  <div>
-                    <span className="text-3xl font-bold text-foreground">
-                      {current.price}
-                    </span>
+                  {(current.price || current.billing) && (
+                    <div>
+                      <span className="text-3xl font-bold text-foreground">
+                        {current.price}
+                      </span>
 
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {current.billing}
-                    </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {current.billing}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3 md:justify-end">
+                    <motion.button
+                      type="button"
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => toggleModule(current)}
+                      aria-pressed={currentSelected}
+                      className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition-colors ${
+                        currentSelected
+                          ? "border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30"
+                          : "border-primary/30 bg-card text-primary hover:bg-lavender"
+                      }`}
+                    >
+                      {currentSelected ? (
+                        <>
+                          <Check className="size-4" strokeWidth={3} />
+                          Agregado
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="size-4" />
+                          Agregar módulo
+                        </>
+                      )}
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={onConsult}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
+                    >
+                      Consultar por este módulo
+                      <ArrowRight className="size-4" />
+                    </motion.button>
                   </div>
-
-                  <motion.button
-                    type="button"
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={onConsult}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
-                  >
-                    Consultar por este módulo
-                    <ArrowRight className="size-4" />
-                  </motion.button>
                 </div>
               </div>
 
@@ -598,6 +713,59 @@ function AdditionalModulesTeeth({
           )}
         </div>
       )}
+
+      {/* BARRA DE MÓDULOS AGREGADOS */}
+      <AnimatePresence>
+        {selectedModules.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mx-auto mt-8 flex max-w-3xl flex-col gap-4 overflow-hidden rounded-2xl border border-primary/25 bg-card/90 p-5 shadow-[0_18px_50px_rgba(88,28,135,0.15)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="pointer-events-none absolute -left-10 -top-10 size-32 rounded-full bg-primary/15 blur-2xl" />
+
+            <div className="relative min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                {selectedModules.length === 1
+                  ? "1 módulo agregado"
+                  : `${selectedModules.length} módulos agregados`}
+              </p>
+
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {selectedModules.map((module) => module.name).join(" · ")}
+              </p>
+            </div>
+
+            <div className="relative flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  selectedModules.forEach((module) => {
+                    if (onToggleModule) onToggleModule(module, false);
+                  });
+                  setSelected([]);
+                }}
+                className="text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+              >
+                Limpiar
+              </button>
+
+              <motion.button
+                type="button"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onConsult}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
+              >
+                Consultar mi selección
+                <ArrowRight className="size-4" />
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

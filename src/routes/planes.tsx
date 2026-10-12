@@ -104,11 +104,29 @@ function ToothShape({
   active,
   uid,
   className = "",
+  wave = null,
 }: {
   active: boolean;
   uid: string;
   className?: string;
+  /** Si se pasa, el diente se ilumina en "ola" cuando no está activo */
+  wave?: { index: number; total: number } | null;
 }) {
+  const waving = !active && wave !== null;
+  const total = wave ? wave.total : 1;
+  const index = wave ? wave.index : 0;
+
+  // Momento del ciclo (0 a 1) en que la ola pasa por este diente
+  const peak = 0.1 + ((index + 0.5) / total) * 0.75;
+  const cycle = Math.max(total, 3) * 0.6 + 2;
+  const times = [
+    0,
+    Math.max(peak - 0.1, 0.01),
+    peak,
+    Math.min(peak + 0.1, 0.99),
+    1,
+  ];
+
   return (
     <svg
       viewBox="12 12 40 42"
@@ -135,8 +153,16 @@ function ToothShape({
         d={TOOTH_PATH}
         fill={`url(#tooth-fill-${uid})`}
         initial={false}
-        animate={{ opacity: active ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
+        animate={
+          waving
+            ? { opacity: [0, 0, 0.7, 0, 0] }
+            : { opacity: active ? 1 : 0 }
+        }
+        transition={
+          waving
+            ? { duration: cycle, times, repeat: Infinity, ease: "easeInOut" }
+            : { duration: 0.3 }
+        }
       />
 
       <path
@@ -225,6 +251,19 @@ function AdditionalModulesTeeth({
             const isActive = index === safeActive;
             const uid = `arch-${safeId(module.id)}-${index}`;
 
+            const spring = {
+              type: "spring" as const,
+              stiffness: 260,
+              damping: 18,
+            };
+            const loop = {
+              duration: 3.6 + (index % 4) * 0.5,
+              delay: index * 0.15,
+              repeat: Infinity,
+              ease: "easeInOut" as const,
+            };
+            const still = isActive || reduceMotion;
+
             return (
               <motion.div
                 key={module.id}
@@ -255,22 +294,18 @@ function AdditionalModulesTeeth({
                   animate={
                     reduceMotion
                       ? { y: isActive ? -12 : 0, scale: isActive ? 1.14 : 1 }
-                      : {
-                          y: isActive ? -12 : [0, -4, 0],
-                          scale: isActive ? 1.14 : 1,
-                        }
+                      : isActive
+                        ? { y: -14, scale: 1.16, rotate: 0 }
+                        : {
+                            y: [0, -10, 0],
+                            scale: [1, 1.04, 1],
+                            rotate: [0, 2.5, -2.5, 0],
+                          }
                   }
                   transition={{
-                    scale: { type: "spring", stiffness: 260, damping: 18 },
-                    y:
-                      isActive || reduceMotion
-                        ? { type: "spring", stiffness: 260, damping: 18 }
-                        : {
-                            duration: 4 + (index % 3) * 0.6,
-                            delay: index * 0.2,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          },
+                    y: still ? spring : loop,
+                    scale: still ? spring : loop,
+                    rotate: still ? spring : loop,
                   }}
                   className="group relative flex w-full flex-col items-center rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
@@ -287,16 +322,29 @@ function AdditionalModulesTeeth({
                     />
 
                     {isActive && !reduceMotion && (
-                      <motion.span
-                        aria-hidden="true"
-                        animate={{ scale: [1, 1.5], opacity: [0.45, 0] }}
-                        transition={{
-                          duration: 2.2,
-                          repeat: Infinity,
-                          ease: "easeOut",
-                        }}
-                        className="pointer-events-none absolute inset-3 rounded-full border border-primary/50"
-                      />
+                      <>
+                        <motion.span
+                          aria-hidden="true"
+                          animate={{ scale: [1, 1.5], opacity: [0.45, 0] }}
+                          transition={{
+                            duration: 2.2,
+                            repeat: Infinity,
+                            ease: "easeOut",
+                          }}
+                          className="pointer-events-none absolute inset-3 rounded-full border border-primary/50"
+                        />
+
+                        <motion.span
+                          aria-hidden="true"
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 12,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          className="pointer-events-none absolute -inset-1 rounded-full border border-dashed border-primary/40"
+                        />
+                      </>
                     )}
 
                     <span
@@ -306,14 +354,38 @@ function AdditionalModulesTeeth({
                       <ToothShape
                         uid={uid}
                         active={isActive}
+                        wave={
+                          isActive || reduceMotion ? null : { index, total }
+                        }
                         className="size-full drop-shadow-[0_10px_18px_rgba(124,58,237,0.22)]"
                       />
 
-                      <Plus
-                        className={`absolute left-1/2 top-[34%] size-5 -translate-x-1/2 -translate-y-1/2 transition-colors duration-300 ${
-                          isActive ? "text-white" : "text-primary"
-                        }`}
-                      />
+                      <span className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2">
+                        <motion.span
+                          animate={
+                            isActive || reduceMotion
+                              ? { scale: 1 }
+                              : { scale: [1, 1.25, 1] }
+                          }
+                          transition={
+                            isActive || reduceMotion
+                              ? { duration: 0.2 }
+                              : {
+                                  duration: 2.2,
+                                  delay: index * 0.2,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }
+                          }
+                          className="inline-flex"
+                        >
+                          <Plus
+                            className={`size-5 transition-colors duration-300 ${
+                              isActive ? "text-white" : "text-primary"
+                            }`}
+                          />
+                        </motion.span>
+                      </span>
                     </span>
                   </span>
 
@@ -355,14 +427,27 @@ function AdditionalModulesTeeth({
               }}
               className="flex gap-4 border-b border-border/60 py-5 last:border-0"
             >
-              <span className="relative block h-[58px] w-[54px] shrink-0">
+              <motion.span
+                animate={
+                  reduceMotion
+                    ? undefined
+                    : { y: [0, -5, 0], rotate: [0, 3, -3, 0] }
+                }
+                transition={{
+                  duration: 3.4 + (index % 3) * 0.5,
+                  delay: index * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="relative block h-[58px] w-[54px] shrink-0"
+              >
                 <ToothShape
                   uid={uid}
                   active
                   className="size-full drop-shadow-[0_8px_14px_rgba(124,58,237,0.22)]"
                 />
                 <Plus className="absolute left-1/2 top-[34%] size-4 -translate-x-1/2 -translate-y-1/2 text-white" />
-              </span>
+              </motion.span>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -610,16 +695,21 @@ function CtaFinal({ onContract }: { onContract: () => void }) {
           className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/25 to-transparent"
         />
 
-        {/* Dientes flotantes de fondo */}
+        {/* Dientes flotantes de fondo (más visibles y con más movimiento) */}
         <motion.div
           aria-hidden="true"
-          animate={{ y: [0, -16, 0], rotate: [-10, 8, -10] }}
+          animate={{
+            y: [0, -26, 0],
+            x: [0, 10, 0],
+            rotate: [-14, 12, -14],
+            scale: [1, 1.12, 1],
+          }}
           transition={{
-            duration: 8,
+            duration: 6,
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="pointer-events-none absolute left-[6%] top-[16%] hidden text-white/15 sm:block"
+          className="pointer-events-none absolute left-[5%] top-[14%] hidden text-white/30 drop-shadow-[0_0_18px_rgba(255,255,255,0.35)] sm:block"
         >
           <svg viewBox="0 0 24 24" className="size-14 fill-current">
             <path d={CTA_TOOTH_PATH} />
@@ -628,15 +718,60 @@ function CtaFinal({ onContract }: { onContract: () => void }) {
 
         <motion.div
           aria-hidden="true"
-          animate={{ y: [0, 18, 0], rotate: [12, -8, 12] }}
+          animate={{
+            y: [0, 28, 0],
+            x: [0, -12, 0],
+            rotate: [14, -12, 14],
+            scale: [1, 1.1, 1],
+          }}
           transition={{
-            duration: 10,
+            duration: 8,
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="pointer-events-none absolute bottom-[12%] right-[7%] hidden text-white/15 sm:block"
+          className="pointer-events-none absolute bottom-[10%] right-[6%] hidden text-white/30 drop-shadow-[0_0_18px_rgba(255,255,255,0.35)] sm:block"
         >
           <svg viewBox="0 0 24 24" className="size-20 fill-current">
+            <path d={CTA_TOOTH_PATH} />
+          </svg>
+        </motion.div>
+
+        <motion.div
+          aria-hidden="true"
+          animate={{
+            y: [0, -20, 0],
+            rotate: [10, -10, 10],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{
+            duration: 7,
+            delay: 1,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="pointer-events-none absolute bottom-[12%] left-[16%] hidden text-white/25 drop-shadow-[0_0_14px_rgba(255,255,255,0.3)] md:block"
+        >
+          <svg viewBox="0 0 24 24" className="size-10 fill-current">
+            <path d={CTA_TOOTH_PATH} />
+          </svg>
+        </motion.div>
+
+        <motion.div
+          aria-hidden="true"
+          animate={{
+            y: [0, 22, 0],
+            rotate: [-8, 12, -8],
+            scale: [1, 1.12, 1],
+          }}
+          transition={{
+            duration: 9,
+            delay: 0.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="pointer-events-none absolute right-[18%] top-[10%] hidden text-white/25 drop-shadow-[0_0_14px_rgba(255,255,255,0.3)] md:block"
+        >
+          <svg viewBox="0 0 24 24" className="size-12 fill-current">
             <path d={CTA_TOOTH_PATH} />
           </svg>
         </motion.div>
@@ -693,7 +828,7 @@ function CtaFinal({ onContract }: { onContract: () => void }) {
             />
 
             <motion.div
-              animate={{ y: [0, -5, 0] }}
+              animate={{ y: [0, -6, 0], rotate: [-4, 4, -4] }}
               transition={{
                 duration: 3.2,
                 repeat: Infinity,
@@ -704,7 +839,7 @@ function CtaFinal({ onContract }: { onContract: () => void }) {
               <motion.svg
                 viewBox="0 0 24 24"
                 aria-hidden="true"
-                animate={{ scale: [1, 1.15, 1] }}
+                animate={{ scale: [1, 1.2, 1] }}
                 transition={{
                   duration: 2.4,
                   repeat: Infinity,

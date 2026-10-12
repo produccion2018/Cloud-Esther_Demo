@@ -198,9 +198,13 @@ export function precioAnual(c: ConfigPlan) {
     : Math.round(c.precioMensual * 12 * (1 - c.descuentoAnual));
 }
 
+/** Precios comerciales: siempre en dólares (USD) y SIN impuestos (se muestran con «+ impuestos»). */
 export function formatearPrecio(n: number | null) {
-  return n === null ? "US$ —" : `US$\u00a0${n.toLocaleString("es-AR")}`;
+  return n === null ? "USD —" : `USD\u00a0${n.toLocaleString("es-AR")}`;
 }
+
+/** Leyenda que acompaña a TODO precio: no dice «IVA» porque se vende en varios países. */
+export const MAS_IMPUESTOS = "+ impuestos";
 
 const miles = (n: number) => n.toLocaleString("es-AR");
 const finito = Number.isFinite;

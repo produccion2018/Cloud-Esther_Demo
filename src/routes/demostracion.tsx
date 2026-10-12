@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { TelefonoPais } from "@/components/site/TelefonoPais";
 import { additionalModules, plans } from "@/lib/site-data";
 import {
   enviarSolicitudContratacion,
@@ -87,6 +88,7 @@ function Contratacion() {
   const [enviando, setEnviando] = useState(false);
   const [listo, setListo] = useState<SolicitudGuardada | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paisElegido, setPaisElegido] = useState("");
   const elegido = plans.find((p) => p.id === plan);
 
   const toggle = (m: string) =>
@@ -96,10 +98,6 @@ function Contratacion() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
-    if (v("telefono").replace(/[^0-9]/g, "").length < 7) {
-      setError("Escribí un teléfono completo (con código de área).");
-      return;
-    }
     setError(null);
     setEnviando(true);
     const r = await enviarSolicitudContratacion({
@@ -286,13 +284,26 @@ function Contratacion() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pais">País</Label>
-                      <select id="pais" name="pais" required className={SELECT} defaultValue="AR">
+                      <select
+                        id="pais"
+                        name="pais"
+                        required
+                        className={SELECT}
+                        value={paisElegido}
+                        onChange={(e) => setPaisElegido(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Elegí tu país
+                        </option>
                         {PAISES_DEMO.map((p) => (
                           <option key={p.codigo} value={p.codigo}>
                             {p.nombre}
                           </option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Tenés que estar en este país: lo verificamos por tu conexión.
+                      </p>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="ciudad">
@@ -336,17 +347,8 @@ function Contratacion() {
                       />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="telefono">Teléfono</Label>
-                      <Input
-                        id="telefono"
-                        name="telefono"
-                        type="tel"
-                        required
-                        maxLength={40}
-                        pattern="[+]?[0-9 ()\-.]+"
-                        title="Solo números, espacios, guiones y el signo +"
-                        placeholder="+54 11 5555 5555"
-                      />
+                      <Label htmlFor="telefono">Teléfono / WhatsApp</Label>
+                      <TelefonoPais pais={paisElegido} />
                     </div>
                     {/* Campo trampa para robots: las personas no lo ven */}
                     <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { TelefonoPais } from "@/components/site/TelefonoPais";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
 import { existeCuentaLocal, registrarCuenta } from "@/lib/cloud-esther/auth-store";
@@ -49,6 +50,7 @@ function Registro() {
   const [entrando, setEntrando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [verClave, setVerClave] = useState(false);
+  const [paisElegido, setPaisElegido] = useState("");
   // Con servidor: correo al que mandamos la bienvenida (y estado del "reenviar")
   const [correoEnviado, setCorreoEnviado] = useState("");
   const [reenvio, setReenvio] = useState<"" | "enviando" | "listo">("");
@@ -179,7 +181,8 @@ function Registro() {
                             id="pais"
                             name="pais"
                             required
-                            defaultValue=""
+                            value={paisElegido}
+                            onChange={(e) => setPaisElegido(e.target.value)}
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           >
                             <option value="" disabled>
@@ -191,19 +194,13 @@ function Registro() {
                               </option>
                             ))}
                           </select>
+                          <p className="text-[11px] text-muted-foreground">
+                            Tenés que estar en este país: lo verificamos por tu conexión.
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="telefono">Teléfono / WhatsApp</Label>
-                          <Input
-                            id="telefono"
-                            name="telefono"
-                            type="tel"
-                            required
-                            maxLength={40}
-                            minLength={7}
-                            inputMode="tel"
-                            placeholder="+54 9 11 5555 5555"
-                          />
+                          <TelefonoPais pais={paisElegido} />
                         </div>
                       </>
                     )}

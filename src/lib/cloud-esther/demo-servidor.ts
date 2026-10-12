@@ -21,7 +21,6 @@ export const PAISES_DEMO = [
   { codigo: "CO", nombre: "Colombia", prefijo: "57" },
   { codigo: "PE", nombre: "Perú", prefijo: "51" },
   { codigo: "EC", nombre: "Ecuador", prefijo: "593" },
-  { codigo: "VE", nombre: "Venezuela", prefijo: "58" },
   { codigo: "MX", nombre: "México", prefijo: "52" },
   { codigo: "ES", nombre: "España", prefijo: "34" },
 ] as const;

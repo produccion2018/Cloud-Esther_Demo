@@ -54,6 +54,7 @@ import type {
   AdminRole,
   AdminUser,
   Clinica,
+  Contratacion,
   ConsumoIAMensual,
   ConfigDemo,
   CuentaDemo,
@@ -87,6 +88,10 @@ import type {
    PUT    /admin/planes/:id              CambiosPlan                 → PlanConfig  (lo lee la web y la app)
    GET    /planes   (PÚBLICA, sin sesión)                            → PlanConfig[] (la web pública)
    GET    /admin/clinicas                                            → Clinica[]
+   GET    /admin/contrataciones                                      → Contratacion[]
+   PATCH  /admin/contrataciones/:id { notas }                        → Contratacion
+   POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion
+   POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
    GET    /admin/demos                                               → CuentaDemo[]
    PATCH  /admin/demos/:id               { estado?, notas?, responsable? } → CuentaDemo
@@ -660,6 +665,40 @@ export async function guardarPlan(id: PlanId, cambios: CambiosPlan): Promise<Pla
 export async function obtenerClinicas(): Promise<Clinica[]> {
   if (CON_BACKEND) return http("GET", "/admin/clinicas");
   return copia((await db()).clinicas);
+}
+
+/* ───────────── Contrataciones (Etapa 3b) ─────────────
+   Solo con backend: sin servidor no llegan solicitudes al panel. */
+
+const SOLO_CON_SERVIDOR = "Las contrataciones se manejan con el servidor conectado.";
+
+export async function obtenerContrataciones(): Promise<Contratacion[]> {
+  if (CON_BACKEND) return http("GET", "/admin/contrataciones");
+  return [];
+}
+
+/** Notas internas (Dueño, Socio y Secretaría). */
+export async function guardarNotasContratacion(a: { id: string; notas: string }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("PATCH", `/admin/contrataciones/${a.id}`, { notas: a.notas });
+}
+
+/** ACTIVAR (Dueño, Socio y Secretaría): después de revisar y cobrar. Crea la clínica. */
+export async function activarContratacion(a: {
+  id: string;
+  referenciaPago?: string;
+}): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/activar`, {
+    confirmo: true,
+    ...(a.referenciaPago?.trim() ? { referenciaPago: a.referenciaPago.trim() } : {}),
+  });
+}
+
+/** RECHAZAR (Dueño, Socio y Secretaría), con motivo. */
+export async function rechazarContratacion(a: { id: string; motivo: string }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/rechazar`, { motivo: a.motivo });
 }
 
 /** Montos del contrato de una clínica (tenant): monto inicial y monto mensual, en US$.

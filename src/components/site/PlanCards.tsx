@@ -18,6 +18,7 @@ import { plans, type Plan } from "@/lib/site-data";
 import type { PlanId } from "@/lib/cloud-esther/data";
 import {
   formatearPrecio,
+  MAS_IMPUESTOS,
   notaCapacidad,
   precioAnual,
   textoLimites,
@@ -155,14 +156,14 @@ export function PlanCard({
               {precio ?? formatearPrecio(monto)}
             </span>
             <span className="text-xs text-muted-foreground">
-              {precio ? notaPrecio : ciclo === "anual" ? "/ año" : "/ mes"}
+              {precio ? notaPrecio : `${ciclo === "anual" ? "/ año" : "/ mes"} ${MAS_IMPUESTOS}`}
             </span>
           </p>
         )}
         {/* Monto inicial: pago único al contratar (también lo define el panel). */}
         {!precio && config.precioInicial !== null && (
           <p className="relative mt-1 text-[12px] font-semibold text-foreground/80">
-            + {formatearPrecio(config.precioInicial)} de monto inicial (pago único al contratar)
+            + {formatearPrecio(config.precioInicial)} {MAS_IMPUESTOS} de monto inicial (pago único al contratar)
           </p>
         )}
         {!precio && monto !== null && ciclo === "anual" && (
@@ -318,6 +319,12 @@ export function PlanGrid({
           ))}
         </div>
       </div>
+      {hayPrecios && (
+        <p className="-mt-4 mb-6 text-center text-xs text-muted-foreground">
+          Precios en dólares (USD), sin impuestos. Los impuestos dependen de tu país: antes de pagar
+          vas a ver el total exacto.
+        </p>
+      )}
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((plan, index) => (
           <PlanCard

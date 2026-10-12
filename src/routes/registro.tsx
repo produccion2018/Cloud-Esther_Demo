@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { TelefonoPais } from "@/components/site/TelefonoPais";
 import { plans } from "@/lib/site-data";
 import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
 import { existeCuentaLocal, registrarCuenta } from "@/lib/cloud-esther/auth-store";
@@ -16,7 +17,7 @@ import {
   problemaClaveDemo,
   registrarDemoEnServidor,
 } from "@/lib/cloud-esther/demo-servidor";
-import { formatearPrecio, textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
+import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -49,6 +50,7 @@ function Registro() {
   const [entrando, setEntrando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [verClave, setVerClave] = useState(false);
+  const [paisElegido, setPaisElegido] = useState("");
   // Con servidor: correo al que mandamos la bienvenida (y estado del "reenviar")
   const [correoEnviado, setCorreoEnviado] = useState("");
   const [reenvio, setReenvio] = useState<"" | "enviando" | "listo">("");
@@ -79,7 +81,7 @@ function Registro() {
                     Probá Cloud Esther con tu propia clínica.
                   </h1>
                   <p className="mt-4 text-muted-foreground">
-                    Creá tu cuenta y explorá la plataforma.
+                    Demo gratis: creá tu cuenta de prueba y explorá la plataforma. No se cobra nada.
                   </p>
                 </div>
 
@@ -179,7 +181,8 @@ function Registro() {
                             id="pais"
                             name="pais"
                             required
-                            defaultValue=""
+                            value={paisElegido}
+                            onChange={(e) => setPaisElegido(e.target.value)}
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           >
                             <option value="" disabled>
@@ -191,19 +194,13 @@ function Registro() {
                               </option>
                             ))}
                           </select>
+                          <p className="text-[11px] text-muted-foreground">
+                            Tenés que estar en este país: lo verificamos por tu conexión.
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="telefono">Teléfono / WhatsApp</Label>
-                          <Input
-                            id="telefono"
-                            name="telefono"
-                            type="tel"
-                            required
-                            maxLength={40}
-                            minLength={7}
-                            inputMode="tel"
-                            placeholder="+54 9 11 5555 5555"
-                          />
+                          <TelefonoPais pais={paisElegido} />
                         </div>
                       </>
                     )}
@@ -242,7 +239,19 @@ function Registro() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Seleccioná tu plan</Label>
+                    <Label>¿Qué plan querés probar?</Label>
+                    <p className="-mt-1 text-[11px] text-muted-foreground">
+                      Es solo para el demo gratis: no se cobra nada.{" "}
+                      ¿Ya querés contratar?{" "}
+                      <Link
+                        to="/demostracion"
+                        search={{ plan: selected }}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Contratar servicio
+                      </Link>
+                      .
+                    </p>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {plans.map((p) => (
                         <motion.button
@@ -257,9 +266,6 @@ function Registro() {
                           }`}
                         >
                           <span className="block text-sm font-semibold">{p.name}</span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {formatearPrecio(config[mapSitePlanToPlanId(p.id)].precioMensual)} / mes
-                          </span>
                           <span className="mt-1.5 block text-[11px] leading-4 text-foreground/80">
                             {textoLimites(config[mapSitePlanToPlanId(p.id)]).pacientes}
                           </span>
@@ -287,7 +293,7 @@ function Registro() {
                       </>
                     ) : (
                       <>
-                        Crear cuenta y entrar al panel <ArrowRight className="size-4" />
+                        Crear mi demo gratis <ArrowRight className="size-4" />
                       </>
                     )}
                   </Button>

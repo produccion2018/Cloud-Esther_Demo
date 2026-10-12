@@ -13,15 +13,16 @@ const API_URL = (import.meta.env["VITE_ADMIN_API_URL"] as string | undefined)?.r
 /** ¿El demo se controla desde el servidor? */
 export const DEMO_EN_SERVIDOR = Boolean(API_URL);
 
+/** Países donde está Cloud Esther, con su código de teléfono. La persona tiene que ESTAR en el país
+ *  que elige (el servidor lo verifica por su conexión) y el teléfono tiene que ser de ese país. */
 export const PAISES_DEMO = [
-  { codigo: "AR", nombre: "Argentina" },
-  { codigo: "CL", nombre: "Chile" },
-  { codigo: "CO", nombre: "Colombia" },
-  { codigo: "PE", nombre: "Perú" },
-  { codigo: "EC", nombre: "Ecuador" },
-  { codigo: "VE", nombre: "Venezuela" },
-  { codigo: "MX", nombre: "México" },
-  { codigo: "ES", nombre: "España" },
+  { codigo: "AR", nombre: "Argentina", prefijo: "54" },
+  { codigo: "CL", nombre: "Chile", prefijo: "56" },
+  { codigo: "CO", nombre: "Colombia", prefijo: "57" },
+  { codigo: "PE", nombre: "Perú", prefijo: "51" },
+  { codigo: "EC", nombre: "Ecuador", prefijo: "593" },
+  { codigo: "MX", nombre: "México", prefijo: "52" },
+  { codigo: "ES", nombre: "España", prefijo: "34" },
 ] as const;
 
 export type EstadoDemoServidor = {

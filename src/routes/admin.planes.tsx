@@ -221,12 +221,12 @@ function TarjetaPlan({
         <div className="col-span-2">
           {campo(
             "inicial",
-            "Monto inicial · pago único al contratar",
-            <span className="font-bold text-primary">US$</span>,
+            "Monto inicial · pago único al contratar (USD, sin impuestos)",
+            <span className="font-bold text-primary">USD</span>,
             { vacio: "Sin definir" },
           )}
         </div>
-        {campo("precio", "Precio mensual", <span className="font-bold text-primary">US$</span>, {
+        {campo("precio", "Precio mensual (USD, sin impuestos)", <span className="font-bold text-primary">USD</span>, {
           vacio: "Sin definir",
         })}
         {campo("descuento", "Descuento anual", <span className="font-bold text-primary">%</span>, {

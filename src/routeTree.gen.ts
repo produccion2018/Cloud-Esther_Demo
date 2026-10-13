@@ -50,6 +50,8 @@ import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
 import { Route as DemoBiRouteImport } from './routes/demo_.bi'
 import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
@@ -283,6 +285,16 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugClaveRoute = CSlugClaveRouteImport.update({
+  id: '/c/$slug_/clave',
+  path: '/c/$slug/clave',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoAutomatizacionesRoute = DemoAutomatizacionesRouteImport.update({
   id: '/demo_/automatizaciones',
   path: '/demo/automatizaciones',
@@ -462,6 +474,8 @@ export interface FileRoutesByFullPath {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/c/$slug': typeof CSlugRoute
+  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
@@ -531,6 +545,8 @@ export interface FileRoutesByTo {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/c/$slug': typeof CSlugRoute
+  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
@@ -602,6 +618,8 @@ export interface FileRoutesById {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo_/admin': typeof DemoAdminRoute
   '/demo_/agenda': typeof DemoAgendaRoute
+  '/c/$slug': typeof CSlugRoute
+  '/c/$slug_/clave': typeof CSlugClaveRoute
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
   '/demo_/comunicaciones': typeof DemoComunicacionesRoute
@@ -674,6 +692,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo/admin'
     | '/demo/agenda'
+    | '/c/$slug'
+    | '/c/$slug/clave'
     | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
@@ -743,6 +763,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo/admin'
     | '/demo/agenda'
+    | '/c/$slug'
+    | '/c/$slug/clave'
     | '/demo/automatizaciones'
     | '/demo/bi'
     | '/demo/comunicaciones'
@@ -813,6 +835,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo_/admin'
     | '/demo_/agenda'
+    | '/c/$slug'
+    | '/c/$slug_/clave'
     | '/demo_/automatizaciones'
     | '/demo_/bi'
     | '/demo_/comunicaciones'
@@ -863,6 +887,8 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   DemoAdminRoute: typeof DemoAdminRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
+  CSlugRoute: typeof CSlugRoute
+  CSlugClaveRoute: typeof CSlugClaveRoute
   DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
   DemoBiRoute: typeof DemoBiRoute
   DemoComunicacionesRoute: typeof DemoComunicacionesRoute
@@ -1182,6 +1208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug_/clave': {
+      id: '/c/$slug_/clave'
+      path: '/c/$slug/clave'
+      fullPath: '/c/$slug/clave'
+      preLoaderRoute: typeof CSlugClaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/automatizaciones': {
       id: '/demo_/automatizaciones'
       path: '/demo/automatizaciones'
@@ -1445,6 +1485,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   DemoAdminRoute: DemoAdminRoute,
   DemoAgendaRoute: DemoAgendaRoute,
+  CSlugRoute: CSlugRoute,
+  CSlugClaveRoute: CSlugClaveRoute,
   DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,
   DemoBiRoute: DemoBiRoute,
   DemoComunicacionesRoute: DemoComunicacionesRoute,

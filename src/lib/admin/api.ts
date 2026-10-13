@@ -766,6 +766,12 @@ export async function activarContratacion(a: {
   });
 }
 
+/** Etapa 8a: reenviar al Administrador de la clínica el enlace para crear su contraseña. */
+export async function reenviarAccesoClinica(a: { id: string }): Promise<{ direccion: string }> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/reenviar-acceso`, {});
+}
+
 /** RECHAZAR (Dueño, Socio y Secretaría), con motivo. */
 export async function rechazarContratacion(a: { id: string; motivo: string }): Promise<Contratacion> {
   if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);

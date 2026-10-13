@@ -11,6 +11,7 @@ import {
   agregarNotaContratacion,
   marcarTareaHecha,
   rechazarContratacion,
+  reenviarAccesoClinica,
 } from "@/lib/admin/api";
 import { useAccion, useContrataciones } from "@/lib/admin/consultas";
 import { NOMBRE_PLAN, enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
@@ -212,6 +213,7 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
                 <span className="font-semibold">{c.nota}</span>
               </p>
             )}
+            {c.estado === "activada" && puedeActivar && <ReenviarAcceso c={c} />}
           </div>
         )}
 
@@ -394,6 +396,39 @@ function HistorialNotas({ c }: { c: Contratacion }) {
   );
 }
 
+/* Etapa 8a: al activar, el contacto queda como Administrador de su clínica y le llega un enlace
+   para elegir su contraseña. Si no le llegó o venció, desde acá se le reenvía (el panel nunca ve
+   las personas ni los datos de la clínica). */
+function ReenviarAcceso({ c }: { c: Contratacion }) {
+  const reenviar = useAccion(
+    reenviarAccesoClinica,
+    ["contrataciones"],
+    `Le reenviamos el acceso a ${c.contacto.email}`,
+  );
+  return (
+    <div className="mt-3 rounded-xl bg-muted/50 p-3 text-xs">
+      <p>
+        Al activarla, a <strong>{c.contacto.email}</strong> le llegó el enlace para crear su contraseña de
+        Administrador. ¿No le llegó o se le venció?
+      </p>
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-2"
+        disabled={reenviar.isPending}
+        onClick={() => reenviar.mutate({ id: c.id })}
+      >
+        <Mail className="h-4 w-4" /> Reenviar acceso
+      </Button>
+      {reenviar.data && (
+        <p className="mt-2">
+          Dirección de la clínica: <span className="font-semibold">{reenviar.data.direccion}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function DialogoActivar({ c, onCerrar }: { c: Contratacion; onCerrar: () => void }) {
   const [confirmo, setConfirmo] = useState(false);
   const [referencia, setReferencia] = useState("");
@@ -407,7 +442,7 @@ function DialogoActivar({ c, onCerrar }: { c: Contratacion; onCerrar: () => void
     <DialogoFormulario
       abierto
       titulo={`Activar ${c.clinica}`}
-      descripcion={`Plan ${NOMBRE_PLAN[c.plan]} · ${c.ciclo}. Se crea la clínica y le llega un correo de bienvenida a ${c.contacto.email}.`}
+      descripcion={`Plan ${NOMBRE_PLAN[c.plan]} · ${c.ciclo}. Se crea la clínica y a ${c.contacto.email} le llega el correo de bienvenida con el enlace para crear su contraseña de Administrador.`}
       onCerrar={onCerrar}
       textoGuardar="Activar clínica"
       guardando={activar.isPending}

@@ -1,4 +1,4 @@
-import { CheckCircle2, FileSignature, Mail, Phone, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileSignature, Mail, Phone, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   activarContratacion,
-  guardarNotasContratacion,
+  agregarNotaContratacion,
+  marcarTareaHecha,
   rechazarContratacion,
 } from "@/lib/admin/api";
 import { useAccion, useContrataciones } from "@/lib/admin/consultas";
@@ -19,7 +20,8 @@ import type { Contratacion, EstadoContratacion } from "@/lib/admin/tipos";
 /* Ubicación: src/components/admin/contrataciones.tsx
    SOLICITUDES DE CONTRATACIÓN (formulario «Contratar servicio» de la web). Es distinto del demo.
    · Las ven el Dueño, el Socio y la Secretaría (y les llega un correo con cada una).
-   · Todos pueden escribir notas internas.
+   · Todos dejan notas en el HISTORIAL (quién y cuándo). Una nota puede ser una TAREA PENDIENTE:
+     se ve en rojo hasta que alguien la marca como hecha (pedido de Camilo, 12 oct).
    · «Activar» (después de revisar y cobrar) y «Rechazar»: también la Secretaría
      (decisión de Camilo, 11 oct 20:44). Soporte no las ve. */
 
@@ -102,6 +104,12 @@ export function SolicitudesContratacion() {
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     {NOMBRE_PLAN[c.plan]} · {c.ciclo}
                   </span>
+                  {(c.tareasPendientes ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-bold text-destructive-foreground">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {c.tareasPendientes} tarea{c.tareasPendientes === 1 ? "" : "s"}
+                    </span>
+                  )}
                   {c.estado === "pendiente" && c.pagoEnLinea && c.pagoEnLinea !== "sin_iniciar" && (
                     <Pildora tono={PAGO_EN_LINEA[c.pagoEnLinea].tono}>{PAGO_EN_LINEA[c.pagoEnLinea].texto}</Pildora>
                   )}
@@ -117,8 +125,7 @@ export function SolicitudesContratacion() {
         <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-lg">
           {seleccionada && (
             <DetalleContratacion
-              // Si otra persona cambia las notas, el detalle se actualiza (no se pisan)
-              key={`${seleccionada.id}:${seleccionada.notas}:${seleccionada.estado}`}
+              key={`${seleccionada.id}:${seleccionada.estado}`}
               c={seleccionada}
               puedeActivar={permisos.activarContrataciones(role)}
             />
@@ -130,10 +137,8 @@ export function SolicitudesContratacion() {
 }
 
 function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActivar: boolean }) {
-  const [notas, setNotas] = useState(c.notas);
   const [activando, setActivando] = useState(false);
   const [rechazando, setRechazando] = useState(false);
-  const guardarNotas = useAccion(guardarNotasContratacion, ["contrataciones"], "Notas guardadas");
 
   const filas: [string, string][] = [
     ["Número", c.codigo],
@@ -189,7 +194,7 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
               </div>
             ) : (
               <p className="mt-2 text-xs font-semibold">
-                El Dueño o el Socio la activan después del pago. Podés dejar notas abajo.
+                El Dueño o el Socio la activan después del pago. Podés dejar notas en el historial.
               </p>
             )}
           </div>
@@ -255,32 +260,136 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
           </div>
         )}
 
-        <div className="rounded-2xl border border-border p-4">
-          <Campo label="Notas internas del equipo" ayuda="Las ve solo el equipo de Cloud Esther.">
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              maxLength={2000}
-              rows={4}
-              className={`${INPUT} h-auto py-2`}
-              placeholder="Ej: hablé por WhatsApp, paga por transferencia el viernes"
-            />
-          </Campo>
-          <div className="mt-2 flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={guardarNotas.isPending || notas === c.notas}
-              onClick={() => guardarNotas.mutate({ id: c.id, notas })}
-            >
-              Guardar notas
-            </Button>
-          </div>
-        </div>
+        <HistorialNotas c={c} />
       </div>
 
       {activando && <DialogoActivar c={c} onCerrar={() => setActivando(false)} />}
       {rechazando && <DialogoRechazar c={c} onCerrar={() => setRechazando(false)} />}
+    </div>
+  );
+}
+
+/* HISTORIAL DE NOTAS: cada nota queda con quién y cuándo (no se borran ni se editan).
+   Las TAREAS PENDIENTES se ven en rojo hasta que alguien aprieta «Marcar como hecha». */
+function HistorialNotas({ c }: { c: Contratacion }) {
+  const [texto, setTexto] = useState("");
+  const [tarea, setTarea] = useState(false);
+  const agregar = useAccion(agregarNotaContratacion, ["contrataciones"], (a) =>
+    a.tarea ? "Tarea pendiente agregada" : "Nota agregada",
+  );
+  const hecha = useAccion(marcarTareaHecha, ["contrataciones"], "Tarea marcada como hecha");
+  const historial = c.historial ?? [];
+  const pendientes = historial.filter((n) => n.tarea && !n.hecha);
+  const resto = historial.filter((n) => !(n.tarea && !n.hecha));
+
+  const guardar = () => {
+    const t = texto.trim();
+    if (!t) return;
+    agregar.mutate(
+      { id: c.id, texto: t, tarea },
+      {
+        onSuccess: () => {
+          setTexto("");
+          setTarea(false);
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-border p-4">
+      <p className="text-sm font-bold">Historial y tareas del equipo</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Lo ve solo el equipo de Cloud Esther. Queda quién lo escribió y cuándo; no se borra.
+      </p>
+
+      {/* Nueva nota */}
+      <div className="mt-3 space-y-2">
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          maxLength={1000}
+          rows={3}
+          className={`${INPUT} h-auto py-2`}
+          placeholder={tarea ? "Ej: llamar al cliente el viernes para confirmar el pago" : "Ej: hablé por WhatsApp, paga por transferencia"}
+          aria-label="Nueva nota"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold">
+            <input
+              type="checkbox"
+              checked={tarea}
+              onChange={(e) => setTarea(e.target.checked)}
+              className="size-4 accent-destructive"
+            />
+            <span className={tarea ? "text-destructive" : ""}>Es una tarea pendiente (se ve en rojo)</span>
+          </label>
+          <Button size="sm" disabled={agregar.isPending || !texto.trim()} onClick={guardar}>
+            {tarea ? "Agregar tarea" : "Agregar nota"}
+          </Button>
+        </div>
+        <p className="text-right text-[11px] text-muted-foreground">{texto.length}/1000</p>
+      </div>
+
+      {/* Tareas pendientes (en rojo) */}
+      {pendientes.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {pendientes.map((n) => (
+            <li key={n.id} className="rounded-xl border-2 border-destructive/60 bg-destructive/10 p-3">
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-destructive">
+                <AlertCircle className="h-3.5 w-3.5" /> Tarea pendiente
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-destructive">{n.texto}</p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] text-muted-foreground">
+                  {n.autor} · {fecha(n.fecha, true)}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={hecha.isPending}
+                  onClick={() => hecha.mutate({ id: c.id, notaId: n.id })}
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Marcar como hecha
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Resto del historial */}
+      {resto.length > 0 && (
+        <ol className="mt-3 space-y-2 border-l-2 border-border pl-3">
+          {resto.map((n) => (
+            <li key={n.id} className="text-sm">
+              {n.tarea && (
+                <p className="flex items-center gap-1 text-[11px] font-bold text-success">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Tarea hecha
+                  {n.hechaPor ? ` por ${n.hechaPor}` : ""}
+                  {n.hechaEl ? ` · ${fecha(n.hechaEl, true)}` : ""}
+                </p>
+              )}
+              <p className={`whitespace-pre-wrap ${n.tarea ? "text-muted-foreground line-through" : ""}`}>{n.texto}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {n.autor} · {fecha(n.fecha, true)}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {/* Notas de antes (cuando era un solo cuadro de texto) */}
+      {c.notas && (
+        <div className="mt-3 rounded-xl bg-muted/50 p-3">
+          <p className="text-[11px] font-semibold text-muted-foreground">Notas anteriores</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm">{c.notas}</p>
+        </div>
+      )}
+
+      {historial.length === 0 && !c.notas && (
+        <p className="mt-3 text-xs text-muted-foreground">Todavía no hay notas.</p>
+      )}
     </div>
   );
 }

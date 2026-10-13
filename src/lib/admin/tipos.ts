@@ -127,6 +127,21 @@ export type Contratacion = {
   nota: string;
   /** Pago en línea (Paddle): sin_iniciar · iniciado · pagado · fallido */
   pagoEnLinea?: "sin_iniciar" | "iniciado" | "pagado" | "fallido";
+  /** Historial de notas del equipo (la más nueva primero). Las tareas sin hacer se ven en rojo. */
+  historial?: NotaContratacion[];
+  /** Cuántas tareas faltan hacer */
+  tareasPendientes?: number;
+};
+
+export type NotaContratacion = {
+  id: string;
+  texto: string;
+  autor: string;
+  fecha: string;
+  tarea: boolean;
+  hecha: boolean;
+  hechaPor: string | null;
+  hechaEl: string | null;
 };
 
 /* ───────────── Facturación en línea (Paddle) — solo Dueño y Socio ───────────── */

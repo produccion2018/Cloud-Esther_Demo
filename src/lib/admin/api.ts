@@ -91,6 +91,8 @@ import type {
    GET    /admin/clinicas                                            → Clinica[]
    GET    /admin/contrataciones                                      → Contratacion[]
    PATCH  /admin/contrataciones/:id { notas }                        → Contratacion
+   POST   /admin/contrataciones/:id/notas { texto, tarea }           → Contratacion (historial)
+   POST   /admin/contrataciones/:id/notas/:notaId/hecha              → Contratacion
    POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion
    POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
@@ -688,6 +690,18 @@ export async function obtenerFacturacion(): Promise<Facturacion> {
 export async function guardarNotasContratacion(a: { id: string; notas: string }): Promise<Contratacion> {
   if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
   return http("PATCH", `/admin/contrataciones/${a.id}`, { notas: a.notas });
+}
+
+/** Historial: agregar una nota o una tarea pendiente (no se borran ni se editan). */
+export async function agregarNotaContratacion(a: { id: string; texto: string; tarea: boolean }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/notas`, { texto: a.texto, tarea: a.tarea });
+}
+
+/** Historial: marcar una tarea como hecha (queda quién y cuándo). */
+export async function marcarTareaHecha(a: { id: string; notaId: string }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/notas/${a.notaId}/hecha`, {});
 }
 
 /** ACTIVAR (Dueño, Socio y Secretaría): después de revisar y cobrar. Crea la clínica. */

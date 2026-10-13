@@ -53,6 +53,7 @@ import type {
 import type {
   AdminRole,
   AdminUser,
+  Permiso,
   Clinica,
   Contratacion,
   Facturacion,
@@ -362,6 +363,12 @@ export async function iniciarSesionAdmin(email: string, clave: string): Promise<
 }
 
 /** Devuelve el enlace solo en modo sin backend (para poder probar sin correo). */
+/** Mis datos y permisos de ahora (si el Dueño cambió mis permisos, se ven al instante). */
+export async function obtenerMiUsuario(): Promise<AdminUser | null> {
+  if (!CON_BACKEND) return null;
+  return http<AdminUser>("GET", "/admin/auth/sesion");
+}
+
 export async function solicitarRecuperacion(email: string): Promise<{ enlacePrueba?: string }> {
   const correo = email.trim().toLowerCase();
   if (CON_BACKEND) {
@@ -436,6 +443,7 @@ export async function invitarAdmin(datos: {
   nombre: string;
   email: string;
   rol: AdminRole;
+  permisos?: Permiso[];
 }): Promise<{ usuario: AdminUser; clavePrueba?: string }> {
   if (CON_BACKEND) return { usuario: await http<AdminUser>("POST", "/admin/equipo", datos) };
   await espera();
@@ -461,7 +469,10 @@ export async function invitarAdmin(datos: {
   return { usuario, clavePrueba };
 }
 
-export async function actualizarAdmin(id: string, cambios: { rol?: AdminRole; activo?: boolean }) {
+export async function actualizarAdmin(
+  id: string,
+  cambios: { rol?: AdminRole; activo?: boolean; permisos?: Permiso[] },
+) {
   if (CON_BACKEND) return http<AdminUser>("PATCH", `/admin/equipo/${id}`, cambios);
   await espera();
   const b = await db();

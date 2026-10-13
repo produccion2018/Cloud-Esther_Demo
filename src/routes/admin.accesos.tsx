@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy, Minus, UserPlus } from "lucide-react";
+import { Copy, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Cargando, Seccion } from "@/components/admin/bits";
 import { RestrictedView } from "@/components/admin/restricted";
 import {
+  PERMISOS,
+  PERMISOS_DEL_ROL,
   ROLES,
   ROLES_ASIGNABLES,
+  accesoTotal,
   canAccess,
   roleDescription,
   roleLabel,
@@ -29,6 +32,7 @@ import { actualizarAdmin, invitarAdmin } from "@/lib/admin/api";
 import { useAccion, useEquipo } from "@/lib/admin/consultas";
 import { haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
+import type { AdminUser, Permiso } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/accesos")({
@@ -44,37 +48,12 @@ export const Route = createFileRoute("/admin/accesos")({
 const SELECT =
   "h-9 rounded-lg border border-input bg-card px-2 text-xs font-semibold outline-none focus:border-primary/50 disabled:opacity-60";
 
-/** Qué puede hacer cada perfil (lo mismo que aplica el menú). */
-const MATRIZ: [string, string][] = [
-  ["Resumen", "/admin"],
-  ["Demos e interesados", "/admin/demos"],
-  ["Clínicas clientes", "/admin/clinicas"],
-  ["Pagos y cobranza", "/admin/pagos"],
-  ["Planes y precios", "/admin/planes"],
-  ["Consumo de IA", "/admin/ia"],
-  ["Personal", "/admin/personal"],
-  ["Nómina y pagos", "/admin/nomina"],
-  ["Gastos y proveedores", "/admin/gastos"],
-  ["Soporte técnico", "/admin/soporte"],
-  ["Auditoría", "/admin/auditoria"],
-  ["Reportes", "/admin/reportes"],
-  ["Notificaciones", "/admin/notificaciones"],
-  ["Mi perfil y contraseña", "/admin/cuenta"],
-  ["Equipo y accesos", "/admin/accesos"],
-];
-const EXTRAS: [string, AdminRole[]][] = [
-  ["Ver importes y facturación", ["owner"]],
-  ["Editar precios y límites", ["owner"]],
-  ["Seguimiento de demos", ["owner", "partner", "customer-care"]],
-  ["Gestionar tickets", ["owner", "support", "customer-care"]],
-  ["Ver sueldos y nómina", ["owner", "partner"]],
-];
-
 function AccessPage() {
   const { role } = useRole();
   const sesion = useSesionAdmin();
   const { data: equipo, isLoading } = useEquipo();
   const [invitar, setInvitar] = useState(false);
+  const [editando, setEditando] = useState<AdminUser | null>(null);
   const cambiar = useAccion(
     (a: { id: string; c: Parameters<typeof actualizarAdmin>[1] }) => actualizarAdmin(a.id, a.c),
     ["equipo"],
@@ -85,7 +64,7 @@ function AccessPage() {
   return (
     <AdminShell
       title="Equipo y accesos"
-      description="Quién puede entrar al panel interno y con qué perfil: Dueño, Socio, Soporte técnico (técnico en sistemas / desarrollo) y Asistente / Secretaría."
+      description="Quién puede entrar al panel interno y qué puede usar cada persona. Los permisos se eligen persona por persona."
       actions={
         <Button onClick={() => setInvitar(true)}>
           <UserPlus className="mr-1.5 h-4 w-4" /> Dar acceso
@@ -112,7 +91,7 @@ function AccessPage() {
 
       <Seccion
         titulo="Personas con acceso"
-        descripcion="Cambiá el perfil o quitá el acceso. El Dueño no se puede desactivar."
+        descripcion="Elegí los permisos de cada persona, cambiá su perfil o quitá el acceso. El Dueño no se puede desactivar."
         sinPadding
       >
         {isLoading ? (
@@ -124,6 +103,7 @@ function AccessPage() {
                 <tr className="bg-primary/[0.035] text-left text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                   <th className="px-5 py-2.5">Persona</th>
                   <th className="px-3 py-2.5">Perfil</th>
+                  <th className="px-3 py-2.5">Permisos</th>
                   <th className="px-3 py-2.5">Último ingreso</th>
                   <th className="px-5 py-2.5 text-right">Acceso</th>
                 </tr>
@@ -161,6 +141,23 @@ function AccessPage() {
                           ))}
                         </select>
                       </td>
+                      <td className="px-3 py-3">
+                        {accesoTotal(a.rol) ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Todo
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={cambiar.isPending}
+                            onClick={() => setEditando(a)}
+                          >
+                            <KeyRound className="mr-1 h-3.5 w-3.5" />
+                            {(a.permisos ?? PERMISOS_DEL_ROL[a.rol]).length} permisos
+                          </Button>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-xs text-muted-foreground">
                         {haceCuanto(a.ultimoAcceso)}
                       </td>
@@ -187,48 +184,39 @@ function AccessPage() {
       </Seccion>
 
       <Seccion
-        titulo="Qué ve cada perfil"
-        descripcion="Esto define el menú y los permisos. El backend también lo valida."
-        sinPadding
+        titulo="Cómo funcionan los permisos"
+        descripcion="El menú de cada persona muestra solo lo que tiene permitido. El servidor también lo controla."
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="bg-primary/[0.035] text-left text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                <th className="px-5 py-2.5">Sección o permiso</th>
-                {ROLES.map((r) => (
-                  <th key={r} className="px-3 py-2.5 text-center">
-                    {roleLabel[r]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ...MATRIZ.map(([l, ruta]) => [l, ROLES.filter((r) => canAccess(r, ruta))] as const),
-                ...EXTRAS,
-              ].map(([l, roles]) => (
-                <tr key={l} className="border-t border-border/60">
-                  <td className="px-5 py-2.5 font-medium">{l}</td>
-                  {ROLES.map((r) => (
-                    <td key={r} className="px-3 py-2.5 text-center">
-                      {roles.includes(r) ? (
-                        <Check className="mx-auto h-4 w-4 text-success" aria-label="Sí" />
-                      ) : (
-                        <Minus
-                          className="mx-auto h-4 w-4 text-muted-foreground/50"
-                          aria-label="No"
-                        />
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+          <li>
+            <b className="text-foreground">Dueño y Socio</b> tienen todo, siempre.
+          </li>
+          <li>
+            A cada persona le tildás lo que puede usar (por ejemplo: una asistente para Demos y Atención,
+            otra para Nómina y Atención). El perfil solo elige las casillas iniciales.
+          </li>
+          <li>
+            Si le quitás un permiso a alguien, lo pierde <b className="text-foreground">al instante</b>.
+            Cada cambio queda registrado en la actividad del equipo.
+          </li>
+          <li>
+            <b className="text-foreground">Equipo y accesos</b>, <b className="text-foreground">Planes y precios</b>,
+            cambiar <b className="text-foreground">Países</b> y la configuración del demo son siempre solo del Dueño y el
+            Socio.
+          </li>
+        </ul>
       </Seccion>
 
+      {editando && (
+        <DialogoPermisos
+          persona={editando}
+          guardando={cambiar.isPending}
+          onGuardar={(permisos) =>
+            cambiar.mutate({ id: editando.id, c: { permisos } }, { onSuccess: () => setEditando(null) })
+          }
+          onCerrar={() => setEditando(null)}
+        />
+      )}
       <DialogoInvitar abierto={invitar} onCerrar={() => setInvitar(false)} />
     </AdminShell>
   );
@@ -238,6 +226,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [rol, setRol] = useState<AdminRole>("customer-care");
+  const [elegidos, setElegidos] = useState<Permiso[]>(PERMISOS_DEL_ROL["customer-care"]);
   const [error, setError] = useState<string | null>(null);
   const [clave, setClave] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
@@ -247,6 +236,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
     setNombre("");
     setEmail("");
     setRol("customer-care");
+    setElegidos(PERMISOS_DEL_ROL["customer-care"]);
     setError(null);
     setClave(null);
     setEnviado(false);
@@ -259,7 +249,7 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError("Escribí un correo válido.");
     setError(null);
     invitar.mutate(
-      { nombre, email, rol },
+      { nombre, email, rol, ...(accesoTotal(rol) ? {} : { permisos: elegidos }) },
       {
         onSuccess: (r) => {
           setClave(r.clavePrueba ?? null);
@@ -346,7 +336,10 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
                       type="radio"
                       name="rol"
                       checked={rol === r}
-                      onChange={() => setRol(r)}
+                      onChange={() => {
+                        setRol(r);
+                        setElegidos(PERMISOS_DEL_ROL[r]);
+                      }}
                       className="mt-1 accent-[var(--primary)]"
                     />
                     <span>
@@ -359,6 +352,12 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
                 ))}
               </div>
             </div>
+            {!accesoTotal(rol) && (
+              <div className="space-y-2">
+                <Label>Permisos</Label>
+                <CasillasPermisos elegidos={elegidos} onCambiar={setElegidos} />
+              </div>
+            )}
             {error && (
               <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -374,6 +373,77 @@ function DialogoInvitar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
             </DialogFooter>
           </form>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Casillas de permisos (se usan al invitar y al editar a una persona). */
+function CasillasPermisos({
+  elegidos,
+  onCambiar,
+}: {
+  elegidos: Permiso[];
+  onCambiar: (p: Permiso[]) => void;
+}) {
+  const alternar = (p: Permiso) =>
+    onCambiar(elegidos.includes(p) ? elegidos.filter((x) => x !== p) : [...elegidos, p]);
+  return (
+    <div className="grid max-h-[46vh] gap-1.5 overflow-y-auto pr-1">
+      {PERMISOS.map((p) => (
+        <label
+          key={p.id}
+          className={cn(
+            "flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 text-sm transition",
+            elegidos.includes(p.id) ? "border-primary bg-primary/[0.05]" : "border-border hover:border-primary/40",
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={elegidos.includes(p.id)}
+            onChange={() => alternar(p.id)}
+            className="mt-0.5 size-4 accent-[var(--primary)]"
+          />
+          <span>
+            <span className="block font-semibold">{p.nombre}</span>
+            <span className="block text-xs text-muted-foreground">{p.detalle}</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function DialogoPermisos({
+  persona,
+  guardando,
+  onGuardar,
+  onCerrar,
+}: {
+  persona: AdminUser;
+  guardando: boolean;
+  onGuardar: (p: Permiso[]) => void;
+  onCerrar: () => void;
+}) {
+  const [elegidos, setElegidos] = useState<Permiso[]>(persona.permisos ?? PERMISOS_DEL_ROL[persona.rol]);
+  return (
+    <Dialog open onOpenChange={(v) => !v && onCerrar()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Permisos de {persona.nombre}</DialogTitle>
+          <DialogDescription>
+            Tildá lo que puede usar en el panel. Se aplica al instante y queda registrado.
+          </DialogDescription>
+        </DialogHeader>
+        <CasillasPermisos elegidos={elegidos} onCambiar={setElegidos} />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onCerrar}>
+            Cancelar
+          </Button>
+          <Button type="button" disabled={guardando} onClick={() => onGuardar(elegidos)}>
+            Guardar permisos
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

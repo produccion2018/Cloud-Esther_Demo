@@ -8,12 +8,31 @@
  *  customer-care = Asistente / Secretaría. */
 export type AdminRole = "owner" | "partner" | "support" | "customer-care";
 
+/** Permisos que se eligen persona por persona en «Equipo y accesos» (el servidor los valida). */
+export type Permiso =
+  | "demos"
+  | "contrataciones"
+  | "cobranza"
+  | "importes"
+  | "atencion"
+  | "soporte"
+  | "personal"
+  | "nomina"
+  | "gastos"
+  | "paises"
+  | "ia"
+  | "reportes"
+  | "auditoria"
+  | "actividad";
+
 export type AdminUser = {
   id: string;
   nombre: string;
   email: string;
   telefono: string;
   rol: AdminRole;
+  /** Permisos que tiene (Dueño y Socio: todos). Lo manda el servidor. */
+  permisos?: Permiso[];
   activo: boolean;
   ultimoAcceso: string | null; // ISO
   creado: string; // ISO

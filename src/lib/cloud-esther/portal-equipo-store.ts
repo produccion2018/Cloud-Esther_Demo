@@ -65,17 +65,11 @@ export const storeEquipoPortal = crearStorePorEmpresa<Estado>(
         ultimoIngreso: new Date(Date.now() - 3 * 3_600_000).toISOString(),
         ingresos: 18,
       },
-      "3": {
-        codigo: codigoInicial("3"),
+      "2": {
+        codigo: codigoInicial("2"),
         estado: "Activo",
         ultimoIngreso: new Date(Date.now() - 5 * 3_600_000).toISOString(),
         ingresos: 11,
-      },
-      "8": {
-        codigo: codigoInicial("8"),
-        estado: "Activo",
-        ultimoIngreso: new Date(Date.now() - 1 * 3_600_000).toISOString(),
-        ingresos: 9,
       },
       "4": {
         codigo: codigoInicial("4"),

@@ -19,8 +19,10 @@ const QUE_HAY_ADENTRO = [
 export function MarcoClinica({ nombre, children }: { nombre: string | null; children: ReactNode }) {
   const titulo = nombre ?? "Tu clínica";
   return (
+    <>
+    {/* El aviso va FUERA de la grilla: si no, ocupa el lugar de la mitad violeta */}
+    <Toaster position="top-center" richColors closeButton />
     <div className="grid min-h-screen bg-background lg:grid-cols-[1.1fr_1fr]">
-      <Toaster position="top-center" richColors closeButton />
 
       {/* Mitad de la clínica (solo computadora) */}
       <aside
@@ -76,6 +78,7 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
         <p className="pb-6 text-center text-xs text-muted-foreground">Cloud Esther</p>
       </main>
     </div>
+    </>
   );
 }
 

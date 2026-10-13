@@ -42,6 +42,8 @@ import { toast } from "sonner";
 import { EquipoClinicaPanel } from "@/components/clinica/equipo";
 import { MarcoClinica, MensajeError } from "@/components/clinica/marco";
 import { MiCuentaClinica } from "@/components/clinica/mi-cuenta";
+import { CabeceraModulo, ClinicaShell, PLAN_DE_CODIGO, modulosDe } from "@/components/clinica/shell";
+import { ModuleIcon, etiquetaModulo } from "@/lib/cloud-esther/data";
 import { ToothLogo } from "@/components/admin/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -334,24 +336,60 @@ const inicialesDe = (nombre: string) =>
     .map((x) => x[0]?.toUpperCase() ?? "")
     .join("") || "?";
 
+// Qué hace cada módulo (cabecera de la pantalla)
+const DETALLE_MODULO: Record<string, string> = {
+  agenda: "Los turnos del día de cada profesional",
+  pacientes: "Fichas, datos de contacto y cobertura",
+  historia: "Evoluciones, antecedentes y alergias",
+  odontograma: "Hallazgos y tratamientos pieza por pieza",
+  odontograma3d: "La boca completa en tres dimensiones",
+  recetas: "Recetas para imprimir o enviar",
+  estudios: "Radiografías y estudios de cada paciente",
+  laboratorio: "Trabajos enviados al laboratorio",
+  tratamientos: "Planes de tratamiento y seguimiento",
+  comunicaciones: "Mensajes con tus pacientes",
+  notificaciones: "Avisos de la clínica",
+  presupuestos: "Presupuestos armados y aprobados",
+  facturacion: "Cobros y facturas",
+  configuracion: "Datos de la clínica, horarios y apariencia",
+  equipo: "Quién trabaja en la clínica y con qué acceso",
+};
+
 function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }) {
   const esAdmin = sesion.usuario.rol === "admin";
   const ultimaActividad = useRef(Date.now());
-  const [pestana, setPestana] = useState<"inicio" | "equipo" | "cuenta">("inicio");
+  const visibles = modulosDe(sesion);
+  const desdeDireccion = () => {
+    const h = typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "");
+    return h === "cuenta" || visibles.some((m) => m.id === h) ? h : "dashboard";
+  };
+  const [vista, setVista] = useState<string>(desdeDireccion);
   const [equipo, setEquipo] = useState<EquipoClinica | null>(null);
+
+  // La sección queda en la dirección (#agenda): al recargar se vuelve al mismo lugar
+  const ir = (id: string) => {
+    setVista(id);
+    window.history.replaceState(null, "", id === "dashboard" ? window.location.pathname : `#${id}`);
+    window.scrollTo({ top: 0 });
+  };
 
   // Al abrir: datos y rol de AHORA (si el Administrador le cambió el rol, se ve al instante)
   useEffect(() => {
     void refrescarSesionClinica(slug).catch(() => undefined);
   }, [slug]);
 
+  // Si le cambiaron el rol y ya no puede ver esta sección, vuelve al inicio
+  useEffect(() => {
+    if (vista !== "dashboard" && vista !== "cuenta" && !visibles.some((m) => m.id === vista)) setVista("dashboard");
+  }, [vista, visibles]);
+
   // Resumen del equipo para el Inicio (solo el Administrador lo puede ver)
   useEffect(() => {
-    if (!esAdmin || pestana !== "inicio") return;
+    if (!esAdmin || vista !== "dashboard") return;
     verEquipo(slug)
       .then(setEquipo)
       .catch(() => undefined);
-  }, [slug, esAdmin, pestana]);
+  }, [slug, esAdmin, vista]);
 
   useEffect(() => {
     const marcar = () => {
@@ -382,88 +420,30 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
   const hoy = fecha.charAt(0).toUpperCase() + fecha.slice(1);
   const plan = sesion.clinica.plan ? sesion.clinica.plan.charAt(0) + sesion.clinica.plan.slice(1).toLowerCase() : null;
   const planWeb = PLANES_WEB.find((p) => p.id === PLAN_WEB[sesion.clinica.plan ?? ""]);
-  const PESTANAS = [
-    { id: "inicio" as const, nombre: "Inicio", icono: LayoutGrid },
-    ...(esAdmin ? [{ id: "equipo" as const, nombre: "Equipo", icono: UsersRound }] : []),
-    { id: "cuenta" as const, nombre: "Mi cuenta", icono: UserRound },
-  ];
   const activas = equipo?.personas.filter((p) => p.estado === "activa").length ?? null;
   const invitadas = equipo?.personas.filter((p) => p.estado === "invitada").length ?? null;
   const libres = equipo ? (equipo.limite === null ? null : Math.max(0, equipo.limite - equipo.usados)) : undefined;
+  const planId = PLAN_DE_CODIGO[sesion.clinica.plan ?? ""] ?? "inicial";
+  const modulo = visibles.find((m) => m.id === vista);
+  const titulo = vista === "cuenta" ? "Mi cuenta" : vista === "dashboard" ? "Inicio" : (modulo ? etiquetaModulo(modulo, planId) : "Inicio");
 
   return (
-    <div className="ce-clinica min-h-screen bg-[oklch(0.985_0.006_300)] dark:bg-background">
+    <>
       <Toaster position="top-right" richColors closeButton />
-
-      {/* Franja de la clínica */}
-      <div className="ce-franja relative overflow-hidden text-white">
-        <ToothLogo className="pointer-events-none absolute -right-10 -top-6 h-72 w-72 opacity-[0.06]" />
-        <header className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-5 sm:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
-              <ToothLogo className="h-5 w-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[15px] font-bold leading-tight">{sesion.clinica.nombre}</span>
-              {plan && <span className="block text-[11px] font-medium text-white/70">Plan {plan}</span>}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 rounded-full bg-white/10 py-1 pl-1 pr-1 ring-1 ring-white/20 backdrop-blur sm:pl-3">
-            <span className="hidden text-right leading-tight sm:block">
-              <span className="block text-[13px] font-semibold">{sesion.usuario.nombre}</span>
-              <span className="block text-[11px] text-white/70">{sesion.usuario.rolNombre}</span>
-            </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[oklch(0.42_0.2_292)] sm:ml-1.5">
-              {inicialesDe(sesion.usuario.nombre)}
-            </span>
-            <button
-              type="button"
-              onClick={salir}
-              title="Salir"
-              aria-label="Salir"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/20 hover:text-white"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </header>
-
-        <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-8">
-          <p className="ce-entra text-sm font-medium text-white/75">{hoy}</p>
-          <h1 className="ce-entra mt-1.5 text-[2rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.75rem]">
-            {saludo}, {primerNombre}
-          </h1>
-          <nav
-            className="ce-entra-2 mt-8 inline-flex gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/20 backdrop-blur"
-            aria-label="Secciones"
-          >
-            {PESTANAS.map((t) => {
-              const Icono = t.icono;
-              const activa = pestana === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setPestana(t.id)}
-                  aria-current={activa ? "page" : undefined}
-                  className={
-                    activa
-                      ? "inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[oklch(0.42_0.2_292)] shadow-[0_6px_16px_-8px_rgba(30,0,60,0.6)] transition-all"
-                      : "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white"
-                  }
-                >
-                  <Icono className="h-4 w-4" />
-                  {t.nombre}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      <main className="ce-entra-3 relative mx-auto -mt-10 max-w-6xl px-4 pb-16 sm:px-8">
-        {pestana === "inicio" && (
+      <ClinicaShell sesion={sesion} actual={vista} onIr={ir} onSalir={salir} titulo={titulo}>
+        {vista === "dashboard" && (
           <div className="space-y-6">
+            <section className="ce-franja ce-entra relative overflow-hidden rounded-[1.75rem] px-6 py-8 text-white shadow-[0_24px_48px_-28px_rgba(60,10,120,0.8)] sm:px-9 sm:py-10">
+              <ToothLogo className="pointer-events-none absolute -right-6 -top-6 h-56 w-56 opacity-[0.08]" />
+              <p className="relative text-sm font-medium text-white/75">{hoy}</p>
+              <h1 className="relative mt-1.5 text-[2rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
+                {saludo}, {primerNombre}
+              </h1>
+              <p className="relative mt-2 max-w-xl text-sm text-white/80">
+                {sesion.usuario.rolNombre} en {sesion.clinica.nombre}
+                {plan ? ` · Plan ${plan}` : ""}
+              </p>
+            </section>
             {esAdmin && (
               <section className="ce-tarjeta p-6 sm:p-8">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -485,27 +465,52 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
                     icono={UserPlus}
                     titulo="Sumar personas"
                     detalle="Una por una o pegando tu lista"
-                    onClick={() => setPestana("equipo")}
+                    onClick={() => ir("equipo")}
                   />
                   <Atajo
                     icono={KeyRound}
                     titulo="Mi cuenta"
                     detalle="Tus datos y tu contraseña"
-                    onClick={() => setPestana("cuenta")}
+                    onClick={() => ir("cuenta")}
                   />
                 </div>
               </section>
             )}
             {!esAdmin && (
               <section className="ce-tarjeta p-6 sm:p-8">
-                <h2 className="text-xl font-extrabold tracking-tight">Bienvenido a {sesion.clinica.nombre}</h2>
-                <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-                  Este es tu acceso personal. Desde acá vas a trabajar con la agenda y los pacientes de la clínica.
+                <h2 className="text-xl font-extrabold tracking-tight">Tus accesos</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Lo que podés usar en {sesion.clinica.nombre} como {sesion.usuario.rolNombre}.
                 </p>
+                <ul className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibles
+                    .filter((m) => m.id !== "dashboard")
+                    .map((m) => (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => ir(m.id)}
+                          className="ce-levanta group flex w-full items-center gap-3 rounded-2xl bg-[oklch(0.975_0.01_300)] p-3 pr-4 text-left ring-1 ring-transparent hover:bg-card hover:ring-border dark:bg-muted/40"
+                        >
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-10px_rgba(76,29,149,0.8)]"
+                            style={{ background: "var(--gradient-brand)" }}
+                          >
+                            <ModuleIcon name={m.icon} className="h-[18px] w-[18px]" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold">{etiquetaModulo(m, planId)}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{DETALLE_MODULO[m.id] ?? ""}</span>
+                          </span>
+                          <ChevronRight className="ce-flecha h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                </ul>
               </section>
             )}
 
-            {planWeb && (
+            {esAdmin && planWeb && (
               <section className="ce-tarjeta-suave p-6 sm:p-8">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
@@ -546,10 +551,50 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
             )}
           </div>
         )}
-        {pestana === "equipo" && esAdmin && <EquipoClinicaPanel slug={slug} />}
-        {pestana === "cuenta" && <MiCuentaClinica slug={slug} sesion={sesion} />}
-      </main>
-    </div>
+        {vista === "equipo" && esAdmin && (
+          <>
+            <CabeceraModulo icono="team" titulo="Equipo" detalle={DETALLE_MODULO["equipo"]!} />
+            <EquipoClinicaPanel slug={slug} />
+          </>
+        )}
+        {vista === "cuenta" && (
+          <>
+            <CabeceraModulo icono="users" titulo="Mi cuenta" detalle="Tus datos y tu contraseña" />
+            <MiCuentaClinica slug={slug} sesion={sesion} />
+          </>
+        )}
+        {modulo && vista !== "dashboard" && vista !== "equipo" && (
+          <>
+            <CabeceraModulo icono={modulo.icon} titulo={etiquetaModulo(modulo, planId)} detalle={DETALLE_MODULO[modulo.id] ?? ""} />
+            <ModuloEnPreparacion nombre={etiquetaModulo(modulo, planId)} icono={modulo.icon} />
+          </>
+        )}
+      </ClinicaShell>
+    </>
+  );
+}
+
+/* Mientras un módulo todavía no guarda en el servidor, NO se muestra con datos de ejemplo:
+   así nadie carga información real de un paciente en un lugar que no la guarda. */
+function ModuloEnPreparacion({ nombre, icono }: { nombre: string; icono: string }) {
+  return (
+    <section className="ce-tarjeta relative overflow-hidden px-6 py-14 text-center sm:px-10 sm:py-20">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.10),transparent_60%)]"
+      />
+      <span
+        className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-[1.25rem] text-white shadow-[0_18px_36px_-16px_rgba(76,29,149,0.9)]"
+        style={{ background: "var(--gradient-brand)" }}
+      >
+        <ModuleIcon name={icono} className="h-7 w-7" />
+      </span>
+      <h2 className="relative mt-6 text-xl font-extrabold tracking-tight">{nombre} se está preparando para tu clínica</h2>
+      <p className="relative mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        Estamos dejando este módulo listo para guardar los datos de tu clínica de forma segura. Te avisamos apenas esté
+        disponible.
+      </p>
+    </section>
   );
 }
 

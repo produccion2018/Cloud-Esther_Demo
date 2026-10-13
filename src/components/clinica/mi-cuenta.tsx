@@ -39,7 +39,7 @@ export function MiCuentaClinica({ slug, sesion }: { slug: string; sesion: Sesion
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="rounded-2xl border bg-card p-5 text-sm">
+      <div className="rounded-3xl bg-card p-6 text-sm shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border">
         <h2 className="font-bold">Mis datos</h2>
         <dl className="mt-3 space-y-2">
           <div>
@@ -56,7 +56,7 @@ export function MiCuentaClinica({ slug, sesion }: { slug: string; sesion: Sesion
           </div>
         </dl>
       </div>
-      <form className="space-y-3 rounded-2xl border bg-card p-5" onSubmit={guardar} noValidate>
+      <form className="space-y-3 rounded-3xl bg-card p-6 ring-1 ring-border" onSubmit={guardar} noValidate>
         <h2 className="font-bold">Cambiar mi contraseña</h2>
         <CampoClave id="actual" label="Contraseña actual" value={actual} onChange={setActual} autoComplete="current-password" />
         <CampoClave id="nueva" label="Contraseña nueva" value={nueva} onChange={setNueva} />

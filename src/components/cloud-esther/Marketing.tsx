@@ -2533,9 +2533,13 @@ function Formulario({ ctx }: { ctx: Ctx }) {
     <div className="space-y-3">
       <Encabezado
         icon={Globe}
-        titulo="Formulario web de captación"
-        descripcion="Ponelo en tu sitio o en la bio de Instagram: cada envío entra como lead."
+        titulo="Formulario para los pacientes de tu clínica"
+        descripcion="Ponelo en el sitio web de tu clínica o en la bio de Instagram: tus pacientes piden turno y cada pedido entra como lead."
       />
+      <p className="rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 text-sm">
+        <b>Es para tus pacientes</b> (primera consulta, limpieza, ortodoncia…). No es el formulario para contratar Cloud
+        Esther.
+      </p>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="card-grad space-y-3 p-4">
           <p className="text-sm font-semibold">Personalizar</p>
@@ -2605,7 +2609,7 @@ function Formulario({ ctx }: { ctx: Ctx }) {
         </div>
         <div className="rounded-3xl bg-gradient-to-br from-violet-100 via-white to-primary/15 p-6">
           <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Vista previa (probalo)
+            Así lo ven tus pacientes (probalo)
           </p>
           <FormularioCaptacion
             onEnviado={() => ctx.onToast("¡Llegó un lead nuevo desde el formulario web!")}

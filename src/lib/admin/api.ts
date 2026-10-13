@@ -55,6 +55,7 @@ import type {
   AdminUser,
   Clinica,
   Contratacion,
+  Facturacion,
   ConsumoIAMensual,
   ConfigDemo,
   CuentaDemo,
@@ -675,6 +676,12 @@ const SOLO_CON_SERVIDOR = "Las contrataciones se manejan con el servidor conecta
 export async function obtenerContrataciones(): Promise<Contratacion[]> {
   if (CON_BACKEND) return http("GET", "/admin/contrataciones");
   return [];
+}
+
+/** Facturación en línea (Paddle): cobros, suscripciones y reembolsos. Solo Dueño y Socio. */
+export async function obtenerFacturacion(): Promise<Facturacion> {
+  if (CON_BACKEND) return http("GET", "/admin/facturacion");
+  return { pagosEnLinea: false, suscripciones: [], pagos: [], ajustes: [] };
 }
 
 /** Notas internas (Dueño, Socio y Secretaría). */

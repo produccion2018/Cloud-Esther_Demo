@@ -32,7 +32,13 @@ export type SolicitudContratacion = {
   web: string;
 };
 
-export type SolicitudGuardada = { email: string; planNombre: string; modulos: number };
+export type SolicitudGuardada = {
+  email: string;
+  planNombre: string;
+  modulos: number;
+  /** Con pago en línea: lleva al resumen para pagar (/pagar#t=...) */
+  pagoToken?: string;
+};
 
 const CLAVE = "cloud-esther:contrataciones";
 const SIN_CONEXION = "No pudimos enviar la solicitud. Probá de nuevo en unos segundos.";
@@ -68,7 +74,9 @@ export async function enviarSolicitudContratacion(
         }),
       });
       if (!r.ok) return { ok: false, error: (await r.text().catch(() => "")) || SIN_CONEXION };
-      return { ok: true, solicitud };
+      const res = (await r.json().catch(() => ({}))) as { pagoToken?: unknown };
+      const pagoToken = typeof res.pagoToken === "string" ? res.pagoToken : undefined;
+      return { ok: true, solicitud: { ...solicitud, ...(pagoToken ? { pagoToken } : {}) } };
     } catch {
       return { ok: false, error: SIN_CONEXION };
     }

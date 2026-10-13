@@ -24,12 +24,19 @@ import {
   Pildora,
   Tabla,
 } from "@/components/admin/formularios";
-import { permisos, useRole } from "@/components/admin/role";
+import { accesoTotal, permisos, useRole } from "@/components/admin/role";
+import { UsoIAEquipo } from "@/components/admin/uso-ia-equipo";
+import {
+  BotonExcel,
+  RegistroLlamadas,
+  RespuestasListas,
+} from "@/components/admin/herramientas-atencion";
 import { AdminShell } from "@/components/admin/shell";
+import { descargarExcel } from "@/lib/admin/excel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { guardarEn } from "@/lib/admin/api";
+import { guardarEn, nuevoNumero } from "@/lib/admin/api";
 import { useAccion, useClinicas, useColeccion, useEquipo } from "@/lib/admin/consultas";
 import { fecha, haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
@@ -91,7 +98,7 @@ const hoyISO = () => {
 };
 const abierto = (c: CasoAtencion) => c.estado !== "Resuelto";
 
-type Vista = "bandeja" | "clinica" | "seguimientos";
+type Vista = "bandeja" | "clinica" | "seguimientos" | "llamadas" | "respuestas" | "ia";
 
 function useAutor() {
   return useSesionAdmin()?.usuario.nombre ?? "Equipo";
@@ -113,6 +120,8 @@ function AtencionPage() {
   const [abiertoId, setAbiertoId] = useState<string | null>(null);
   const [nuevo, setNuevo] = useState<TipoAtencion | null>(null);
   const [clinica, setClinica] = useState<string>("");
+  const [llamadaNueva, setLlamadaNueva] = useState(false);
+  const { data: llamadas } = useColeccion("llamadas");
   const lista = casos ?? [];
   const hoy = hoyISO();
   const seleccionado = lista.find((c) => c.id === abiertoId) ?? null;
@@ -124,7 +133,14 @@ function AtencionPage() {
       actions={
         editable ? (
           <>
-            <Button size="sm" variant="outline" onClick={() => setNuevo("Llamada")}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setVista("llamadas");
+                setLlamadaNueva(true);
+              }}
+            >
               <PhoneCall className="mr-1 h-4 w-4" /> Registrar llamada
             </Button>
             <Button size="sm" onClick={() => setNuevo("Consulta")}>
@@ -197,18 +213,44 @@ function AtencionPage() {
                 label: "Seguimientos",
                 cantidad: lista.filter((c) => abierto(c) && c.proximoSeguimiento).length,
               },
+              {
+                id: "llamadas",
+                label: "Llamadas",
+                cantidad: (llamadas ?? []).filter((l) => l.proximoSeguimiento && l.proximoSeguimiento <= hoy).length || undefined,
+              },
+              { id: "respuestas", label: "Respuestas listas" },
+              // Solo Dueño y Socio: presupuesto y consumo de IA de cada persona
+              ...(accesoTotal(role) ? [{ id: "ia" as const, label: "Uso de IA del equipo 🔒" }] : []),
             ]}
           />
 
-          {vista === "bandeja" ? (
-            <Bandeja lista={lista} onAbrir={setAbiertoId} />
-          ) : vista === "clinica" ? (
-            <PorClinica
-              lista={lista}
-              clinica={clinica}
-              onClinica={setClinica}
-              onAbrir={setAbiertoId}
+          {vista === "ia" && accesoTotal(role) ? (
+            <UsoIAEquipo />
+          ) : vista === "llamadas" ? (
+            <RegistroLlamadas
+              editable={editable}
+              nueva={llamadaNueva}
+              onCerrarNueva={() => setLlamadaNueva(false)}
             />
+          ) : vista === "respuestas" ? (
+            <RespuestasListas area="Atención" editable={editable} />
+          ) : vista === "bandeja" ? (
+            <>
+              <div className="flex justify-end">
+                <BotonExcel texto="Descargar casos en Excel" onClick={() => exportarCasos(lista)} />
+              </div>
+              <Bandeja lista={lista} onAbrir={setAbiertoId} />
+            </>
+          ) : vista === "clinica" ? (
+            <>
+              <PorClinica
+                lista={lista}
+                clinica={clinica}
+                onClinica={setClinica}
+                onAbrir={setAbiertoId}
+              />
+              {clinica && <RegistroLlamadas editable={editable} clinica={clinica} />}
+            </>
           ) : (
             <Seguimientos lista={lista} onAbrir={setAbiertoId} />
           )}
@@ -230,6 +272,27 @@ function AtencionPage() {
       />
     </AdminShell>
   );
+}
+
+function exportarCasos(lista: CasoAtencion[]) {
+  descargarExcel("casos-atencion", "Casos", [
+    ["Número", "Creado", "Clínica", "Tipo", "Canal", "Asunto", "Detalle", "Contacto", "Prioridad", "Estado", "Responsable", "Próximo seguimiento", "Ticket"],
+    ...lista.map((c) => [
+      c.id,
+      c.creado.slice(0, 10),
+      c.clinica,
+      c.tipo,
+      c.canal,
+      c.asunto,
+      c.detalle,
+      c.contacto,
+      c.prioridad,
+      c.estado,
+      c.responsable ?? "",
+      c.proximoSeguimiento ?? "",
+      c.ticket ?? "",
+    ]),
+  ]);
 }
 
 function FilaCaso({ c, onAbrir }: { c: CasoAtencion; onAbrir: (id: string) => void }) {
@@ -824,7 +887,7 @@ function FormNuevoCaso({
     const ahora = new Date().toISOString();
     guardar.mutate(
       {
-        id: `AT-${2032 + siguiente}`,
+        id: nuevoNumero("AT"),
         clinica: f.clinica,
         tipo: f.tipo,
         canal: f.canal,

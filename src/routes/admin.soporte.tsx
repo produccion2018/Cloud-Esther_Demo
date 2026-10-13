@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Inbox, LifeBuoy, Plus, Timer } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Cargando, KpiCard, Seccion, Vacio } from "@/components/admin/bits";
 import {
@@ -12,11 +12,21 @@ import {
   Tabla,
 } from "@/components/admin/formularios";
 import { permisos, useRole } from "@/components/admin/role";
+import { BotonExcel, RespuestasListas } from "@/components/admin/herramientas-atencion";
+import {
+  FichaClinica,
+  Guias,
+  LIMITE_HORAS,
+  TiempoTicket,
+  fueraDeTiempo,
+  horasTicket,
+} from "@/components/admin/herramientas-soporte";
 import { AdminShell } from "@/components/admin/shell";
+import { descargarExcel } from "@/lib/admin/excel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { guardarEn, nuevoIdLocal } from "@/lib/admin/api";
+import { guardarEn, nuevoIdLocal, nuevoNumero } from "@/lib/admin/api";
 import { useAccion, useColeccion, useEquipo } from "@/lib/admin/consultas";
 import { fecha, haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
@@ -67,17 +77,20 @@ const ESTADO_TONO: Record<EstadoTicket, "primario" | "alerta" | "ok" | "neutro">
 const SELECT =
   "h-8 rounded-lg border border-input bg-card px-2 text-xs font-semibold outline-none focus:border-primary/50 disabled:opacity-60";
 
-type Vista = "tickets" | "incidentes" | "tareas";
+type Vista = "tickets" | "ficha" | "guias" | "respuestas" | "incidentes" | "tareas";
 
 function SupportPage() {
   const { data: tickets } = useColeccion("ticketsSoporte");
   const { data: incidentes } = useColeccion("incidentes");
   const { data: tareas } = useColeccion("tareas");
   const [vista, setVista] = useState<Vista>("tickets");
+  const { role } = useRole();
+  const editableSoporte = permisos.gestionarTickets(role);
+  const [ticketDesdeFicha, setTicketDesdeFicha] = useState<string | null>(null);
   return (
     <AdminShell
       title="Soporte técnico"
-      description="Problemas y consultas de las clínicas, incidentes de la plataforma y tareas internas del equipo. Asigná responsables y seguí cada caso hasta cerrarlo."
+      description="Problemas y consultas de las clínicas, ficha técnica de cada clínica, guías y soluciones, incidentes de la plataforma y tareas internas. Cada ticket muestra cuánto lleva y se pone en rojo si se pasa del tiempo."
     >
       <Pestanas
         valor={vista}
@@ -88,6 +101,9 @@ function SupportPage() {
             label: "Tickets",
             cantidad: (tickets ?? []).filter((t) => ABIERTOS.includes(t.estado)).length,
           },
+          { id: "ficha", label: "Ficha de clínica" },
+          { id: "guias", label: "Guías y soluciones" },
+          { id: "respuestas", label: "Respuestas listas" },
           {
             id: "incidentes",
             label: "Incidentes",
@@ -100,7 +116,24 @@ function SupportPage() {
           },
         ]}
       />
-      {vista === "tickets" ? <Tickets /> : vista === "incidentes" ? <Incidentes /> : <Tareas />}
+      {vista === "tickets" ? (
+        <Tickets abrirId={ticketDesdeFicha} onAbierto={() => setTicketDesdeFicha(null)} />
+      ) : vista === "ficha" ? (
+        <FichaClinica
+          onAbrirTicket={(id) => {
+            setTicketDesdeFicha(id);
+            setVista("tickets");
+          }}
+        />
+      ) : vista === "guias" ? (
+        <Guias editable={editableSoporte} />
+      ) : vista === "respuestas" ? (
+        <RespuestasListas area="Soporte" editable={editableSoporte} />
+      ) : vista === "incidentes" ? (
+        <Incidentes />
+      ) : (
+        <Tareas />
+      )}
     </AdminShell>
   );
 }
@@ -109,12 +142,18 @@ function useAutor() {
   return useSesionAdmin()?.usuario.nombre ?? "Equipo";
 }
 
-function Tickets() {
+function Tickets({ abrirId, onAbierto }: { abrirId: string | null; onAbierto: () => void }) {
   const { role } = useRole();
   const editable = permisos.gestionarTickets(role);
   const { data: tickets, isLoading } = useColeccion("ticketsSoporte");
-  const [filtro, setFiltro] = useState<"abiertos" | EstadoTicket | "todos">("abiertos");
-  const [abierto, setAbierto] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<"abiertos" | "tarde" | EstadoTicket | "todos">("abiertos");
+  const [abierto, setAbierto] = useState<string | null>(abrirId);
+  useEffect(() => {
+    if (abrirId) {
+      setAbierto(abrirId);
+      onAbierto();
+    }
+  }, [abrirId, onAbierto]);
   const [nuevo, setNuevo] = useState(false);
   if (isLoading) return <Cargando />;
   const lista = tickets ?? [];
@@ -133,14 +172,16 @@ function Tickets() {
         ? true
         : filtro === "abiertos"
           ? ABIERTOS.includes(t.estado)
-          : t.estado === filtro,
+          : filtro === "tarde"
+            ? fueraDeTiempo(t)
+            : t.estado === filtro,
     )
     .sort((a, b) => b.abierto.localeCompare(a.abierto));
   const seleccionado = lista.find((t) => t.id === abierto) ?? null;
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-6">
         <KpiCard
           accent
           label="Abiertos"
@@ -162,6 +203,13 @@ function Tickets() {
           )}
           hint="Abiertos"
           icon={<AlertTriangle className="h-4 w-4" />}
+          tono="destructive"
+        />
+        <KpiCard
+          label="Fuera de tiempo"
+          value={String(lista.filter((t) => fueraDeTiempo(t)).length)}
+          hint={`Alta ${LIMITE_HORAS.Alta} h · Media ${LIMITE_HORAS.Media} h · Baja ${LIMITE_HORAS.Baja} h`}
+          icon={<Timer className="h-4 w-4" />}
           tono="destructive"
         />
         <KpiCard
@@ -191,11 +239,13 @@ function Tickets() {
               aria-label="Estado"
             >
               <option value="abiertos">Abiertos</option>
+              <option value="tarde">Fuera de tiempo</option>
               <option value="todos">Todos</option>
               {ESTADOS.map((e) => (
                 <option key={e}>{e}</option>
               ))}
             </select>
+            <BotonExcel onClick={() => exportarTickets(filas)} />
             {editable && (
               <Button size="sm" onClick={() => setNuevo(true)}>
                 <Plus className="mr-1 h-4 w-4" /> Nuevo ticket
@@ -210,7 +260,7 @@ function Tickets() {
             <Vacio titulo="No hay tickets en este estado" />
           </div>
         ) : (
-          <Tabla columnas={["Ticket", "Categoría", "Prioridad", "Responsable", "Estado"]}>
+          <Tabla columnas={["Ticket", "Categoría", "Prioridad", "Responsable", "Tiempo", "Estado"]}>
             {filas.map((t) => (
               <tr
                 key={t.id}
@@ -229,6 +279,9 @@ function Tickets() {
                 </td>
                 <td className="px-3 py-3 text-xs">
                   {t.responsable ?? <span className="text-muted-foreground">Sin asignar</span>}
+                </td>
+                <td className="px-3 py-3">
+                  <TiempoTicket t={t} />
                 </td>
                 <td className="py-3 pl-3 pr-5">
                   <Pildora tono={ESTADO_TONO[t.estado]}>{t.estado}</Pildora>
@@ -249,6 +302,26 @@ function Tickets() {
       <NuevoTicket abierto={nuevo} onCerrar={() => setNuevo(false)} siguiente={lista.length} />
     </>
   );
+}
+
+function exportarTickets(lista: TicketSoporte[]) {
+  descargarExcel("tickets-soporte", "Tickets", [
+    ["Ticket", "Abierto", "Clínica", "Asunto", "Categoría", "Prioridad", "Estado", "Responsable", "Resuelto", "Horas", "Fuera de tiempo", "Descripción"],
+    ...lista.map((t) => [
+      t.id,
+      t.abierto.slice(0, 16).replace("T", " "),
+      t.clinica,
+      t.asunto,
+      t.categoria,
+      t.prioridad,
+      t.estado,
+      t.responsable ?? "",
+      t.resuelto ? t.resuelto.slice(0, 16).replace("T", " ") : "",
+      Math.round(horasTicket(t) * 10) / 10,
+      fueraDeTiempo(t) ? "Sí" : "No",
+      t.descripcion,
+    ]),
+  ]);
 }
 
 function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: boolean }) {
@@ -473,7 +546,7 @@ function NuevoTicket({
         const ahora = new Date().toISOString();
         crear.mutate(
           {
-            id: `T-${1043 + siguiente}`,
+            id: nuevoNumero("T"),
             asunto: f.asunto.trim(),
             descripcion: f.descripcion.trim(),
             clinica: f.clinica.trim() || "Interno",

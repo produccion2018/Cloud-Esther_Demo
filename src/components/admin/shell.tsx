@@ -12,6 +12,7 @@ import {
   Headset,
   LayoutDashboard,
   LifeBuoy,
+  Megaphone,
   LogOut,
   Menu,
   Moon,
@@ -89,6 +90,7 @@ const nav: NavGrupo[] = [
     items: [
       { to: "/admin/atencion", label: "Atención a clínicas", icon: PhoneCall },
       { to: "/admin/soporte", label: "Soporte técnico", icon: LifeBuoy },
+      { to: "/admin/marketing", label: "Redes y marketing", icon: Megaphone },
       { to: "/admin/notificaciones", label: "Notificaciones", icon: Bell },
     ],
   },

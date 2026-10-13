@@ -1,7 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  Armchair,
   BellRing,
+  ChartNoAxesColumn,
+  CircleCheck,
+  FileText,
+  FlaskConical,
+  MailClock,
+  Mic,
+  Package,
+  Pill,
+  Plug,
+  ScanLine,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
   CalendarDays,
   ChevronRight,
   Eye,
@@ -33,6 +48,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
+import { plans as PLANES_WEB } from "@/lib/site-data";
+import { cn } from "@/lib/utils";
 import {
   CLINICA_CON_SERVIDOR,
   infoPublicaClinica,
@@ -280,18 +297,35 @@ function CampoIcono({
 // Cierre por inactividad en el navegador (el servidor también corta a las 2 horas)
 const INACTIVIDAD_MS = 2 * 60 * 60 * 1000;
 
-// Lo que incluye el plan, en palabras de la clínica (lo técnico —perfil, seguridad, configuración— no se muestra)
-const FUNCIONES: { codigo: string; nombre: string; detalle: string; icono: typeof CalendarDays }[] = [
-  { codigo: "agenda", nombre: "Agenda", detalle: "Turnos del día de cada profesional", icono: CalendarDays },
-  { codigo: "patients", nombre: "Pacientes", detalle: "Fichas, datos y contacto", icono: UsersRound },
-  { codigo: "clinical_history", nombre: "Historia clínica", detalle: "Evoluciones y antecedentes", icono: FileHeart },
-  { codigo: "odontogram_2d", nombre: "Odontograma 2D", detalle: "Hallazgos pieza por pieza", icono: Smile },
-  { codigo: "odontogram_3d", nombre: "Odontograma 3D", detalle: "La boca completa en tres dimensiones", icono: Smile },
-  { codigo: "reminders", nombre: "Recordatorios", detalle: "Avisos de turno a los pacientes", icono: BellRing },
-  { codigo: "basic_communications", nombre: "Comunicaciones", detalle: "Mensajes con tus pacientes", icono: MessagesSquare },
-  { codigo: "treatments", nombre: "Tratamientos", detalle: "Planes y seguimiento", icono: Stethoscope },
-  { codigo: "budgets", nombre: "Presupuestos", detalle: "Armados y aprobados", icono: Receipt },
+// Lo que incluye el plan: la MISMA lista que ve el cliente en la web pública (src/lib/site-data.ts)
+const PLAN_WEB: Record<string, string> = { START: "esencial", PRO: "profesional", PLUS: "avanzado", ENTERPRISE: "enterprise" };
+
+// Ícono de cada función según de qué se trata
+const ICONOS: [RegExp, typeof CalendarDays][] = [
+  [/^todo lo del plan/i, Sparkles],
+  [/dashboard/i, LayoutGrid],
+  [/agenda|turnos/i, CalendarDays],
+  [/odontograma/i, Smile],
+  [/historia/i, FileHeart],
+  [/paciente|portal/i, UsersRound],
+  [/receta/i, Pill],
+  [/tratamiento/i, Stethoscope],
+  [/equipo|recursos humanos|permisos/i, UsersRound],
+  [/estudio|diagn|rayos/i, ScanLine],
+  [/laboratorio/i, FlaskConical],
+  [/comunicaci|marketing/i, MessagesSquare],
+  [/configuraci/i, Settings2],
+  [/notificaci|recordatorio/i, BellRing],
+  [/presupuesto|pago|factura/i, Receipt],
+  [/anal[ií]tica|reporte|auditor/i, ChartNoAxesColumn],
+  [/esther ia|ia\b/i, Sparkles],
+  [/inventario/i, Package],
+  [/documento/i, FileText],
+  [/integraci|n8n|automatiza/i, Plug],
+  [/voz|audio/i, Mic],
+  [/seguridad/i, ShieldCheck],
 ];
+const iconoDe = (texto: string) => ICONOS.find(([re]) => re.test(texto))?.[1] ?? CircleCheck;
 
 const inicialesDe = (nombre: string) =>
   nombre
@@ -348,7 +382,7 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
   const fecha = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
   const hoy = fecha.charAt(0).toUpperCase() + fecha.slice(1);
   const plan = sesion.clinica.plan ? sesion.clinica.plan.charAt(0) + sesion.clinica.plan.slice(1).toLowerCase() : null;
-  const funciones = FUNCIONES.filter((f) => sesion.clinica.modulos.includes(f.codigo));
+  const planWeb = PLANES_WEB.find((p) => p.id === PLAN_WEB[sesion.clinica.plan ?? ""]);
   const PESTANAS = [
     { id: "inicio" as const, nombre: "Inicio", icono: LayoutGrid },
     ...(esAdmin ? [{ id: "equipo" as const, nombre: "Equipo", icono: UsersRound }] : []),
@@ -441,10 +475,10 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
                       entra con su propio acceso.
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                    <Dato valor={activas} texto="Con acceso" />
-                    <Dato valor={invitadas} texto="Invitadas" />
-                    <Dato valor={libres === undefined ? null : libres === null ? "∞" : libres} texto="Lugares libres" />
+                  <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                    <Dato valor={activas} texto="Con acceso" icono={UserCheck} tono="verde" />
+                    <Dato valor={invitadas} texto="Invitadas" icono={MailClock} tono="ambar" />
+                    <Dato valor={libres === undefined ? null : libres === null ? "∞" : libres} texto="Lugares libres" icono={Armchair} tono="violeta" />
                   </div>
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -472,28 +506,43 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
               </section>
             )}
 
-            {funciones.length > 0 && (
+            {planWeb && (
               <section className="ce-tarjeta-suave p-6 sm:p-8">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="text-base font-bold">Lo que incluye tu plan{plan ? ` ${plan}` : ""}</h2>
-                  <p className="text-xs text-muted-foreground">Se van habilitando en tu cuenta</p>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold tracking-tight">Lo que incluye tu plan {planWeb.name}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{planWeb.tagline}</p>
+                  </div>
+                  <ul className="flex flex-wrap gap-2 text-xs font-semibold">
+                    {[planWeb.branches, planWeb.users, planWeb.externalUsers].filter(Boolean).map((l) => (
+                      <li key={l} className="rounded-full bg-primary/10 px-3 py-1.5 text-primary">
+                        {l}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {funciones.map(({ codigo, nombre, detalle, icono: Icono }) => (
-                    <li
-                      key={codigo}
-                      className="ce-levanta flex items-center gap-3.5 rounded-2xl bg-[oklch(0.975_0.01_300)] p-4 ring-1 ring-transparent hover:bg-card hover:ring-border dark:bg-muted/40"
-                    >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-10px_rgba(76,29,149,0.8)]" style={{ background: "var(--gradient-brand)" }}>
-                        <Icono className="h-5 w-5" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold">{nombre}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{detalle}</span>
-                      </span>
-                    </li>
-                  ))}
+                <ul className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {planWeb.features.map((texto) => {
+                    const Icono = iconoDe(texto);
+                    return (
+                      <li
+                        key={texto}
+                        className="ce-levanta group flex items-center gap-3 rounded-2xl bg-[oklch(0.975_0.01_300)] p-3 pr-4 ring-1 ring-transparent hover:bg-card hover:ring-border dark:bg-muted/40"
+                      >
+                        <span
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-10px_rgba(76,29,149,0.8)] transition-transform duration-300 group-hover:scale-105"
+                          style={{ background: "var(--gradient-brand)" }}
+                        >
+                          <Icono className="h-[18px] w-[18px]" />
+                        </span>
+                        <span className="text-sm font-semibold leading-snug">{texto}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
+                <p className="mt-5 text-xs text-muted-foreground">
+                  Los módulos se van habilitando en tu cuenta. Para sumar más, podés pasarte a un plan mayor.
+                </p>
               </section>
             )}
           </div>
@@ -505,11 +554,32 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
   );
 }
 
-function Dato({ valor, texto }: { valor: number | string | null; texto: string }) {
+const TONO_DATO = {
+  verde: { icono: "bg-emerald-500/12 text-emerald-600", barra: "bg-emerald-500" },
+  ambar: { icono: "bg-amber-500/15 text-amber-600", barra: "bg-amber-500" },
+  violeta: { icono: "bg-primary/10 text-primary", barra: "bg-primary" },
+};
+
+function Dato({
+  valor,
+  texto,
+  icono: Icono,
+  tono,
+}: {
+  valor: number | string | null;
+  texto: string;
+  icono: typeof UserPlus;
+  tono: keyof typeof TONO_DATO;
+}) {
+  const t = TONO_DATO[tono];
   return (
-    <div className="min-w-[5.5rem] rounded-2xl bg-[oklch(0.975_0.01_300)] px-4 py-3 text-center dark:bg-muted/40">
-      <p className="text-2xl font-extrabold tabular-nums tracking-tight">{valor ?? "–"}</p>
-      <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{texto}</p>
+    <div className="ce-levanta relative overflow-hidden rounded-2xl bg-card p-3.5 ring-1 ring-border sm:min-w-[8.5rem] sm:p-4">
+      <span className={cn("absolute inset-x-0 top-0 h-1", t.barra)} aria-hidden="true" />
+      <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl sm:h-9 sm:w-9", t.icono)}>
+        <Icono className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+      </span>
+      <p className="mt-3 text-2xl font-extrabold tabular-nums leading-none tracking-tight sm:text-3xl">{valor ?? "–"}</p>
+      <p className="mt-1.5 text-[11px] font-semibold leading-tight text-muted-foreground sm:text-xs">{texto}</p>
     </div>
   );
 }

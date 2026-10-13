@@ -12,7 +12,8 @@ import {
   rechazarContratacion,
 } from "@/lib/admin/api";
 import { useAccion, useContrataciones } from "@/lib/admin/consultas";
-import { NOMBRE_PLAN, fecha, haceCuanto } from "@/lib/admin/formato";
+import { NOMBRE_PLAN, enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import type { Contratacion, EstadoContratacion } from "@/lib/admin/tipos";
 
 /* Ubicación: src/components/admin/contrataciones.tsx
@@ -225,6 +226,16 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
             >
               <Phone className="h-3.5 w-3.5" /> {c.contacto.telefono}
             </a>
+            {enlaceWhatsApp(c.contacto.telefono, c.pais) && (
+              <a
+                href={enlaceWhatsApp(c.contacto.telefono, c.pais) ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-wa !min-h-8 !text-xs"
+              >
+                <IconoWhatsApp /> WhatsApp
+              </a>
+            )}
           </div>
         </div>
 

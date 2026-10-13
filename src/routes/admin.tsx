@@ -3,10 +3,17 @@ import { useEffect, useState } from "react";
 
 import { RoleProvider } from "@/components/admin/role";
 import { Toaster } from "@/components/ui/sonner";
-import { marcarActividadSesion, registrarSalida, registrarSeccionSesion } from "@/lib/admin/api";
+import {
+  ErrorApi,
+  marcarActividadSesion,
+  obtenerMiUsuario,
+  registrarSalida,
+  registrarSeccionSesion,
+} from "@/lib/admin/api";
 import { aplicarPreferencias, leerPreferencias } from "@/lib/admin/preferencias";
 import {
   INACTIVIDAD_MS,
+  actualizarUsuarioSesion,
   cerrarSesionAdmin,
   inactivoDesde,
   marcarActividad,
@@ -53,6 +60,20 @@ function AdminLayout() {
       raiz.classList.toggle("dark", teniaOscuro);
     };
   }, []);
+
+  // Permisos al día: al abrir el panel y al cambiar de sección se piden al servidor
+  // (si el Dueño le quitó o le dio permisos a alguien, el menú cambia sin volver a entrar).
+  const hayUsuario = !!sesion && !publica;
+  useEffect(() => {
+    if (!hayUsuario) return;
+    void obtenerMiUsuario()
+      .then((u) => {
+        if (u) actualizarUsuarioSesion(u);
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ErrorApi && /sesi[oó]n venci|desactivado/i.test(e.message)) cerrarSesionAdmin();
+      });
+  }, [hayUsuario, pathname]);
 
   // Auditoría: sección del panel usada en esta sesión.
   useEffect(() => {

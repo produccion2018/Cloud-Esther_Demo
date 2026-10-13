@@ -181,14 +181,7 @@ export function ControlSesionDemo() {
               seguir ahora, te contamos los planes o te ayudamos a contratar.
             </p>
             <div className="mt-6 grid gap-2">
-              <Link
-                to={"/formulario" as never}
-                onClick={() => registrarSolicitudDemo("Información comercial")}
-                className="btn-ce !h-10"
-              >
-                <MessageSquare className="size-4" />
-                Pedir información comercial
-              </Link>
+              <PedirInformacion principal />
               <div className="grid gap-2 sm:grid-cols-2">
                 <Link
                   to={"/planes" as never}
@@ -315,14 +308,7 @@ function DemoVencidoServidor() {
                 <Sparkles className="size-4" />
                 Ver planes y contratar
               </Link>
-              <Link
-                to={"/formulario" as never}
-                onClick={() => registrarSolicitudDemo("Información comercial")}
-                className="btn-ce-outline !h-10"
-              >
-                <MessageSquare className="size-4" />
-                Pedir información
-              </Link>
+              <PedirInformacion />
             </div>
           </div>
         </div>
@@ -446,14 +432,7 @@ function LimiteIngresosServidor() {
                 <Sparkles className="size-4" />
                 Ver planes y contratar
               </Link>
-              <Link
-                to={"/formulario" as never}
-                onClick={() => registrarSolicitudDemo("Información comercial")}
-                className="btn-ce-outline !h-10"
-              >
-                <MessageSquare className="size-4" />
-                Pedir información
-              </Link>
+              <PedirInformacion />
             </div>
             <button
               type="button"
@@ -469,6 +448,65 @@ function LimiteIngresosServidor() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** «Pedir información»: la persona escribe su consulta y le llega al equipo de Cloud Esther
+ *  (panel → Demos y campanita). Antes llevaba al formulario de pacientes de la clínica, que
+ *  no le llega a nadie del equipo. */
+function PedirInformacion({ principal = false }: { principal?: boolean }) {
+  const [abierto, setAbierto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [estado, setEstado] = useState<"inicio" | "enviando" | "enviado" | "error">("inicio");
+  const [error, setError] = useState("");
+  const enviar = async () => {
+    setEstado("enviando");
+    const r = await enviarPedidoDemo("informacion", texto.trim() || undefined);
+    if (r.ok) setEstado("enviado");
+    else {
+      setError(r.error ?? "No se pudo enviar.");
+      setEstado("error");
+    }
+  };
+  if (estado === "enviado")
+    return (
+      <p className="flex items-center justify-center gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-sm font-semibold text-success sm:col-span-2">
+        <CheckCircle2 className="size-4" /> Consulta enviada. El equipo te contacta pronto.
+      </p>
+    );
+  if (!abierto)
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className={principal ? "btn-ce !h-10" : "btn-ce-outline !h-10"}
+      >
+        <MessageSquare className="size-4" />
+        {principal ? "Pedir información comercial" : "Pedir información"}
+      </button>
+    );
+  return (
+    <div className="grid gap-2 text-left sm:col-span-2">
+      <textarea
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        maxLength={500}
+        rows={3}
+        autoFocus
+        aria-label="Tu consulta"
+        placeholder="¿Qué te gustaría saber? Ej: precios para 2 sucursales, cómo migrar mis pacientes…"
+        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+      />
+      {estado === "error" && (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {error}
+        </p>
+      )}
+      <button type="button" className="btn-ce !h-10" disabled={estado === "enviando"} onClick={() => void enviar()}>
+        <MessageSquare className="size-4" />
+        {estado === "enviando" ? "Enviando…" : "Enviar consulta al equipo"}
+      </button>
     </div>
   );
 }

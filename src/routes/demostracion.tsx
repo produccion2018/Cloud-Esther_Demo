@@ -422,8 +422,10 @@ function Contratacion() {
                   {listo.modulos
                     ? ` con ${listo.modulos} módulo${listo.modulos === 1 ? "" : "s"} adicional${listo.modulos === 1 ? "" : "es"}`
                     : ""}
-                  . Te mandamos un correo a {listo.email} con el número de solicitud y los pasos a
-                  seguir para el pago y la activación de tu clínica.
+                  . Te mandamos un correo a {listo.email}
+                  {PAGO_EN_LINEA
+                    ? " con el botón «Ver el resumen y pagar»: ahí ves los impuestos y el total, pagás en línea y tu clínica se activa sola. Si ya habías pedido antes con este correo, te mandamos un enlace nuevo."
+                    : " con el número de solicitud y los pasos a seguir para el pago y la activación de tu clínica."}
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-2">
                   <Button asChild variant="hero" size="lg">

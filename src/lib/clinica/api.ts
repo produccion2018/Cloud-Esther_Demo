@@ -153,6 +153,10 @@ async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unkn
   return (r.status === 204 ? undefined : await r.json()) as T;
 }
 
+/** Pedido con la sesión de la clínica (lo usa la sincronización de los módulos). */
+export const pedirAClinica = <T,>(slug: string, metodo: string, ruta: string, cuerpo?: unknown) =>
+  http<T>(slug, metodo, ruta, cuerpo);
+
 export const infoPublicaClinica = (slug: string) => http<{ nombre: string }>(slug, "GET", "");
 
 export async function ingresarClinica(slug: string, email: string, claveIngreso: string): Promise<SesionClinica> {

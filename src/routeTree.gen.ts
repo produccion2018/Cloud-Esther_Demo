@@ -50,6 +50,8 @@ import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
+import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
+import { Route as DemoMiCuentaRouteImport } from './routes/demo_.mi-cuenta'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
@@ -285,6 +287,16 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoAccesosRoute = DemoAccesosRouteImport.update({
+  id: '/demo_/accesos',
+  path: '/demo/accesos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoMiCuentaRoute = DemoMiCuentaRouteImport.update({
+  id: '/demo_/mi-cuenta',
+  path: '/demo/mi-cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CSlugRoute = CSlugRouteImport.update({
   id: '/c/$slug',
   path: '/c/$slug',
@@ -474,6 +486,8 @@ export interface FileRoutesByFullPath {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/accesos': typeof DemoAccesosRoute
+  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
@@ -545,6 +559,8 @@ export interface FileRoutesByTo {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
+  '/demo/accesos': typeof DemoAccesosRoute
+  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
@@ -618,6 +634,8 @@ export interface FileRoutesById {
   '/admin/soporte': typeof AdminSoporteRoute
   '/demo_/admin': typeof DemoAdminRoute
   '/demo_/agenda': typeof DemoAgendaRoute
+  '/demo_/accesos': typeof DemoAccesosRoute
+  '/demo_/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug_/clave': typeof CSlugClaveRoute
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
@@ -692,6 +710,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo/admin'
     | '/demo/agenda'
+    | '/demo/accesos'
+    | '/demo/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug/clave'
     | '/demo/automatizaciones'
@@ -763,6 +783,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo/admin'
     | '/demo/agenda'
+    | '/demo/accesos'
+    | '/demo/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug/clave'
     | '/demo/automatizaciones'
@@ -835,6 +857,8 @@ export interface FileRouteTypes {
     | '/admin/soporte'
     | '/demo_/admin'
     | '/demo_/agenda'
+    | '/demo_/accesos'
+    | '/demo_/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug_/clave'
     | '/demo_/automatizaciones'
@@ -887,6 +911,8 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   DemoAdminRoute: typeof DemoAdminRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
+  DemoAccesosRoute: typeof DemoAccesosRoute
+  DemoMiCuentaRoute: typeof DemoMiCuentaRoute
   CSlugRoute: typeof CSlugRoute
   CSlugClaveRoute: typeof CSlugClaveRoute
   DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
@@ -1208,6 +1234,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/accesos': {
+      id: '/demo_/accesos'
+      path: '/demo/accesos'
+      fullPath: '/demo/accesos'
+      preLoaderRoute: typeof DemoAccesosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/mi-cuenta': {
+      id: '/demo_/mi-cuenta'
+      path: '/demo/mi-cuenta'
+      fullPath: '/demo/mi-cuenta'
+      preLoaderRoute: typeof DemoMiCuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/c/$slug': {
       id: '/c/$slug'
       path: '/c/$slug'
@@ -1485,6 +1525,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   DemoAdminRoute: DemoAdminRoute,
   DemoAgendaRoute: DemoAgendaRoute,
+  DemoAccesosRoute: DemoAccesosRoute,
+  DemoMiCuentaRoute: DemoMiCuentaRoute,
   CSlugRoute: CSlugRoute,
   CSlugClaveRoute: CSlugClaveRoute,
   DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,

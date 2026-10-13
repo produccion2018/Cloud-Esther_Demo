@@ -182,7 +182,10 @@ export const storeNotificaciones = crearStorePorEmpresa<EstadoNotificaciones>(()
       titulo: "Llamar al proveedor de implantes",
     },
   ],
-}), { persistir: "notificaciones" });
+}), {
+  persistir: "notificaciones",
+  vacio: () => ({ manuales: [], estados: {}, preferencias: PREFERENCIAS, historial: [] }),
+});
 
 type Actualizar<T> = T | ((prev: T) => T);
 

@@ -585,7 +585,11 @@ export async function actualizarNotificaciones(
 /* ───────────── Módulos internos (CRUD genérico) ───────────── */
 
 export async function listar<K extends keyof Colecciones>(k: K): Promise<Colecciones[K]> {
-  if (CON_BACKEND) return http("GET", `/admin/empresa/${k}`);
+  if (CON_BACKEND) {
+    const datos = await http<Colecciones[K]>("GET", `/admin/empresa/${k}`);
+    // Países: se muestran también los de la lista base que todavía no se guardaron
+    return (k === "paises" ? completarPaises(datos as PaisOperacion[]) : datos) as Colecciones[K];
+  }
   return copia((await db()).colecciones[k]);
 }
 

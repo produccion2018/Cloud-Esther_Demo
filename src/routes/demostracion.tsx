@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -89,6 +89,7 @@ function Contratacion() {
   const [listo, setListo] = useState<SolicitudGuardada | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paisElegido, setPaisElegido] = useState("");
+  const navigate = useNavigate();
   const elegido = plans.find((p) => p.id === plan);
 
   const toggle = (m: string) =>
@@ -119,6 +120,11 @@ function Contratacion() {
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);
+      return;
+    }
+    // Con pago en línea: directo al resumen (plan, impuestos y total) para confirmar y pagar
+    if (r.solicitud.pagoToken) {
+      void navigate({ to: "/pagar", hash: `t=${r.solicitud.pagoToken}` });
       return;
     }
     setListo(r.solicitud);
@@ -415,8 +421,8 @@ function Contratacion() {
                   {listo.modulos
                     ? ` con ${listo.modulos} módulo${listo.modulos === 1 ? "" : "s"} adicional${listo.modulos === 1 ? "" : "es"}`
                     : ""}
-                  . Te mandamos un correo a {listo.email} con el número de solicitud. Un asesor te
-                  escribe para confirmar la propuesta, coordinar el pago y activar tu clínica.
+                  . Te mandamos un correo a {listo.email} con el número de solicitud y los pasos a
+                  seguir para el pago y la activación de tu clínica.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-2">
                   <Button asChild variant="hero" size="lg">

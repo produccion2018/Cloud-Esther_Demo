@@ -195,7 +195,8 @@ export function odontogramaDelPlan(plan: PlanId): ModuloOdontograma {
 export function precioAnual(c: ConfigPlan) {
   return c.precioMensual === null
     ? null
-    : Math.round(c.precioMensual * 12 * (1 - c.descuentoAnual));
+    : // En centavos, igual que el servidor al cobrar (no se redondea a dólares enteros)
+      Math.round(c.precioMensual * 100 * 12 * (1 - c.descuentoAnual)) / 100;
 }
 
 /** Precios comerciales: siempre en dólares (USD) y SIN impuestos (se muestran con «+ impuestos»). */

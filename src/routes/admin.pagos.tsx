@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import { Cargando, KpiCard, Seccion, StatusBadge, Vacio } from "@/components/admin/bits";
 import { RestrictedView } from "@/components/admin/restricted";
+import { FacturacionEnLinea } from "@/components/admin/facturacion-en-linea";
 import { canAccess, permisos, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
@@ -233,6 +234,8 @@ function PaymentsPage() {
           </Seccion>
         </>
       )}
+      {/* Cobros reales en línea (Paddle): solo Dueño y Socio */}
+      <FacturacionEnLinea />
     </AdminShell>
   );
 }

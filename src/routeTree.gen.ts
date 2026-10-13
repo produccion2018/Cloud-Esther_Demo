@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemostracionRouteImport } from './routes/demostracion'
+import { Route as PagarRouteImport } from './routes/pagar'
 import { Route as DuenoRouteImport } from './routes/dueno'
 import { Route as EquipoRouteImport } from './routes/equipo'
 import { Route as FormularioRouteImport } from './routes/formulario'
@@ -104,6 +105,11 @@ const DemoRoute = DemoRouteImport.update({
 const DemostracionRoute = DemostracionRouteImport.update({
   id: '/demostracion',
   path: '/demostracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagarRoute = PagarRouteImport.update({
+  id: '/pagar',
+  path: '/pagar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DuenoRoute = DuenoRouteImport.update({
@@ -417,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
@@ -553,6 +561,7 @@ export interface FileRoutesById {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
+  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
@@ -623,6 +632,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
@@ -690,6 +700,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
@@ -758,6 +769,7 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
+    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
@@ -827,6 +839,7 @@ export interface RootRouteChildren {
   CaracteristicasRoute: typeof CaracteristicasRoute
   DemoRoute: typeof DemoRoute
   DemostracionRoute: typeof DemostracionRoute
+  PagarRoute: typeof PagarRoute
   DuenoRoute: typeof DuenoRoute
   EquipoRoute: typeof EquipoRoute
   FormularioRoute: typeof FormularioRoute
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/demostracion'
       fullPath: '/demostracion'
       preLoaderRoute: typeof DemostracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagar': {
+      id: '/pagar'
+      path: '/pagar'
+      fullPath: '/pagar'
+      preLoaderRoute: typeof PagarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dueno': {
@@ -1392,6 +1412,7 @@ const rootRouteChildren: RootRouteChildren = {
   CaracteristicasRoute: CaracteristicasRoute,
   DemoRoute: DemoRoute,
   DemostracionRoute: DemostracionRoute,
+  PagarRoute: PagarRoute,
   DuenoRoute: DuenoRoute,
   EquipoRoute: EquipoRoute,
   FormularioRoute: FormularioRoute,

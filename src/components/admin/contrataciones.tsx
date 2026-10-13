@@ -22,6 +22,14 @@ import type { Contratacion, EstadoContratacion } from "@/lib/admin/tipos";
    · «Activar» (después de revisar y cobrar) y «Rechazar»: también la Secretaría
      (decisión de Camilo, 11 oct 20:44). Soporte no las ve. */
 
+// Pago en línea (Paddle)
+const PAGO_EN_LINEA: Record<string, { texto: string; tono: "alerta" | "ok" | "neutro" | "peligro" }> = {
+  sin_iniciar: { texto: "Pago en línea: no iniciado", tono: "neutro" },
+  iniciado: { texto: "Pago en línea: iniciado", tono: "alerta" },
+  pagado: { texto: "Pagado en línea", tono: "ok" },
+  fallido: { texto: "Pago en línea rechazado", tono: "peligro" },
+};
+
 const ESTADO: Record<EstadoContratacion, { texto: string; tono: "alerta" | "ok" | "neutro" }> = {
   pendiente: { texto: "Pendiente de revisión y pago", tono: "alerta" },
   activada: { texto: "Activada", tono: "ok" },
@@ -93,6 +101,9 @@ export function SolicitudesContratacion() {
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     {NOMBRE_PLAN[c.plan]} · {c.ciclo}
                   </span>
+                  {c.estado === "pendiente" && c.pagoEnLinea && c.pagoEnLinea !== "sin_iniciar" && (
+                    <Pildora tono={PAGO_EN_LINEA[c.pagoEnLinea].tono}>{PAGO_EN_LINEA[c.pagoEnLinea].texto}</Pildora>
+                  )}
                   <Pildora tono={ESTADO[c.estado].tono}>{ESTADO[c.estado].texto}</Pildora>
                 </button>
               </li>
@@ -127,6 +138,7 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
     ["Número", c.codigo],
     ["Recibida", fecha(c.fecha, true)],
     ["Plan", `${NOMBRE_PLAN[c.plan]} · ${c.ciclo}`],
+    ["Pago en línea", PAGO_EN_LINEA[c.pagoEnLinea ?? "sin_iniciar"]?.texto.replace("Pago en línea: ", "") ?? "—"],
     ["Módulos adicionales", c.modulos.length ? c.modulos.join(", ") : "Ninguno"],
     ["Sucursales", c.sucursales || "—"],
     ["Profesionales", c.profesionales || "—"],
@@ -159,7 +171,10 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
             <p className="text-sm font-bold">Qué falta</p>
             <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-xs text-muted-foreground">
               <li>Revisar los datos y hablar con el cliente.</li>
-              <li>Cobrar (por ahora, a mano: transferencia u otro medio).</li>
+              <li>
+                Cobrar: el cliente puede pagar en línea con el enlace del correo (se activa sola al confirmarse), o a mano
+                (transferencia u otro medio) y después apretás «Activar».
+              </li>
               <li>Apretar «Activar»: se crea la clínica y le llega un correo al cliente.</li>
             </ol>
             {puedeActivar ? (

@@ -125,6 +125,54 @@ export type Contratacion = {
   resueltaPor: string | null;
   /** Referencia del pago (activada) o motivo (rechazada) */
   nota: string;
+  /** Pago en línea (Paddle): sin_iniciar · iniciado · pagado · fallido */
+  pagoEnLinea?: "sin_iniciar" | "iniciado" | "pagado" | "fallido";
+};
+
+/* ───────────── Facturación en línea (Paddle) — solo Dueño y Socio ───────────── */
+
+export type Facturacion = {
+  pagosEnLinea: boolean;
+  suscripciones: {
+    id: string;
+    paddleId: string;
+    clinica: string;
+    plan: PlanId | null;
+    ciclo: "Mensual" | "Anual";
+    /** pendiente · activa · gracia · pago_rechazado · vencida · suspendida · cancelada */
+    estado: string;
+    proximoCobro: string | null;
+    periodoHasta: string | null;
+    canceladaEl: string | null;
+  }[];
+  pagos: {
+    id: string;
+    paddleId: string;
+    clinica: string;
+    /** alta · renovacion · otro */
+    tipo: string;
+    /** pagado · fallido · vencido */
+    estado: string;
+    moneda: string;
+    sinImpuestos: number;
+    impuestos: number;
+    total: number;
+    pais: string | null;
+    comprobante: string | null;
+    fecha: string;
+  }[];
+  ajustes: {
+    id: string;
+    paddleId: string;
+    cobro: string;
+    tipo: string;
+    estado: string;
+    moneda: string;
+    impuestos: number;
+    total: number;
+    motivo: string;
+    fecha: string;
+  }[];
 };
 
 /* ───────────── Demos (espejo de lo que hacen en el demo) ───────────── */

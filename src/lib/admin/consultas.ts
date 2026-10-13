@@ -9,6 +9,8 @@ import * as api from "./api";
 export const useEquipo = () => useQuery({ queryKey: ["equipo"], queryFn: api.obtenerEquipo });
 export const usePlanes = () => useQuery({ queryKey: ["planes"], queryFn: api.obtenerPlanes });
 export const useClinicas = () => useQuery({ queryKey: ["clinicas"], queryFn: api.obtenerClinicas });
+export const useFacturacion = (habilitado = true) =>
+  useQuery({ queryKey: ["facturacion"], queryFn: api.obtenerFacturacion, enabled: habilitado, refetchInterval: 60_000 });
 export const useContrataciones = (habilitado = true) =>
   useQuery({
     queryKey: ["contrataciones"],

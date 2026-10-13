@@ -319,7 +319,7 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
           <div className="flex min-w-0 items-center gap-3">
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-primary-foreground"
-              style={{ background: "var(--gradient-primary)" }}
+              style={{ background: "var(--gradient-brand)" }}
             >
               <ToothLogo className="h-5 w-5" />
             </div>

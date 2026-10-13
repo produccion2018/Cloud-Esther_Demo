@@ -29,6 +29,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccesosRouteImport } from './routes/admin.accesos'
 import { Route as AdminActividadRouteImport } from './routes/admin.actividad'
 import { Route as AdminAtencionRouteImport } from './routes/admin.atencion'
+import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
 import { Route as AdminAuditoriaRouteImport } from './routes/admin.auditoria'
 import { Route as AdminClinicasRouteImport } from './routes/admin.clinicas'
 import { Route as AdminCuentaRouteImport } from './routes/admin.cuenta'
@@ -175,6 +176,11 @@ const AdminActividadRoute = AdminActividadRouteImport.update({
 const AdminAtencionRoute = AdminAtencionRouteImport.update({
   id: '/atencion',
   path: '/atencion',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMarketingRoute = AdminMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAuditoriaRoute = AdminAuditoriaRouteImport.update({
@@ -436,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -504,6 +511,7 @@ export interface FileRoutesByTo {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -574,6 +582,7 @@ export interface FileRoutesById {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -645,6 +654,7 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
+    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -713,6 +723,7 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
+    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -782,6 +793,7 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
+    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -1021,6 +1033,13 @@ declare module '@tanstack/react-router' {
       path: '/atencion'
       fullPath: '/admin/atencion'
       preLoaderRoute: typeof AdminAtencionRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/marketing': {
+      id: '/admin/marketing'
+      path: '/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AdminMarketingRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/auditoria': {
@@ -1359,6 +1378,7 @@ interface AdminRouteChildren {
   AdminAccesosRoute: typeof AdminAccesosRoute
   AdminActividadRoute: typeof AdminActividadRoute
   AdminAtencionRoute: typeof AdminAtencionRoute
+  AdminMarketingRoute: typeof AdminMarketingRoute
   AdminAuditoriaRoute: typeof AdminAuditoriaRoute
   AdminClinicasRoute: typeof AdminClinicasRoute
   AdminCuentaRoute: typeof AdminCuentaRoute
@@ -1383,6 +1403,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAccesosRoute: AdminAccesosRoute,
   AdminActividadRoute: AdminActividadRoute,
   AdminAtencionRoute: AdminAtencionRoute,
+  AdminMarketingRoute: AdminMarketingRoute,
   AdminAuditoriaRoute: AdminAuditoriaRoute,
   AdminClinicasRoute: AdminClinicasRoute,
   AdminCuentaRoute: AdminCuentaRoute,

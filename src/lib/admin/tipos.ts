@@ -23,7 +23,8 @@ export type Permiso =
   | "ia"
   | "reportes"
   | "auditoria"
-  | "actividad";
+  | "actividad"
+  | "marketing";
 
 export type AdminUser = {
   id: string;

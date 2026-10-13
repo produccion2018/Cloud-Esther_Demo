@@ -34,8 +34,17 @@ import type {
   Anticipo,
   Asistencia,
   Ausencia,
+  Campana,
   CasoAtencion,
+  ConsumoIA,
+  ContactoRed,
   Contrato,
+  Guia,
+  IdeaMarketing,
+  Llamada,
+  Plantilla,
+  PresupuestoIA,
+  Publicacion,
   DocumentoInterno,
   Empleado,
   Gasto,
@@ -173,6 +182,15 @@ export type Colecciones = {
   tareas: TareaInterna[];
   paises: PaisOperacion[];
   atencionClinicas: CasoAtencion[];
+  llamadas: Llamada[];
+  plantillas: Plantilla[];
+  guias: Guia[];
+  publicaciones: Publicacion[];
+  campanas: Campana[];
+  ideasMarketing: IdeaMarketing[];
+  contactosRedes: ContactoRed[];
+  presupuestosIA: PresupuestoIA[];
+  consumosIA: ConsumoIA[];
 };
 
 const COLECCIONES_INICIALES: Colecciones = {
@@ -191,6 +209,15 @@ const COLECCIONES_INICIALES: Colecciones = {
   tareas: TAREAS_INICIALES,
   paises: PAISES_INICIALES,
   atencionClinicas: ATENCION_CLINICAS_INICIAL,
+  llamadas: [],
+  plantillas: [],
+  guias: [],
+  publicaciones: [],
+  campanas: [],
+  ideasMarketing: [],
+  contactosRedes: [],
+  presupuestosIA: [],
+  consumosIA: [],
 };
 
 type BaseLocal = {
@@ -636,6 +663,11 @@ export async function borrarDe<K extends keyof Colecciones>(k: K, id: string, ac
 }
 
 export const nuevoIdLocal = nuevoId;
+
+/** Número corto y único para casos y tickets (ej. «AT-K9F2QX»). No depende de cuántos hay:
+ *  dos personas que crean uno al mismo tiempo no se pisan. */
+export const nuevoNumero = (prefijo: string) =>
+  `${prefijo}-${Date.now().toString(36).slice(-4).toUpperCase()}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
 
 /* ───────────── Planes ───────────── */
 

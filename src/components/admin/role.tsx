@@ -42,8 +42,9 @@ export const PERMISOS: { id: Permiso; nombre: string; detalle: string }[] = [
   { id: "contrataciones", nombre: "Contrataciones", detalle: "Ver las solicitudes, dejar notas, activar y rechazar." },
   { id: "cobranza", nombre: "Pagos y cobranza", detalle: "Estado de pagos de las clínicas y recordatorios de pago." },
   { id: "importes", nombre: "Importes y facturación", detalle: "Montos de cada clínica y cobros en línea (Paddle)." },
-  { id: "atencion", nombre: "Atención a clínicas", detalle: "Casos, mensajes y seguimientos con las clínicas." },
-  { id: "soporte", nombre: "Soporte técnico", detalle: "Tickets, incidentes y tareas internas." },
+  { id: "atencion", nombre: "Atención a clínicas", detalle: "Casos, llamadas, respuestas listas y seguimientos con las clínicas." },
+  { id: "marketing", nombre: "Redes y marketing", detalle: "Calendario de publicaciones, textos, campañas y contactos que llegan por redes." },
+  { id: "soporte", nombre: "Soporte técnico", detalle: "Tickets, ficha técnica de cada clínica, guías, incidentes y tareas." },
   { id: "personal", nombre: "Personal", detalle: "Empleados, asistencia, ausencias y documentos." },
   { id: "nomina", nombre: "Nómina y sueldos", detalle: "Liquidaciones, pagos de sueldos y anticipos." },
   { id: "gastos", nombre: "Gastos, proveedores y contratos", detalle: "Gastos de la empresa, proveedores y contratos." },
@@ -59,7 +60,7 @@ const TODOS: Permiso[] = PERMISOS.map((p) => p.id);
 export const PERMISOS_DEL_ROL: Record<AdminRole, Permiso[]> = {
   owner: TODOS,
   partner: TODOS,
-  "customer-care": ["demos", "contrataciones", "cobranza", "atencion", "soporte", "paises"],
+  "customer-care": ["demos", "contrataciones", "cobranza", "atencion", "soporte", "paises", "marketing"],
   support: ["soporte", "ia", "auditoria"],
 };
 
@@ -96,6 +97,7 @@ export const sectionAccess: Record<string, (r: AdminRole) => boolean> = {
   "/admin/ia": con("ia"),
   "/admin/soporte": con("soporte"),
   "/admin/atencion": con("atencion", "soporte"),
+  "/admin/marketing": con("marketing"),
   "/admin/personal": con("personal"),
   "/admin/nomina": con("nomina"),
   "/admin/gastos": con("gastos"),

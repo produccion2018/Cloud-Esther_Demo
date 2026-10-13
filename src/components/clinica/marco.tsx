@@ -22,12 +22,11 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
     <>
     {/* El aviso va FUERA de la grilla: si no, ocupa el lugar de la mitad violeta */}
     <Toaster position="top-center" richColors closeButton />
-    <div className="grid min-h-screen bg-background lg:grid-cols-[1.1fr_1fr]">
+    <div className="ce-clinica grid min-h-screen bg-background lg:grid-cols-[1.1fr_1fr]">
 
       {/* Mitad de la clínica (solo computadora) */}
       <aside
-        className="relative hidden overflow-hidden px-14 py-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between"
-        style={{ background: "var(--gradient-brand)" }}
+        className="ce-franja relative hidden overflow-hidden px-14 py-12 text-white lg:flex lg:flex-col lg:justify-between"
       >
         <ToothLogo className="pointer-events-none absolute -bottom-24 -right-20 h-[30rem] w-[30rem] opacity-[0.07]" />
         <div className="relative flex items-center gap-2.5 text-sm font-semibold opacity-90">
@@ -37,15 +36,15 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
           Acceso de la clínica
         </div>
 
-        <div className="relative max-w-lg">
-          <h1 className="break-words text-5xl font-extrabold leading-[1.05] tracking-tight xl:text-6xl">{titulo}</h1>
+        <div className="ce-entra-2 relative max-w-lg">
+          <h1 className="break-words text-5xl font-extrabold leading-[1.02] tracking-[-0.03em] xl:text-6xl">{titulo}</h1>
           <p className="mt-5 text-base leading-relaxed opacity-90">
             Entrá con tu correo y tu contraseña. Cada persona del equipo tiene su propio acceso.
           </p>
           <ul className="mt-8 space-y-3 text-sm">
             {QUE_HAY_ADENTRO.map(({ icono: Icono, texto }) => (
               <li key={texto} className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/12 ring-1 ring-white/20">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/12 ring-1 ring-white/20 backdrop-blur">
                   <Icono className="h-4 w-4" />
                 </span>
                 <span className="opacity-95">{texto}</span>
@@ -62,8 +61,7 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
       {/* Formulario */}
       <main className="flex flex-col">
         <div
-          className="px-6 pb-10 pt-8 text-primary-foreground lg:hidden"
-          style={{ background: "var(--gradient-brand)" }}
+          className="ce-franja relative px-6 pb-10 pt-8 text-white lg:hidden"
         >
           <div className="flex items-center gap-2 text-xs font-semibold opacity-90">
             <ToothLogo className="h-4 w-4" /> Acceso de la clínica
@@ -71,7 +69,7 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
           <h1 className="mt-3 break-words text-3xl font-extrabold leading-tight tracking-tight">{titulo}</h1>
         </div>
         <div className="-mt-6 flex flex-1 items-start justify-center px-5 pb-10 lg:mt-0 lg:items-center lg:px-10">
-          <div className="w-full max-w-sm rounded-3xl bg-background p-6 shadow-[0_20px_60px_-25px_rgba(76,29,149,0.35)] ring-1 ring-border lg:p-8 lg:shadow-none lg:ring-0">
+          <div className="ce-entra-3 w-full max-w-sm rounded-[1.75rem] bg-background p-6 shadow-[0_20px_60px_-25px_rgba(76,29,149,0.35)] ring-1 ring-border lg:p-2 lg:shadow-none lg:ring-0">
             {children}
           </div>
         </div>

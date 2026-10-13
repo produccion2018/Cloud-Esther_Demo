@@ -1716,3 +1716,188 @@ label {
     padding-right: 1.875rem;
   }
 }
+
+/* ═════════════ Acceso de cada clínica (/c/<dirección>) — Etapa 8a ═════════════
+   Capa premium SOLO para las pantallas de la clínica (envueltas en .ce-clinica).
+   Elevación en capas, hover sutiles con movimiento corto, foco visible para teclado
+   y una única entrada animada al abrir. Sin movimiento si la persona lo pidió así. */
+.ce-clinica {
+  --ce-violeta: oklch(0.52 0.22 296);
+  --ce-violeta-hondo: oklch(0.36 0.17 292);
+  --ce-sombra-1: 0 1px 2px oklch(0.32 0.14 296 / 0.06), 0 2px 6px oklch(0.32 0.14 296 / 0.04);
+  --ce-sombra-2: 0 1px 2px oklch(0.32 0.14 296 / 0.05), 0 24px 48px -28px oklch(0.36 0.17 292 / 0.38);
+  --ce-sombra-3: 0 2px 4px oklch(0.32 0.14 296 / 0.06), 0 32px 64px -30px oklch(0.36 0.17 292 / 0.5);
+  --ce-curva: cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Franja de la clínica: violeta con luz suave arriba a la derecha y profundidad abajo */
+.ce-clinica .ce-franja {
+  background:
+    radial-gradient(70% 90% at 92% -10%, oklch(0.85 0.12 305 / 0.45), transparent 60%),
+    radial-gradient(60% 80% at 0% 120%, oklch(0.3 0.15 290 / 0.55), transparent 60%),
+    var(--gradient-brand);
+}
+.ce-clinica .ce-franja::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.35), transparent);
+}
+
+/* Tarjetas */
+.ce-clinica .ce-tarjeta {
+  border-radius: 1.75rem;
+  background: var(--card);
+  box-shadow: var(--ce-sombra-2);
+  outline: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  outline-offset: -1px;
+}
+.ce-clinica .ce-tarjeta-suave {
+  border-radius: 1.75rem;
+  background: var(--card);
+  box-shadow: var(--ce-sombra-1);
+  outline: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  outline-offset: -1px;
+}
+.ce-clinica .ce-levanta {
+  transition:
+    transform 0.35s var(--ce-curva),
+    box-shadow 0.35s var(--ce-curva),
+    background-color 0.2s ease;
+}
+@media (hover: hover) {
+  .ce-clinica .ce-levanta:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--ce-sombra-3);
+  }
+  .ce-clinica .ce-levanta:hover .ce-flecha {
+    transform: translateX(3px);
+  }
+}
+.ce-clinica .ce-flecha {
+  transition: transform 0.35s var(--ce-curva);
+}
+
+/* Botón principal: degradé de la marca, brillo al pasar, se hunde al apretar */
+.ce-clinica .ce-boton {
+  position: relative;
+  overflow: hidden;
+  background: var(--gradient-brand);
+  color: white;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.25) inset,
+    0 10px 24px -12px oklch(0.45 0.2 294 / 0.75);
+  transition:
+    transform 0.25s var(--ce-curva),
+    box-shadow 0.25s var(--ce-curva),
+    filter 0.2s ease;
+}
+.ce-clinica .ce-boton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, oklch(1 0 0 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s var(--ce-curva);
+}
+@media (hover: hover) {
+  .ce-clinica .ce-boton:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: saturate(1.08);
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 0.25) inset,
+      0 16px 32px -14px oklch(0.45 0.2 294 / 0.85);
+  }
+  .ce-clinica .ce-boton:not(:disabled):hover::before {
+    transform: translateX(120%);
+  }
+}
+.ce-clinica .ce-boton:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+.ce-clinica .ce-boton:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* Foco visible solo con teclado (nada de bordes negros al hacer clic) */
+.ce-clinica :is(button, a, [role="button"]):focus {
+  outline: none;
+}
+.ce-clinica :is(button, a, [role="button"]):focus-visible {
+  outline: 2px solid var(--ce-violeta);
+  outline-offset: 2px;
+}
+.ce-clinica .ce-franja :is(button, a):focus-visible {
+  outline-color: white;
+}
+
+/* Campos: halo violeta suave al escribir */
+.ce-clinica input:not([type="checkbox"]),
+.ce-clinica select,
+.ce-clinica textarea {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.ce-clinica input:not([type="checkbox"]):focus-visible,
+.ce-clinica select:focus-visible,
+.ce-clinica textarea:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklab, var(--ce-violeta) 60%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--ce-violeta) 14%, transparent);
+}
+
+/* Avatares: se acomodan apenas al pasar */
+.ce-clinica .ce-avatar {
+  transition:
+    transform 0.3s var(--ce-curva),
+    box-shadow 0.3s var(--ce-curva);
+}
+@media (hover: hover) {
+  .ce-clinica .ce-avatar:hover {
+    transform: translateY(-3px) scale(1.06);
+    box-shadow: 0 10px 20px -10px oklch(0.36 0.17 292 / 0.6);
+    z-index: 1;
+  }
+}
+
+/* Barra de lugares del plan: con brillo */
+.ce-clinica .ce-barra {
+  background: var(--gradient-brand);
+  box-shadow: 0 0 16px oklch(0.6 0.2 300 / 0.55);
+  transition: width 0.8s var(--ce-curva);
+}
+
+/* Una sola entrada al abrir: el saludo y después el contenido */
+@keyframes ce-subir {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ce-clinica .ce-entra {
+  animation: ce-subir 0.6s var(--ce-curva) both;
+}
+.ce-clinica .ce-entra-2 {
+  animation: ce-subir 0.6s 0.08s var(--ce-curva) both;
+}
+.ce-clinica .ce-entra-3 {
+  animation: ce-subir 0.6s 0.16s var(--ce-curva) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ce-clinica *,
+  .ce-clinica *::before,
+  .ce-clinica *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

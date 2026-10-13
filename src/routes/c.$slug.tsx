@@ -1,5 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, LogOut, Mail, MailCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  BellRing,
+  CalendarDays,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  FileHeart,
+  KeyRound,
+  LayoutGrid,
+  Loader2,
+  LockKeyhole,
+  LogOut,
+  Mail,
+  MailCheck,
+  MessagesSquare,
+  Receipt,
+  Smile,
+  Stethoscope,
+  UserPlus,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +41,8 @@ import {
   refrescarSesionClinica,
   salirClinica,
   useSesionClinica,
+  verEquipo,
+  type EquipoClinica,
   type SesionClinica,
 } from "@/lib/clinica/api";
 
@@ -152,11 +176,11 @@ function Ingresar({ slug }: { slug: string }) {
             placeholder="tu@correo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 rounded-xl pl-10"
+            className="h-12 rounded-2xl pl-10"
           />
         </CampoIcono>
         {error && <MensajeError>{error}</MensajeError>}
-        <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando}>
+        <Button type="submit" className="ce-boton h-12 w-full rounded-full text-base" disabled={cargando}>
           {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Enviar enlace
         </Button>
@@ -178,7 +202,7 @@ function Ingresar({ slug }: { slug: string }) {
           placeholder="tu@correo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-12 rounded-xl pl-10"
+          className="h-12 rounded-2xl pl-10"
         />
       </CampoIcono>
       <CampoIcono
@@ -204,7 +228,7 @@ function Ingresar({ slug }: { slug: string }) {
           autoComplete="current-password"
           value={clave}
           onChange={(e) => setClave(e.target.value)}
-          className="h-12 rounded-xl pl-10 pr-10"
+          className="h-12 rounded-2xl pl-10 pr-10"
         />
         <button
           type="button"
@@ -216,7 +240,7 @@ function Ingresar({ slug }: { slug: string }) {
         </button>
       </CampoIcono>
       {error && <MensajeError>{error}</MensajeError>}
-      <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando}>
+      <Button type="submit" className="ce-boton h-12 w-full rounded-full text-base" disabled={cargando}>
         {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Ingresar
       </Button>
@@ -256,37 +280,45 @@ function CampoIcono({
 // Cierre por inactividad en el navegador (el servidor también corta a las 2 horas)
 const INACTIVIDAD_MS = 2 * 60 * 60 * 1000;
 
-const NOMBRE_MODULO: Record<string, string> = {
-  dashboard: "Inicio",
-  agenda: "Agenda",
-  patients: "Pacientes",
-  clinical_history: "Historia clínica",
-  odontogram_2d: "Odontograma 2D",
-  odontogram_3d: "Odontograma 3D",
-  reminders: "Recordatorios",
-  basic_communications: "Comunicaciones",
-  profile: "Perfil",
-  security: "Seguridad",
-  basic_settings: "Configuración",
-  teams: "Equipo",
-  specialties: "Especialidades",
-  schedules: "Agenda y horarios",
-  appointments: "Turnos",
-  treatments: "Tratamientos",
-  patient_communication: "Comunicación con pacientes",
-  budgets: "Presupuestos",
-  payments_billing: "Pagos y facturación",
-  studies_diagnosis: "Estudios y diagnóstico",
-};
+// Lo que incluye el plan, en palabras de la clínica (lo técnico —perfil, seguridad, configuración— no se muestra)
+const FUNCIONES: { codigo: string; nombre: string; detalle: string; icono: typeof CalendarDays }[] = [
+  { codigo: "agenda", nombre: "Agenda", detalle: "Turnos del día de cada profesional", icono: CalendarDays },
+  { codigo: "patients", nombre: "Pacientes", detalle: "Fichas, datos y contacto", icono: UsersRound },
+  { codigo: "clinical_history", nombre: "Historia clínica", detalle: "Evoluciones y antecedentes", icono: FileHeart },
+  { codigo: "odontogram_2d", nombre: "Odontograma 2D", detalle: "Hallazgos pieza por pieza", icono: Smile },
+  { codigo: "odontogram_3d", nombre: "Odontograma 3D", detalle: "La boca completa en tres dimensiones", icono: Smile },
+  { codigo: "reminders", nombre: "Recordatorios", detalle: "Avisos de turno a los pacientes", icono: BellRing },
+  { codigo: "basic_communications", nombre: "Comunicaciones", detalle: "Mensajes con tus pacientes", icono: MessagesSquare },
+  { codigo: "treatments", nombre: "Tratamientos", detalle: "Planes y seguimiento", icono: Stethoscope },
+  { codigo: "budgets", nombre: "Presupuestos", detalle: "Armados y aprobados", icono: Receipt },
+];
+
+const inicialesDe = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((x) => x[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 
 function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }) {
   const esAdmin = sesion.usuario.rol === "admin";
   const ultimaActividad = useRef(Date.now());
+  const [pestana, setPestana] = useState<"inicio" | "equipo" | "cuenta">("inicio");
+  const [equipo, setEquipo] = useState<EquipoClinica | null>(null);
 
   // Al abrir: datos y rol de AHORA (si el Administrador le cambió el rol, se ve al instante)
   useEffect(() => {
     void refrescarSesionClinica(slug).catch(() => undefined);
   }, [slug]);
+
+  // Resumen del equipo para el Inicio (solo el Administrador lo puede ver)
+  useEffect(() => {
+    if (!esAdmin || pestana !== "inicio") return;
+    verEquipo(slug)
+      .then(setEquipo)
+      .catch(() => undefined);
+  }, [slug, esAdmin, pestana]);
 
   useEffect(() => {
     const marcar = () => {
@@ -310,108 +342,155 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
     void salirClinica(slug).catch(() => undefined);
   };
 
-  const [pestana, setPestana] = useState<"inicio" | "equipo" | "cuenta">("inicio");
   const primerNombre = sesion.usuario.nombre.split(" ")[0] ?? sesion.usuario.nombre;
   const hora = new Date().getHours();
   const saludo = hora < 12 ? "Buen día" : hora < 20 ? "Buenas tardes" : "Buenas noches";
-  const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const fecha = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const hoy = fecha.charAt(0).toUpperCase() + fecha.slice(1);
   const plan = sesion.clinica.plan ? sesion.clinica.plan.charAt(0) + sesion.clinica.plan.slice(1).toLowerCase() : null;
+  const funciones = FUNCIONES.filter((f) => sesion.clinica.modulos.includes(f.codigo));
   const PESTANAS = [
-    { id: "inicio" as const, nombre: "Inicio" },
-    ...(esAdmin ? [{ id: "equipo" as const, nombre: "Equipo" }] : []),
-    { id: "cuenta" as const, nombre: "Mi cuenta" },
+    { id: "inicio" as const, nombre: "Inicio", icono: LayoutGrid },
+    ...(esAdmin ? [{ id: "equipo" as const, nombre: "Equipo", icono: UsersRound }] : []),
+    { id: "cuenta" as const, nombre: "Mi cuenta", icono: UserRound },
   ];
+  const activas = equipo?.personas.filter((p) => p.estado === "activa").length ?? null;
+  const invitadas = equipo?.personas.filter((p) => p.estado === "invitada").length ?? null;
+  const libres = equipo ? (equipo.limite === null ? null : Math.max(0, equipo.limite - equipo.usados)) : undefined;
 
   return (
-    <div className="min-h-screen bg-muted/40">
+    <div className="ce-clinica min-h-screen bg-[oklch(0.985_0.006_300)] dark:bg-background">
       <Toaster position="top-right" richColors closeButton />
 
       {/* Franja de la clínica */}
-      <div className="relative overflow-hidden text-primary-foreground" style={{ background: "var(--gradient-brand)" }}>
-        <ToothLogo className="pointer-events-none absolute -right-16 -top-10 h-80 w-80 opacity-[0.07]" />
-        <header className="relative mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 pt-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+      <div className="ce-franja relative overflow-hidden text-white">
+        <ToothLogo className="pointer-events-none absolute -right-10 -top-6 h-72 w-72 opacity-[0.06]" />
+        <header className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-5 sm:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
               <ToothLogo className="h-5 w-5" />
             </span>
-            <p className="truncate font-bold">{sesion.clinica.nombre}</p>
-            {plan && (
-              <span className="hidden rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/25 sm:inline">
-                Plan {plan}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-right leading-tight sm:block">
-              <span className="block text-sm font-semibold">{sesion.usuario.nombre}</span>
-              <span className="block text-[11px] opacity-80">{sesion.usuario.rolNombre}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-[15px] font-bold leading-tight">{sesion.clinica.nombre}</span>
+              {plan && <span className="block text-[11px] font-medium text-white/70">Plan {plan}</span>}
             </span>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">
-              {sesion.usuario.nombre
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((x) => x[0]?.toUpperCase() ?? "")
-                .join("")}
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full bg-white/10 py-1 pl-1 pr-1 ring-1 ring-white/20 backdrop-blur sm:pl-3">
+            <span className="hidden text-right leading-tight sm:block">
+              <span className="block text-[13px] font-semibold">{sesion.usuario.nombre}</span>
+              <span className="block text-[11px] text-white/70">{sesion.usuario.rolNombre}</span>
+            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[oklch(0.42_0.2_292)] sm:ml-1.5">
+              {inicialesDe(sesion.usuario.nombre)}
             </span>
             <button
               type="button"
               onClick={salir}
-              className="ml-1 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              title="Salir"
+              aria-label="Salir"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/20 hover:text-white"
             >
-              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Salir</span>
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </header>
 
-        <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-10 sm:px-6">
-          <p className="text-sm capitalize opacity-80">{hoy}</p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+        <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-8">
+          <p className="ce-entra text-sm font-medium text-white/75">{hoy}</p>
+          <h1 className="ce-entra mt-1.5 text-[2rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.75rem]">
             {saludo}, {primerNombre}
           </h1>
-          <nav className="mt-6 flex gap-1.5" aria-label="Secciones">
-            {PESTANAS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setPestana(t.id)}
-                aria-current={pestana === t.id ? "page" : undefined}
-                className={
-                  pestana === t.id
-                    ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm"
-                    : "rounded-full px-4 py-2 text-sm font-semibold text-white/85 hover:bg-white/15"
-                }
-              >
-                {t.nombre}
-              </button>
-            ))}
+          <nav
+            className="ce-entra-2 mt-8 inline-flex gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/20 backdrop-blur"
+            aria-label="Secciones"
+          >
+            {PESTANAS.map((t) => {
+              const Icono = t.icono;
+              const activa = pestana === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setPestana(t.id)}
+                  aria-current={activa ? "page" : undefined}
+                  className={
+                    activa
+                      ? "inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[oklch(0.42_0.2_292)] shadow-[0_6px_16px_-8px_rgba(30,0,60,0.6)] transition-all"
+                      : "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white"
+                  }
+                >
+                  <Icono className="h-4 w-4" />
+                  {t.nombre}
+                </button>
+              );
+            })}
           </nav>
         </div>
       </div>
 
-      <main className="relative mx-auto -mt-8 max-w-5xl px-4 pb-12 sm:px-6">
+      <main className="ce-entra-3 relative mx-auto -mt-10 max-w-6xl px-4 pb-16 sm:px-8">
         {pestana === "inicio" && (
-          <div className="space-y-5">
-            <section className="rounded-3xl bg-card p-6 shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border">
-              <h2 className="text-lg font-extrabold tracking-tight">Bienvenido a {sesion.clinica.nombre}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {esAdmin
-                  ? "Como Administrador, desde Equipo sumás a tus odontólogos, secretarias y asistentes. A cada uno le llega un correo para elegir su contraseña."
-                  : "Desde acá vas a trabajar con tu agenda y tus pacientes."}
-              </p>
-              {esAdmin && (
-                <Button className="mt-4 rounded-xl" onClick={() => setPestana("equipo")}>
-                  Ir a Equipo
-                </Button>
-              )}
-            </section>
-            {sesion.clinica.modulos.length > 0 && (
-              <section className="rounded-3xl bg-card p-6 ring-1 ring-border">
-                <h2 className="text-sm font-bold">Lo que incluye tu plan{plan ? ` ${plan}` : ""}</h2>
-                <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {sesion.clinica.modulos.map((m) => (
-                    <li key={m} className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 text-sm font-medium">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                      {NOMBRE_MODULO[m] ?? m}
+          <div className="space-y-6">
+            {esAdmin && (
+              <section className="ce-tarjeta p-6 sm:p-8">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="max-w-md">
+                    <h2 className="text-xl font-extrabold tracking-tight">Tu clínica, lista para tu equipo</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      Sumá a tus odontólogos, secretarias y asistentes. Cada uno recibe un correo, elige su contraseña y
+                      entra con su propio acceso.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                    <Dato valor={activas} texto="Con acceso" />
+                    <Dato valor={invitadas} texto="Invitadas" />
+                    <Dato valor={libres === undefined ? null : libres === null ? "∞" : libres} texto="Lugares libres" />
+                  </div>
+                </div>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <Atajo
+                    icono={UserPlus}
+                    titulo="Sumar personas"
+                    detalle="Una por una o pegando tu lista"
+                    onClick={() => setPestana("equipo")}
+                  />
+                  <Atajo
+                    icono={KeyRound}
+                    titulo="Mi cuenta"
+                    detalle="Tus datos y tu contraseña"
+                    onClick={() => setPestana("cuenta")}
+                  />
+                </div>
+              </section>
+            )}
+            {!esAdmin && (
+              <section className="ce-tarjeta p-6 sm:p-8">
+                <h2 className="text-xl font-extrabold tracking-tight">Bienvenido a {sesion.clinica.nombre}</h2>
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  Este es tu acceso personal. Desde acá vas a trabajar con la agenda y los pacientes de la clínica.
+                </p>
+              </section>
+            )}
+
+            {funciones.length > 0 && (
+              <section className="ce-tarjeta-suave p-6 sm:p-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-base font-bold">Lo que incluye tu plan{plan ? ` ${plan}` : ""}</h2>
+                  <p className="text-xs text-muted-foreground">Se van habilitando en tu cuenta</p>
+                </div>
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {funciones.map(({ codigo, nombre, detalle, icono: Icono }) => (
+                    <li
+                      key={codigo}
+                      className="ce-levanta flex items-center gap-3.5 rounded-2xl bg-[oklch(0.975_0.01_300)] p-4 ring-1 ring-transparent hover:bg-card hover:ring-border dark:bg-muted/40"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-10px_rgba(76,29,149,0.8)]" style={{ background: "var(--gradient-brand)" }}>
+                        <Icono className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">{nombre}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{detalle}</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -423,5 +502,43 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
         {pestana === "cuenta" && <MiCuentaClinica slug={slug} sesion={sesion} />}
       </main>
     </div>
+  );
+}
+
+function Dato({ valor, texto }: { valor: number | string | null; texto: string }) {
+  return (
+    <div className="min-w-[5.5rem] rounded-2xl bg-[oklch(0.975_0.01_300)] px-4 py-3 text-center dark:bg-muted/40">
+      <p className="text-2xl font-extrabold tabular-nums tracking-tight">{valor ?? "–"}</p>
+      <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{texto}</p>
+    </div>
+  );
+}
+
+function Atajo({
+  icono: Icono,
+  titulo,
+  detalle,
+  onClick,
+}: {
+  icono: typeof UserPlus;
+  titulo: string;
+  detalle: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ce-levanta group flex items-center gap-4 rounded-2xl bg-card p-4 text-left ring-1 ring-border"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+        <Icono className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{titulo}</span>
+        <span className="block text-xs text-muted-foreground">{detalle}</span>
+      </span>
+      <ChevronRight className="ce-flecha h-5 w-5 text-muted-foreground" />
+    </button>
   );
 }

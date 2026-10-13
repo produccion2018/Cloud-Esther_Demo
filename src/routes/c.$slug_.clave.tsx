@@ -74,7 +74,7 @@ function ElegirClave() {
           <ReglasClave clave={clave} />
           <CampoClave id="repetir" label="Repetir contraseña" value={repetir} onChange={setRepetir} />
           {error && <MensajeError>{error}</MensajeError>}
-          <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando || token === null}>
+          <Button type="submit" className="ce-boton h-12 w-full rounded-full text-base" disabled={cargando || token === null}>
             {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar contraseña
           </Button>

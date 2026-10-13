@@ -42,6 +42,7 @@ import type {
   Guia,
   IdeaMarketing,
   Llamada,
+  PedidoLlamada,
   Plantilla,
   PresupuestoIA,
   Publicacion,
@@ -191,6 +192,7 @@ export type Colecciones = {
   contactosRedes: ContactoRed[];
   presupuestosIA: PresupuestoIA[];
   consumosIA: ConsumoIA[];
+  pedidosLlamada: PedidoLlamada[];
 };
 
 const COLECCIONES_INICIALES: Colecciones = {
@@ -218,6 +220,7 @@ const COLECCIONES_INICIALES: Colecciones = {
   contactosRedes: [],
   presupuestosIA: [],
   consumosIA: [],
+  pedidosLlamada: [],
 };
 
 type BaseLocal = {

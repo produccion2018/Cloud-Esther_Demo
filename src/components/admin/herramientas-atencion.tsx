@@ -1,4 +1,4 @@
-import { Check, Copy, FileSpreadsheet, Pencil, Phone, PhoneCall, PhoneIncoming, PhoneOutgoing, Plus, Search, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, Copy, FileSpreadsheet, Pencil, Phone, PhoneCall, PhoneIncoming, PhoneOutgoing, Plus, Search, Trash2, Video } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
@@ -8,16 +8,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { borrarDe, guardarEn, nuevoIdLocal } from "@/lib/admin/api";
 import { useAccion, useClinicas, useColeccion } from "@/lib/admin/consultas";
 import { descargarExcel } from "@/lib/admin/excel";
-import { fecha } from "@/lib/admin/formato";
+import { enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { useSesionAdmin } from "@/lib/admin/sesion";
-import type { Llamada, Plantilla } from "@/lib/admin/tipos-empresa";
+import type { Llamada, PedidoLlamada, Plantilla } from "@/lib/admin/tipos-empresa";
 
 /* Ubicación: src/components/admin/herramientas-atencion.tsx
    Piezas que comparten Atención a clínicas, Soporte técnico y Redes y marketing:
    · Botón «Descargar Excel» (planilla .xlsx de verdad).
-   · Registro de LLAMADAS con botón «Llamar». Hoy «Llamar» abre el teléfono de la computadora
-     (enlace tel:). Cuando instalen Avaya (Avaya Workplace), Avaya atiende esos enlaces y llama
-     solo; después se conecta el registro automático (las llamadas entran con origen «Avaya»).
+   · Registro de LLAMADAS (todo gratis): «WhatsApp» abre el chat para llamar por WhatsApp,
+     «Llamar» abre el teléfono de la computadora o del celular, y «Videollamada» arma un enlace
+     de Jitsi Meet (gratis, sin cuenta) para mandarle a la clínica.
+   · PEDIDOS DE LLAMADA: lo que las clínicas piden desde «Te llamamos gratis» en la web.
    · RESPUESTAS LISTAS para copiar (WhatsApp, correo). */
 
 export function useAutor() {
@@ -33,6 +35,70 @@ const hoyISO = () => {
 export function enlaceLlamar(tel: string): string | null {
   const limpio = tel.replace(/[^0-9+]/g, "");
   return limpio.replace(/\D/g, "").length >= 6 ? `tel:${limpio}` : null;
+}
+
+/** Enlace de videollamada gratis (Jitsi Meet, sin cuenta ni instalación). */
+export function nuevaVideollamada(): string {
+  const azar = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return `https://meet.jit.si/CloudEsther-${azar}`;
+}
+
+/** Botones para contactar gratis: WhatsApp, teléfono y videollamada. */
+export function BotonesContacto({ telefono, pais, compacto = false }: { telefono: string; pais?: string; compacto?: boolean }) {
+  const wa = enlaceWhatsApp(telefono, pais);
+  const tel = enlaceLlamar(telefono);
+  const [video, setVideo] = useState<string | null>(null);
+  const armarVideo = async () => {
+    const enlace = nuevaVideollamada();
+    setVideo(enlace);
+    try {
+      await navigator.clipboard.writeText(enlace);
+    } catch {
+      /* sin portapapeles: el enlace queda a la vista */
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {wa && (
+        <a href={wa} target="_blank" rel="noreferrer" className="btn-wa !min-h-8 !px-2.5 !text-xs" title="Abrir WhatsApp (llamada o mensaje gratis)">
+          <IconoWhatsApp /> {!compacto && "WhatsApp"}
+        </a>
+      )}
+      {tel && (
+        <Button asChild size="sm" variant="outline" title="Llamar">
+          <a href={tel}>
+            <Phone className="h-3.5 w-3.5" />
+            {!compacto && <span className="ml-1">Llamar</span>}
+          </a>
+        </Button>
+      )}
+      <Button size="sm" variant="outline" title="Armar enlace de videollamada (gratis)" onClick={() => void armarVideo()}>
+        <Video className="h-3.5 w-3.5" />
+        {!compacto && <span className="ml-1">Videollamada</span>}
+      </Button>
+      {video && (
+        <span className="w-full text-[11px] text-muted-foreground">
+          Enlace copiado:{" "}
+          <a href={video} target="_blank" rel="noreferrer" className="font-semibold text-primary underline">
+            {video.replace("https://", "")}
+          </a>
+          {wa && (
+            <>
+              {" · "}
+              <a
+                href={`${wa}${wa.includes("?") ? "&" : "?"}text=${encodeURIComponent(`Hola, te escribimos de Cloud Esther. Entrá a esta videollamada: ${video}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-primary underline"
+              >
+                mandar por WhatsApp
+              </a>
+            </>
+          )}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function BotonExcel({ onClick, texto = "Descargar Excel" }: { onClick: () => void; texto?: string }) {
@@ -56,11 +122,12 @@ const TONO_RESULTADO: Record<Llamada["resultado"], "ok" | "alerta" | "peligro" |
 
 export function exportarLlamadas(lista: Llamada[]) {
   descargarExcel("llamadas", "Llamadas", [
-    ["Fecha", "Hora", "Dirección", "Clínica", "Contacto", "Teléfono", "Duración (min)", "Resultado", "Motivo", "Notas", "Atendió", "Próximo seguimiento", "Origen"],
+    ["Fecha", "Hora", "Dirección", "Medio", "Clínica", "Contacto", "Teléfono", "Duración (min)", "Resultado", "Motivo", "Notas", "Atendió", "Próximo seguimiento", "Origen"],
     ...lista.map((l) => [
       l.fecha.slice(0, 10),
       new Date(l.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
       l.direccion,
+      l.medio ?? "Teléfono",
       l.clinica,
       l.contacto,
       l.telefono,
@@ -118,7 +185,7 @@ export function RegistroLlamadas({
   return (
     <Seccion
       titulo={clinica ? `Llamadas con ${clinica}` : "Registro de llamadas"}
-      descripcion="Cada llamada queda con quién atendió, cuánto duró y qué se habló. «Llamar» abre el teléfono de la computadora (y Avaya, cuando lo instalen)."
+      descripcion="Cada llamada queda con quién atendió, cuánto duró y qué se habló. Llamá gratis por WhatsApp o armá una videollamada."
       acciones={
         <div className="flex flex-wrap gap-2">
           <BotonExcel onClick={() => exportarLlamadas(lista)} />
@@ -174,7 +241,7 @@ export function RegistroLlamadas({
                     {fecha(l.fecha, true)}
                   </span>
                   <span className="text-muted-foreground">
-                    {l.direccion} · {l.duracionMin} min{l.origen === "Avaya" ? " · Avaya" : ""}
+                    {l.direccion} · {l.medio ?? "Teléfono"} · {l.duracionMin} min{l.origen === "Pedido web" ? " · pedido web" : ""}
                   </span>
                 </td>
                 <td className="px-3 py-3">
@@ -198,13 +265,7 @@ export function RegistroLlamadas({
                 <td className="px-3 py-3 text-xs text-muted-foreground">{l.atendio}</td>
                 <td className="py-3 pl-3 pr-5 text-right">
                   <div className="flex justify-end gap-1">
-                    {tel && (
-                      <Button asChild size="sm" variant="outline" title="Llamar">
-                        <a href={tel}>
-                          <Phone className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    )}
+                    {tel && <BotonesContacto telefono={l.telefono} compacto />}
                     {editable && (
                       <Button size="sm" variant="outline" onClick={() => setEditando(l)} title="Editar">
                         <Pencil className="h-3.5 w-3.5" />
@@ -228,13 +289,18 @@ export function RegistroLlamadas({
   );
 }
 
-function DialogoLlamada({
+export function DialogoLlamada({
   inicial,
   clinicaInicial,
+  base,
+  onGuardada,
   onCerrar,
 }: {
   inicial: Llamada | null;
   clinicaInicial?: string;
+  /** Datos para completar una llamada nueva (por ejemplo, desde un pedido de la web) */
+  base?: Partial<Llamada>;
+  onGuardada?: (l: Llamada) => void;
   onCerrar: () => void;
 }) {
   const autor = useAutor();
@@ -260,7 +326,9 @@ function DialogoLlamada({
       atendio: autor,
       casoId: null,
       origen: "Manual",
+      medio: "WhatsApp",
       proximoSeguimiento: null,
+      ...base,
     },
   );
   const set = <K extends keyof Llamada>(k: K, v: Llamada[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -281,10 +349,13 @@ function DialogoLlamada({
     if (!f.clinica.trim() && !f.contacto.trim()) return setError("Elegí la clínica o escribí con quién hablaste.");
     if (!Number.isFinite(f.duracionMin) || f.duracionMin < 0) return setError("La duración no es válida.");
     setError(null);
-    guardar.mutate(
-      { ...f, clinica: f.clinica.trim(), contacto: f.contacto.trim(), motivo: f.motivo.trim(), notas: f.notas.trim() },
-      { onSuccess: onCerrar },
-    );
+    const final = { ...f, medio: f.medio ?? "Teléfono", clinica: f.clinica.trim(), contacto: f.contacto.trim(), motivo: f.motivo.trim(), notas: f.notas.trim() };
+    guardar.mutate(final, {
+      onSuccess: () => {
+        onGuardada?.(final);
+        onCerrar();
+      },
+    });
   };
 
   return (
@@ -316,16 +387,19 @@ function DialogoLlamada({
           <input value={f.contacto} onChange={(e) => set("contacto", e.target.value)} className={INPUT} />
         </Campo>
         <Campo label="Teléfono">
-          <div className="flex gap-2">
-            <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} className={INPUT} placeholder="+54 11 5555 5555" />
-            {tel && (
-              <Button asChild type="button" variant="outline" title="Llamar ahora">
-                <a href={tel}>
-                  <PhoneCall className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
+          <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} className={INPUT} placeholder="+54 11 5555 5555" />
+        </Campo>
+        {tel && (
+          <div className="sm:col-span-2">
+            <BotonesContacto telefono={f.telefono} />
           </div>
+        )}
+        <Campo label="Por dónde">
+          <select value={f.medio ?? "Teléfono"} onChange={(e) => set("medio", e.target.value as Llamada["medio"])} className={INPUT}>
+            <option>WhatsApp</option>
+            <option>Teléfono</option>
+            <option>Videollamada</option>
+          </select>
         </Campo>
         <Campo label="Dirección">
           <select value={f.direccion} onChange={(e) => set("direccion", e.target.value as Llamada["direccion"])} className={INPUT}>
@@ -535,5 +609,127 @@ function DialogoPlantilla({
         </Campo>
       </div>
     </DialogoFormulario>
+  );
+}
+
+/* ───────────── Pedidos de llamada («Te llamamos gratis» de la web) ───────────── */
+
+const TONO_PEDIDO: Record<PedidoLlamada["estado"], "primario" | "ok" | "alerta" | "neutro"> = {
+  Pendiente: "primario",
+  Llamado: "ok",
+  "No contestó": "alerta",
+  Descartado: "neutro",
+};
+
+export function PedidosLlamada({ editable }: { editable: boolean }) {
+  const autor = useAutor();
+  const { data, isLoading } = useColeccion("pedidosLlamada");
+  const guardar = useAccion((p: PedidoLlamada) => guardarEn("pedidosLlamada", p), ["pedidosLlamada"], "Pedido actualizado");
+  const [filtro, setFiltro] = useState<"pendientes" | "todos">("pendientes");
+  const [llamando, setLlamando] = useState<PedidoLlamada | null>(null);
+  const lista = (data ?? [])
+    .filter((p) => filtro === "todos" || p.estado === "Pendiente" || p.estado === "No contestó")
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  const exportar = () =>
+    descargarExcel("pedidos-de-llamada", "Pedidos", [
+      ["Fecha", "Nombre", "Clínica", "País", "Teléfono", "Horario", "Motivo", "Estado", "Atendió", "Notas"],
+      ...lista.map((p) => [p.fecha.slice(0, 16).replace("T", " "), p.nombre, p.clinica, p.pais, p.telefono, p.horario, p.motivo, p.estado, p.atendidoPor ?? "", p.notas]),
+    ]);
+
+  const marcar = (p: PedidoLlamada, estado: PedidoLlamada["estado"], llamadaId: string | null = p.llamadaId) =>
+    guardar.mutate({ ...p, estado, atendidoPor: autor, llamadaId });
+
+  return (
+    <Seccion
+      titulo="Pedidos de llamada"
+      descripcion="Clínicas que pidieron «Te llamamos gratis» en la página. Llamalas por WhatsApp (gratis) o por teléfono y marcá cómo te fue: la llamada queda registrada."
+      acciones={
+        <div className="flex flex-wrap gap-2">
+          <select value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)} className={`${INPUT} w-auto`} aria-label="Mostrar">
+            <option value="pendientes">Por llamar</option>
+            <option value="todos">Todos</option>
+          </select>
+          <BotonExcel onClick={exportar} />
+        </div>
+      }
+      sinPadding
+    >
+      {isLoading ? (
+        <div className="p-5">
+          <Cargando />
+        </div>
+      ) : lista.length === 0 ? (
+        <div className="p-5">
+          <Vacio titulo={filtro === "pendientes" ? "No hay pedidos por llamar" : "Todavía no llegó ningún pedido"} texto="Llegan desde el botón «Te llamamos gratis» de la página." />
+        </div>
+      ) : (
+        <ul className="divide-y divide-border/60">
+          {lista.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-start gap-3 px-5 py-4">
+              <div className="min-w-[220px] flex-1">
+                <p className="font-semibold">
+                  {p.nombre}
+                  {p.clinica && <span className="font-normal text-muted-foreground"> · {p.clinica}</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {p.telefono} · {p.pais} · pidió {haceCuanto(p.fecha)}
+                </p>
+                <p className="mt-1 text-xs">
+                  <b>Horario:</b> {p.horario}
+                  {p.motivo && (
+                    <>
+                      {" · "}
+                      <b>Motivo:</b> {p.motivo}
+                    </>
+                  )}
+                </p>
+                {p.atendidoPor && p.estado !== "Pendiente" && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">Atendió: {p.atendidoPor}</p>
+                )}
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Pildora tono={TONO_PEDIDO[p.estado]}>{p.estado}</Pildora>
+                <BotonesContacto telefono={p.telefono} pais={p.pais} />
+                {editable && (p.estado === "Pendiente" || p.estado === "No contestó") && (
+                  <div className="flex flex-wrap justify-end gap-1">
+                    <Button size="sm" onClick={() => setLlamando(p)}>
+                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Ya lo llamé
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={guardar.isPending} onClick={() => marcar(p, "No contestó")}>
+                      No contestó
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={guardar.isPending}
+                      onClick={() => confirmar("¿Descartar este pedido?") && marcar(p, "Descartado")}
+                    >
+                      Descartar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {llamando && (
+        <DialogoLlamada
+          inicial={null}
+          base={{
+            direccion: "Saliente",
+            clinica: llamando.clinica,
+            contacto: llamando.nombre,
+            telefono: llamando.telefono,
+            motivo: llamando.motivo.slice(0, 200),
+            origen: "Pedido web",
+            medio: "WhatsApp",
+          }}
+          onGuardada={(l) => marcar(llamando, l.resultado === "Atendida" ? "Llamado" : "No contestó", l.id)}
+          onCerrar={() => setLlamando(null)}
+        />
+      )}
+    </Seccion>
   );
 }

@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CLINICA_CON_SERVIDOR,
   infoPublicaClinica,
@@ -311,77 +310,117 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
     void salirClinica(slug).catch(() => undefined);
   };
 
+  const [pestana, setPestana] = useState<"inicio" | "equipo" | "cuenta">("inicio");
+  const primerNombre = sesion.usuario.nombre.split(" ")[0] ?? sesion.usuario.nombre;
+  const hora = new Date().getHours();
+  const saludo = hora < 12 ? "Buen día" : hora < 20 ? "Buenas tardes" : "Buenas noches";
+  const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const plan = sesion.clinica.plan ? sesion.clinica.plan.charAt(0) + sesion.clinica.plan.slice(1).toLowerCase() : null;
+  const PESTANAS = [
+    { id: "inicio" as const, nombre: "Inicio" },
+    ...(esAdmin ? [{ id: "equipo" as const, nombre: "Equipo" }] : []),
+    { id: "cuenta" as const, nombre: "Mi cuenta" },
+  ];
+
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/40">
       <Toaster position="top-right" richColors closeButton />
-      <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-primary-foreground"
-              style={{ background: "var(--gradient-brand)" }}
-            >
+
+      {/* Franja de la clínica */}
+      <div className="relative overflow-hidden text-primary-foreground" style={{ background: "var(--gradient-brand)" }}>
+        <ToothLogo className="pointer-events-none absolute -right-16 -top-10 h-80 w-80 opacity-[0.07]" />
+        <header className="relative mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 pt-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
               <ToothLogo className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 leading-tight">
-              <p className="truncate font-bold">{sesion.clinica.nombre}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {sesion.usuario.nombre} · {sesion.usuario.rolNombre}
-              </p>
-            </div>
+            </span>
+            <p className="truncate font-bold">{sesion.clinica.nombre}</p>
+            {plan && (
+              <span className="hidden rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/25 sm:inline">
+                Plan {plan}
+              </span>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={salir}>
-            <LogOut className="mr-1.5 h-4 w-4" /> Salir
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-right leading-tight sm:block">
+              <span className="block text-sm font-semibold">{sesion.usuario.nombre}</span>
+              <span className="block text-[11px] opacity-80">{sesion.usuario.rolNombre}</span>
+            </span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">
+              {sesion.usuario.nombre
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((x) => x[0]?.toUpperCase() ?? "")
+                .join("")}
+            </span>
+            <button
+              type="button"
+              onClick={salir}
+              className="ml-1 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Salir</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-10 sm:px-6">
+          <p className="text-sm capitalize opacity-80">{hoy}</p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {saludo}, {primerNombre}
+          </h1>
+          <nav className="mt-6 flex gap-1.5" aria-label="Secciones">
+            {PESTANAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setPestana(t.id)}
+                aria-current={pestana === t.id ? "page" : undefined}
+                className={
+                  pestana === t.id
+                    ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm"
+                    : "rounded-full px-4 py-2 text-sm font-semibold text-white/85 hover:bg-white/15"
+                }
+              >
+                {t.nombre}
+              </button>
+            ))}
+          </nav>
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <Tabs defaultValue="inicio">
-          <TabsList>
-            <TabsTrigger value="inicio">Inicio</TabsTrigger>
-            {esAdmin && <TabsTrigger value="equipo">Equipo</TabsTrigger>}
-            <TabsTrigger value="cuenta">Mi cuenta</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="inicio" className="mt-4 space-y-4">
-            <div className="rounded-2xl border bg-card p-5">
-              <h1 className="text-xl font-extrabold tracking-tight">¡Hola, {sesion.usuario.nombre.split(" ")[0]}!</h1>
+      <main className="relative mx-auto -mt-8 max-w-5xl px-4 pb-12 sm:px-6">
+        {pestana === "inicio" && (
+          <div className="space-y-5">
+            <section className="rounded-3xl bg-card p-6 shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border">
+              <h2 className="text-lg font-extrabold tracking-tight">Bienvenido a {sesion.clinica.nombre}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Bienvenido a {sesion.clinica.nombre}.
-                {sesion.clinica.plan ? ` Plan ${sesion.clinica.plan.charAt(0)}${sesion.clinica.plan.slice(1).toLowerCase()}.` : ""}
+                {esAdmin
+                  ? "Como Administrador, desde Equipo sumás a tus odontólogos, secretarias y asistentes. A cada uno le llega un correo para elegir su contraseña."
+                  : "Desde acá vas a trabajar con tu agenda y tus pacientes."}
               </p>
               {esAdmin && (
-                <p className="mt-3 text-sm">
-                  Como Administrador, desde <strong>Equipo</strong> podés invitar a tus odontólogos, secretarias y
-                  asistentes. A cada uno le llega un correo para elegir su contraseña.
-                </p>
+                <Button className="mt-4 rounded-xl" onClick={() => setPestana("equipo")}>
+                  Ir a Equipo
+                </Button>
               )}
-            </div>
+            </section>
             {sesion.clinica.modulos.length > 0 && (
-              <div className="rounded-2xl border bg-card p-5">
-                <h2 className="text-sm font-bold">Lo que incluye tu plan</h2>
-                <ul className="mt-3 flex flex-wrap gap-2">
+              <section className="rounded-3xl bg-card p-6 ring-1 ring-border">
+                <h2 className="text-sm font-bold">Lo que incluye tu plan{plan ? ` ${plan}` : ""}</h2>
+                <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {sesion.clinica.modulos.map((m) => (
-                    <li key={m} className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                    <li key={m} className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 text-sm font-medium">
+                      <span className="h-2 w-2 rounded-full bg-primary" />
                       {NOMBRE_MODULO[m] ?? m}
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             )}
-          </TabsContent>
-
-          {esAdmin && (
-            <TabsContent value="equipo" className="mt-4">
-              <EquipoClinicaPanel slug={slug} />
-            </TabsContent>
-          )}
-
-          <TabsContent value="cuenta" className="mt-4">
-            <MiCuentaClinica slug={slug} sesion={sesion} />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
+        {pestana === "equipo" && esAdmin && <EquipoClinicaPanel slug={slug} />}
+        {pestana === "cuenta" && <MiCuentaClinica slug={slug} sesion={sesion} />}
       </main>
     </div>
   );

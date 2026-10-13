@@ -52,6 +52,12 @@ const COLOR_ROL: Record<RolClinica, { fondo: string; texto: string; anillo: stri
   secretaria: { fondo: "bg-amber-500", texto: "text-white", anillo: "ring-amber-500/30" },
   asistente: { fondo: "bg-emerald-600", texto: "text-white", anillo: "ring-emerald-600/30" },
 };
+const CHIP_ROL: Record<RolClinica, string> = {
+  admin: "bg-primary/10 text-primary",
+  odontologo: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  secretaria: "bg-amber-500/15 text-amber-800 dark:text-amber-200",
+  asistente: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+};
 const NOMBRE_ROL = Object.fromEntries(ROLES_CLINICA.map((r) => [r.id, r.nombre])) as Record<RolClinica, string>;
 const PLURAL_ROL: Record<RolClinica, string> = {
   admin: "Administradores",
@@ -85,7 +91,7 @@ function Avatar({ p, chico = false }: { p: { nombre: string; rol: RolClinica }; 
         "inline-flex shrink-0 items-center justify-center rounded-full font-bold",
         c.fondo,
         c.texto,
-        chico ? "h-9 w-9 text-xs ring-2 ring-background" : "h-11 w-11 text-sm",
+        chico ? "h-10 w-10 text-xs ring-2 ring-background" : "h-11 w-11 text-sm shadow-sm",
       )}
       aria-hidden="true"
     >
@@ -160,7 +166,7 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
   return (
     <div className="space-y-5">
       {/* Lugares del plan */}
-      <section className="rounded-3xl border bg-card p-5 sm:p-6">
+      <section className="rounded-3xl bg-card p-6 shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Tu equipo</h2>
@@ -215,14 +221,17 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
       </div>
 
       {/* Personas */}
-      <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
+      <ul className="divide-y overflow-hidden rounded-3xl bg-card ring-1 ring-border">
         {visibles.length === 0 && (
           <li className="px-5 py-10 text-center text-sm text-muted-foreground">Nadie coincide con la búsqueda.</li>
         )}
         {visibles.map((p) => (
           <li
             key={p.id}
-            className={cn("flex items-center gap-4 px-4 py-3.5 sm:px-5", p.estado === "desactivada" && "opacity-55")}
+            className={cn(
+              "flex items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/40 sm:px-6",
+              p.estado === "desactivada" && "opacity-55",
+            )}
           >
             <Avatar p={p} />
             <div className="min-w-0 flex-1">
@@ -231,8 +240,10 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
               </p>
               <p className="truncate text-xs text-muted-foreground">{p.email}</p>
             </div>
-            <div className="hidden w-36 sm:block">
-              <p className="text-sm font-medium">{p.rolNombre}</p>
+            <span className={cn("hidden rounded-full px-3 py-1 text-xs font-semibold sm:inline", CHIP_ROL[p.rol])}>
+              {p.rolNombre}
+            </span>
+            <div className="hidden w-44 sm:block">
               <Estado p={p} />
             </div>
             <div className="sm:hidden">
@@ -328,8 +339,16 @@ function Lugares({
   const libres = limite === null ? 0 : Math.max(0, limite - ocupan.length);
   const mostrarLibres = Math.min(libres, Math.max(0, MAX - ocupan.length));
   const sobran = Math.max(0, ocupan.length - MAX);
+  const total = limite ?? ocupan.length;
+  const porcentaje = total > 0 ? Math.min(100, Math.round((ocupan.length / total) * 100)) : 0;
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-2">
+    <div className="mt-6 space-y-4">
+      {limite !== null && (
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+          <div className="h-full rounded-full" style={{ width: `${porcentaje}%`, background: "var(--gradient-brand)" }} />
+        </div>
+      )}
+    <div className="flex flex-wrap items-center gap-2.5">
       {ocupan.slice(0, MAX).map((p) => (
         <span key={p.id} title={`${p.nombre} · ${p.rolNombre}${p.estado === "invitada" ? " (invitada)" : ""}`}>
           <span className={cn("block rounded-full", p.estado === "invitada" && "opacity-50")}>
@@ -344,11 +363,12 @@ function Lugares({
           type="button"
           onClick={onLibre}
           aria-label="Lugar libre: sumar una persona"
-          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 text-muted-foreground/60 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 text-muted-foreground/60 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Plus className="h-4 w-4" />
         </button>
       ))}
+    </div>
     </div>
   );
 }
@@ -370,11 +390,19 @@ function Filtro({ activo, onClick, children }: { activo: boolean; onClick: () =>
 }
 
 function Estado({ p }: { p: PersonaEquipo }) {
-  if (p.estado === "invitada")
-    return <p className="text-xs font-medium text-amber-700 dark:text-amber-300">Invitada · falta su contraseña</p>;
-  if (p.estado === "desactivada") return <p className="text-xs text-muted-foreground">Sin acceso</p>;
   const u = cuando(p.ultimoIngreso);
-  return <p className="text-xs text-muted-foreground">{u ? `Entró ${u}` : "Todavía no entró"}</p>;
+  const [punto, texto] =
+    p.estado === "invitada"
+      ? ["bg-amber-500", "Invitada · falta su contraseña"]
+      : p.estado === "desactivada"
+        ? ["bg-muted-foreground/40", "Sin acceso"]
+        : ["bg-emerald-500", u ? `Activa · entró ${u}` : "Activa · todavía no entró"];
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className={cn("h-2 w-2 shrink-0 rounded-full", punto)} />
+      <span className={p.estado === "invitada" ? "font-medium text-amber-700 dark:text-amber-300" : undefined}>{texto}</span>
+    </p>
+  );
 }
 
 /* ───────────── Sumar personas (varias a la vez) ───────────── */

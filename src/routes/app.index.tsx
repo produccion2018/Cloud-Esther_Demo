@@ -18,10 +18,8 @@ const STATS = [
 ];
 
 const TURNOS = [
-  { hora: "08:00", paciente: "María González", detalle: "Control de ortodoncia · Dra. An...", estado: "Confirmado" },
-  { hora: "08:45", paciente: "Carlos Rodríguez", detalle: "Implante · fase 2 · Dr. Carlos Ló...", estado: "Confirmado" },
-  { hora: "09:30", paciente: "Laura Fernández", detalle: "Colocación de brackets · Dra. An...", estado: "Pendiente" },
-  { hora: "10:15", paciente: "Juan Pérez", detalle: "Endodoncia pieza 26 · Dra. Sofí...", estado: "Confirmado" },
+  { hora: "10:30", paciente: "Mauro Pinto", detalle: "Control de ortodoncia · Dra. Mireya Becerra", estado: "Confirmado" },
+  { hora: "15:00", paciente: "Alejo Becerra", detalle: "Evaluación de implante · Dr. Andrés Becerra", estado: "Pendiente" },
 ];
 
 function EstadoBadge({ estado }: { estado: string }) {

@@ -84,17 +84,10 @@ export const TRATAMIENTOS = [
 const ESPERA_EJEMPLO: Espera[] = [
   {
     id: 1,
-    nombre: "Carla Núñez",
-    motivo: "Primera consulta",
+    nombre: "Alejo Becerra",
+    motivo: "Limpieza dental",
     franja: "Tardes",
     sucursal: "Clínica Centro",
-  },
-  {
-    id: 2,
-    nombre: "Tomás Herrera",
-    motivo: "Limpieza dental",
-    franja: "Mañanas",
-    sucursal: "Clínica Norte",
   },
 ];
 
@@ -106,26 +99,15 @@ function turnosEjemplo(hoy: string): Turno[] {
     d.setDate(d.getDate() + n);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
+  // Solo los dos pacientes de ejemplo (Mauro Pinto y Alejo Becerra) con los dos odontólogos
   const base: [number, string, string, string, number, string, EstadoTurno][] = [
-    [0, "09:00", "Marina Delgado", "Primera consulta", 0, "Gabinete 1", "Confirmada"],
-    [0, "09:30", "Julián Ortega", "Control", 1, "Gabinete 2", "Atendida"],
-    [0, "10:30", "Lucía Paz", "Limpieza dental", 0, "Gabinete 1", "Pendiente"],
-    [0, "11:30", "Ramiro Sosa", "Endodoncia", 2, "Gabinete 3", "Confirmada"],
-    [0, "15:00", "Paula Medina", "Restauración", 1, "Gabinete 2", "Pendiente"],
-    [0, "16:30", "Sergio Luna", "Control de ortodoncia", 2, "Gabinete 3", "Ausente"],
-    [1, "10:00", "Ana Torres", "Blanqueamiento", 0, "Gabinete 1", "Pendiente"],
-    [1, "14:00", "Diego Ruiz", "Extracción", 1, "Gabinete 2", "Confirmada"],
-    [2, "09:30", "Valeria Gómez", "Evaluación de implante", 2, "Gabinete 3", "Pendiente"],
-    [3, "11:00", "Carlos Méndez", "Control", 0, "Gabinete 1", "Pendiente"],
-    [-1, "12:00", "Florencia Díaz", "Limpieza dental", 1, "Gabinete 2", "Atendida"],
-    [2, "11:30", "Mauro Pinto", "Control", 0, "Gabinete 1", "Pendiente"],
+    [0, "10:30", "Mauro Pinto", "Control", 0, "Gabinete 1", "Confirmada"],
+    [0, "15:00", "Alejo Becerra", "Evaluación de implante", 1, "Gabinete 2", "Pendiente"],
+    [2, "11:30", "Mauro Pinto", "Control de ortodoncia", 0, "Gabinete 1", "Pendiente"],
+    [5, "16:00", "Alejo Becerra", "Limpieza dental", 0, "Gabinete 1", "Pendiente"],
+    [-3, "10:00", "Alejo Becerra", "Primera consulta", 1, "Gabinete 2", "Atendida"],
     [-32, "15:00", "Mauro Pinto", "Restauración", 0, "Gabinete 1", "Atendida"],
     [-50, "10:30", "Mauro Pinto", "Primera consulta", 0, "Gabinete 1", "Atendida"],
-    [0, "09:00", "Valeria Gómez", "Limpieza dental", 3, "Gabinete 4", "Confirmada"],
-    [0, "11:00", "Diego Ruiz", "Control", 3, "Gabinete 4", "Pendiente"],
-    [0, "14:30", "Ana Torres", "Restauración", 3, "Gabinete 4", "Pendiente"],
-    [1, "09:30", "Florencia Díaz", "Primera consulta", 3, "Gabinete 4", "Pendiente"],
-    [-3, "10:00", "Julián Ortega", "Limpieza dental", 3, "Gabinete 4", "Atendida"],
   ];
   return base.map(([d, hora, paciente, tratamiento, o, gabinete, estado], i) => ({
     id: i + 1,
@@ -134,7 +116,7 @@ function turnosEjemplo(hoy: string): Turno[] {
     paciente,
     tratamiento,
     odontologo: od(o),
-    sucursal: i % 3 === 2 ? "Clínica Norte" : "Clínica Centro",
+    sucursal: "Clínica Centro",
     gabinete,
     estado,
     notas: "",
@@ -182,7 +164,7 @@ export const setTareasStore = setterAgenda("tareas");
 const TAREA_EJEMPLO: Omit<Tarea, "id" | "fecha"> = {
   texto: "Llamar para confirmar el turno",
   categoria: "Llamar al paciente",
-  paciente: "Marina Delgado",
+  paciente: "Mauro Pinto",
   hecha: false,
 };
 

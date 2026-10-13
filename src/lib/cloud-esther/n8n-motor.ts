@@ -30,7 +30,7 @@ import {
 
 /** Lo que disparó el evento: siempre un registro real de esta empresa. */
 export type Disparo = {
-  titulo: string; // "Presupuesto PR-0004 de Lucía Gómez"
+  titulo: string; // "Presupuesto PR-0004 de Mauro Pinto"
   paciente: string;
   pacienteId: number | null;
   telefono: string;

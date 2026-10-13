@@ -56,12 +56,12 @@ const PRODUCCION = [
 ];
 
 const ACTIVIDAD_INICIAL: Actividad[] = [
-  { id: 1, hora: "09:42", quien: "Mariana Costa", accion: "Confirmó el turno de María González" },
-  { id: 2, hora: "09:31", quien: "Dra. Ana Martínez", accion: "Actualizó la historia clínica de Paula Medina" },
+  { id: 1, hora: "09:42", quien: "Ketty Margarita", accion: "Confirmó el turno de Mauro Pinto" },
+  { id: 2, hora: "09:31", quien: "Dra. Mireya Becerra", accion: "Actualizó la historia clínica de Mauro Pinto" },
   { id: 3, hora: "09:18", quien: "Automatización", accion: "Envió 34 recordatorios de turno por WhatsApp" },
-  { id: 4, hora: "08:55", quien: "Esteban Rivas", accion: "Emitió la factura F-0001-00184" },
+  { id: 4, hora: "08:55", quien: "Ketty Margarita", accion: "Emitió la factura F-0001-00184" },
   { id: 5, hora: "08:40", quien: "Sistema", accion: "Alerta de stock crítico: Guantes nitrilo M" },
-  { id: 6, hora: "08:12", quien: "Dr. Carlos López", accion: "Aprobó el presupuesto PR-2026-0141" },
+  { id: 6, hora: "08:12", quien: "Dr. Andrés Becerra", accion: "Aprobó el presupuesto PR-2026-0141" },
 ];
 
 const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
@@ -789,7 +789,7 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
             ))}
           </ul>
           <p className="border-t border-border bg-primary/[0.03] px-4 py-2.5 text-[10.5px] leading-snug text-muted-foreground">
-            Paciente de prueba: DNI <b>95193944</b>. Profesional: <b>jesus.mendez@cloudesther.com</b>. El código se muestra con “Recibir el código”.
+            Paciente de prueba: DNI <b>95193944</b>. Profesional: <b>andres.becerra@cloudesther.com</b>. El código se muestra con “Recibir el código”.
           </p>
         </div>
       )}

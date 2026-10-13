@@ -108,7 +108,7 @@ export function EstherAI({
   const sedes = sucursalesDelPlan(plan === "grupo");
   const conN8n = useConN8n();
   const n8n = storeN8n.usar();
-  const nombreUsuario = context?.usuario ?? usuario?.nombre ?? "Jesús Méndez";
+  const nombreUsuario = context?.usuario ?? usuario?.nombre ?? "Andrés Becerra";
   const primerNombre = nombreUsuario.split(" ")[0] ?? "";
   const esther = useEstherAI({
     context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId, n8n: conN8n },

@@ -2,7 +2,7 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { storeEquipo, type Ausencia, type TipoAusencia } from "@/lib/cloud-esther/equipo-store";
 import { storeEquipoPortal } from "@/lib/cloud-esther/portal-equipo-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
-import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
+import { TEAM_MEMBERS, type TeamMember, type TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 import {
   COTIZACIONES_INICIALES,
   contratoDe,
@@ -328,7 +328,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "27-30112456-3",
       nacimiento: haceAnios(41, 3),
       direccion: "Av. Corrientes 2450, CABA",
-      emergencia: "Pablo Martínez · +54 11 5512-0098",
+      emergencia: "Familiar · +54 11 5512-0098",
       obraSocial: "OSDE 310",
       cbu: "0070 0999 2000 0012 3456 78",
       historial: [
@@ -351,7 +351,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "20-28765332-1",
       nacimiento: haceAnios(45, 80),
       direccion: "Cabildo 1820, CABA",
-      emergencia: "Ana González · +54 11 4455-2211",
+      emergencia: "Familiar · +54 11 4455-2211",
       obraSocial: "Swiss Medical",
       sucursal: NORTE,
       jornada: 30,
@@ -371,7 +371,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "27-40221908-5",
       nacimiento: haceAnios(26, 12),
       direccion: "Rivadavia 5320, CABA",
-      emergencia: "Marta López · +54 11 6011-4432",
+      emergencia: "Familiar · +54 11 6011-4432",
       obraSocial: "OSPSA",
     }),
     legajo({
@@ -387,7 +387,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "27-35998120-9",
       nacimiento: haceAnios(33, 150),
       direccion: "Scalabrini Ortiz 980, CABA",
-      emergencia: "Juan Rodríguez · +54 11 5099-1102",
+      emergencia: "Familiar · +54 11 5099-1102",
       obraSocial: "OSPSA",
     }),
     legajo({
@@ -403,7 +403,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "20-27554001-7",
       nacimiento: haceAnios(47, -20),
       direccion: "Av. Santa Fe 3100, CABA",
-      emergencia: "Clara Fernández · +54 11 4788-9012",
+      emergencia: "Familiar · +54 11 4788-9012",
       obraSocial: "OSDE 210",
       convenio: "Fuera de convenio",
     }),
@@ -450,7 +450,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "20-95193944-6",
       nacimiento: haceAnios(38, 45),
       direccion: "Av. Belgrano 1450, CABA",
-      emergencia: "María Méndez · +54 11 6677-3344",
+      emergencia: "Familiar · +54 11 6677-3344",
       obraSocial: "Galeno",
     }),
     legajo({
@@ -470,7 +470,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "CC 1020456789",
       nacimiento: haceAnios(29, 70),
       direccion: "Cra. 15 #93-47, Bogotá",
-      emergencia: "Andrés Ortiz · +57 310 555 0199",
+      emergencia: "Familiar · +57 310 555 0199",
       obraSocial: "EPS Sura",
       cbu: "Bancolombia · Ahorros 123-456789-01",
       convenio: "Cuenta de cobro mensual",
@@ -491,7 +491,7 @@ function legajosEjemplo(): Record<string, Legajo> {
       cuil: "RUT 21 456789 0012",
       nacimiento: haceAnios(36, 110),
       direccion: "Bv. Artigas 1250, Montevideo",
-      emergencia: "Laura Rivas · +598 99 222 333",
+      emergencia: "Familiar · +598 99 222 333",
       obraSocial: "Médica Uruguaya",
       cbu: "BROU · Cta. 001234567-00001",
       convenio: "Factura mensual",
@@ -621,7 +621,7 @@ const EVALUACIONES: Evaluacion[] = [
     miembroId: "1",
     ciclo: "2026 · 1er semestre",
     fecha: diaISO(-90),
-    evaluador: "Diego Fernández",
+    evaluador: "Ketty Margarita",
     puntajes: puntajes(5, 5, 4, 5, 4),
     fortalezas: "Excelente trato con pacientes de ortodoncia y muy ordenada con las historias.",
     mejoras: "Delegar más tareas a las asistentes.",
@@ -633,7 +633,7 @@ const EVALUACIONES: Evaluacion[] = [
     miembroId: "3",
     ciclo: "2026 · 1er semestre",
     fecha: diaISO(-88),
-    evaluador: "Laura Martínez",
+    evaluador: "Mireya Becerra",
     puntajes: puntajes(4, 4, 5, 3, 4),
     fortalezas: "Muy buena predisposición y trabajo en equipo.",
     mejoras: "Mejorar la puntualidad al inicio del turno.",
@@ -645,7 +645,7 @@ const EVALUACIONES: Evaluacion[] = [
     miembroId: "4",
     ciclo: "2026 · 1er semestre",
     fecha: diaISO(-85),
-    evaluador: "Diego Fernández",
+    evaluador: "Ketty Margarita",
     puntajes: puntajes(5, 4, 4, 5, 5),
     fortalezas: "Resuelve la agenda con mucha agilidad y es clara con los pacientes.",
     mejoras: "Documentar mejor las derivaciones.",
@@ -657,7 +657,7 @@ const EVALUACIONES: Evaluacion[] = [
     miembroId: "8",
     ciclo: "2026 · 2do semestre",
     fecha: diaISO(-2),
-    evaluador: "Laura Martínez",
+    evaluador: "Mireya Becerra",
     puntajes: puntajes(5, 4, 4, 4, 4),
     fortalezas: "Muy buena comunicación con pacientes nuevos.",
     mejoras: "",
@@ -673,7 +673,7 @@ const COMUNICADOS: Comunicado[] = [
     texto:
       "Desde el lunes, cada ciclo de autoclave se registra en el portal del equipo (Gabinete). Gracias por sumarse.",
     fecha: new Date(Date.now() - 2 * 86_400_000).toISOString(),
-    autor: "Diego Fernández",
+    autor: "Ketty Margarita",
     destino: "Todos",
     fijado: true,
     leidos: ["1", "3", "5"],
@@ -684,7 +684,7 @@ const COMUNICADOS: Comunicado[] = [
     texto:
       "La clínica permanecerá cerrada el próximo feriado nacional. Reprogramen los turnos con tiempo.",
     fecha: new Date(Date.now() - 6 * 86_400_000).toISOString(),
-    autor: "Diego Fernández",
+    autor: "Ketty Margarita",
     destino: "Todos",
     fijado: false,
     leidos: ["1", "2", "3", "4", "5", "8"],
@@ -694,7 +694,7 @@ const COMUNICADOS: Comunicado[] = [
     titulo: "Reunión clínica mensual",
     texto: "El jueves a las 18 h revisamos casos complejos del mes. Traigan sus dudas.",
     fecha: new Date(Date.now() - 1 * 86_400_000).toISOString(),
-    autor: "Laura Martínez",
+    autor: "Mireya Becerra",
     destino: "odontologo",
     fijado: false,
     leidos: ["1"],
@@ -912,10 +912,30 @@ const FLUJOS: FlujoRRHH[] = [
   },
 ];
 
+/* El demo usa solo el equipo de ejemplo (Mireya y Andrés Becerra, odontólogos, y Ketty Margarita,
+   secretaria): se quitan los datos de ejemplo de otras personas. */
+function soloEquipoEjemplo(e: EstadoRRHH): EstadoRRHH {
+  const ids = new Set(TEAM_MEMBERS.map((m) => m.id));
+  const ok = (id: string) => ids.has(id);
+  return {
+    ...e,
+    legajos: Object.fromEntries(Object.entries(e.legajos).filter(([id]) => ok(id))),
+    solicitudes: e.solicitudes.filter((x) => ok(x.miembroId)),
+    fichajes: e.fichajes.filter((x) => ok(x.miembroId)),
+    periodos: e.periodos.map((p) => ({
+      ...p,
+      ajustes: Object.fromEntries(Object.entries(p.ajustes).filter(([id]) => ok(id))),
+    })),
+    capacitaciones: e.capacitaciones.map((c) => ({ ...c, asignados: c.asignados.filter((a) => ok(a.miembroId)) })),
+    evaluaciones: e.evaluaciones.filter((x) => ok(x.miembroId)),
+    documentos: e.documentos.filter((x) => ok(x.miembroId)),
+  };
+}
+
 export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
   () => {
     const actual = periodoActual();
-    return {
+    return soloEquipoEjemplo({
       legajos: legajosEjemplo(),
       solicitudes: [
         {
@@ -952,7 +972,7 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
           estado: "Aprobada",
           creada: diaISO(-15),
           origen: "RRHH",
-          respuesta: "Aprobada. Cubre Jesús Méndez.",
+          respuesta: "Aprobada. Cubre Mireya Becerra.",
         },
       ],
       fichajes: fichajesEjemplo(),
@@ -995,12 +1015,12 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
           fecha: new Date(Date.now() - 86_400_000).toISOString(),
           usuario: "Portal del equipo",
           accion: "Solicitud",
-          detalle: "Sofía Rodríguez pidió vacaciones",
+          detalle: "Ketty Margarita pidió vacaciones",
         },
         {
           id: "au2",
           fecha: new Date(Date.now() - 25 * 86_400_000).toISOString(),
-          usuario: "Diego Fernández",
+          usuario: "Ketty Margarita",
           accion: "Nómina",
           detalle: `Período ${nombrePeriodo(periodoAnterior(actual, 1))} pagado`,
         },
@@ -1017,7 +1037,7 @@ export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
         tasas: {},
       },
       lotes: [],
-    };
+    });
   },
   { persistir: "rrhh" },
 );
@@ -1683,6 +1703,6 @@ export function responderRRHH(pregunta: string): string {
     `Hoy: ${deHoy.length} fichadas, ${ausentesHoy.length} con licencia.`,
     `Solicitudes pendientes: ${r.solicitudes.filter((s) => s.estado === "Pendiente").length}.`,
     `Costo laboral estimado del mes: ${ars(recibos.reduce((a, x) => a + x.costoBase, 0))}.`,
-    "Podés preguntarme por una persona (ej. «¿Cómo está Sofía?»), vencimientos, llegadas tarde, vacaciones o costos.",
+    "Podés preguntarme por una persona (ej. «¿Cómo está Ketty?»), vencimientos, llegadas tarde, vacaciones o costos.",
   ].join("\n");
 }

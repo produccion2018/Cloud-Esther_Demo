@@ -52,7 +52,7 @@ export default function EstherPanelFlotante({
   const { plan } = useCloudEsther();
   const { usuario } = useSesion();
   const conN8n = useConN8n();
-  const nombre = usuario?.nombre ?? "Jesús Méndez";
+  const nombre = usuario?.nombre ?? "Andrés Becerra";
   const esther = useEstherAI({
     context: {
       section: SECCION[moduloId] ?? "general",

@@ -39,7 +39,7 @@ export function MiCuentaClinica({ slug, sesion }: { slug: string; sesion: Sesion
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="rounded-3xl bg-card p-6 text-sm shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border">
+      <div className="ce-tarjeta p-6 text-sm sm:p-8">
         <h2 className="font-bold">Mis datos</h2>
         <dl className="mt-3 space-y-2">
           <div>
@@ -56,14 +56,14 @@ export function MiCuentaClinica({ slug, sesion }: { slug: string; sesion: Sesion
           </div>
         </dl>
       </div>
-      <form className="space-y-3 rounded-3xl bg-card p-6 ring-1 ring-border" onSubmit={guardar} noValidate>
+      <form className="ce-tarjeta space-y-3 p-6 sm:p-8" onSubmit={guardar} noValidate>
         <h2 className="font-bold">Cambiar mi contraseña</h2>
         <CampoClave id="actual" label="Contraseña actual" value={actual} onChange={setActual} autoComplete="current-password" />
         <CampoClave id="nueva" label="Contraseña nueva" value={nueva} onChange={setNueva} />
         <ReglasClave clave={nueva} />
         <CampoClave id="repetir" label="Repetir contraseña nueva" value={repetir} onChange={setRepetir} />
         {error && <MensajeError>{error}</MensajeError>}
-        <Button type="submit" className="w-full" disabled={cargando}>
+        <Button type="submit" className="ce-boton h-11 w-full rounded-full" disabled={cargando}>
           {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Guardar contraseña
         </Button>

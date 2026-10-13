@@ -78,7 +78,7 @@ const cuando = (iso: string | null) => {
   if (!iso) return null;
   const d = new Date(iso);
   const dias = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (dias <= 0) return `hoy ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+  if (dias <= 0) return `hoy ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
   if (dias === 1) return "ayer";
   return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 };
@@ -88,7 +88,7 @@ function Avatar({ p, chico = false }: { p: { nombre: string; rol: RolClinica }; 
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-bold",
+        "ce-avatar inline-flex shrink-0 items-center justify-center rounded-full font-bold",
         c.fondo,
         c.texto,
         chico ? "h-10 w-10 text-xs ring-2 ring-background" : "h-11 w-11 text-sm shadow-sm",
@@ -166,10 +166,17 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
   return (
     <div className="space-y-5">
       {/* Lugares del plan */}
-      <section className="rounded-3xl bg-card p-6 shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] ring-1 ring-border sm:p-7">
+      <section className="ce-tarjeta p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-extrabold tracking-tight">Tu equipo</h2>
+            <h2 className="flex items-baseline gap-3 text-xl font-extrabold tracking-tight">
+              Tu equipo
+              {equipo.limite !== null && (
+                <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+                  {equipo.usados}/{equipo.limite}
+                </span>
+              )}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {libres === null
                 ? `${equipo.usados} personas con acceso. Tu plan no tiene límite.`
@@ -181,7 +188,7 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
           <Button
             onClick={() => setSumar(true)}
             disabled={libres === 0}
-            className="h-11 rounded-xl px-5"
+            className="ce-boton h-11 rounded-full px-6"
             title={libres === 0 ? "Llegaste al límite de tu plan" : undefined}
           >
             <UserPlus className="mr-2 h-4 w-4" /> Sumar personas
@@ -198,12 +205,12 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
       {/* Buscar y filtrar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
             placeholder="Buscar por nombre o correo"
-            className="h-10 rounded-xl pl-9"
+            className="h-11 rounded-full border-transparent bg-card pl-10 shadow-[0_1px_2px_rgba(30,0,60,0.06)] ring-1 ring-border"
             aria-label="Buscar en el equipo"
           />
         </div>
@@ -221,7 +228,7 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
       </div>
 
       {/* Personas */}
-      <ul className="divide-y overflow-hidden rounded-3xl bg-card ring-1 ring-border">
+      <ul className="ce-tarjeta-suave divide-y divide-border/60 overflow-hidden">
         {visibles.length === 0 && (
           <li className="px-5 py-10 text-center text-sm text-muted-foreground">Nadie coincide con la búsqueda.</li>
         )}
@@ -229,26 +236,31 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
           <li
             key={p.id}
             className={cn(
-              "flex items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/40 sm:px-6",
+              "group relative flex items-center gap-4 px-4 py-4 transition-colors duration-200 hover:bg-[oklch(0.975_0.012_300)] dark:hover:bg-muted/40 sm:px-6",
               p.estado === "desactivada" && "opacity-55",
             )}
           >
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-3 left-0 w-1 origin-center scale-y-0 rounded-r-full bg-primary transition-transform duration-300 group-hover:scale-y-100"
+            />
             <Avatar p={p} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">
                 {p.nombre} {p.soyYo && <span className="text-xs font-normal text-muted-foreground">(vos)</span>}
               </p>
               <p className="truncate text-xs text-muted-foreground">{p.email}</p>
+              <div className="mt-1 sm:hidden">
+                <Estado p={p} />
+              </div>
             </div>
             <span className={cn("hidden rounded-full px-3 py-1 text-xs font-semibold sm:inline", CHIP_ROL[p.rol])}>
               {p.rolNombre}
             </span>
-            <div className="hidden w-44 sm:block">
+            <div className="hidden w-60 sm:block">
               <Estado p={p} />
             </div>
-            <div className="sm:hidden">
-              <Estado p={p} />
-            </div>
+
             {p.soyYo ? (
               <span className="w-9" />
             ) : (
@@ -257,7 +269,7 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full"
+                    className="h-9 w-9 rounded-full text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 hover:bg-primary/10 hover:text-primary data-[state=open]:opacity-100"
                     disabled={ocupado === p.id}
                     aria-label={`Opciones de ${p.nombre}`}
                   >
@@ -344,8 +356,8 @@ function Lugares({
   return (
     <div className="mt-6 space-y-4">
       {limite !== null && (
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-          <div className="h-full rounded-full" style={{ width: `${porcentaje}%`, background: "var(--gradient-brand)" }} />
+        <div className="h-2 overflow-hidden rounded-full bg-[oklch(0.95_0.015_300)] dark:bg-muted" aria-hidden="true">
+          <div className="ce-barra h-full rounded-full" style={{ width: `${porcentaje}%` }} />
         </div>
       )}
     <div className="flex flex-wrap items-center gap-2.5">
@@ -363,7 +375,7 @@ function Lugares({
           type="button"
           onClick={onLibre}
           aria-label="Lugar libre: sumar una persona"
-          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 text-muted-foreground/60 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 text-muted-foreground/60 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 hover:text-primary"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -380,8 +392,10 @@ function Filtro({ activo, onClick, children }: { activo: boolean; onClick: () =>
       onClick={onClick}
       aria-pressed={activo}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-        activo ? "border-foreground bg-foreground text-background" : "bg-card hover:border-foreground/40",
+        "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-all duration-200",
+        activo
+          ? "border-transparent bg-[oklch(0.24_0.09_293)] text-white shadow-[0_8px_18px_-10px_rgba(30,0,60,0.7)] dark:bg-primary"
+          : "bg-card text-foreground/80 hover:-translate-y-px hover:border-primary/40 hover:text-foreground hover:shadow-sm",
       )}
     >
       {children}
@@ -398,7 +412,7 @@ function Estado({ p }: { p: PersonaEquipo }) {
         ? ["bg-muted-foreground/40", "Sin acceso"]
         : ["bg-emerald-500", u ? `Activa · entró ${u}` : "Activa · todavía no entró"];
   return (
-    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
       <span className={cn("h-2 w-2 shrink-0 rounded-full", punto)} />
       <span className={p.estado === "invitada" ? "font-medium text-amber-700 dark:text-amber-300" : undefined}>{texto}</span>
     </p>
@@ -493,7 +507,7 @@ function SumarPersonas({
 
   return (
     <Sheet open={abierto} onOpenChange={(v) => !v && onCerrar()}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+      <SheetContent side="right" className="ce-clinica flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="border-b px-6 py-5 text-left">
           <SheetTitle className="text-xl font-extrabold tracking-tight">Sumar personas</SheetTitle>
           <SheetDescription>
@@ -513,8 +527,10 @@ function SumarPersonas({
                   onClick={() => setRolBase(r.id)}
                   aria-pressed={rolBase === r.id}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition-colors",
-                    rolBase === r.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "hover:border-foreground/30",
+                    "flex items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition-all duration-200",
+                    rolBase === r.id
+                      ? "border-primary bg-primary/5 shadow-[0_10px_24px_-16px_rgba(76,29,149,0.8)] ring-2 ring-primary/20"
+                      : "hover:-translate-y-px hover:border-primary/40 hover:shadow-sm",
                   )}
                 >
                   <span className={cn("h-3 w-3 shrink-0 rounded-full", COLOR_ROL[r.id].fondo)} />
@@ -636,7 +652,7 @@ function SumarPersonas({
                   ? `Te quedan ${libres} lugares y la lista tiene ${completas.length}.`
                   : `Te quedan ${libres - completas.length} lugares después de esto.`}
             </p>
-            <Button className="h-11 rounded-xl px-5" onClick={() => void enviar()} disabled={enviando || completas.length === 0 || pasa}>
+            <Button className="ce-boton h-11 rounded-full px-6" onClick={() => void enviar()} disabled={enviando || completas.length === 0 || pasa}>
               {enviando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {completas.length <= 1 ? "Enviar invitación" : `Enviar ${completas.length} invitaciones`}
             </Button>

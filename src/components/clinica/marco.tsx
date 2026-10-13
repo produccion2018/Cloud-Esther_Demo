@@ -27,7 +27,7 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
       {/* Mitad de la clínica (solo computadora) */}
       <aside
         className="relative hidden overflow-hidden px-14 py-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between"
-        style={{ background: "var(--gradient-primary)" }}
+        style={{ background: "var(--gradient-brand)" }}
       >
         <ToothLogo className="pointer-events-none absolute -bottom-24 -right-20 h-[30rem] w-[30rem] opacity-[0.07]" />
         <div className="relative flex items-center gap-2.5 text-sm font-semibold opacity-90">
@@ -63,7 +63,7 @@ export function MarcoClinica({ nombre, children }: { nombre: string | null; chil
       <main className="flex flex-col">
         <div
           className="px-6 pb-10 pt-8 text-primary-foreground lg:hidden"
-          style={{ background: "var(--gradient-primary)" }}
+          style={{ background: "var(--gradient-brand)" }}
         >
           <div className="flex items-center gap-2 text-xs font-semibold opacity-90">
             <ToothLogo className="h-4 w-4" /> Acceso de la clínica

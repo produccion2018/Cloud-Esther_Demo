@@ -1,27 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Armchair,
+  BarChart3,
   BellRing,
-  ChartNoAxesColumn,
-  CircleCheck,
-  FileText,
-  FlaskConical,
-  MailClock,
-  Mic,
-  Package,
-  Pill,
-  Plug,
-  ScanLine,
-  Settings2,
-  ShieldCheck,
-  Sparkles,
-  UserCheck,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
   Eye,
   EyeOff,
   FileHeart,
+  FileText,
+  FlaskConical,
+  Hourglass,
   KeyRound,
   LayoutGrid,
   Loader2,
@@ -30,9 +20,18 @@ import {
   Mail,
   MailCheck,
   MessagesSquare,
+  Mic,
+  Package,
+  Pill,
+  Plug,
   Receipt,
+  ScanLine,
+  Settings2,
+  ShieldCheck,
   Smile,
+  Sparkles,
   Stethoscope,
+  UserCheck,
   UserPlus,
   UserRound,
   UsersRound,
@@ -317,7 +316,7 @@ const ICONOS: [RegExp, typeof CalendarDays][] = [
   [/configuraci/i, Settings2],
   [/notificaci|recordatorio/i, BellRing],
   [/presupuesto|pago|factura/i, Receipt],
-  [/anal[ií]tica|reporte|auditor/i, ChartNoAxesColumn],
+  [/anal[ií]tica|reporte|auditor/i, BarChart3],
   [/esther ia|ia\b/i, Sparkles],
   [/inventario/i, Package],
   [/documento/i, FileText],
@@ -325,7 +324,7 @@ const ICONOS: [RegExp, typeof CalendarDays][] = [
   [/voz|audio/i, Mic],
   [/seguridad/i, ShieldCheck],
 ];
-const iconoDe = (texto: string) => ICONOS.find(([re]) => re.test(texto))?.[1] ?? CircleCheck;
+const iconoDe = (texto: string) => ICONOS.find(([re]) => re.test(texto))?.[1] ?? CheckCircle2;
 
 const inicialesDe = (nombre: string) =>
   nombre
@@ -477,8 +476,8 @@ function InicioClinica({ slug, sesion }: { slug: string; sesion: SesionClinica }
                   </div>
                   <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
                     <Dato valor={activas} texto="Con acceso" icono={UserCheck} tono="verde" />
-                    <Dato valor={invitadas} texto="Invitadas" icono={MailClock} tono="ambar" />
-                    <Dato valor={libres === undefined ? null : libres === null ? "∞" : libres} texto="Lugares libres" icono={Armchair} tono="violeta" />
+                    <Dato valor={invitadas} texto="Invitadas" icono={Hourglass} tono="ambar" />
+                    <Dato valor={libres === undefined ? null : libres === null ? "∞" : libres} texto="Lugares libres" icono={UserPlus} tono="violeta" />
                   </div>
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">

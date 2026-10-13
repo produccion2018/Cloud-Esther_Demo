@@ -2536,10 +2536,6 @@ function Formulario({ ctx }: { ctx: Ctx }) {
         titulo="Formulario para los pacientes de tu clínica"
         descripcion="Ponelo en el sitio web de tu clínica o en la bio de Instagram: tus pacientes piden turno y cada pedido entra como lead."
       />
-      <p className="rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 text-sm">
-        <b>Es para tus pacientes</b> (primera consulta, limpieza, ortodoncia…). No es el formulario para contratar Cloud
-        Esther.
-      </p>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="card-grad space-y-3 p-4">
           <p className="text-sm font-semibold">Personalizar</p>

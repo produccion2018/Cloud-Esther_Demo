@@ -95,7 +95,12 @@ function Pagar() {
   }, []);
 
   useEffect(() => {
-    if (paso !== "procesando" || !token || consultando.current) return;
+    if (paso !== "procesando" || consultando.current) return;
+    // Sin enlace (se abrió desde Paddle): no se puede consultar; llega el correo igual
+    if (!token) {
+      setPaso("pendiente");
+      return;
+    }
     consultando.current = true;
     let vueltas = 0;
     const id = window.setInterval(async () => {
@@ -104,7 +109,7 @@ function Pagar() {
       if (r.ok && r.datos.activada) {
         window.clearInterval(id);
         setPaso("listo");
-      } else if (vueltas >= 40) {
+      } else if ((!r.ok && (r.status === 401 || r.status === 409)) || vueltas >= 40) {
         // ~2 minutos: el pago puede tardar en confirmarse; le llega el correo igual
         window.clearInterval(id);
         setPaso("pendiente");
@@ -138,6 +143,12 @@ function Pagar() {
       <section className="relative overflow-hidden bg-soft">
         <div className="bg-glow pointer-events-none absolute inset-x-0 top-0 h-96" />
         <div className="relative mx-auto max-w-2xl px-5 py-14 lg:py-20">
+          {paso === "abriendo" && !resumen && (
+            <div className="card-premium flex items-center justify-center gap-2 p-10 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" /> Abriendo el pago seguro…
+            </div>
+          )}
+
           {paso === "cargando" && (
             <div className="card-premium flex items-center justify-center gap-2 p-10 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" /> Preparando tu resumen…

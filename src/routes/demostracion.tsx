@@ -24,6 +24,7 @@ import {
   type SolicitudGuardada,
 } from "@/lib/contratacion";
 import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { PAGO_EN_LINEA } from "@/lib/pago-en-linea";
 
 /* La ruta se mantiene en /demostracion para no romper enlaces existentes, pero la página es
    la de contratación: el demo se prueba desde «Probar demo» (/registro). */
@@ -123,7 +124,7 @@ function Contratacion() {
       return;
     }
     // Con pago en línea: directo al resumen (plan, impuestos y total) para confirmar y pagar
-    if (r.solicitud.pagoToken) {
+    if (r.solicitud.pagoToken && PAGO_EN_LINEA) {
       void navigate({ to: "/pagar", hash: `t=${r.solicitud.pagoToken}` });
       return;
     }

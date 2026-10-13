@@ -585,7 +585,11 @@ export async function actualizarNotificaciones(
 /* ───────────── Módulos internos (CRUD genérico) ───────────── */
 
 export async function listar<K extends keyof Colecciones>(k: K): Promise<Colecciones[K]> {
-  if (CON_BACKEND) return http("GET", `/admin/empresa/${k}`);
+  if (CON_BACKEND) {
+    const datos = await http<Colecciones[K]>("GET", `/admin/empresa/${k}`);
+    // Países: se muestran también los de la lista base que todavía no se guardaron
+    return (k === "paises" ? completarPaises(datos as PaisOperacion[]) : datos) as Colecciones[K];
+  }
   return copia((await db()).colecciones[k]);
 }
 
@@ -745,7 +749,7 @@ export async function guardarMontosClinica(a: {
 }
 
 export async function enviarRecordatorioPago(id: string) {
-  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`);
+  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`, {});
   await espera();
   const c = (await db()).clinicas.find((x) => x.id === id);
   await registrar(`Envió recordatorio de pago a ${c?.nombre ?? id}`, "pago");

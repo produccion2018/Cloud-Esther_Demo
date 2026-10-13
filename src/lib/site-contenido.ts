@@ -32,7 +32,7 @@ export const PANEL_CARACTERISTICAS_PRUEBA: PanelCaracteristicas = {
     {
       tipo: "historia",
       categoria: "Historia clínica",
-      texto: "Resumen listo de la historia clínica de Laura Gómez antes de su consulta.",
+      texto: "Resumen listo de la historia clínica de Mauro Pinto antes de su consulta.",
       accion: "Ver resumen",
     },
     {

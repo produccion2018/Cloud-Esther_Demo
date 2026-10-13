@@ -2038,7 +2038,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
                   paciente: "Lucía",
                   fecha: formatearFecha(sumarDias(hoy, 1)),
                   hora: "10:30",
-                  profesional: "Dra. Laura Gómez",
+                  profesional: "Dra. Mireya Becerra",
                   clinica: ctx.clinica,
                   tratamiento: "Limpieza dental",
                 })}
@@ -2283,7 +2283,7 @@ function PlantillaForm({
     paciente: "Lucía",
     fecha: formatearFecha(sumarDias(hoyISO(), 1)),
     hora: "10:30",
-    profesional: "Dra. Laura Gómez",
+    profesional: "Dra. Mireya Becerra",
     clinica,
     tratamiento: "Limpieza dental",
   };

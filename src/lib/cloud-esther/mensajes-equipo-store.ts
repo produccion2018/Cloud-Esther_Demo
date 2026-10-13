@@ -23,7 +23,7 @@ export const storeMensajesEquipo = crearStorePorEmpresa<{ mensajes: MensajeEquip
       {
         id: "me-1",
         deId: "4",
-        deNombre: "Sofía Rodríguez",
+        deNombre: "Ketty Margarita",
         para: "todos",
         texto: "Buen día equipo. Hoy la agenda de la tarde está completa: avisen si se demoran.",
         fecha: hace(5),
@@ -31,7 +31,7 @@ export const storeMensajesEquipo = crearStorePorEmpresa<{ mensajes: MensajeEquip
       {
         id: "me-2",
         deId: "1",
-        deNombre: "Laura Martínez",
+        deNombre: "Mireya Becerra",
         para: "todos",
         texto: "Perfecto. Necesito el sillón 2 a las 15 para una endodoncia.",
         fecha: hace(4),

@@ -545,7 +545,7 @@ export function conversacionesEjemplo(): ConversacionCC[] {
       mensajes: [
         m("paciente", "Hola, quiero confirmar mi turno", 95),
         m("esther", "Para buscar tu información necesito identificarte: ¿me pasás tu DNI?", 94),
-        m("paciente", "Soy Julián Ortega", 93),
+        m("paciente", "Soy Alejo Becerra", 93),
         m("esther", "Gracias, Julián. Confirmé tu turno. ¡Te esperamos!", 93),
       ],
     },
@@ -577,7 +577,7 @@ export function conversacionesEjemplo(): ConversacionCC[] {
       mensajes: [
         m("paciente", "Hola! Quería saber en qué quedó mi presupuesto", 12),
         m("esther", "Para buscar tu información necesito identificarte: ¿me pasás tu DNI?", 12),
-        m("paciente", "Lucía Paz", 11),
+        m("paciente", "Mauro Pinto", 11),
         m(
           "esther",
           "Gracias, Lucía. Estos son tus presupuestos: PR-0005 enviado (esperando tu respuesta).",

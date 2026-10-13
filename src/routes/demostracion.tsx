@@ -340,7 +340,7 @@ function Contratacion() {
                         id="contacto"
                         name="contacto"
                         required
-                        placeholder="Dra. Paula Arriaga"
+                        placeholder="Dra. Mireya Becerra"
                       />
                     </div>
                     <div className="space-y-2">

@@ -1107,7 +1107,7 @@ function LeadForm({
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           className={INPUT}
-          placeholder="Ej: Camila Herrera"
+          placeholder="Ej: Alejo Becerra"
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

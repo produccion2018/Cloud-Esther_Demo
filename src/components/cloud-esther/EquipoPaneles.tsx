@@ -663,7 +663,7 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className={INPUT}
-            placeholder="Ej: Julieta Paredes"
+            placeholder="Ej: Ketty Margarita"
           />
         </Field>
         <Field label="Correo *">

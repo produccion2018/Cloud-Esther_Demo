@@ -428,7 +428,7 @@ const pago = (
   monto: number,
   medio: MedioPago,
   referencia = "",
-): Pago => ({ id, fecha: diaISO(-dias), monto, medio, referencia, usuario: "Sofía Rodríguez" });
+): Pago => ({ id, fecha: diaISO(-dias), monto, medio, referencia, usuario: "Ketty Margarita" });
 
 function comprobantesEjemplo(): Comprobante[] {
   return [
@@ -443,7 +443,7 @@ function comprobantesEjemplo(): Comprobante[] {
         { descripcion: "Restauración estética pieza 21", cantidad: 1, precio: 60000, ivaPct: 0 },
       ],
       pagos: [pago("p1", 38, 25000, "Transferencia")],
-      profesional: "Dr. Carlos Rodríguez",
+      profesional: "Dr. Andrés Becerra",
       origen: "Presupuesto PR-0001",
     }),
     comprobante({
@@ -452,13 +452,13 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-22),
       vencimiento: diaISO(-7),
       pacienteId: 3,
-      cliente: cf("Julián Ortega", "28444555", "julian.ortega@example.com", "+54 11 5174-2826"),
+      cliente: cf("Alejo Becerra", "28444555", "alejo.becerra@example.com", "+54 11 5174-2826"),
       items: [
         { descripcion: "Implante de titanio pieza 46", cantidad: 1, precio: 650000, ivaPct: 0 },
         { descripcion: "Pilar protésico", cantidad: 1, precio: 180000, ivaPct: 0 },
       ],
       pagos: [pago("p2", 20, 415000, "Tarjeta de crédito", "Visa 6 cuotas")],
-      profesional: "Martín González",
+      profesional: "Andrés Becerra",
       origen: "Presupuesto PR-0003",
     }),
     comprobante({
@@ -467,13 +467,13 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-15),
       vencimiento: diaISO(0),
       pacienteId: 2,
-      cliente: cf("Marina Delgado", "30111222", "marina.delgado@example.com", "+54 11 5100-2000"),
+      cliente: cf("Mauro Pinto", "30111222", "mauro.pinto@example.com", "+54 11 5100-2000"),
       items: [
         { descripcion: "Limpieza y profilaxis", cantidad: 1, precio: 45000, ivaPct: 0 },
         { descripcion: "Aplicación de flúor", cantidad: 1, precio: 18000, ivaPct: 0 },
       ],
       pagos: [pago("p3", 15, 63000, "Efectivo")],
-      profesional: "Jesús Méndez",
+      profesional: "Andrés Becerra",
     }),
     comprobante({
       id: "c4",
@@ -481,12 +481,12 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-9),
       vencimiento: diaISO(6),
       pacienteId: 9,
-      cliente: cf("Diego Ruiz", "27999888", "diego.ruiz@example.com", "+54 11 5359-4478"),
+      cliente: cf("Alejo Becerra", "27999888", "alejo.becerra@example.com", "+54 11 5359-4478"),
       items: [
         { descripcion: "Raspaje y alisado por cuadrante", cantidad: 4, precio: 60000, ivaPct: 0 },
       ],
       pagos: [pago("p4", 9, 80000, "Mercado Pago", "Cuota 1/3")],
-      profesional: "Jesús Méndez",
+      profesional: "Andrés Becerra",
       origen: "Presupuesto PR-0010",
     }),
     comprobante({
@@ -495,7 +495,7 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-6),
       vencimiento: diaISO(9),
       pacienteId: 6,
-      cliente: cf("Paula Medina", "33222111", "paula.medina@example.com", "+54 11 5248-3239"),
+      cliente: cf("Mauro Pinto", "33222111", "mauro.pinto@example.com", "+54 11 5248-3239"),
       items: [
         {
           descripcion: "Kit de blanqueamiento domiciliario",
@@ -505,7 +505,7 @@ function comprobantesEjemplo(): Comprobante[] {
         },
         { descripcion: "Blanqueamiento en consultorio", cantidad: 1, precio: 90000, ivaPct: 0 },
       ],
-      profesional: "Jesús Méndez",
+      profesional: "Andrés Becerra",
     }),
     comprobante({
       id: "c6",
@@ -513,7 +513,7 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-3),
       vencimiento: diaISO(12),
       pacienteId: 8,
-      cliente: cf("Ana Torres", "40123456", "ana.torres@example.com", "+54 11 5322-4652"),
+      cliente: cf("Mauro Pinto", "40123456", "mauro.pinto@example.com", "+54 11 5322-4652"),
       items: [
         {
           descripcion: "Endodoncia multirradicular pieza 26",
@@ -523,7 +523,7 @@ function comprobantesEjemplo(): Comprobante[] {
         },
       ],
       pagos: [pago("p5", 3, 180000, "Transferencia")],
-      profesional: "Jesús Méndez",
+      profesional: "Andrés Becerra",
       sucursal: NORTE,
       origen: "Presupuesto PR-0009",
     }),
@@ -556,10 +556,10 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-2),
       vencimiento: diaISO(-2),
       pacienteId: 12,
-      cliente: cf("Florencia Díaz", "38444333"),
+      cliente: cf("Alejo Becerra", "38444333"),
       items: [{ descripcion: "Consulta y diagnóstico", cantidad: 1, precio: 25000, ivaPct: 0 }],
       anulada: true,
-      profesional: "Laura Martínez",
+      profesional: "Mireya Becerra",
     }),
     comprobante({
       id: "c9",
@@ -569,7 +569,7 @@ function comprobantesEjemplo(): Comprobante[] {
       fecha: diaISO(-2),
       vencimiento: diaISO(-2),
       pacienteId: 12,
-      cliente: cf("Florencia Díaz", "38444333"),
+      cliente: cf("Alejo Becerra", "38444333"),
       items: [
         {
           descripcion: "Anula factura 0003-00001048 (cargada por error)",
@@ -579,7 +579,7 @@ function comprobantesEjemplo(): Comprobante[] {
         },
       ],
       asociadaA: "c8",
-      profesional: "Laura Martínez",
+      profesional: "Mireya Becerra",
     }),
   ];
 }
@@ -620,8 +620,8 @@ function liquidacionesEjemplo(): LiquidacionOS[] {
       cobrada: diaISO(-4),
       prestaciones: [
         pr(1, "Mauro Pinto", 45, "01.01", "Consulta", 18000),
-        pr(3, "Julián Ortega", 40, "05.02", "Limpieza", 32000),
-        pr(8, "Ana Torres", 36, "03.01", "Obturación", 41000),
+        pr(3, "Alejo Becerra", 40, "05.02", "Limpieza", 32000),
+        pr(8, "Mauro Pinto", 36, "03.01", "Obturación", 41000),
       ],
     },
     {
@@ -632,10 +632,10 @@ function liquidacionesEjemplo(): LiquidacionOS[] {
       presentada: diaISO(-27),
       cobrada: diaISO(-2),
       prestaciones: [
-        pr(2, "Marina Delgado", 44, "01.01", "Consulta", 17500),
+        pr(2, "Mauro Pinto", 44, "01.01", "Consulta", 17500),
         pr(
           10,
-          "Valeria Gómez",
+          "Mauro Pinto",
           38,
           "08.04",
           "Radiografía panorámica",
@@ -654,8 +654,8 @@ function liquidacionesEjemplo(): LiquidacionOS[] {
       cobrada: "",
       prestaciones: [
         pr(1, "Mauro Pinto", 12, "01.01", "Consulta", 18000),
-        pr(3, "Julián Ortega", 8, "05.02", "Limpieza", 32000),
-        pr(8, "Ana Torres", 3, "04.01", "Endodoncia", 95000),
+        pr(3, "Alejo Becerra", 8, "05.02", "Limpieza", 32000),
+        pr(8, "Mauro Pinto", 3, "04.01", "Endodoncia", 95000),
       ],
     },
     {
@@ -666,8 +666,8 @@ function liquidacionesEjemplo(): LiquidacionOS[] {
       presentada: diaISO(-1),
       cobrada: "",
       prestaciones: [
-        pr(4, "Lucía Paz", 14, "01.01", "Consulta", 16000),
-        pr(12, "Florencia Díaz", 6, "05.02", "Limpieza", 30000),
+        pr(4, "Mauro Pinto", 14, "01.01", "Consulta", 16000),
+        pr(12, "Alejo Becerra", 6, "05.02", "Limpieza", 30000),
       ],
     },
   ];
@@ -685,7 +685,7 @@ export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
         inicial: 50000,
         cerrada: "",
         contado: 0,
-        usuario: "Sofía Rodríguez",
+        usuario: "Ketty Margarita",
       },
     ],
     movimientos: [
@@ -694,7 +694,7 @@ export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
         sesionId: "s1",
         fecha: new Date(new Date().setHours(9, 40, 0, 0)).toISOString(),
         tipo: "Ingreso",
-        concepto: "Consulta · Sergio Luna",
+        concepto: "Consulta · Alejo Becerra",
         medio: "Efectivo",
         monto: 25000,
         comprobanteId: "",

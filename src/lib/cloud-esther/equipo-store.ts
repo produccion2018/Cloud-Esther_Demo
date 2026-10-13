@@ -46,7 +46,7 @@ const store = crearStorePorEmpresa<EstadoEquipo>(
     ausencias: [
       {
         id: "a-1",
-        miembroId: "3",
+        miembroId: "4",
         tipo: "Capacitación",
         desde: diaISO(0),
         hasta: diaISO(0),

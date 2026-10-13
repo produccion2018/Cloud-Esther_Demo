@@ -503,7 +503,7 @@ export const storeFinanzas = crearStorePorEmpresa<EstadoFinanzas>(
       {
         id: "gf3",
         concepto: "Alquiler Clínica Sur",
-        proveedor: "Raúl Benítez",
+        proveedor: "Propietario del local",
         categoria: "Alquiler",
         monto: 480_000,
         dia: 2,
@@ -579,10 +579,9 @@ export const storeFinanzas = crearStorePorEmpresa<EstadoFinanzas>(
       "Otros gastos": 100_000,
     },
     comisiones: {
-      "Martín González": 40,
-      "Jesús Méndez": 35,
-      "Laura Martínez": 40,
-      "Dr. Carlos Rodríguez": 30,
+      "Mireya Becerra": 40,
+      "Andrés Becerra": 35,
+      "Dr. Andrés Becerra": 35,
     },
     comisionPorDefecto: 35,
     liquidaciones: [],

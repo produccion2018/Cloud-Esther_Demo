@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { clinicaActualId, suscribirSesion } from "@/lib/cloud-esther/auth-store";
+import { PREFIJO_TENANT, clinicaReal } from "@/lib/clinica/modo-clinica";
+import { cargarModulo, guardarModulo, registrarModulo } from "@/lib/clinica/sincronizar";
 
 /* Ubicación: src/lib/cloud-esther/tenant-store.ts
 
@@ -26,21 +28,71 @@ export function claveTenant(base: string): string {
    así cada navegador arranca de nuevo con los datos actualizados. */
 const VERSION_DATOS = "v3";
 
-type OpcionesStore = {
+type OpcionesStore<T> = {
   /** Si se indica, los datos de cada empresa se guardan en el navegador (localStorage) con
-      esta clave y se sincronizan entre pestañas (ej.: el Portal del paciente y Cloud Esther). */
+      esta clave y se sincronizan entre pestañas (ej.: el Portal del paciente y Cloud Esther).
+      En una CLÍNICA REAL (Etapa 8b) esta misma clave es el módulo que se guarda en el servidor. */
   persistir?: string;
+  /** Cómo arranca una clínica real (sin los datos de ejemplo del demo). Si no se indica:
+      las listas empiezan vacías y la configuración queda con sus valores normales. */
+  vacio?: () => T;
+  /** Partes que son solo de esta pantalla (ej. el paciente elegido): no se guardan en el servidor. */
+  soloLocal?: (keyof T)[];
 };
 
-export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStore = {}) {
+/* Clínica real: listas vacías; los "mapas por id" (claves numéricas o compuestas) también vacíos;
+   la configuración (objetos con nombres de campos) se deja con sus valores normales. */
+const esMapaDeIds = (v: unknown) =>
+  !!v &&
+  typeof v === "object" &&
+  !Array.isArray(v) &&
+  Object.keys(v).length > 0 &&
+  Object.keys(v).every((k) => /^\d+$/.test(k) || k.includes(":"));
+
+export function vaciarDatosDeEjemplo<T>(valor: T): T {
+  if (Array.isArray(valor)) return [] as T;
+  if (esMapaDeIds(valor)) return {} as T;
+  if (valor && typeof valor === "object") {
+    return Object.fromEntries(
+      Object.entries(valor as Record<string, unknown>).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? [] : esMapaDeIds(v) ? {} : v,
+      ]),
+    ) as T;
+  }
+  return valor;
+}
+
+/** ¿Este espacio es de una clínica real con sesión abierta en esta pestaña? */
+const esClinicaRealActiva = (tenant: string) =>
+  tenant.startsWith(PREFIJO_TENANT) && clinicaReal()?.slug === tenant.slice(PREFIJO_TENANT.length);
+
+export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStore<T> = {}) {
   const porEmpresa = new Map<string, T>();
   const oyentes = new Set<() => void>();
   const cargados = new Set<string>();
   const clave = (tenant: string) => `cloud-esther:${VERSION_DATOS}:${opciones.persistir}:${tenant}`;
 
+  const vacio = (): T => (opciones.vacio ? opciones.vacio() : vaciarDatosDeEjemplo(inicial()));
+
   const de = (tenant: string): T => {
-    if (!porEmpresa.has(tenant)) porEmpresa.set(tenant, inicial());
+    // Una clínica real NUNCA arranca con los datos de ejemplo del demo
+    if (!porEmpresa.has(tenant)) porEmpresa.set(tenant, tenant.startsWith(PREFIJO_TENANT) ? vacio() : inicial());
     return porEmpresa.get(tenant) as T;
+  };
+
+  // Lo que es solo de esta pantalla se conserva al traer datos del servidor y no se manda
+  const quitarLocal = (valor: T): unknown => {
+    if (!opciones.soloLocal?.length || !valor || typeof valor !== "object" || Array.isArray(valor)) return valor;
+    const copia = { ...(valor as Record<string, unknown>) };
+    for (const k of opciones.soloLocal) delete copia[k as string];
+    return copia;
+  };
+  const conLocal = (datos: unknown, actual: T): T => {
+    if (!opciones.soloLocal?.length || !datos || typeof datos !== "object" || Array.isArray(datos)) return datos as T;
+    const copia = { ...(datos as Record<string, unknown>) };
+    for (const k of opciones.soloLocal) copia[k as string] = (actual as Record<string, unknown>)[k as string];
+    return copia as T;
   };
 
   const avisar = () => oyentes.forEach((f) => f());
@@ -49,6 +101,26 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
   // para que el HTML del servidor y el del cliente coincidan.
   const cargar = (tenant: string) => {
     if (!opciones.persistir || cargados.has(tenant) || typeof window === "undefined") return;
+    // Clínica real: se trae del SERVIDOR (nunca del navegador)
+    if (tenant.startsWith(PREFIJO_TENANT)) {
+      if (!esClinicaRealActiva(tenant)) return;
+      cargados.add(tenant);
+      const clave = opciones.persistir;
+      registrarModulo(clave, {
+        aplicar: (datos) => {
+          if (tenantActual() !== tenant) return;
+          const nuevo = Array.isArray(datos)
+            ? (datos as T)
+            : ({ ...vacioCompleto(), ...(conLocal(datos, de(tenant)) as object) } as T);
+          porEmpresa.set(tenant, nuevo);
+          avisar();
+        },
+        vacio: () => vacio(),
+        paraGuardar: (valor) => quitarLocal(valor as T),
+      });
+      void cargarModulo(clave);
+      return;
+    }
     cargados.add(tenant);
     try {
       const guardado = window.localStorage.getItem(clave(tenant));
@@ -61,8 +133,18 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
     }
   };
 
+  // Lo guardado puede ser de una versión anterior: los campos nuevos toman su valor vacío
+  const vacioCompleto = (): Partial<T> => {
+    const v = vacio();
+    return v && typeof v === "object" && !Array.isArray(v) ? v : ({} as Partial<T>);
+  };
+
   const guardar = (tenant: string, valor: T) => {
     if (!opciones.persistir || typeof window === "undefined") return;
+    if (tenant.startsWith(PREFIJO_TENANT)) {
+      if (esClinicaRealActiva(tenant)) guardarModulo(opciones.persistir, valor);
+      return;
+    }
     try {
       window.localStorage.setItem(clave(tenant), JSON.stringify(valor));
     } catch {

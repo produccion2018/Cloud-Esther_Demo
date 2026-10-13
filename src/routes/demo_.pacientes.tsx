@@ -51,6 +51,8 @@ import type {
   Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
 import { contarPacientesActivos, usePacientes } from "@/lib/cloud-esther/pacientes";
 import type {
@@ -1089,6 +1091,9 @@ function CarpetaPaciente({
 }) {
   const [seccion, setSeccion] =
     useState<Seccion>("resumen");
+  // Clínica real: la Secretaría no ve las secciones de salud (el servidor tampoco se las da)
+  const real = useClinicaReal();
+  const secciones = real ? SECCIONES.filter((x) => puedeVerSeccionPaciente(real.rol, x.id)) : SECCIONES;
 
   const tratamientosEnCurso =
     datos.tratamientos.filter(
@@ -1133,7 +1138,7 @@ function CarpetaPaciente({
       <div className="grid grid-cols-1 md:grid-cols-[230px_minmax(0,1fr)]">
         {/* Navegación: queda fija al bajar, así la columna nunca se ve vacía */}
 
-        <NavCarpeta items={SECCIONES} activa={seccion} datos={datos} onElegir={setSeccion} />
+        <NavCarpeta items={secciones} activa={seccion} datos={datos} onElegir={setSeccion} />
 
         {/* Contenido */}
 
@@ -1148,6 +1153,10 @@ function CarpetaPaciente({
               onEditar={onEditar}
               onIr={setSeccion}
             />
+          ) : seccion === "odontograma" && real ? (
+            <p className="rounded-2xl bg-primary/5 p-6 text-center text-sm text-muted-foreground">
+              El odontograma se está preparando para tu clínica. Mientras tanto, registrá los hallazgos en la Historia clínica.
+            </p>
           ) : seccion === "odontograma" ? (
             <OdontogramaGate
               key={paciente.id}

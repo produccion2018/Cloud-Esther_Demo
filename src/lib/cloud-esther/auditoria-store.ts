@@ -148,6 +148,8 @@ export function registrarEventoAuditoria(
     resultado?: EventoAuditoria["resultado"];
   },
 ) {
+  // Clínica real (c-…): la auditoría la lleva el servidor; acá no se guarda nada en el navegador
+  if (clinicId.startsWith("c-")) return;
   const r = leer(clinicId);
   const evento: EventoAuditoria = {
     id: nuevoId("ev"),
@@ -162,6 +164,8 @@ export function registrarEventoAuditoria(
 
 /** Abre una sesión y devuelve su identificador. */
 export function abrirSesionAuditoria(clinicId: string, quien: Quien) {
+  // Clínica real (c-…): la auditoría la lleva el servidor; acá no se guarda nada en el navegador
+  if (clinicId.startsWith("c-")) return;
   const r = leer(clinicId);
   const ahora = new Date().toISOString();
   const sesion: SesionAuditoria = {
@@ -187,6 +191,8 @@ export function abrirSesionAuditoria(clinicId: string, quien: Quien) {
 }
 
 export function cerrarSesionAuditoria(clinicId: string, motivo: "Manual" | "Vencida" = "Manual") {
+  // Clínica real (c-…): la auditoría la lleva el servidor; acá no se guarda nada en el navegador
+  if (clinicId.startsWith("c-")) return;
   const r = leer(clinicId);
   const abierta = r.sesiones.find((s) => !s.fin);
   if (!abierta) return;
@@ -222,6 +228,7 @@ export function registrarActividadAuditoria(
   modulo: string | null,
   registrarModulo: boolean,
 ) {
+  if (clinicId.startsWith("c-")) return;
   const r = leer(clinicId);
   const abierta = r.sesiones.find((s) => !s.fin);
   if (!abierta) return;

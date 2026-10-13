@@ -62,7 +62,11 @@ const store = crearStorePorEmpresa<EstadoEquipo>(
       },
     ],
   }),
-  { persistir: "equipo" },
+  {
+    persistir: "equipo",
+    // Clínica real: sin integrantes de ejemplo, pero con la lista de especialidades para elegir
+    vacio: () => ({ miembros: [], especialidades: ESPECIALIDADES, ausencias: [] }),
+  },
 );
 
 type Actualizar<T> = T | ((prev: T) => T);

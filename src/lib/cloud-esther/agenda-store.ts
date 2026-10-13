@@ -68,6 +68,15 @@ export const ODONTOLOGOS = TEAM_MEMBERS.filter((m) => m.role === "odontologo").m
   `${m.firstName} ${m.lastName}`.trim(),
 );
 export const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3", "Gabinete 4"];
+
+/* Clínica real (Etapa 8b): sin sucursales ni odontólogos de ejemplo. La sucursal es la clínica
+   y los odontólogos son los que cargue en Equipo. (Se ajusta al abrir las pantallas.) */
+export function ajustarCatalogosClinica(nombreClinica: string) {
+  if (SUCURSALES.length !== 1 || SUCURSALES[0] !== nombreClinica) {
+    SUCURSALES.splice(0, SUCURSALES.length, nombreClinica);
+  }
+  if (ODONTOLOGOS.length) ODONTOLOGOS.splice(0, ODONTOLOGOS.length);
+}
 export const TRATAMIENTOS = [
   "Primera consulta",
   "Control",

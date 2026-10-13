@@ -256,9 +256,36 @@ export function iniciarSesion(emailCrudo: string, pass?: string): Resultado {
 }
 
 export function cerrarSesion(motivo: "Manual" | "Vencida" = "Manual") {
+  // Clínica real: la cierra el servidor (src/lib/clinica/modo-clinica.ts escucha este aviso)
+  if (leer()?.tipo === "cliente" && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cloud-esther:salir-clinica"));
+    return;
+  }
   terminarIngresoDemo("cierre");
   const actual = leer();
   if (actual) cerrarSesionAuditoria(actual.clinica.id, motivo);
+  ponerSesion(null);
+}
+
+/* ---------- clínica REAL (Etapa 8b) ----------
+   La sesión la abre el servidor en la dirección de la clínica (/c/<dirección>): el usuario,
+   el rol y el plan vienen de ahí. Acá solo se avisa a la app con qué clínica se trabaja
+   (sin datos de demo, sin seguimiento de demo y sin auditoría del navegador). */
+export function ponerSesionClinicaReal(d: {
+  usuarioId: string;
+  nombre: string;
+  email: string;
+  clinicaId: string;
+  clinicaNombre: string;
+}) {
+  ponerSesion({
+    usuario: { id: d.usuarioId, nombre: capitalizarNombre(d.nombre), email: d.email, clinicId: d.clinicaId },
+    clinica: { id: d.clinicaId, nombre: d.clinicaNombre },
+    tipo: "cliente",
+  });
+}
+
+export function quitarSesionClinicaReal() {
   ponerSesion(null);
 }
 

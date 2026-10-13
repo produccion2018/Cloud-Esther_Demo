@@ -88,7 +88,12 @@ type Estado = {
 };
 
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes. */
-const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), { persistir: "pacientes" });
+const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), {
+  persistir: "pacientes",
+  vacio: () => ({ pacientes: [], activoId: null }),
+  // El paciente elegido es de cada pantalla: no se comparte con el resto de la clínica
+  soloLocal: ["activoId"],
+});
 
 /** Lectura sin hooks (Esther IA). */
 export function leerPacientes(): Paciente[] {

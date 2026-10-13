@@ -159,6 +159,9 @@ export const cambiarClaveClinica = (slug: string, actual: string, nueva: string)
 export const verEquipo = (slug: string) => http<EquipoClinica>(slug, "GET", "/equipo");
 export const invitarAlEquipo = (slug: string, datos: { nombre: string; email: string; rol: RolClinica }) =>
   http<EquipoClinica>(slug, "POST", "/equipo", datos);
+/** Varias personas a la vez (todo o nada). Devuelve el equipo y a quién no le salió el correo. */
+export const invitarVarios = (slug: string, personas: { nombre: string; email: string; rol: RolClinica }[]) =>
+  http<{ equipo: EquipoClinica; enviadas: number; sinCorreo: string[] }>(slug, "POST", "/equipo/varios", { personas });
 export const cambiarPersonaEquipo = (slug: string, id: string, cambios: { rol?: RolClinica; activo?: boolean }) =>
   http<EquipoClinica>(slug, "PATCH", `/equipo/${id}`, cambios);
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});

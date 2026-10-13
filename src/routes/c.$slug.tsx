@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, LogOut } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, LogOut, Mail, MailCheck } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { EquipoClinicaPanel } from "@/components/clinica/equipo";
@@ -76,6 +76,7 @@ function Ingresar({ slug }: { slug: string }) {
   const [modo, setModo] = useState<"ingresar" | "recuperar" | "enviado">("ingresar");
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
+  const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -109,13 +110,18 @@ function Ingresar({ slug }: { slug: string }) {
 
   if (modo === "enviado") {
     return (
-      <div className="space-y-4 text-sm">
-        <h1 className="text-lg font-bold">Revisá tu correo</h1>
-        <p className="text-muted-foreground">
-          Si <strong>{email.trim()}</strong> tiene acceso a esta clínica, le mandamos un enlace para elegir una contraseña
-          nueva. Vence en 30 minutos.
-        </p>
-        <Button variant="outline" className="w-full" onClick={() => setModo("ingresar")}>
+      <div className="space-y-5 text-sm">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <MailCheck className="h-6 w-6" />
+        </span>
+        <div>
+          <h2 className="text-xl font-extrabold tracking-tight">Revisá tu correo</h2>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Si <strong className="text-foreground">{email.trim()}</strong> tiene acceso a esta clínica, le mandamos un
+            enlace para elegir una contraseña nueva. Vence en 30 minutos.
+          </p>
+        </div>
+        <Button variant="outline" className="h-11 w-full" onClick={() => setModo("ingresar")}>
           Volver a ingresar
         </Button>
       </div>
@@ -124,7 +130,7 @@ function Ingresar({ slug }: { slug: string }) {
 
   if (modo === "recuperar") {
     return (
-      <form className="space-y-4" onSubmit={recuperar} noValidate>
+      <form className="space-y-5" onSubmit={recuperar} noValidate>
         <button
           type="button"
           onClick={() => {
@@ -135,14 +141,23 @@ function Ingresar({ slug }: { slug: string }) {
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Volver
         </button>
-        <h1 className="text-lg font-bold">¿Olvidaste tu contraseña?</h1>
-        <p className="text-sm text-muted-foreground">Escribí tu correo y te mandamos un enlace para elegir una nueva.</p>
-        <div className="space-y-2">
-          <Label htmlFor="rec-email">Correo</Label>
-          <Input id="rec-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">¿Olvidaste tu contraseña?</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">Te mandamos un enlace para elegir una nueva.</p>
         </div>
+        <CampoIcono id="rec-email" label="Correo" icono={<Mail className="h-4 w-4" />}>
+          <Input
+            id="rec-email"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@correo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-12 rounded-xl pl-10"
+          />
+        </CampoIcono>
         {error && <MensajeError>{error}</MensajeError>}
-        <Button type="submit" className="h-11 w-full" disabled={cargando}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando}>
           {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Enviar enlace
         </Button>
@@ -151,32 +166,89 @@ function Ingresar({ slug }: { slug: string }) {
   }
 
   return (
-    <form className="space-y-4" onSubmit={ingresar} noValidate>
-      <h1 className="text-lg font-bold">Ingresar</h1>
-      <div className="space-y-2">
-        <Label htmlFor="email">Correo</Label>
-        <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+    <form className="space-y-5" onSubmit={ingresar} noValidate>
+      <div>
+        <h2 className="text-2xl font-extrabold tracking-tight">Ingresar</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">Con el correo y la contraseña de tu acceso.</p>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="clave">Contraseña</Label>
-        <Input id="clave" type="password" autoComplete="current-password" value={clave} onChange={(e) => setClave(e.target.value)} className="h-11" />
-      </div>
+      <CampoIcono id="email" label="Correo" icono={<Mail className="h-4 w-4" />}>
+        <Input
+          id="email"
+          type="email"
+          autoComplete="username"
+          placeholder="tu@correo.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-12 rounded-xl pl-10"
+        />
+      </CampoIcono>
+      <CampoIcono
+        id="clave"
+        label="Contraseña"
+        icono={<LockKeyhole className="h-4 w-4" />}
+        extra={
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setModo("recuperar");
+            }}
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            ¿La olvidaste?
+          </button>
+        }
+      >
+        <Input
+          id="clave"
+          type={verClave ? "text" : "password"}
+          autoComplete="current-password"
+          value={clave}
+          onChange={(e) => setClave(e.target.value)}
+          className="h-12 rounded-xl pl-10 pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setVerClave((v) => !v)}
+          aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        >
+          {verClave ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </CampoIcono>
       {error && <MensajeError>{error}</MensajeError>}
-      <Button type="submit" className="h-11 w-full" disabled={cargando}>
+      <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando}>
         {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Ingresar
       </Button>
-      <button
-        type="button"
-        onClick={() => {
-          setError(null);
-          setModo("recuperar");
-        }}
-        className="w-full text-center text-xs font-semibold text-primary hover:underline"
-      >
-        ¿Olvidaste tu contraseña?
-      </button>
     </form>
+  );
+}
+
+function CampoIcono({
+  id,
+  label,
+  icono,
+  extra,
+  children,
+}: {
+  id: string;
+  label: string;
+  icono: ReactNode;
+  extra?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        {extra}
+      </div>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">{icono}</span>
+        {children}
+      </div>
+    </div>
   );
 }
 

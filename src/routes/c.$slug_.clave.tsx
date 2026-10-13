@@ -59,7 +59,8 @@ function ElegirClave() {
 
   return (
     <MarcoClinica nombre={nombre}>
-      <h1 className="text-lg font-bold">Elegí tu contraseña</h1>
+      <h2 className="text-2xl font-extrabold tracking-tight">Elegí tu contraseña</h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">Es la que vas a usar para entrar a la clínica.</p>
       {token === "" ? (
         <div className="mt-3 space-y-3">
           <MensajeError>El enlace no es válido. Pedí uno nuevo desde «¿Olvidaste tu contraseña?».</MensajeError>
@@ -73,7 +74,7 @@ function ElegirClave() {
           <ReglasClave clave={clave} />
           <CampoClave id="repetir" label="Repetir contraseña" value={repetir} onChange={setRepetir} />
           {error && <MensajeError>{error}</MensajeError>}
-          <Button type="submit" className="h-11 w-full" disabled={cargando || token === null}>
+          <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={cargando || token === null}>
             {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar contraseña
           </Button>

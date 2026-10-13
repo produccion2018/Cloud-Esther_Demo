@@ -97,6 +97,35 @@ export function useSesionClinica(slug: string): SesionClinica | null {
   );
 }
 
+/* ───────────── Nombres prolijos ─────────────
+   El servidor ya los guarda así; esto acomoda también los que se cargaron antes
+   ("ricardo pinto" → "Ricardo Pinto", "maría de los ángeles" → "María de los Ángeles"). */
+const PARTICULAS = new Set(["de", "del", "la", "las", "los", "y", "e", "da", "das", "do", "dos", "van", "von", "di"]);
+const mayuscula = (w: string) => (w ? w.charAt(0).toLocaleUpperCase("es") + w.slice(1) : w);
+export function nombrePersona(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("es")
+    .split(" ")
+    .map((w, i) =>
+      i > 0 && PARTICULAS.has(w)
+        ? w
+        : w
+            .split("-")
+            .map((p) => p.split("'").map(mayuscula).join("'"))
+            .join("-"),
+    )
+    .join(" ");
+}
+const conNombres = (e: EquipoClinica): EquipoClinica => ({
+  ...e,
+  personas: e.personas.map((p) => ({ ...p, nombre: nombrePersona(p.nombre) })),
+});
+function sesionProlija<T extends { usuario: UsuarioClinica }>(s: T): T {
+  return { ...s, usuario: { ...s.usuario, nombre: nombrePersona(s.usuario.nombre) } };
+}
+
 /* ───────────── Pedidos al servidor ───────────── */
 
 async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
@@ -127,7 +156,7 @@ async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unkn
 export const infoPublicaClinica = (slug: string) => http<{ nombre: string }>(slug, "GET", "");
 
 export async function ingresarClinica(slug: string, email: string, claveIngreso: string): Promise<SesionClinica> {
-  const s = await http<SesionClinica>(slug, "POST", "/ingresar", { email, clave: claveIngreso });
+  const s = sesionProlija(await http<SesionClinica>(slug, "POST", "/ingresar", { email, clave: claveIngreso }));
   guardarSesionClinica(s);
   return s;
 }
@@ -144,7 +173,7 @@ export async function salirClinica(slug: string, motivo: "Manual" | "Inactividad
 export async function refrescarSesionClinica(slug: string): Promise<SesionClinica | null> {
   const actual = leerSesionClinica(slug);
   if (!actual) return null;
-  const datos = await http<Omit<SesionClinica, "token">>(slug, "GET", "/sesion");
+  const datos = sesionProlija(await http<Omit<SesionClinica, "token">>(slug, "GET", "/sesion"));
   const nueva = { ...datos, token: actual.token };
   guardarSesionClinica(nueva);
   return nueva;
@@ -156,14 +185,16 @@ export const elegirClaveClinica = (slug: string, token: string, nueva: string) =
 export const cambiarClaveClinica = (slug: string, actual: string, nueva: string) =>
   http<void>(slug, "POST", "/cambiar-clave", { actual, nueva });
 
-export const verEquipo = (slug: string) => http<EquipoClinica>(slug, "GET", "/equipo");
-export const invitarAlEquipo = (slug: string, datos: { nombre: string; email: string; rol: RolClinica }) =>
-  http<EquipoClinica>(slug, "POST", "/equipo", datos);
+export const verEquipo = async (slug: string) => conNombres(await http<EquipoClinica>(slug, "GET", "/equipo"));
+export const invitarAlEquipo = async (slug: string, datos: { nombre: string; email: string; rol: RolClinica }) =>
+  conNombres(await http<EquipoClinica>(slug, "POST", "/equipo", datos));
 /** Varias personas a la vez (todo o nada). Devuelve el equipo y a quién no le salió el correo. */
-export const invitarVarios = (slug: string, personas: { nombre: string; email: string; rol: RolClinica }[]) =>
-  http<{ equipo: EquipoClinica; enviadas: number; sinCorreo: string[] }>(slug, "POST", "/equipo/varios", { personas });
-export const cambiarPersonaEquipo = (slug: string, id: string, cambios: { rol?: RolClinica; activo?: boolean }) =>
-  http<EquipoClinica>(slug, "PATCH", `/equipo/${id}`, cambios);
+export const invitarVarios = async (slug: string, personas: { nombre: string; email: string; rol: RolClinica }[]) => {
+  const r = await http<{ equipo: EquipoClinica; enviadas: number; sinCorreo: string[] }>(slug, "POST", "/equipo/varios", { personas });
+  return { ...r, equipo: conNombres(r.equipo) };
+};
+export const cambiarPersonaEquipo = async (slug: string, id: string, cambios: { rol?: RolClinica; activo?: boolean }) =>
+  conNombres(await http<EquipoClinica>(slug, "PATCH", `/equipo/${id}`, cambios));
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});
 
 /** Las mismas reglas que el servidor */

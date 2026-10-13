@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { TeLlamamos } from "./TeLlamamos";
 
 /* =========================================================
    BOTÓN PARA VOLVER ARRIBA
@@ -58,6 +59,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       </motion.main>
       <Footer />
       <ScrollToTop />
+      <TeLlamamos />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import { accesoTotal, permisos, useRole } from "@/components/admin/role";
 import { UsoIAEquipo } from "@/components/admin/uso-ia-equipo";
 import {
   BotonExcel,
+  PedidosLlamada,
   RegistroLlamadas,
   RespuestasListas,
 } from "@/components/admin/herramientas-atencion";
@@ -98,7 +99,7 @@ const hoyISO = () => {
 };
 const abierto = (c: CasoAtencion) => c.estado !== "Resuelto";
 
-type Vista = "bandeja" | "clinica" | "seguimientos" | "llamadas" | "respuestas" | "ia";
+type Vista = "bandeja" | "pedidos" | "clinica" | "seguimientos" | "llamadas" | "respuestas" | "ia";
 
 function useAutor() {
   return useSesionAdmin()?.usuario.nombre ?? "Equipo";
@@ -122,6 +123,7 @@ function AtencionPage() {
   const [clinica, setClinica] = useState<string>("");
   const [llamadaNueva, setLlamadaNueva] = useState(false);
   const { data: llamadas } = useColeccion("llamadas");
+  const { data: pedidos } = useColeccion("pedidosLlamada");
   const lista = casos ?? [];
   const hoy = hoyISO();
   const seleccionado = lista.find((c) => c.id === abiertoId) ?? null;
@@ -207,6 +209,11 @@ function AtencionPage() {
             onCambiar={setVista}
             opciones={[
               { id: "bandeja", label: "Bandeja", cantidad: lista.filter(abierto).length },
+              {
+                id: "pedidos",
+                label: "Pedidos de llamada",
+                cantidad: (pedidos ?? []).filter((p) => p.estado === "Pendiente").length || undefined,
+              },
               { id: "clinica", label: "Por clínica" },
               {
                 id: "seguimientos",
@@ -226,6 +233,8 @@ function AtencionPage() {
 
           {vista === "ia" && accesoTotal(role) ? (
             <UsoIAEquipo />
+          ) : vista === "pedidos" ? (
+            <PedidosLlamada editable={editable} />
           ) : vista === "llamadas" ? (
             <RegistroLlamadas
               editable={editable}

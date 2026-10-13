@@ -279,7 +279,7 @@ export type PaisOperacion = {
 
 /* ───────────── Atención y Soporte: llamadas, respuestas listas y guías ───────────── */
 
-/** Llamada registrada (hoy a mano; con Avaya entran solas con origen «Avaya»). */
+/** Llamada registrada: por teléfono, WhatsApp (gratis) o videollamada. */
 export type Llamada = {
   id: string;
   fecha: string; // ISO
@@ -293,8 +293,26 @@ export type Llamada = {
   notas: string;
   atendio: string;
   casoId: string | null;
-  origen: "Manual" | "Avaya";
+  origen: "Manual" | "Pedido web";
+  medio: "Teléfono" | "WhatsApp" | "Videollamada";
   proximoSeguimiento: string | null; // yyyy-mm-dd
+};
+
+/** «Te llamamos gratis»: una clínica pidió desde la web que la llamen. */
+export type PedidoLlamada = {
+  id: string;
+  fecha: string; // ISO
+  nombre: string;
+  telefono: string;
+  pais: string; // AR, CL…
+  clinica: string;
+  motivo: string;
+  horario: "Cuanto antes" | "Mañana (9 a 12)" | "Mediodía (12 a 15)" | "Tarde (15 a 19)";
+  estado: "Pendiente" | "Llamado" | "No contestó" | "Descartado";
+  atendidoPor: string | null;
+  llamadaId: string | null;
+  notas: string;
+  origen: "Web";
 };
 
 /** Respuesta lista para copiar (WhatsApp, correo). */

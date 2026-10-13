@@ -749,7 +749,7 @@ export async function guardarMontosClinica(a: {
 }
 
 export async function enviarRecordatorioPago(id: string) {
-  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`);
+  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`, {});
   await espera();
   const c = (await db()).clinicas.find((x) => x.id === id);
   await registrar(`Envió recordatorio de pago a ${c?.nombre ?? id}`, "pago");

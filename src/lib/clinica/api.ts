@@ -247,6 +247,19 @@ export const verActividad = async (slug: string, dias: number, persona?: string)
   return { ...r, personas: r.personas.map((p) => ({ ...p, nombre: nombrePersona(p.nombre) })) };
 };
 
+/* ───────────── Permisos por rol (solo el Administrador) ───────────── */
+export type RolConPermisos = "odontologo" | "secretaria" | "asistente";
+export type PermisosPorRol = {
+  /** Lo elegido para cada rol (null = todo lo que permite el rol) */
+  roles: Record<RolConPermisos, string[] | null>;
+  /** Lo máximo que puede ver cada rol */
+  maximos: Record<RolConPermisos, string[]>;
+  siempre: string[];
+};
+export const verPermisosPorRol = (slug: string) => http<PermisosPorRol>(slug, "GET", "/equipo/permisos");
+export const guardarPermisosPorRol = (slug: string, roles: Partial<Record<RolConPermisos, string[] | null>>) =>
+  http<PermisosPorRol>(slug, "PUT", "/equipo/permisos", roles);
+
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});
 
 /** Las mismas reglas que el servidor */

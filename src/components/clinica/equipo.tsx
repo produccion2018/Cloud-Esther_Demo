@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MODULES, ModuleIcon, availableIn, useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { modulosDelRol } from "@/lib/clinica/permisos";
+import { PermisosPorRolPanel } from "@/components/clinica/permisos-rol";
 import { cn } from "@/lib/utils";
 import { descargarEquipoExcel, descargarPlantillaEquipo, leerPersonasDeArchivo } from "@/lib/clinica/excel-equipo";
 import {
@@ -241,6 +242,9 @@ export function EquipoClinicaPanel({
         )}
       </section>
 
+      {/* Panel de control: qué ve cada rol (siempre visible, aunque todavía no haya nadie invitado) */}
+      <PermisosPorRolPanel slug={slug} equipo={equipo} />
+
       {/* Buscar y filtrar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative sm:w-72">
@@ -309,11 +313,11 @@ export function EquipoClinicaPanel({
                     ? "bg-primary text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
                     : "bg-primary/[0.07] text-primary hover:bg-primary/[0.14]",
                 )}
-                title="Elegí qué módulos ve esta persona"
+                title="Elegí qué módulos ve esta persona en particular"
               >
                 <Eye className="size-3.5" />
                 <span className="hidden md:inline">
-                  {p.modulosPersonalizados ? "Acceso elegido por vos" : "Ve todo su rol"}
+                  {p.modulosPersonalizados ? "Acceso elegido por vos" : "Usa los permisos de su rol"}
                 </span>
                 <span className="md:hidden">Qué ve</span>
               </button>
@@ -392,7 +396,7 @@ export function EquipoClinicaPanel({
           const ok = await cambiar(
             queVe,
             { modulos },
-            modulos === null ? `${queVe.nombre} ve todo lo de su rol.` : `Listo: ${queVe.nombre} ve solo lo que elegiste.`,
+            modulos === null ? `${queVe.nombre} ve lo de su rol.` : `Listo: ${queVe.nombre} ve solo lo que elegiste.`,
           );
           if (ok) setQueVe(null);
         }}
@@ -434,7 +438,7 @@ function QueVe({
     .filter((m): m is (typeof MODULES)[number] => !!m && (!ctx || availableIn(m, ctx.plan)));
   const [elegidos, setElegidos] = useState<string[]>([]);
   useEffect(() => {
-    if (persona) setElegidos(persona.modulosPersonalizados && persona.modulos ? persona.modulos : delRol);
+    if (persona) setElegidos(persona.modulos ?? delRol);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persona?.id]);
   const grupos = [...new Set(lista.map((m) => m.group))];
@@ -522,10 +526,10 @@ function QueVe({
         </div>
         <div className="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-between">
           <Button variant="ghost" onClick={() => void onGuardar(null)} disabled={ocupado} className="rounded-full">
-            Que vea todo lo de su rol
+            Que use los permisos de su rol
           </Button>
           <Button
-            onClick={() => void onGuardar(todo ? null : [...new Set([...elegidos, ...SIEMPRE_VISIBLES])])}
+            onClick={() => void onGuardar([...new Set([...elegidos, ...SIEMPRE_VISIBLES])])}
             disabled={ocupado}
             className="ce-boton rounded-full px-6"
           >

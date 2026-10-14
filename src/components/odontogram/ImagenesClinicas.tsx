@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ImageIcon, FileText } from "lucide-react";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 type Registro = {
   id: string;
@@ -23,7 +24,7 @@ function clave(pacienteId: string) {
 function cargar(pacienteId: string): Registro[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(clave(pacienteId));
+    const raw = almacenClinico.getItem(clave(pacienteId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];

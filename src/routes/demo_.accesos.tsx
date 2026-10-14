@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { Clock3, MailPlus, ShieldCheck, Users } from "lucide-react";
 
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { EquipoClinicaPanel } from "@/components/clinica/equipo";
+import { HeroModulo } from "@/components/clinica/hero-modulo";
+import type { EquipoClinica } from "@/lib/clinica/api";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 
@@ -23,19 +26,31 @@ export const Route = createFileRoute("/demo_/accesos")({
 
 function Accesos() {
   const real = useClinicaReal();
+  const [equipo, setEquipo] = useState<EquipoClinica | null>(null);
+  const hoy = new Date().toDateString();
+  const conAcceso = equipo?.personas.filter((p) => p.estado !== "desactivada").length ?? 0;
+  const libres = equipo?.limite == null ? null : Math.max(0, equipo.limite - equipo.usados);
   return (
-    <div className="ce-clinica mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 lg:px-8">
-      <div className="mb-6 flex items-center gap-4">
-        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_12px_26px_-14px_rgba(124,58,237,0.9)]">
-          <ShieldCheck className="size-5" />
-        </span>
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Accesos del equipo</h1>
-          <p className="text-sm text-muted-foreground">Quién entra a la clínica, con qué rol y desde cuándo.</p>
-        </div>
-      </div>
+    <div className="ce-clinica mx-auto w-full max-w-[1400px] space-y-5 px-4 py-6 md:px-6 lg:px-8">
+      <HeroModulo
+        chip="Tu equipo"
+        icon={ShieldCheck}
+        titulo="Accesos del equipo"
+        descripcion="Quién entra a la clínica, con qué rol y desde cuándo. Invitá de a una persona, varias juntas o subiendo un Excel: a cada una le llega su correo."
+        kpis={[
+          { l: "Con acceso", v: equipo ? conAcceso : "–", s: equipo?.limite ? `de ${equipo.limite} lugares del plan` : "personas activas", i: Users },
+          { l: "Lugares libres", v: equipo ? (libres ?? "∞") : "–", s: libres === null ? "tu plan no tiene límite" : "para sumar personas", i: ShieldCheck },
+          { l: "Invitaciones", v: equipo ? equipo.personas.filter((p) => p.estado === "invitada").length : "–", s: "esperando su contraseña", i: MailPlus },
+          {
+            l: "Entraron hoy",
+            v: equipo ? equipo.personas.filter((p) => p.ultimoIngreso && new Date(p.ultimoIngreso).toDateString() === hoy).length : "–",
+            s: "personas con ingreso hoy",
+            i: Clock3,
+          },
+        ]}
+      />
       {real?.rol === "admin" ? (
-        <EquipoClinicaPanel slug={real.slug} />
+        <EquipoClinicaPanel slug={real.slug} onEquipo={setEquipo} />
       ) : (
         <p className="card-premium p-6 text-sm text-muted-foreground">
           Los accesos los maneja el Administrador de tu clínica.

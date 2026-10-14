@@ -180,3 +180,8 @@ function iniciarRevision() {
 
 /** ¿Hay cambios sin guardar? (para avisar antes de cerrar la pestaña) */
 export const hayCambiosSinGuardar = () => pendientes.size > 0 || enVuelo.size > 0;
+
+/** ¿Ya se trajo este módulo del servidor (o se sabe que no hay permiso)? */
+export function moduloCargado(clave: string): boolean {
+  return versiones.has(clave);
+}

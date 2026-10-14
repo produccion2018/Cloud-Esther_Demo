@@ -31,6 +31,7 @@ import {
   type ToothState,
 } from "@/lib/odontograma2d/types";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 const WIDTH: Record<ToothDef["type"], string> = {
   // Ancho proporcional por tipo de pieza: las 16 piezas de cada arcada entran siempre en el
@@ -68,7 +69,7 @@ function claveGuardado(tenantId: string, patientId: string) {
 function cargar(tenantId: string, patientId: string): OdontogramState {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(claveGuardado(tenantId, patientId));
+    const raw = almacenClinico.getItem(claveGuardado(tenantId, patientId));
     return raw ? (JSON.parse(raw) as OdontogramState) : {};
   } catch {
     return {};
@@ -90,7 +91,7 @@ function claveHistorial(tenantId: string, patientId: string) {
 function cargarHistorial2D(tenantId: string, patientId: string): EntradaHistorial[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(claveHistorial(tenantId, patientId));
+    const raw = almacenClinico.getItem(claveHistorial(tenantId, patientId));
     return raw ? (JSON.parse(raw) as EntradaHistorial[]) : [];
   } catch {
     return [];
@@ -100,7 +101,7 @@ function cargarHistorial2D(tenantId: string, patientId: string): EntradaHistoria
 function guardarHistorial2D(tenantId: string, patientId: string, entradas: EntradaHistorial[]) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(claveHistorial(tenantId, patientId), JSON.stringify(entradas));
+    almacenClinico.setItem(claveHistorial(tenantId, patientId), JSON.stringify(entradas));
   } catch {
     /* almacenamiento no disponible: se ignora */
   }
@@ -131,7 +132,7 @@ function formatearFecha(iso: string) {
 function guardar(tenantId: string, patientId: string, state: OdontogramState) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(claveGuardado(tenantId, patientId), JSON.stringify(state));
+    almacenClinico.setItem(claveGuardado(tenantId, patientId), JSON.stringify(state));
   } catch {
     /* almacenamiento no disponible: se ignora */
   }

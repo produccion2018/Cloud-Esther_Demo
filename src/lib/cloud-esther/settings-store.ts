@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { tenantActual, useTenantActual } from "@/lib/cloud-esther/tenant-store";
+import { almacenClinico, useAlmacen } from "@/lib/clinica/almacen-clinico";
 
 export type SidebarColor =
   | "violeta"
@@ -110,7 +111,7 @@ function aplicarSidebarAlDocumento(settings: ClinicSettings) {
 export function cargarSettings(clinicId: string): ClinicSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    const raw = window.localStorage.getItem(clave(clinicId));
+    const raw = almacenClinico.getItem(clave(clinicId));
     if (!raw) return DEFAULT_SETTINGS;
     const guardados = JSON.parse(raw) as Partial<ClinicSettings>;
     return {
@@ -126,7 +127,7 @@ export function cargarSettings(clinicId: string): ClinicSettings {
 export function guardarSettings(clinicId: string, settings: ClinicSettings) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(clave(clinicId), JSON.stringify(settings));
+    almacenClinico.setItem(clave(clinicId), JSON.stringify(settings));
   } catch {
     /* almacenamiento no disponible: se ignora */
   }
@@ -139,6 +140,8 @@ export function guardarSettings(clinicId: string, settings: ClinicSettings) {
 export function useClinicSettings(clinicId: string): ClinicSettings {
   const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
   const tenant = useTenantActual();
+  // Clínica real: la configuración llega del servidor; al llegar (o cambiar) se vuelve a leer
+  const delServidor = useAlmacen("configuracion");
 
   useEffect(() => {
     setSettings(cargarSettings(clinicId));
@@ -152,7 +155,7 @@ export function useClinicSettings(clinicId: string): ClinicSettings {
 
     window.addEventListener(EVENTO_CAMBIO, handler);
     return () => window.removeEventListener(EVENTO_CAMBIO, handler);
-  }, [clinicId, tenant]);
+  }, [clinicId, tenant, delServidor]);
 
   // Mantiene el color del sidebar aplicado en <html> al cargar y al cambiar.
   useEffect(() => {

@@ -511,7 +511,27 @@ export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(() => 
     recordatorios: {},
     config: CONFIG,
   };
-}, { persistir: "comunicacion" });
+}, {
+  persistir: "comunicacion",
+  // Clínica real: sin mensajes ni envíos de ejemplo y con los canales sin conectar
+  // (las plantillas sí quedan: son textos listos para usar).
+  vacio: () => ({
+    conversaciones: [],
+    plantillas: PLANTILLAS,
+    campanas: [],
+    envios: [],
+    recordatorios: {},
+    config: {
+      ...CONFIG,
+      canales: {
+        WhatsApp: { ...CONFIG.canales.WhatsApp, conectado: false, remitente: "", enviadosMes: 0 },
+        SMS: { ...CONFIG.canales.SMS, conectado: false, remitente: "", enviadosMes: 0 },
+        Email: { ...CONFIG.canales.Email, conectado: false, remitente: "", enviadosMes: 0 },
+      },
+      recordatorios: { ...CONFIG.recordatorios, activo: false },
+    },
+  }),
+});
 
 type Actualizar<T> = T | ((prev: T) => T);
 

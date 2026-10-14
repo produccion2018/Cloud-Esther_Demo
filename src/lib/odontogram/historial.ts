@@ -1,4 +1,5 @@
 import type { ToothState } from "./fdi";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 export interface HistorialEntry {
   id: string;
@@ -15,7 +16,7 @@ function claveHistorial(pacienteId: string) {
 export function cargarHistorial(pacienteId: string): HistorialEntry[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(claveHistorial(pacienteId));
+    const raw = almacenClinico.getItem(claveHistorial(pacienteId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -39,7 +40,7 @@ export function registrarCambio(
     fecha: new Date().toISOString(),
   };
   const next = [entrada, ...historial].slice(0, 200);
-  window.localStorage.setItem(claveHistorial(pacienteId), JSON.stringify(next));
+  almacenClinico.setItem(claveHistorial(pacienteId), JSON.stringify(next));
 }
 
 function claveTratamientos(pacienteId: string) {
@@ -49,7 +50,7 @@ function claveTratamientos(pacienteId: string) {
 export function cargarTratamientos(pacienteId: string): Record<number, string> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(claveTratamientos(pacienteId));
+    const raw = almacenClinico.getItem(claveTratamientos(pacienteId));
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -60,5 +61,5 @@ export function guardarTratamiento(pacienteId: string, fdi: number, texto: strin
   if (typeof window === "undefined") return;
   const actuales = cargarTratamientos(pacienteId);
   const next = { ...actuales, [fdi]: texto };
-  window.localStorage.setItem(claveTratamientos(pacienteId), JSON.stringify(next));
+  almacenClinico.setItem(claveTratamientos(pacienteId), JSON.stringify(next));
 }

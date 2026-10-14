@@ -22,7 +22,8 @@ import { cn } from "@/lib/utils";
    PAPELERA DE DEMOS (solo Dueño y Socio).
    - En la papelera: el demo no aparece en la lista y no puede entrar. Se puede restaurar.
    - Eliminar definitivamente: borra el demo y su historial; el correo queda libre para
-     volver a probar desde cero. Un demo unido a una contratación no se puede eliminar.
+     volver a probar desde cero. Si una contratación vino de un demo, la contratación queda intacta.
+   - Sin límite: «Vaciar papelera» y «Eliminar todo» borran todo, por tandas, y cada demo queda en el registro.
    - Registro: quién mandó a la papelera, restauró o eliminó cada demo, y cuándo. */
 
 export const CLAVES_PAPELERA = ["demos", "papelera-demos"];
@@ -254,8 +255,8 @@ export function PapeleraDemos() {
                         {d.motivo ? ` · «${d.motivo}»` : ""}
                       </p>
                       {d.conContratacion && (
-                        <span className="mt-1 inline-block rounded-full bg-warning/20 px-2 py-0.5 text-[10.5px] font-semibold">
-                          Unido a una contratación: no se puede eliminar
+                        <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10.5px] font-semibold text-primary">
+                          Tiene una contratación: la contratación queda intacta
                         </span>
                       )}
                     </div>
@@ -265,7 +266,7 @@ export function PapeleraDemos() {
               <div className="rounded-2xl border border-destructive/20 bg-destructive/[0.04] p-3">
                 <p className="text-sm font-semibold">Vaciar la papelera</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Elimina para siempre todos los demos de la papelera (menos los unidos a una contratación). Los correos quedan libres para volver a probar desde cero.
+                  Elimina para siempre todos los demos de la papelera, sin límite. Los correos quedan libres para volver a probar desde cero.
                 </p>
                 <Button size="sm" variant="destructive" className="mt-2" disabled={ocupado} onClick={() => setConfirmar("vaciar")}>
                   <Trash2 className="size-4" /> Vaciar papelera
@@ -337,7 +338,7 @@ export function PapeleraDemos() {
         abierta={confirmar === "vaciar"}
         onCerrar={() => setConfirmar(null)}
         titulo="Vaciar la papelera"
-        texto={`Se eliminan para siempre los ${demos.length} demos de la papelera (menos los unidos a una contratación). No se puede deshacer.`}
+        texto={`Se eliminan para siempre todos los demos de la papelera (${demos.length}${demos.length >= 2000 ? " o más" : ""}). No se puede deshacer. Cada uno queda en el registro.`}
         boton="Vaciar papelera"
         peligro
         palabra="VACIAR"

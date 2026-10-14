@@ -42,7 +42,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { CON_BACKEND, actualizarDemo, moverDemosAPapelera } from "@/lib/admin/api";
+import {
+  CON_BACKEND,
+  actualizarDemo,
+  eliminarTodosLosDemos,
+  moverDemosAPapelera,
+  moverTodosLosDemosAPapelera,
+} from "@/lib/admin/api";
 import { useAccion, useDemos, useEquipo, usePapeleraDemos } from "@/lib/admin/consultas";
 import { toast } from "sonner";
 import { fecha, haceCuanto, minutosTexto, resumenDemo, type Interes } from "@/lib/admin/formato";
@@ -85,6 +91,9 @@ function DemosPage() {
   const [verPapelera, setVerPapelera] = useState(false);
   const [confirmarMover, setConfirmarMover] = useState(false);
   const mover = useAccion(moverDemosAPapelera, CLAVES_PAPELERA);
+  const moverTodos = useAccion(moverTodosLosDemosAPapelera, CLAVES_PAPELERA);
+  const eliminarTodo = useAccion(eliminarTodosLosDemos, CLAVES_PAPELERA);
+  const [limpiar, setLimpiar] = useState<"papelera" | "eliminar" | null>(null);
 
   const filas = useMemo(() => (demos ?? []).map((d) => ({ demo: d, r: resumenDemo(d) })), [demos]);
 
@@ -271,6 +280,15 @@ function DemosPage() {
             sinPadding
             acciones={
               puedePapelera ? (
+                <>
+                <Button variant="outline" size="sm" onClick={() => setLimpiar("papelera")} className="rounded-xl" disabled={filas.length === 0}>
+                  <Trash2 className="h-4 w-4" />
+                  Todos a la papelera
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setLimpiar("eliminar")} className="rounded-xl" disabled={filas.length === 0 && (papelera?.demos.length ?? 0) === 0}>
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar todo
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setVerPapelera(true)} className="rounded-xl">
                   <Trash2 className="h-4 w-4" />
                   Papelera
@@ -280,6 +298,7 @@ function DemosPage() {
                     </span>
                   )}
                 </Button>
+                </>
               ) : undefined
             }
           >
@@ -465,6 +484,43 @@ function DemosPage() {
               <PapeleraDemos />
             </SheetContent>
           </Sheet>
+          <ConfirmarPapelera
+            abierta={limpiar === "papelera"}
+            onCerrar={() => setLimpiar(null)}
+            titulo="Todos los demos a la papelera"
+            texto="Todos los demos de la lista (sin límite) pasan a la papelera: dejan de verse y no pueden entrar. Se pueden restaurar. Cada uno queda en el registro."
+            boton="Mover todos"
+            palabra="TODOS"
+            ocupado={moverTodos.isPending}
+            onConfirmar={(motivo) =>
+              moverTodos.mutate(motivo ? { motivo } : {}, {
+                onSuccess: (r) => {
+                  toast.success(resumenResultado(r, "movido"));
+                  setLimpiar(null);
+                  setMarcados(new Set());
+                },
+              })
+            }
+          />
+          <ConfirmarPapelera
+            abierta={limpiar === "eliminar"}
+            onCerrar={() => setLimpiar(null)}
+            titulo="Eliminar TODOS los demos"
+            texto="Se eliminan para siempre todos los demos (los de la lista y los de la papelera), sin límite, con todo su historial. No se puede deshacer. Las contrataciones quedan intactas y cada demo queda en el registro con tu nombre."
+            boton="Eliminar todo"
+            peligro
+            palabra="ELIMINAR TODO"
+            ocupado={eliminarTodo.isPending}
+            onConfirmar={(motivo) =>
+              eliminarTodo.mutate(motivo ? { motivo } : {}, {
+                onSuccess: (r) => {
+                  toast.success(resumenResultado(r, "eliminado"));
+                  setLimpiar(null);
+                  setMarcados(new Set());
+                },
+              })
+            }
+          />
           <ConfirmarPapelera
             abierta={confirmarMover}
             onCerrar={() => setConfirmarMover(false)}

@@ -1,6 +1,9 @@
 import {
+  Check,
   ClipboardPaste,
   Download,
+  Eye,
+  Lock,
   FileSpreadsheet,
   Loader2,
   MailPlus,
@@ -29,6 +32,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { MODULES, ModuleIcon, availableIn, useCloudEstherOpcional } from "@/lib/cloud-esther/data";
+import { modulosDelRol } from "@/lib/clinica/permisos";
 import { cn } from "@/lib/utils";
 import { descargarEquipoExcel, descargarPlantillaEquipo, leerPersonasDeArchivo } from "@/lib/clinica/excel-equipo";
 import {
@@ -122,6 +127,7 @@ export function EquipoClinicaPanel({
   const [sumar, setSumar] = useState(false);
   const [buscar, setBuscar] = useState("");
   const [filtro, setFiltro] = useState<RolClinica | "todos">("todos");
+  const [queVe, setQueVe] = useState<PersonaEquipo | null>(null);
 
   const cargar = useCallback(() => {
     setError(null);
@@ -131,13 +137,19 @@ export function EquipoClinicaPanel({
   }, [slug]);
   useEffect(cargar, [cargar]);
 
-  const cambiar = async (p: PersonaEquipo, cambios: { rol?: RolClinica; activo?: boolean }, ok: string) => {
+  const cambiar = async (
+    p: PersonaEquipo,
+    cambios: { rol?: RolClinica; activo?: boolean; modulos?: string[] | null },
+    ok: string,
+  ): Promise<boolean> => {
     setOcupado(p.id);
     try {
       setEquipo(await cambiarPersonaEquipo(slug, p.id, cambios));
       toast.success(ok);
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo guardar.");
+      return false;
     } finally {
       setOcupado(null);
     }
@@ -287,6 +299,27 @@ export function EquipoClinicaPanel({
             <div className="hidden w-60 sm:block">
               <Estado p={p} />
             </div>
+            {p.rol !== "admin" && p.estado !== "desactivada" ? (
+              <button
+                type="button"
+                onClick={() => setQueVe(p)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5",
+                  p.modulosPersonalizados
+                    ? "bg-primary text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
+                    : "bg-primary/[0.07] text-primary hover:bg-primary/[0.14]",
+                )}
+                title="Elegí qué módulos ve esta persona"
+              >
+                <Eye className="size-3.5" />
+                <span className="hidden md:inline">
+                  {p.modulosPersonalizados ? "Acceso elegido por vos" : "Ve todo su rol"}
+                </span>
+                <span className="md:hidden">Qué ve</span>
+              </button>
+            ) : (
+              <span className="hidden w-[118px] shrink-0 md:block" />
+            )}
 
             {p.soyYo ? (
               <span className="w-9" />
@@ -350,6 +383,21 @@ export function EquipoClinicaPanel({
         ))}
       </ul>
 
+      <QueVe
+        persona={queVe}
+        ocupado={!!queVe && ocupado === queVe.id}
+        onCerrar={() => setQueVe(null)}
+        onGuardar={async (modulos) => {
+          if (!queVe) return;
+          const ok = await cambiar(
+            queVe,
+            { modulos },
+            modulos === null ? `${queVe.nombre} ve todo lo de su rol.` : `Listo: ${queVe.nombre} ve solo lo que elegiste.`,
+          );
+          if (ok) setQueVe(null);
+        }}
+      />
+
       <SumarPersonas
         slug={slug}
         abierto={sumar}
@@ -361,6 +409,132 @@ export function EquipoClinicaPanel({
         }}
       />
     </div>
+  );
+}
+
+/* QUÉ VE CADA PERSONA: el Administrador elige, módulo por módulo (nunca más de lo que permite
+   su rol). El servidor lo cumple al instante, sin que la persona tenga que volver a entrar. */
+const SIEMPRE_VISIBLES = new Set(["dashboard", "notificaciones"]);
+function QueVe({
+  persona,
+  ocupado,
+  onCerrar,
+  onGuardar,
+}: {
+  persona: PersonaEquipo | null;
+  ocupado: boolean;
+  onCerrar: () => void;
+  onGuardar: (modulos: string[] | null) => void | Promise<void>;
+}) {
+  const ctx = useCloudEstherOpcional();
+  const delRol = persona ? (persona.modulosRol?.length ? persona.modulosRol : modulosDelRol(persona.rol)) : [];
+  // Solo los módulos que existen y que incluye el plan de la clínica
+  const lista = delRol
+    .map((id) => MODULES.find((m) => m.id === id))
+    .filter((m): m is (typeof MODULES)[number] => !!m && (!ctx || availableIn(m, ctx.plan)));
+  const [elegidos, setElegidos] = useState<string[]>([]);
+  useEffect(() => {
+    if (persona) setElegidos(persona.modulosPersonalizados && persona.modulos ? persona.modulos : delRol);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persona?.id]);
+  const grupos = [...new Set(lista.map((m) => m.group))];
+  const alternar = (id: string) =>
+    SIEMPRE_VISIBLES.has(id) ? undefined : setElegidos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const cuantos = lista.filter((m) => elegidos.includes(m.id) || SIEMPRE_VISIBLES.has(m.id)).length;
+  const todo = lista.every((m) => elegidos.includes(m.id) || SIEMPRE_VISIBLES.has(m.id));
+
+  return (
+    <Sheet open={!!persona} onOpenChange={(o) => !o && onCerrar()}>
+      <SheetContent side="right" className="ce-clinica flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+        <SheetHeader className="border-b px-6 py-5 text-left">
+          <SheetTitle className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+            <Eye className="size-5 text-primary" /> Qué ve {persona?.nombre.split(" ")[0] ?? ""}
+          </SheetTitle>
+          <SheetDescription>
+            {persona?.rolNombre}: prendé o apagá cada módulo. Lo que apagues deja de verlo al instante, en las dos vistas, y el servidor
+            no se lo entrega.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-primary/[0.06] px-4 py-3">
+            <p className="text-sm">
+              Ve <span className="font-extrabold text-primary">{cuantos}</span> de {lista.length} módulos
+            </p>
+            <button
+              type="button"
+              onClick={() => setElegidos(todo ? [...SIEMPRE_VISIBLES] : lista.map((m) => m.id))}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              {todo ? "Dejar solo lo básico" : "Prender todo"}
+            </button>
+          </div>
+          {grupos.map((g) => (
+            <div key={g}>
+              <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
+                {g}
+              </p>
+              <ul className="space-y-1.5">
+                {lista
+                  .filter((m) => m.group === g)
+                  .map((m) => {
+                    const fijo = SIEMPRE_VISIBLES.has(m.id);
+                    const on = fijo || elegidos.includes(m.id);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          disabled={fijo}
+                          onClick={() => alternar(m.id)}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ring-1 transition",
+                            on ? "bg-card ring-primary/25 shadow-[0_6px_16px_-12px_rgba(124,58,237,0.6)]" : "bg-muted/40 ring-transparent opacity-70 hover:opacity-100",
+                            fijo && "cursor-default",
+                          )}
+                        >
+                          <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl", on ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+                            <ModuleIcon name={m.icon} className="size-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">{m.label}</span>
+                            {fijo && <span className="block text-[11px] text-muted-foreground">Siempre visible</span>}
+                          </span>
+                          {fijo ? (
+                            <Lock className="size-4 text-muted-foreground" />
+                          ) : (
+                            <span className={cn("relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors", on ? "bg-gradient-to-r from-primary to-fuchsia-500" : "bg-muted-foreground/25")}>
+                              <span className={cn("size-5 rounded-full bg-white shadow transition-transform", on ? "translate-x-[22px]" : "translate-x-0.5")} />
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+          ))}
+          <p className="rounded-2xl bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            La Comunicación interna la tiene todo el equipo. Lo que puede hacer cada rol ahí (comunicados, canales, archivos) se elige
+            en Comunicación interna → Permisos.
+          </p>
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-between">
+          <Button variant="ghost" onClick={() => void onGuardar(null)} disabled={ocupado} className="rounded-full">
+            Que vea todo lo de su rol
+          </Button>
+          <Button
+            onClick={() => void onGuardar(todo ? null : [...new Set([...elegidos, ...SIEMPRE_VISIBLES])])}
+            disabled={ocupado}
+            className="ce-boton rounded-full px-6"
+          >
+            {ocupado ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Check className="mr-2 size-4" />}
+            Guardar
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

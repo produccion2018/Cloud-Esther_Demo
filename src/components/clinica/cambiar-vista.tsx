@@ -21,8 +21,11 @@ export function CambiarVista({
   actual,
   compacto = false,
   className,
+  demo = false,
 }: {
   actual: VistaDueno;
+  /** Demo: la Administración se abre como Dueño/a con los datos de ejemplo */
+  demo?: boolean;
   /** Solo íconos (menú lateral angosto) */
   compacto?: boolean;
   className?: string;
@@ -45,22 +48,29 @@ export function CambiarVista({
       >
         {OPCIONES.map((o) => {
           const on = o.id === actual;
-          return (
-            <Link
-              key={o.id}
-              to={o.to as never}
-              role="tab"
-              aria-selected={on}
-              title={o.label}
-              className={cn(
-                "group flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight transition-all duration-200",
-                on
-                  ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_20px_-10px_rgba(124,58,237,0.9)]"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground",
-              )}
-            >
+          const clase = cn(
+            "group flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight transition-all duration-200",
+            on
+              ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_20px_-10px_rgba(124,58,237,0.9)]"
+              : "text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground",
+          );
+          const contenido = (
+            <>
               <o.icon className={cn("size-4 shrink-0 transition-transform", !on && "group-hover:scale-110")} />
               {!compacto && <span className="max-w-full truncate">{o.corto}</span>}
+            </>
+          );
+          // En el demo, la Administración se abre como Dueño/a (sin pedir usuario del equipo)
+          if (demo && o.id === "administracion") {
+            return (
+              <a key={o.id} href="/equipo?vista=dueno" role="tab" aria-selected={on} title={o.label} className={clase}>
+                {contenido}
+              </a>
+            );
+          }
+          return (
+            <Link key={o.id} to={o.to as never} role="tab" aria-selected={on} title={o.label} className={clase}>
+              {contenido}
             </Link>
           );
         })}

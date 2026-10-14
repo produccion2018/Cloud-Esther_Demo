@@ -524,8 +524,11 @@ function IndicadorGuardado() {
 /* Clínica real: el Administrador pasa del Centro de operaciones a Administración (mismos datos) */
 function VistaDelDueno() {
   const real = useClinicaReal();
-  if (real?.rol !== "admin") return null;
-  return <CambiarVista actual="centro" className="mb-3 px-3" />;
+  // Demo: se muestran las dos vistas (Centro de operaciones y Administración) igual que en una clínica real
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  if (real) return real.rol === "admin" ? <CambiarVista actual="centro" className="mb-3 px-3" /> : null;
+  return montado ? <CambiarVista actual="centro" demo className="mb-3 px-3" /> : null;
 }
 
 function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined }) {

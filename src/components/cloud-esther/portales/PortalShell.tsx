@@ -60,6 +60,7 @@ export function PortalShell({
   aviso,
   principales,
   vistaDueno,
+  vistaDuenoDemo,
   children,
 }: {
   portal: string;
@@ -82,6 +83,8 @@ export function PortalShell({
   principales?: string[];
   /** Clínica real, Administrador: selector entre Centro de operaciones y Administración. */
   vistaDueno?: VistaDueno | undefined;
+  /** Demo: la Administración del Dueño/a con los datos de ejemplo */
+  vistaDuenoDemo?: boolean | undefined;
   children: ReactNode;
 }) {
   const [deAccesoPrueba, setDeAccesoPrueba] = useState(false);
@@ -218,6 +221,7 @@ export function PortalShell({
       {vistaDueno && (
         <CambiarVista
           actual={vistaDueno}
+          demo={!!vistaDuenoDemo}
           compacto={modoCompacto}
           className={`relative mb-3 ${modoCompacto ? "px-3" : "px-4"}`}
         />

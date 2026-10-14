@@ -4,7 +4,7 @@ import {
   motion,
   useReducedMotion,
 } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   CalendarCheck,
   Users,
@@ -255,22 +255,62 @@ const titleLines = [
   "en un solo lugar.",
 ] as const;
 
+type VarianteTitulo = "destello" | "marca";
+
+function estiloVariante(variante: VarianteTitulo): CSSProperties {
+  const base: CSSProperties = {
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+  };
+
+  if (variante === "destello") {
+    return {
+      ...base,
+      backgroundImage:
+        "linear-gradient(105deg,#111827 0%,#111827 40%,#7c3aed 47%,#c084fc 50%,#7c3aed 53%,#111827 60%,#111827 100%)",
+      backgroundSize: "250% 100%",
+    };
+  }
+
+  return {
+    ...base,
+    backgroundImage:
+      "linear-gradient(100deg,#5b21b6 0%,#8b5cf6 25%,#c084fc 50%,#8b5cf6 75%,#5b21b6 100%)",
+    backgroundSize: "200% 100%",
+  };
+}
+
 function AnimatedLetters({
   text,
   delay = 0,
-  gradient = false,
+  variante = "destello",
 }: {
   text: string;
   delay?: number;
-  gradient?: boolean;
+  variante?: VarianteTitulo;
 }) {
+  const reducir = useReducedMotion();
+
   return (
-    <span
-      className={
-        gradient
-          ? "inline-block bg-[linear-gradient(110deg,#111827_0%,#111827_38%,#7c3aed_52%,#a855f7_62%,#111827_78%)] bg-[length:250%_100%] bg-clip-text text-transparent"
-          : "inline-block"
+    <motion.span
+      className="inline-block pb-[0.14em] -mb-[0.14em]"
+      style={estiloVariante(variante)}
+      animate={
+        reducir
+          ? undefined
+          : {
+              backgroundPosition: [
+                "0% 50%",
+                variante === "destello" ? "250% 50%" : "200% 50%",
+              ],
+            }
       }
+      transition={{
+        duration: variante === "destello" ? 6 : 7,
+        repeat: Infinity,
+        ease: "linear",
+      }}
     >
       {text.split("").map((char, index) => (
         <motion.span
@@ -297,10 +337,25 @@ function AnimatedLetters({
             whiteSpace: char === " " ? "pre" : undefined,
           }}
         >
-          {char}
+          {/* Onda suave infinita, letra por letra */}
+          <motion.span
+            className="inline-block"
+            style={{
+              whiteSpace: char === " " ? "pre" : undefined,
+            }}
+            animate={reducir ? undefined : { y: [0, -4, 0] }}
+            transition={{
+              duration: 3.2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: delay + 1.2 + index * 0.07,
+            }}
+          >
+            {char}
+          </motion.span>
         </motion.span>
       ))}
-    </span>
+    </motion.span>
   );
 }
 
@@ -616,41 +671,16 @@ function Caracteristicas() {
               <AnimatedLetters
                 text={titleLines[0]}
                 delay={0.15}
+                variante="destello"
               />
             </div>
 
-            <div className="relative mt-1 inline-block">
+            <div className="relative mt-1 inline-block drop-shadow-[0_8px_28px_rgba(124,58,237,0.28)]">
               <AnimatedLetters
                 text={titleLines[1]}
                 delay={0.5}
-                gradient
+                variante="marca"
               />
-
-              {/* Chispa decorativa */}
-              <motion.span
-                initial={{ opacity: 0, scale: 0.4, rotate: -20 }}
-                animate={{
-                  opacity: [0, 1, 1, 0],
-                  scale: [0.4, 1.1, 1, 0.4],
-                  rotate: [-20, 8, 0, -20],
-                }}
-                transition={{
-                  duration: 3.2,
-                  delay: 1.4,
-                  repeat: Infinity,
-                  repeatDelay: 2.5,
-                  ease: "easeInOut",
-                }}
-                className="pointer-events-none absolute -right-7 -top-3 text-primary sm:-right-9 sm:-top-4"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-5 fill-current sm:size-6"
-                  aria-hidden="true"
-                >
-                  <path d="M12 2C8.5 2 6 4 6 7.5c0 2.2.6 3.8 1.1 5.6.5 1.7.9 3.6 1.1 6.1.1 1.2 1 2.1 1.9 1.7.7-.3.9-1.3 1.1-2.2.3-1.4.6-2.9 1.8-2.9s1.5 1.5 1.8 2.9c.2.9.4 1.9 1.1 2.2.9.4 1.8-.5 1.9-1.7.2-2.5.6-4.4 1.1-6.1.5-1.8 1.1-3.4 1.1-5.6C18 4 15.5 2 12 2z" />
-                </svg>
-              </motion.span>
 
               {/* Barrido de luz infinito */}
               <motion.span

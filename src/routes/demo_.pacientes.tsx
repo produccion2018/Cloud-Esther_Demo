@@ -1153,10 +1153,6 @@ function CarpetaPaciente({
               onEditar={onEditar}
               onIr={setSeccion}
             />
-          ) : seccion === "odontograma" && real ? (
-            <p className="rounded-2xl bg-primary/5 p-6 text-center text-sm text-muted-foreground">
-              El odontograma se está preparando para tu clínica. Mientras tanto, registrá los hallazgos en la Historia clínica.
-            </p>
           ) : seccion === "odontograma" ? (
             <OdontogramaGate
               key={paciente.id}

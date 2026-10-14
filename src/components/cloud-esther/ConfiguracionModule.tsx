@@ -1316,7 +1316,7 @@ function PreviewSidebar({
             className="mt-3 rounded-lg border px-2.5 py-2 text-[8px]"
             style={{ background: "var(--sidebar-accent)", borderColor: "var(--sidebar-border)" }}
           >
-            Plan del demo
+            Tu plan
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Upload, X, FileText, ImageIcon } from "lucide-react";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 type Registro = {
   id: string;
@@ -23,7 +24,7 @@ function clave(pacienteId: string) {
 function cargar(pacienteId: string): Registro[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(clave(pacienteId));
+    const raw = almacenClinico.getItem(clave(pacienteId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -32,7 +33,7 @@ function cargar(pacienteId: string): Registro[] {
 
 function guardar(pacienteId: string, registros: Registro[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(clave(pacienteId), JSON.stringify(registros));
+  almacenClinico.setItem(clave(pacienteId), JSON.stringify(registros));
 }
 
 const CARD =

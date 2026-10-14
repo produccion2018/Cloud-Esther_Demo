@@ -39,7 +39,11 @@ export function puedeVer(rol: RolClinica | null, moduloId: string): boolean {
 
 /* Módulos que YA guardan en el servidor para las clínicas reales. Los demás muestran
    «se está preparando» (nunca datos de ejemplo, y nunca guardan en el navegador). */
-const HABILITADOS = new Set(["dashboard", "agenda", "pacientes", "equipo", "notificaciones"]);
+const HABILITADOS = new Set([
+  "dashboard", "agenda", "pacientes", "equipo", "notificaciones",
+  // Plan Start completo (14 oct): ficha clínica, odontograma 2D, estudios, comunicación y configuración
+  "historia", "odontograma", "recetas", "estudios", "laboratorio", "tratamientos", "comunicaciones", "configuracion",
+]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 
 /* Secciones de la ficha del paciente que cada rol ve (la Secretaría no ve datos de salud) */

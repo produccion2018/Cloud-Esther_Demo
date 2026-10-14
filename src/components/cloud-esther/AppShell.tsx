@@ -28,6 +28,7 @@ import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
 import { refrescarSesionClinica } from "@/lib/clinica/api";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
+import { useAlmacenClinicoListo } from "@/lib/clinica/almacen-clinico";
 import { Toaster } from "@/components/ui/sonner";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
@@ -842,13 +843,16 @@ function ModuloNoIncluido({
 function AvisoClinica({ titulo, texto, icono }: { titulo: string; texto: string; icono: string }) {
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
-      <div className="card-premium max-w-md p-8 text-center">
-        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
-          <ModuleIcon name={icono} className="size-6" />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.05] p-8 text-center shadow-[0_24px_60px_-38px_rgba(76,29,149,0.6)] sm:p-10 dark:from-card dark:via-card">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-pink-400/60" />
+        <div className="pointer-events-none absolute -right-20 -top-24 size-60 rounded-full bg-primary/[0.06] blur-2xl" />
+        <span className="relative mx-auto grid size-16 place-items-center rounded-[22px] bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_16px_34px_-14px_rgba(124,58,237,0.9)]">
+          <span aria-hidden className="absolute inset-0 rounded-[22px] bg-primary/30 motion-safe:animate-ping [animation-duration:2.6s]" />
+          <ModuleIcon name={icono} className="relative size-7" />
         </span>
-        <p className="mt-5 text-base font-semibold text-foreground">{titulo}</p>
-        <p className="mt-1.5 text-sm text-muted-foreground">{texto}</p>
-        <div className="mt-5">
+        <p className="relative mt-6 font-display text-xl font-bold tracking-tight text-foreground">{titulo}</p>
+        <p className="relative mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{texto}</p>
+        <div className="relative mt-6">
           <Link to={"/demo" as never} className="btn-ce-outline">
             Volver al Dashboard
           </Link>
@@ -867,6 +871,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (real) ajustarCatalogosClinica(real.sesion.clinica.nombre);
   const [montadoShell, setMontadoShell] = useState(false);
   useEffect(() => setMontadoShell(true), []);
+  // Clínica real: odontograma, radiografías y configuración llegan del servidor antes de mostrarse
+  const almacenListo = useAlmacenClinicoListo();
   // Clínica real: si se cierra la pestaña con algo sin guardar todavía, el navegador avisa
   const esReal = !!real;
   useEffect(() => {
@@ -980,7 +986,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           sidebarStyle={sidebarStyle}
           menu={menuMovil}
           setMenu={setMenuMovil}
-          titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
+          titulo={
+            modulo
+              ? etiquetaModulo(modulo, plan)
+              : pathname === "/demo/accesos"
+                ? "Accesos del equipo"
+                : pathname === "/demo/mi-cuenta"
+                  ? "Mi cuenta"
+                  : "Inicio"
+          }
         />
         {/* En el celular se deja lugar para la barra inferior. */}
         {/* Hasta saber en el navegador si es una clínica real, el contenido no se muestra:
@@ -1007,6 +1021,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               texto="Lo maneja otra persona de tu clínica. Si lo necesitás, pedíselo al Administrador."
               icono={modulo.icon}
             />
+          ) : real && !almacenListo ? (
+            <div className="grid min-h-[50vh] place-items-center" role="status" aria-live="polite">
+              <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+                <span className="size-10 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
+                Trayendo los datos de tu clínica…
+              </div>
+            </div>
           ) : real && modulo && !moduloHabilitado(modulo.id) ? (
             <AvisoClinica
               titulo={`${etiquetaModulo(modulo, plan)} se está preparando para tu clínica`}

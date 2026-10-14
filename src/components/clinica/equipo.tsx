@@ -1,5 +1,7 @@
 import {
   ClipboardPaste,
+  Download,
+  FileSpreadsheet,
   Loader2,
   MailPlus,
   MoreHorizontal,
@@ -28,10 +30,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { descargarEquipoExcel, descargarPlantillaEquipo, leerPersonasDeArchivo } from "@/lib/clinica/excel-equipo";
 import {
   ROLES_CLINICA,
   cambiarPersonaEquipo,
   invitarVarios,
+  nombrePersona,
   reenviarInvitacion,
   verEquipo,
   type EquipoClinica,
@@ -100,8 +104,19 @@ function Avatar({ p, chico = false }: { p: { nombre: string; rol: RolClinica }; 
   );
 }
 
-export function EquipoClinicaPanel({ slug }: { slug: string }) {
+export function EquipoClinicaPanel({
+  slug,
+  onEquipo,
+}: {
+  slug: string;
+  /** Avisa cada vez que cambia el equipo (para los indicadores del encabezado) */
+  onEquipo?: ((e: EquipoClinica) => void) | undefined;
+}) {
   const [equipo, setEquipo] = useState<EquipoClinica | null>(null);
+  useEffect(() => {
+    if (equipo) onEquipo?.(equipo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipo]);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [sumar, setSumar] = useState(false);
@@ -185,14 +200,26 @@ export function EquipoClinicaPanel({ slug }: { slug: string }) {
                   : `${equipo.usados} de ${equipo.limite} lugares ocupados · te quedan ${libres}.`}
             </p>
           </div>
-          <Button
-            onClick={() => setSumar(true)}
-            disabled={libres === 0}
-            className="ce-boton h-11 rounded-full px-6"
-            title={libres === 0 ? "Llegaste al límite de tu plan" : undefined}
-          >
-            <UserPlus className="mr-2 h-4 w-4" /> Sumar personas
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                void descargarEquipoExcel(equipo, slug).catch(() => toast.error("No se pudo armar el Excel. Probá de nuevo."))
+              }
+              className="ce-levanta h-11 rounded-full px-5"
+              title="Descargar el equipo en Excel"
+            >
+              <Download className="mr-2 h-4 w-4" /> Excel
+            </Button>
+            <Button
+              onClick={() => setSumar(true)}
+              disabled={libres === 0}
+              className="ce-boton h-11 rounded-full px-6"
+              title={libres === 0 ? "Llegaste al límite de tu plan" : undefined}
+            >
+              <UserPlus className="mr-2 h-4 w-4" /> Sumar personas
+            </Button>
+          </div>
         </div>
         <Lugares ocupan={ocupan} limite={equipo.limite} onLibre={() => setSumar(true)} />
         {libres === 0 && (
@@ -478,6 +505,34 @@ function SumarPersonas({
     toast.success(`${nuevas.length} ${nuevas.length === 1 ? "persona agregada" : "personas agregadas"} a la lista.`);
   };
 
+  // Subir el personal desde un Excel (o CSV): pasa a la lista para revisarlo antes de invitar
+  const [leyendo, setLeyendo] = useState(false);
+  const subirExcel = async (archivo: File | undefined) => {
+    if (!archivo) return;
+    if (archivo.size > 5 * 1024 * 1024) return setError("El archivo es muy grande (máximo 5 MB).");
+    setLeyendo(true);
+    try {
+      const personas = await leerPersonasDeArchivo(archivo);
+      if (personas.length === 0) {
+        setError("No encontramos correos en el archivo. Usá la plantilla: Nombre y apellido, Correo y Rol.");
+        return;
+      }
+      setError(null);
+      const yaEstan = new Set(filas.map((f) => f.email.trim().toLowerCase()).filter(Boolean));
+      const nuevas = personas
+        .filter((p) => !yaEstan.has(p.email))
+        .map((p) => filaNueva(p.rol ?? rolBase, nombrePersona(p.nombre), p.email));
+      setFilas((fs) => [...fs.filter((f) => f.nombre.trim() || f.email.trim()), ...nuevas]);
+      toast.success(
+        `${nuevas.length} ${nuevas.length === 1 ? "persona cargada" : "personas cargadas"} desde el Excel. Revisalas y mandá las invitaciones.`,
+      );
+    } catch {
+      setError("No pudimos leer el archivo. Guardalo como Excel (.xlsx) o CSV y probá de nuevo.");
+    } finally {
+      setLeyendo(false);
+    }
+  };
+
   const enviar = async () => {
     if (completas.length === 0) return setError("Agregá al menos una persona.");
     for (const f of completas) {
@@ -544,6 +599,40 @@ function SumarPersonas({
             <p className="mt-2 text-xs text-muted-foreground">Se usa para las personas que agregues. Cada una se puede cambiar abajo.</p>
           </div>
 
+          {/* Subir un Excel */}
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <label
+              className={cn(
+                "group flex cursor-pointer items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] px-4 py-3 text-left text-sm transition-all duration-200 hover:-translate-y-px hover:border-emerald-500/60 hover:shadow-[0_10px_24px_-18px_rgba(16,185,129,0.9)]",
+                leyendo && "pointer-events-none opacity-60",
+              )}
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                {leyendo ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileSpreadsheet className="h-5 w-5" />}
+              </span>
+              <span>
+                <span className="block font-semibold">Subir tu personal desde Excel</span>
+                <span className="block text-xs text-muted-foreground">Archivo .xlsx o .csv con nombre, correo y rol.</span>
+              </span>
+              <input
+                type="file"
+                accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                className="sr-only"
+                onChange={(e) => {
+                  void subirExcel(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void descargarPlantillaEquipo().catch(() => toast.error("No se pudo descargar la plantilla."))}
+              className="flex items-center justify-center gap-1.5 rounded-2xl border px-4 py-3 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
+            >
+              <Download className="h-4 w-4" /> Plantilla
+            </button>
+          </div>
+
           {/* Pegar una lista */}
           {pegar ? (
             <div className="space-y-2 rounded-2xl border border-dashed p-4">
@@ -576,7 +665,7 @@ function SumarPersonas({
             >
               <ClipboardPaste className="h-5 w-5 shrink-0" />
               <span>
-                <span className="block font-semibold">¿Tenés la lista en Excel o WhatsApp?</span>
+                <span className="block font-semibold">¿La tenés copiada de WhatsApp o un correo?</span>
                 <span className="block text-xs text-muted-foreground">Pegala y se cargan todas de una.</span>
               </span>
             </button>

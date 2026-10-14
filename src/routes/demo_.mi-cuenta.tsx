@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { UserRound } from "lucide-react";
+import { Building2, Mail, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { MiCuentaClinica } from "@/components/clinica/mi-cuenta";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { HeroModulo } from "@/components/clinica/hero-modulo";
+import { CloudEstherProvider, PLANS, useCloudEsther } from "@/lib/cloud-esther/data";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 
 /* Ubicación: src/routes/demo_.mi-cuenta.tsx
@@ -22,17 +23,26 @@ export const Route = createFileRoute("/demo_/mi-cuenta")({
 
 function MiCuenta() {
   const real = useClinicaReal();
+  const { plan } = useCloudEsther();
+  const u = real?.sesion.usuario;
   return (
-    <div className="ce-clinica mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 lg:px-8">
-      <div className="mb-6 flex items-center gap-4">
-        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_12px_26px_-14px_rgba(124,58,237,0.9)]">
-          <UserRound className="size-5" />
-        </span>
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Mi cuenta</h1>
-          <p className="text-sm text-muted-foreground">Tus datos y tu contraseña.</p>
-        </div>
-      </div>
+    <div className="ce-clinica mx-auto w-full max-w-[1400px] space-y-5 px-4 py-6 md:px-6 lg:px-8">
+      <HeroModulo
+        chip="Tu cuenta"
+        icon={UserRound}
+        titulo="Mi cuenta"
+        descripcion="Tus datos para entrar a la clínica y tu contraseña. Al cambiarla, se cierran tus sesiones abiertas en otras computadoras o celulares."
+        kpis={
+          u && real
+            ? [
+                { l: "Tu rol", v: u.rolNombre, s: "lo define el Administrador", i: ShieldCheck },
+                { l: "Clínica", v: real.sesion.clinica.nombre, s: "donde trabajás", i: Building2 },
+                { l: "Plan", v: PLANS[plan].name, s: "contratado por la clínica", i: Sparkles },
+                { l: "Correo", v: u.email, s: "con el que ingresás", i: Mail },
+              ]
+            : []
+        }
+      />
       {real ? (
         <MiCuentaClinica slug={real.slug} sesion={real.sesion} />
       ) : (

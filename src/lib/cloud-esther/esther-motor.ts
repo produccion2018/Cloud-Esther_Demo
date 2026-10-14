@@ -29,6 +29,7 @@ import { cargarTratamientos } from "@/lib/odontogram/historial";
 import { odontogramKey } from "@/lib/odontograma2d/types";
 import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
 import type { RolIA } from "@/lib/cloud-esther/ia-store";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 /* ───────────── Tipos de respuesta ───────────── */
 
@@ -254,7 +255,7 @@ function chart3D(p: Paciente): Record<number, ToothState> {
   if (typeof window === "undefined") return {};
   try {
     const clave = odontogramKey(clinicaActualId() ?? "demo", String(p.id));
-    const raw = window.localStorage.getItem(`cloud-esther:odontograma3d:${clave}`);
+    const raw = almacenClinico.getItem(`cloud-esther:odontograma3d:${clave}`);
     return raw ? (JSON.parse(raw) as Record<number, ToothState>) : {};
   } catch {
     return {};

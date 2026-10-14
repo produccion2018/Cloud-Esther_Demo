@@ -41,6 +41,7 @@ import { Cargando3D, Limite3D } from "@/components/odontogram/Carga3D";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
 import { EstherOdontograma } from "@/components/cloud-esther/odontograma3d/EstherOdontograma";
+import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 /** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
  *  siempre el plan, nunca la vista. */
@@ -98,7 +99,7 @@ function chartDesdeRegistros(pacienteId: string): Record<number, ToothState> {
 function cargarChart(clavePaciente: string, pacienteId?: string): Record<number, ToothState> {
   if (typeof window === "undefined") return defaultChart();
   try {
-    const raw = window.localStorage.getItem(claveAlmacenamiento(clavePaciente));
+    const raw = almacenClinico.getItem(claveAlmacenamiento(clavePaciente));
     if (!raw) return pacienteId ? chartDesdeRegistros(pacienteId) : defaultChart();
     return { ...defaultChart(), ...JSON.parse(raw) };
   } catch {
@@ -109,7 +110,7 @@ function cargarChart(clavePaciente: string, pacienteId?: string): Record<number,
 function guardarChart(clavePaciente: string, chart: Record<number, ToothState>) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(claveAlmacenamiento(clavePaciente), JSON.stringify(chart));
+    almacenClinico.setItem(claveAlmacenamiento(clavePaciente), JSON.stringify(chart));
   } catch {
     /* almacenamiento no disponible: se ignora */
   }

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   verActividad,
-  type ActividadEquipo,
+  type ActividadEquipo as DatosActividad,
   type ActividadEvento,
   type ActividadPersona,
   type CambioCantidad,
@@ -169,7 +169,7 @@ export function ActividadEquipo({ slug }: { slug: string }) {
   const [dias, setDias] = useState(7);
   const [persona, setPersona] = useState<string | null>(null);
   const [tipo, setTipo] = useState<"todo" | "cambio" | "ingreso" | "consulta">("todo");
-  const [datos, setDatos] = useState<ActividadEquipo | null>(null);
+  const [datos, setDatos] = useState<DatosActividad | null>(null);
   const [todas, setTodas] = useState<ActividadPersona[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);

@@ -505,7 +505,7 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
       />
       <NuevoPrivado abierto={dialogo === "privado"} onCerrar={() => setDialogo(null)} res={res} onListo={abrir} />
       {esAdmin && res.permisosPorRol && (
-        <PermisosChat abierto={dialogo === "permisos"} onCerrar={() => setDialogo(null)} actuales={res.permisosPorRol} />
+        <DialogoPermisos abierto={dialogo === "permisos"} onCerrar={() => setDialogo(null)} actuales={res.permisosPorRol} />
       )}
     </div>
   );
@@ -1360,7 +1360,7 @@ function NuevoPrivado({ abierto, onCerrar, res, onListo }: { abierto: boolean; o
 }
 
 /* ───────────── Permisos del chat (Administrador) ───────────── */
-function PermisosChat({ abierto, onCerrar, actuales }: { abierto: boolean; onCerrar: () => void; actuales: Record<RolChat, PermisosChat> }) {
+function DialogoPermisos({ abierto, onCerrar, actuales }: { abierto: boolean; onCerrar: () => void; actuales: Record<RolChat, PermisosChat> }) {
   const [p, setP] = useState(actuales);
   const [guardando, setGuardando] = useState(false);
   // Se toma lo guardado al abrir (las actualizaciones automáticas no pisan lo que estás cambiando)

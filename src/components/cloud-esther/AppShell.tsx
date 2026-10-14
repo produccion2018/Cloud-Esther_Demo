@@ -27,6 +27,7 @@ import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinic
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
 import { refrescarSesionClinica } from "@/lib/clinica/api";
+import { CambiarVista } from "@/components/clinica/cambiar-vista";
 import { Toaster } from "@/components/ui/sonner";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
@@ -501,6 +502,13 @@ function IndicadorGuardado() {
   );
 }
 
+/* Clínica real: el Administrador pasa del Centro de operaciones a Administración (mismos datos) */
+function VistaDelDueno() {
+  const real = useClinicaReal();
+  if (real?.rol !== "admin") return null;
+  return <CambiarVista actual="centro" className="mb-3 px-3" />;
+}
+
 function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
@@ -513,6 +521,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined })
           <Logo />
         </div>
         <EmpresaActiva />
+        <VistaDelDueno />
         <NavList onNavigate={onNavigate} />
         <PlanFooter />
       </div>

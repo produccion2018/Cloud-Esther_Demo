@@ -80,9 +80,23 @@ export function TeLlamamos() {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(124,58,237,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:bottom-7 sm:left-7"
+        aria-label="Te llamamos gratis: dejanos tu teléfono"
+        className="group fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-4 z-40 inline-flex items-center gap-2.5 overflow-hidden rounded-full border border-white/30 bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 py-1.5 pl-1.5 pr-4 text-white shadow-[0_14px_34px_-10px_rgba(124,58,237,0.65),inset_0_1px_0_rgba(255,255,255,0.35)] ring-1 ring-primary/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-12px_rgba(124,58,237,0.8),inset_0_1px_0_rgba(255,255,255,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 active:translate-y-0 sm:left-6 sm:gap-3 sm:py-2 sm:pl-2 sm:pr-5 md:bottom-7 md:left-7"
       >
-        <PhoneCall className="size-4" /> Te llamamos gratis
+        {/* Brillo que cruza el botón al pasar el mouse */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 transition-all duration-700 group-hover:left-full group-hover:opacity-100"
+        />
+        <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white text-primary shadow-[0_6px_14px_-6px_rgba(0,0,0,0.35)] sm:size-10">
+          <span aria-hidden className="absolute inset-0 rounded-full bg-white/70 motion-safe:animate-ping [animation-duration:2.4s]" />
+          <PhoneCall className="relative size-4 transition-transform duration-300 group-hover:rotate-12 sm:size-[18px]" />
+        </span>
+        <span className="relative text-left leading-tight">
+          <span className="block text-[13px] font-bold tracking-tight sm:text-sm">Te llamamos gratis</span>
+          <span className="hidden text-[11px] font-medium text-white/80 sm:block">Por teléfono o WhatsApp</span>
+        </span>
+        <span aria-hidden className="relative -mr-1 hidden size-2 rounded-full bg-[#6ee7b7] shadow-[0_0_10px_rgba(110,231,183,0.95)] sm:block" />
       </button>
 
       <Dialog open={abierto} onOpenChange={cerrar}>

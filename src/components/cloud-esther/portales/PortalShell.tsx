@@ -18,6 +18,7 @@ import { BrandMark } from "@/components/cloud-esther/AppShell";
 import type { ModoLateral, PreferenciasPortal } from "./preferencias";
 import { VERSION_APP } from "@/lib/version";
 import { vieneDeAccesoPrueba } from "@/lib/acceso-prueba";
+import { CambiarVista, type VistaDueno } from "@/components/clinica/cambiar-vista";
 
 /* Ubicación: src/components/cloud-esther/portales/PortalShell.tsx
    Marco común de los portales del Plan 4 (paciente, profesional y administrativo), con el ADN
@@ -58,6 +59,7 @@ export function PortalShell({
   salirLabel = "Cerrar sesión",
   aviso,
   principales,
+  vistaDueno,
   children,
 }: {
   portal: string;
@@ -78,6 +80,8 @@ export function PortalShell({
   aviso?: ReactNode;
   /** Ids que van en la barra inferior del celular (máx. 4). */
   principales?: string[];
+  /** Clínica real, Administrador: selector entre Centro de operaciones y Administración. */
+  vistaDueno?: VistaDueno | undefined;
   children: ReactNode;
 }) {
   const [deAccesoPrueba, setDeAccesoPrueba] = useState(false);
@@ -211,6 +215,13 @@ export function PortalShell({
           </div>
         )}
       </div>
+      {vistaDueno && (
+        <CambiarVista
+          actual={vistaDueno}
+          compacto={modoCompacto}
+          className={`relative mb-3 ${modoCompacto ? "px-3" : "px-4"}`}
+        />
+      )}
       <div className="relative flex min-h-0 flex-1 flex-col">{navegacion(modoCompacto)}</div>
       <div
         className={`relative space-y-2 border-t border-sidebar-border ${modoCompacto ? "p-2" : "p-3"}`}
@@ -381,7 +392,8 @@ export function PortalShell({
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-primary/10 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid border-t border-primary/10 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        style={{ gridTemplateColumns: `repeat(${barra.length + 1}, minmax(0, 1fr))` }}
         aria-label="Accesos rápidos"
       >
         {barra.map((it) => {

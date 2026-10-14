@@ -15,7 +15,6 @@ import {
   FileText,
   FolderOpen,
   Inbox,
-  MessagesSquare,
   Lock,
   Mail,
   Megaphone,

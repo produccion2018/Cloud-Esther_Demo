@@ -226,6 +226,8 @@ export type IngresoDemo = {
 
 export type CuentaDemo = {
   id: string;
+  /** Este correo ya tuvo un demo eliminado (fecha de la última vez) */
+  eliminadoAntes?: string | null;
   nombre: string;
   email: string;
   telefono: string;

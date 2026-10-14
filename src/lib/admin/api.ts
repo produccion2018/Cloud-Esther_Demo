@@ -812,6 +812,57 @@ export async function obtenerDemos(): Promise<CuentaDemo[]> {
   return copia((await db()).demos);
 }
 
+/* ───────────── Papelera de demos (solo Dueño y Socio, con servidor) ───────────── */
+
+export type DemoEnPapelera = {
+  id: string;
+  email: string;
+  nombre: string;
+  clinica: string;
+  pais: string;
+  registrado: string;
+  enviadoPor: string;
+  enviado: string;
+  motivo: string;
+  /** Unido a una contratación: no se puede eliminar definitivamente */
+  conContratacion: boolean;
+};
+export type RegistroPapelera = {
+  id: string;
+  accion: "papelera" | "restaurar" | "eliminar";
+  email: string;
+  nombre: string;
+  clinica: string;
+  quien: string;
+  motivo: string;
+  fecha: string;
+};
+export type PapeleraDemos = { demos: DemoEnPapelera[]; registro: RegistroPapelera[] };
+export type ResultadoPapelera = { hechos: number; omitidos: { id: string; motivo: string }[] };
+
+const SIN_SERVIDOR_PAPELERA = "La papelera necesita el servidor conectado.";
+
+export async function obtenerPapeleraDemos(): Promise<PapeleraDemos> {
+  if (!CON_BACKEND) return { demos: [], registro: [] };
+  return http<PapeleraDemos>("GET", "/admin/demos/papelera");
+}
+export async function moverDemosAPapelera(a: { ids: string[]; motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera", a);
+}
+export async function restaurarDemos(a: { ids: string[] }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/restaurar", a);
+}
+export async function eliminarDemosDefinitivo(a: { ids: string[]; motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/eliminar", a);
+}
+export async function vaciarPapeleraDemos(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/vaciar", a);
+}
+
 /** Con servidor, la configuración general es: tiempo de cada demo nuevo y aviso antes del cierre.
  *  (El tiempo de cada demo se maneja uno por uno con su reloj.) */
 type ConfigDemoServidor = { minutosIniciales: number; avisoMinutos: number };

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { puede, useRole } from "@/components/admin/role";
+import { accesoTotal, puede, useRole } from "@/components/admin/role";
 
 import * as api from "./api";
 
@@ -23,6 +23,11 @@ export const useContrataciones = (habilitado = true) =>
 export const useDemos = () => {
   const { role } = useRole();
   return useQuery({ queryKey: ["demos"], queryFn: api.obtenerDemos, refetchInterval: 60_000, enabled: puede(role, "demos") });
+};
+/** Papelera de demos: solo Dueño y Socio (el servidor valida igual) */
+export const usePapeleraDemos = () => {
+  const { role } = useRole();
+  return useQuery({ queryKey: ["papelera-demos"], queryFn: api.obtenerPapeleraDemos, enabled: accesoTotal(role) && api.CON_BACKEND });
 };
 export const useHistorialTiempoDemo = (id: string) =>
   useQuery({ queryKey: ["demos", id, "tiempo"], queryFn: () => api.obtenerHistorialTiempoDemo(id) });

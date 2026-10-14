@@ -38,6 +38,9 @@ type OpcionesStore<T> = {
   vacio?: () => T;
   /** Partes que son solo de esta pantalla (ej. el paciente elegido): no se guardan en el servidor. */
   soloLocal?: (keyof T)[];
+  /** Arreglo que se aplica SIEMPRE a los datos (al cargarlos y al guardarlos), por ejemplo
+      los nombres de pacientes con mayúscula inicial («ANDRES felipe» → «Andres Felipe»). */
+  normalizar?: (valor: T) => T;
 };
 
 /* Clínica real: listas vacías; los "mapas por id" (claves numéricas o compuestas) también vacíos;
@@ -74,6 +77,15 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
   const clave = (tenant: string) => `cloud-esther:${VERSION_DATOS}:${opciones.persistir}:${tenant}`;
 
   const vacio = (): T => (opciones.vacio ? opciones.vacio() : vaciarDatosDeEjemplo(inicial()));
+
+  const norm = (valor: T): T => {
+    if (!opciones.normalizar) return valor;
+    try {
+      return opciones.normalizar(valor);
+    } catch {
+      return valor;
+    }
+  };
 
   const de = (tenant: string): T => {
     // Una clínica real NUNCA arranca con los datos de ejemplo del demo
@@ -112,7 +124,7 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
           const nuevo = Array.isArray(datos)
             ? (datos as T)
             : ({ ...vacioCompleto(), ...(conLocal(datos, de(tenant)) as object) } as T);
-          porEmpresa.set(tenant, nuevo);
+          porEmpresa.set(tenant, norm(nuevo));
           avisar();
         },
         vacio: () => vacio(),
@@ -125,7 +137,7 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
     try {
       const guardado = window.localStorage.getItem(clave(tenant));
       if (guardado) {
-        porEmpresa.set(tenant, JSON.parse(guardado) as T);
+        porEmpresa.set(tenant, norm(JSON.parse(guardado) as T));
         avisar();
       }
     } catch {
@@ -156,7 +168,8 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
   // En el servidor no hay sesión: siempre el espacio demo (evita diferencias de hidratación).
   const leerServidor = (): T => de(TENANT_DEMO);
 
-  const poner = (siguiente: T) => {
+  const poner = (valor: T) => {
+    const siguiente = norm(valor);
     const tenant = tenantActual();
     porEmpresa.set(tenant, siguiente);
     guardar(tenant, siguiente);
@@ -170,7 +183,7 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
       const tenant = tenantActual();
       if (e.key !== clave(tenant)) return;
       try {
-        porEmpresa.set(tenant, JSON.parse(e.newValue) as T);
+        porEmpresa.set(tenant, norm(JSON.parse(e.newValue) as T));
         avisar();
       } catch {
         /* ignorar */

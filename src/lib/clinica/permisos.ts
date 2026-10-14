@@ -32,9 +32,23 @@ const ACCESO_ROL: Record<Exclude<RolClinica, "admin">, string[]> = {
   ],
 };
 
-export function puedeVer(rol: RolClinica | null, moduloId: string): boolean {
+/** Módulos que tiene TODO el equipo, sin importar el rol (el chat interno es de todos) */
+const PARA_TODOS = new Set(["comunicacion-interna"]);
+/** Siempre visibles: el inicio y los avisos */
+const SIEMPRE = new Set(["dashboard", "notificaciones"]);
+
+/** ¿Lo puede ver? Rol + lo que el Administrador eligió para esa persona (`modulos`; null = todo lo de su rol).
+    El servidor aplica lo mismo: la pantalla solo lo oculta. */
+export function puedeVer(rol: RolClinica | null, moduloId: string, modulos?: string[] | null): boolean {
   if (!rol) return false;
-  return rol === "admin" || (ACCESO_ROL[rol]?.includes(moduloId) ?? false);
+  if (rol === "admin" || PARA_TODOS.has(moduloId)) return true;
+  if (!(ACCESO_ROL[rol]?.includes(moduloId) ?? false)) return false;
+  return !modulos || SIEMPRE.has(moduloId) || modulos.includes(moduloId);
+}
+
+/** Módulos que el Administrador le puede dar (o sacar) a cada rol, en orden */
+export function modulosDelRol(rol: RolClinica): string[] {
+  return rol === "admin" ? [] : [...(ACCESO_ROL[rol] ?? [])];
 }
 
 /* Módulos que YA guardan en el servidor para las clínicas reales. Los demás muestran
@@ -43,13 +57,33 @@ const HABILITADOS = new Set([
   "dashboard", "agenda", "pacientes", "equipo", "notificaciones",
   // Plan Start completo (14 oct): ficha clínica, odontograma 2D, estudios, comunicación y configuración
   "historia", "odontograma", "recetas", "estudios", "laboratorio", "tratamientos", "comunicaciones", "configuracion",
+  // Comunicación interna (estilo Teams): todos los planes y todos los roles
+  "comunicacion-interna",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 
 /* Secciones de la ficha del paciente que cada rol ve (la Secretaría no ve datos de salud) */
 const SECCIONES_SECRETARIA = new Set(["resumen", "documentos", "presupuestos", "turnos", "cuenta", "profesionales"]);
-export function puedeVerSeccionPaciente(rol: RolClinica | null, seccion: string): boolean {
-  if (rol === "secretaria") return SECCIONES_SECRETARIA.has(seccion);
+/* Secciones de la ficha que dependen de un módulo: si el Administrador le sacó ese módulo a la
+   persona, tampoco ve esa sección en la ficha (el servidor ya no se la entrega). */
+const SECCION_MODULO: Record<string, string> = {
+  historia: "historia",
+  tratamientos: "tratamientos",
+  odontograma: "odontograma",
+  recetas: "recetas",
+  estudios: "estudios",
+  laboratorio: "laboratorio",
+  presupuestos: "presupuestos",
+  turnos: "agenda",
+};
+export function puedeVerSeccionPaciente(rol: RolClinica | null, seccion: string, modulos?: string[] | null): boolean {
+  if (rol === "secretaria" && !SECCIONES_SECRETARIA.has(seccion)) return false;
+  const mod = SECCION_MODULO[seccion];
+  if (rol && rol !== "admin" && modulos && mod && ACCESO_ROL[rol]?.includes(mod) && !modulos.includes(mod)) {
+    // El odontograma 2D o 3D: alcanza con tener uno de los dos
+    if (mod === "odontograma" && modulos.includes("odontograma3d")) return true;
+    return false;
+  }
   return true;
 }
 

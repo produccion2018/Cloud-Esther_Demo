@@ -22,6 +22,14 @@ import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
 import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/ControlDemo";
 import { DEMO_EN_SERVIDOR } from "@/lib/cloud-esther/demo-servidor";
 import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
+// Clínica real (Etapa 8b): mismas pantallas, sus datos en el servidor, menú según el rol
+import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
+import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
+import { refrescarSesionClinica } from "@/lib/clinica/api";
+import { CambiarVista } from "@/components/clinica/cambiar-vista";
+import { Toaster } from "@/components/ui/sonner";
+import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
 import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -172,6 +180,7 @@ function SubList({
 
 function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const { plan, disabled } = useCloudEsther();
+  const real = useClinicaReal();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   // Módulos adicionales comprados: al agregarlos aparecen en el menú sin recargar.
@@ -188,7 +197,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
         // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
-        const visible = items.filter((m) => availableIn(m, plan));
+        const visible = items.filter((m) => availableIn(m, plan) && (!real || puedeVer(real.rol, m.id)));
         if (!visible.length) return null;
 
         return (
@@ -329,6 +338,39 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
           </div>
         );
       })}
+      {real && (
+        <div>
+          <p className="flex items-center gap-2 px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+            <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
+            Tu cuenta
+          </p>
+          <ul className="space-y-0.5">
+            {[
+              ...(real.rol === "admin" ? [{ to: "/demo/accesos", label: "Accesos del equipo", icon: ShieldCheck }] : []),
+              { to: "/demo/mi-cuenta", label: "Mi cuenta", icon: UserRound },
+            ].map((it) => {
+              const activo = pathname === it.to;
+              return (
+                <li key={it.to}>
+                  <Link
+                    to={it.to as never}
+                    onClick={onNavigate}
+                    className={cn(
+                      "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all",
+                      activo
+                        ? "bg-gradient-to-r from-primary to-fuchsia-500 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                        : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    <it.icon className={cn("size-4 shrink-0", activo ? "text-white" : "text-primary")} />
+                    <span className="truncate">{it.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </nav>
   );
 }
@@ -363,6 +405,7 @@ function EmpresaActiva() {
 
 function PlanFooter() {
   const { plan, setPlan, planContratado } = useCloudEsther();
+  const real = useClinicaReal();
   return (
     <div className="border-t border-sidebar-border p-3">
       <div className="rounded-xl bg-sidebar-accent/60 p-3">
@@ -402,6 +445,11 @@ function PlanFooter() {
       <Link
         to={"/" as never}
         onClick={(e) => {
+          if (real) {
+            e.preventDefault();
+            salirYVolver();
+            return;
+          }
           cerrarSesion();
           if (vieneDeAccesoPrueba()) {
             e.preventDefault();
@@ -413,7 +461,10 @@ function PlanFooter() {
         <LogOut className="size-3.5" />
         {planContratado ? "Cerrar sesión" : "Salir del demo"}
       </Link>
-      {DEMO_EN_SERVIDOR && <ContadorDemo />}
+      {DEMO_EN_SERVIDOR && !real && <ContadorDemo />}
+      {real ? (
+        <IndicadorGuardado />
+      ) : (
       <button
         type="button"
         onClick={() => {
@@ -430,8 +481,32 @@ function PlanFooter() {
       >
         Restablecer datos de práctica
       </button>
+      )}
     </div>
   );
+}
+
+/* Clínica real: se ve si lo último ya quedó guardado en el servidor */
+function IndicadorGuardado() {
+  const estado = useEstadoGuardado();
+  return (
+    <p className="mt-1.5 flex items-center justify-center gap-1.5 text-[10.5px] text-sidebar-foreground/55" aria-live="polite">
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          estado === "guardando" ? "animate-pulse bg-amber-400" : estado === "error" ? "bg-destructive" : "bg-emerald-400",
+        )}
+      />
+      {estado === "guardando" ? "Guardando…" : estado === "error" ? "Sin conexión: se reintenta" : "Todo guardado"}
+    </p>
+  );
+}
+
+/* Clínica real: el Administrador pasa del Centro de operaciones a Administración (mismos datos) */
+function VistaDelDueno() {
+  const real = useClinicaReal();
+  if (real?.rol !== "admin") return null;
+  return <CambiarVista actual="centro" className="mb-3 px-3" />;
 }
 
 function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
@@ -446,6 +521,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: (() => void) | undefined })
           <Logo />
         </div>
         <EmpresaActiva />
+        <VistaDelDueno />
         <NavList onNavigate={onNavigate} />
         <PlanFooter />
       </div>
@@ -521,6 +597,8 @@ function CampanaMovil() {
 function UsuarioMovil() {
   const { usuario, clinica } = useSesion();
   const { plan, planContratado } = useCloudEsther();
+  const real = useClinicaReal();
+  const rolTexto = real ? NOMBRE_ROL[real.rol] : "Dueño/a";
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -535,12 +613,17 @@ function UsuarioMovil() {
   }, [abierto]);
   const nombre = usuario?.nombre ?? "Invitado";
   const primerNombre = nombre.split(/\s+/)[0] ?? nombre;
-  const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = [
-    { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },
-    { href: "/equipo", titulo: "Portal del profesional", icon: Stethoscope, enterprise: true },
-    { href: "/demo/configuracion", titulo: "Configuración", icon: Settings },
-    { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", icon: ShieldCheck },
-  ];
+  const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = real
+    ? [
+        { href: "/demo/mi-cuenta", titulo: "Mi cuenta", icon: UserRound },
+        ...(real.rol === "admin" ? [{ href: "/demo/accesos", titulo: "Accesos del equipo", icon: ShieldCheck }] : []),
+      ]
+    : [
+        { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },
+        { href: "/equipo", titulo: "Portal del profesional", icon: Stethoscope, enterprise: true },
+        { href: "/demo/configuracion", titulo: "Configuración", icon: Settings },
+        { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", icon: ShieldCheck },
+      ];
   return (
     <div ref={ref} className="relative shrink-0">
       <button
@@ -556,7 +639,7 @@ function UsuarioMovil() {
         </span>
         <span className="min-w-0 text-left leading-tight">
           <span className="block truncate text-[11.5px] font-semibold text-foreground">{primerNombre}</span>
-          <span className="block truncate text-[9px] text-muted-foreground">Dueño/a</span>
+          <span className="block truncate text-[9px] text-muted-foreground">{rolTexto}</span>
         </span>
       </button>
       {abierto && (
@@ -567,7 +650,7 @@ function UsuarioMovil() {
           <div className="bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white">
             <p className="truncate font-display text-sm font-bold">{nombre}</p>
             <p className="truncate text-[11px] text-white/80">
-              {clinica ? `Dueño/a · ${clinica.nombre}` : "Dueño/a"}
+              {clinica ? `${rolTexto} · ${clinica.nombre}` : rolTexto}
             </p>
           </div>
           <ul className="p-1.5">
@@ -594,6 +677,11 @@ function UsuarioMovil() {
                 role="menuitem"
                 to={"/" as never}
                 onClick={(e) => {
+                  if (real) {
+                    e.preventDefault();
+                    salirYVolver();
+                    return;
+                  }
                   cerrarSesion();
                   if (vieneDeAccesoPrueba()) {
                     e.preventDefault();
@@ -617,6 +705,7 @@ function UsuarioMovil() {
    «Más» abre el menú completo con todos los módulos del plan. */
 function BarraInferior({ onMas }: { onMas: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const real = useClinicaReal();
   const { sinLeer } = useNotificaciones();
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
@@ -625,7 +714,7 @@ function BarraInferior({ onMas }: { onMas: () => void }) {
     { to: "/demo/agenda", label: "Agenda", icon: CalendarDays },
     { to: "/demo/pacientes", label: "Pacientes", icon: Users },
     { to: "/demo/notificaciones", label: "Avisos", icon: Bell },
-  ];
+  ].filter((it) => !real || puedeVer(real.rol, MODULES.find((m) => m.path === it.to)?.id ?? "dashboard"));
   return (
     <nav
       aria-label="Accesos rápidos"
@@ -704,7 +793,9 @@ function ModuloNoIncluido({
   const { usuario } = useSesion();
   const modulo = MODULES.find((m) => m.id === moduloId);
   // Start, Pro y Plus pueden comprar el módulo suelto sin cambiar de plan.
-  const comprable = !!modulo && planLevel(minPlan) > planLevel(plan);
+  const real = useClinicaReal();
+  // En una clínica real los módulos adicionales se contratan con Cloud Esther (no desde acá)
+  const comprable = !real && !!modulo && planLevel(minPlan) > planLevel(plan);
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
       <div className="card-premium max-w-md p-8 text-center">
@@ -747,10 +838,60 @@ function ModuloNoIncluido({
   );
 }
 
+/* Clínica real: módulo sin acceso para el rol, o todavía sin guardar en el servidor */
+function AvisoClinica({ titulo, texto, icono }: { titulo: string; texto: string; icono: string }) {
+  return (
+    <div className="grid min-h-[70vh] place-items-center p-6">
+      <div className="card-premium max-w-md p-8 text-center">
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
+          <ModuleIcon name={icono} className="size-6" />
+        </span>
+        <p className="mt-5 text-base font-semibold text-foreground">{titulo}</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">{texto}</p>
+        <div className="mt-5">
+          <Link to={"/demo" as never} className="btn-ce-outline">
+            Volver al Dashboard
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { clinic, plan, planListo } = useCloudEsther();
   const settings = useClinicSettings(clinic);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const real = useClinicaReal();
+  const { sesion } = useSesion();
+  if (real) ajustarCatalogosClinica(real.sesion.clinica.nombre);
+  const [montadoShell, setMontadoShell] = useState(false);
+  useEffect(() => setMontadoShell(true), []);
+  // Clínica real: si se cierra la pestaña con algo sin guardar todavía, el navegador avisa
+  const esReal = !!real;
+  useEffect(() => {
+    if (!esReal) return;
+    const avisar = (e: BeforeUnloadEvent) => {
+      if (!hayCambiosSinGuardar()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [esReal]);
+  // Sesión de clínica real guardada, pero sin su llave (se cerró la pestaña): a ingresar de nuevo
+  useEffect(() => {
+    if (sesion?.tipo === "cliente" && !real) {
+      const slug = slugDeSesionGuardada();
+      window.location.assign(slug ? `/c/${slug}` : "/");
+    }
+  }, [sesion, real]);
+  // Clínica real: rol y plan de AHORA (si el Administrador le cambió el rol, se ve al instante;
+  // si la sesión venció, se borra y se vuelve a ingresar)
+  const slugReal = real?.slug;
+  useEffect(() => {
+    if (slugReal) void refrescarSesionClinica(slugReal).catch(() => undefined);
+  }, [slugReal, pathname]);
   const modulo = moduloDeRuta(pathname);
   const [menuMovil, setMenuMovil] = useState(false);
   storeModulosExtra.usar(); // al comprar un módulo, se desbloquea en el momento
@@ -771,10 +912,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auditarModulos = settings.auditLogEnabled;
   useEffect(() => {
     if (!nombreModulo) return;
+    // Una clínica real no manda nada al seguimiento del demo ni guarda auditoría en el navegador
+    if (real) return;
     registrarModuloDemo(nombreModulo);
     // Auditoría de la clínica: actividad de la sesión y (si está activado) accesos a módulos.
     if (clinicId) registrarActividadAuditoria(clinicId, nombreModulo, auditarModulos);
-  }, [nombreModulo, clinicId, auditarModulos]);
+  }, [nombreModulo, clinicId, auditarModulos, real]);
 
   // El motor 3D pesa: en los planes con Odontograma 3D se descarga en segundo plano apenas
   // el navegador está libre, así el odontograma aparece rápido cuando se abre.
@@ -815,7 +958,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {DEMO_EN_SERVIDOR && <ControlSesionDemo />}
+      {DEMO_EN_SERVIDOR && !real && <ControlSesionDemo />}
+      {real && <Toaster position="top-right" richColors closeButton />}
       {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
           blanco debajo aunque el contenido sea largo) y el menú queda fijo al hacer scroll. */}
       <aside
@@ -839,7 +983,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           titulo={modulo ? etiquetaModulo(modulo, plan) : "Inicio"}
         />
         {/* En el celular se deja lugar para la barra inferior. */}
-        <main className="panel-clinica relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        {/* Hasta saber en el navegador si es una clínica real, el contenido no se muestra:
+            así nunca aparece ni por un instante un dato de ejemplo en una clínica real. */}
+        <main
+          className="panel-clinica relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+          style={montadoShell ? undefined : { visibility: "hidden" }}
+        >
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (
@@ -852,6 +1001,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           ) : subBloqueada ? (
             <ModuloNoIncluido label={subBloqueada.label} minPlan={subBloqueada.minPlan} />
+          ) : real && modulo && !puedeVer(real.rol, modulo.id) ? (
+            <AvisoClinica
+              titulo="No tenés acceso a este módulo"
+              texto="Lo maneja otra persona de tu clínica. Si lo necesitás, pedíselo al Administrador."
+              icono={modulo.icon}
+            />
+          ) : real && modulo && !moduloHabilitado(modulo.id) ? (
+            <AvisoClinica
+              titulo={`${etiquetaModulo(modulo, plan)} se está preparando para tu clínica`}
+              texto="Estamos dejando este módulo listo para guardar los datos de tu clínica de forma segura. Te avisamos apenas esté disponible."
+              icono={modulo.icon}
+            />
           ) : (
             children
           )}
@@ -860,6 +1021,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <BarraInferior onMas={() => setMenuMovil(true)} />
       {/* Esther a mano en todos los módulos, solo en planes con IA (Plus y Enterprise). */}
       {iaDisponible &&
+        !real &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
         // El Odontograma 2D (Start y Pro) no lleva IA ni audio: eso es del 3D.

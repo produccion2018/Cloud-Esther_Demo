@@ -143,13 +143,19 @@ const m = (
   ...extra,
 });
 
+/* El demo tiene dos pacientes de ejemplo: una conversación por paciente. */
 function conversacionesEjemplo(): Conversacion[] {
+  const vistos = new Set<string>();
+  return conversacionesBase().filter((c) => !vistos.has(c.paciente) && !!vistos.add(c.paciente));
+}
+
+function conversacionesBase(): Conversacion[] {
   return [
     {
       id: 1,
-      paciente: "Lucía Paz",
+      paciente: "Mauro Pinto",
       telefono: "+54 11 5174-2826",
-      email: "lucia.paz@example.com",
+      email: "mauro.pinto@example.com",
       canal: "WhatsApp",
       estado: "Pendiente",
       asignado: "",
@@ -159,7 +165,7 @@ function conversacionesEjemplo(): Conversacion[] {
       mensajes: [
         m(
           "clinica",
-          "Hola Lucía 👋 Te recordamos tu turno de hoy a las 10:30 hs para Limpieza dental. ¿Nos confirmás tu asistencia?",
+          "Hola Mauro 👋 Te recordamos tu turno de hoy a las 10:30 hs para Limpieza dental. ¿Nos confirmás tu asistencia?",
           190,
           { autor: "Recordatorio automático" },
         ),
@@ -169,9 +175,9 @@ function conversacionesEjemplo(): Conversacion[] {
     },
     {
       id: 2,
-      paciente: "Julián Ortega",
+      paciente: "Alejo Becerra",
       telefono: "+54 11 5137-2413",
-      email: "julian.ortega@example.com",
+      email: "alejo.becerra@example.com",
       canal: "WhatsApp",
       estado: "Abierta",
       asignado: "",
@@ -181,7 +187,7 @@ function conversacionesEjemplo(): Conversacion[] {
       mensajes: [
         m(
           "clinica",
-          "Hola Julián, te enviamos el presupuesto del tratamiento de ortodoncia. Cualquier duda nos escribís.",
+          "Hola Alejo, te enviamos el presupuesto del tratamiento de ortodoncia. Cualquier duda nos escribís.",
           60 * 26,
         ),
         m("paciente", "Gracias. ¿Se puede pagar en cuotas?", 58),
@@ -211,9 +217,9 @@ function conversacionesEjemplo(): Conversacion[] {
     },
     {
       id: 4,
-      paciente: "Paula Medina",
+      paciente: "Mauro Pinto",
       telefono: "+54 11 5211-3239",
-      email: "paula.medina@example.com",
+      email: "mauro.pinto@example.com",
       canal: "SMS",
       estado: "Abierta",
       asignado: "",
@@ -231,9 +237,9 @@ function conversacionesEjemplo(): Conversacion[] {
     },
     {
       id: 5,
-      paciente: "Ana Torres",
+      paciente: "Mauro Pinto",
       telefono: "+54 11 5322-4478",
-      email: "ana.torres@example.com",
+      email: "mauro.pinto@example.com",
       canal: "Email",
       estado: "Pendiente",
       asignado: "",
@@ -250,9 +256,9 @@ function conversacionesEjemplo(): Conversacion[] {
     },
     {
       id: 6,
-      paciente: "Diego Ruiz",
+      paciente: "Alejo Becerra",
       telefono: "+54 11 5433-5891",
-      email: "diego.ruiz@example.com",
+      email: "alejo.becerra@example.com",
       canal: "WhatsApp",
       estado: "Abierta",
       asignado: "",
@@ -262,7 +268,7 @@ function conversacionesEjemplo(): Conversacion[] {
       mensajes: [
         m(
           "clinica",
-          "Hola Diego, ¿cómo seguís después de la consulta? Recordá las indicaciones: frío local y nada de comidas calientes hoy.",
+          "Hola Alejo, ¿cómo seguís después de la consulta? Recordá las indicaciones: frío local y nada de comidas calientes hoy.",
           60 * 5,
         ),
         m("paciente", "Bien, un poco de molestia nada más.", 60 * 4),
@@ -435,7 +441,7 @@ function enviosEjemplo(convs: Conversacion[]): Envio[] {
     {
       id: 9001,
       fecha: haceMin(60 * 22),
-      paciente: "Valeria Gómez",
+      paciente: "Mauro Pinto",
       canal: "Email",
       tipo: "Automático",
       texto: "Encuesta de satisfacción",
@@ -444,7 +450,7 @@ function enviosEjemplo(convs: Conversacion[]): Envio[] {
     {
       id: 9002,
       fecha: haceMin(60 * 23),
-      paciente: "Sergio Luna",
+      paciente: "Alejo Becerra",
       canal: "SMS",
       tipo: "Recordatorio",
       texto: "Recordatorio de turno",
@@ -453,7 +459,7 @@ function enviosEjemplo(convs: Conversacion[]): Envio[] {
     {
       id: 9003,
       fecha: haceMin(60 * 48),
-      paciente: "Florencia Díaz",
+      paciente: "Alejo Becerra",
       canal: "WhatsApp",
       tipo: "Campaña",
       texto: "Control semestral de septiembre",

@@ -152,7 +152,7 @@ const PROVEEDORES: Proveedor[] = [
   {
     id: "p1",
     nombre: "Dental Supply",
-    contacto: "Marcela Ruiz",
+    contacto: "Atención comercial",
     telefono: "+54 11 4789-2200",
     email: "ventas@dentalsupply.com.ar",
     plazo: 2,
@@ -162,7 +162,7 @@ const PROVEEDORES: Proveedor[] = [
   {
     id: "p2",
     nombre: "OdontoMed",
-    contacto: "Germán Álvarez",
+    contacto: "Atención comercial",
     telefono: "+54 11 4312-8870",
     email: "pedidos@odontomed.com.ar",
     plazo: 3,
@@ -172,7 +172,7 @@ const PROVEEDORES: Proveedor[] = [
   {
     id: "p3",
     nombre: "OrthoPro",
-    contacto: "Lucía Benítez",
+    contacto: "Atención comercial",
     telefono: "+54 11 5263-1144",
     email: "hola@orthopro.com.ar",
     plazo: 5,
@@ -182,7 +182,7 @@ const PROVEEDORES: Proveedor[] = [
   {
     id: "p4",
     nombre: "Esteril Sur",
-    contacto: "Ramiro Paz",
+    contacto: "Atención comercial",
     telefono: "+54 11 4021-5566",
     email: "comercial@esterilsur.com.ar",
     plazo: 1,
@@ -192,7 +192,7 @@ const PROVEEDORES: Proveedor[] = [
   {
     id: "p5",
     nombre: "Implant Line",
-    contacto: "Paula Ferro",
+    contacto: "Atención comercial",
     telefono: "+54 11 6099-3021",
     email: "ventas@implantline.com.ar",
     plazo: 7,
@@ -457,16 +457,16 @@ function movimientosEjemplo(): Movimiento[] {
   const salidas: [string, number, number, string][] = [
     ["i1", 1, 2, "Uso diario en gabinetes"],
     ["i2", 1, 1, "Endodoncia · Mauro Pinto"],
-    ["i3", 2, 1, "Restauración · Julián Ortega"],
+    ["i3", 2, 1, "Restauración · Alejo Becerra"],
     ["i4", 2, 3, "Uso diario en gabinetes"],
     ["i1", 4, 3, "Uso diario en gabinetes"],
-    ["i5", 5, 1, "Endodoncia · Ana Torres"],
+    ["i5", 5, 1, "Endodoncia · Mauro Pinto"],
     ["i2", 6, 2, "Extracciones de la semana"],
     ["i8", 7, 4, "Uso diario en gabinetes"],
     ["i3", 8, 2, "Restauraciones de la semana"],
     ["i9", 9, 2, "Control de ortodoncia"],
     ["i10", 10, 3, "Uso diario en gabinetes"],
-    ["i12", 11, 2, "Restauración · Lucía Paz"],
+    ["i12", 11, 2, "Restauración · Mauro Pinto"],
     ["i13", 12, 1, "Cirugía de implante"],
     ["i6", 13, 1, "Ciclos de autoclave"],
     ["i1", 15, 2, "Uso diario en gabinetes"],
@@ -483,7 +483,7 @@ function movimientosEjemplo(): Movimiento[] {
     tipo: "Salida",
     cantidad: -cant,
     motivo,
-    usuario: n % 2 ? "Carla Gómez" : "Sofía Rodríguez",
+    usuario: n % 2 ? "Ketty Margarita" : "Ketty Margarita",
     referencia: "",
   }));
   lista.push(
@@ -514,7 +514,7 @@ function movimientosEjemplo(): Movimiento[] {
       tipo: "Merma",
       cantidad: -1,
       motivo: "Frasco abierto contaminado",
-      usuario: "Carla Gómez",
+      usuario: "Ketty Margarita",
       referencia: "",
     },
     {
@@ -646,7 +646,7 @@ export const storeInventario = crearStorePorEmpresa<EstadoInventario>(
       {
         id: "pe1",
         fecha: haceISO(0, 8),
-        autor: "Carla Gómez",
+        autor: "Ketty Margarita",
         sucursal: CENTRO,
         detalle: "Faltan eyectores de saliva en Gabinete 2",
         estado: "Pendiente",

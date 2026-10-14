@@ -12,6 +12,8 @@ import {
   UserCheck,
   Handshake,
   TimerOff,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -26,7 +28,13 @@ import {
   tooltipGrafico,
 } from "@/components/admin/bits";
 import { RestrictedView } from "@/components/admin/restricted";
-import { canAccess, permisos, useRole } from "@/components/admin/role";
+import { accesoTotal, canAccess, permisos, useRole } from "@/components/admin/role";
+import {
+  CLAVES_PAPELERA,
+  ConfirmarPapelera,
+  PapeleraDemos,
+  resumenResultado,
+} from "@/components/admin/papelera-demos";
 import { LimitesDemo, SinLimiteCuenta } from "@/components/admin/limites-demo";
 import { RelojDemo, duracionTexto } from "@/components/admin/reloj-demo";
 import { AdminShell } from "@/components/admin/shell";
@@ -34,8 +42,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { CON_BACKEND, actualizarDemo } from "@/lib/admin/api";
-import { useAccion, useDemos, useEquipo } from "@/lib/admin/consultas";
+import {
+  CON_BACKEND,
+  actualizarDemo,
+  eliminarTodosLosDemos,
+  moverDemosAPapelera,
+  moverTodosLosDemosAPapelera,
+} from "@/lib/admin/api";
+import { useAccion, useDemos, useEquipo, usePapeleraDemos } from "@/lib/admin/consultas";
+import { toast } from "sonner";
 import { fecha, haceCuanto, minutosTexto, resumenDemo, type Interes } from "@/lib/admin/formato";
 import type { CuentaDemo, EstadoDemo } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
@@ -69,6 +84,16 @@ function DemosPage() {
   const [interes, setInteres] = useState<Interes | "">("");
   const [orden, setOrden] = useState<"recientes" | "interes">("recientes");
   const [abierta, setAbierta] = useState<string | null>(null);
+  // Papelera (solo Dueño y Socio, con servidor)
+  const puedePapelera = CON_BACKEND && accesoTotal(role);
+  const { data: papelera } = usePapeleraDemos();
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [verPapelera, setVerPapelera] = useState(false);
+  const [confirmarMover, setConfirmarMover] = useState(false);
+  const mover = useAccion(moverDemosAPapelera, CLAVES_PAPELERA);
+  const moverTodos = useAccion(moverTodosLosDemosAPapelera, CLAVES_PAPELERA);
+  const eliminarTodo = useAccion(eliminarTodosLosDemos, CLAVES_PAPELERA);
+  const [limpiar, setLimpiar] = useState<"papelera" | "eliminar" | null>(null);
 
   const filas = useMemo(() => (demos ?? []).map((d) => ({ demo: d, r: resumenDemo(d) })), [demos]);
 
@@ -127,6 +152,15 @@ function DemosPage() {
   const maxModulo = topModulos[0]?.[1] ?? 1;
 
   const seleccionada = filas.find(({ demo }) => demo.id === abierta) ?? null;
+  const elegidos = lista.filter(({ demo }) => marcados.has(demo.id)).map(({ demo }) => demo.id);
+  const todosElegidos = lista.length > 0 && elegidos.length === lista.length;
+  const alternar = (id: string) =>
+    setMarcados((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   return (
     <AdminShell
@@ -238,9 +272,49 @@ function DemosPage() {
 
           <Seccion
             titulo="Cuentas de demo"
-            descripcion="Tocá una fila para ver cada ingreso y hacer el seguimiento."
+            descripcion={
+              puedePapelera
+                ? "Tocá una fila para ver cada ingreso y hacer el seguimiento. Tildá demos para mandarlos a la papelera."
+                : "Tocá una fila para ver cada ingreso y hacer el seguimiento."
+            }
             sinPadding
+            acciones={
+              puedePapelera ? (
+                <>
+                <Button variant="outline" size="sm" onClick={() => setLimpiar("papelera")} className="rounded-xl" disabled={filas.length === 0}>
+                  <Trash2 className="h-4 w-4" />
+                  Todos a la papelera
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setLimpiar("eliminar")} className="rounded-xl" disabled={filas.length === 0 && (papelera?.demos.length ?? 0) === 0}>
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar todo
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setVerPapelera(true)} className="rounded-xl">
+                  <Trash2 className="h-4 w-4" />
+                  Papelera
+                  {(papelera?.demos.length ?? 0) > 0 && (
+                    <span className="rounded-full bg-primary/10 px-1.5 text-[11px] font-bold text-primary">
+                      {papelera?.demos.length}
+                    </span>
+                  )}
+                </Button>
+                </>
+              ) : undefined
+            }
           >
+            {puedePapelera && elegidos.length > 0 && (
+              <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-primary/20 bg-primary/[0.06] px-5 py-2.5 backdrop-blur">
+                <p className="mr-auto text-sm font-semibold">
+                  {elegidos.length === 1 ? "1 demo elegido" : `${elegidos.length} demos elegidos`}
+                </p>
+                <Button size="sm" variant="ghost" onClick={() => setMarcados(new Set())}>
+                  <X className="h-4 w-4" /> Quitar selección
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setConfirmarMover(true)}>
+                  <Trash2 className="h-4 w-4" /> Mover a la papelera
+                </Button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 border-b border-border/60 px-5 py-3">
               <div className="relative min-w-[220px] flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -293,6 +367,19 @@ function DemosPage() {
                 <table className="w-full min-w-[880px] text-sm">
                   <thead>
                     <tr className="bg-primary/[0.035] text-left text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                      {puedePapelera && (
+                        <th className="w-10 py-2.5 pl-5">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-[var(--primary)]"
+                            checked={todosElegidos}
+                            onChange={() =>
+                              setMarcados(todosElegidos ? new Set() : new Set(lista.map(({ demo }) => demo.id)))
+                            }
+                            aria-label="Elegir todos los demos de la lista"
+                          />
+                        </th>
+                      )}
                       <th className="px-5 py-2.5">Interesado</th>
                       <th className="px-3 py-2.5">Plan elegido</th>
                       <th className="px-3 py-2.5 text-center">Ingresos</th>
@@ -307,8 +394,22 @@ function DemosPage() {
                       <tr
                         key={demo.id}
                         onClick={() => setAbierta(demo.id)}
-                        className="cursor-pointer border-t border-border/60 transition-colors hover:bg-primary/[0.03]"
+                        className={cn(
+                          "cursor-pointer border-t border-border/60 transition-colors hover:bg-primary/[0.03]",
+                          marcados.has(demo.id) && "bg-primary/[0.05]",
+                        )}
                       >
+                        {puedePapelera && (
+                          <td className="py-3 pl-5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="size-4 accent-[var(--primary)]"
+                              checked={marcados.has(demo.id)}
+                              onChange={() => alternar(demo.id)}
+                              aria-label={`Elegir el demo de ${demo.clinica}`}
+                            />
+                          </td>
+                        )}
                         <td className="px-5 py-3">
                           <p className="font-semibold">{demo.clinica}</p>
                           <p className="text-xs text-muted-foreground">
@@ -372,6 +473,74 @@ function DemosPage() {
               </div>
             )}
           </Seccion>
+        </>
+      )}
+
+      {puedePapelera && (
+        <>
+          <Sheet open={verPapelera} onOpenChange={setVerPapelera}>
+            <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
+              <SheetTitle className="sr-only">Papelera de demos</SheetTitle>
+              <PapeleraDemos />
+            </SheetContent>
+          </Sheet>
+          <ConfirmarPapelera
+            abierta={limpiar === "papelera"}
+            onCerrar={() => setLimpiar(null)}
+            titulo="Todos los demos a la papelera"
+            texto="Todos los demos de la lista (sin límite) pasan a la papelera: dejan de verse y no pueden entrar. Se pueden restaurar. Cada uno queda en el registro."
+            boton="Mover todos"
+            palabra="TODOS"
+            ocupado={moverTodos.isPending}
+            onConfirmar={(motivo) =>
+              moverTodos.mutate(motivo ? { motivo } : {}, {
+                onSuccess: (r) => {
+                  toast.success(resumenResultado(r, "movido"));
+                  setLimpiar(null);
+                  setMarcados(new Set());
+                },
+              })
+            }
+          />
+          <ConfirmarPapelera
+            abierta={limpiar === "eliminar"}
+            onCerrar={() => setLimpiar(null)}
+            titulo="Eliminar TODOS los demos"
+            texto="Se eliminan para siempre todos los demos (los de la lista y los de la papelera), sin límite, con todo su historial. No se puede deshacer. Las contrataciones quedan intactas y cada demo queda en el registro con tu nombre."
+            boton="Eliminar todo"
+            peligro
+            palabra="ELIMINAR TODO"
+            ocupado={eliminarTodo.isPending}
+            onConfirmar={(motivo) =>
+              eliminarTodo.mutate(motivo ? { motivo } : {}, {
+                onSuccess: (r) => {
+                  toast.success(resumenResultado(r, "eliminado"));
+                  setLimpiar(null);
+                  setMarcados(new Set());
+                },
+              })
+            }
+          />
+          <ConfirmarPapelera
+            abierta={confirmarMover}
+            onCerrar={() => setConfirmarMover(false)}
+            titulo="Mover a la papelera"
+            texto={`${elegidos.length === 1 ? "El demo deja" : `Los ${elegidos.length} demos dejan`} de verse en la lista y no ${elegidos.length === 1 ? "puede" : "pueden"} entrar. Se ${elegidos.length === 1 ? "puede" : "pueden"} restaurar desde la papelera.`}
+            boton="Mover a la papelera"
+            ocupado={mover.isPending}
+            onConfirmar={(motivo) =>
+              mover.mutate(
+                { ids: elegidos, ...(motivo ? { motivo } : {}) },
+                {
+                  onSuccess: (r) => {
+                    toast.success(resumenResultado(r, "movido"));
+                    setConfirmarMover(false);
+                    setMarcados(new Set());
+                  },
+                },
+              )
+            }
+          />
         </>
       )}
 

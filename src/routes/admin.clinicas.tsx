@@ -14,6 +14,7 @@ import { guardarMontosClinica } from "@/lib/admin/api";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import {
   ETIQUETA_PAGO,
+  enlaceWhatsApp,
   NOMBRE_PLAN,
   fecha,
   haceCuanto,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/admin/formato";
 import type { Clinica, EstadoPago, PlanConfig, PlanId } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 export const Route = createFileRoute("/admin/clinicas")({
   head: () => ({
@@ -285,6 +287,16 @@ function DetalleClinica({
             >
               <Phone className="h-3.5 w-3.5" /> {c.contacto.telefono}
             </a>
+            {enlaceWhatsApp(c.contacto.telefono, undefined) && (
+              <a
+                href={enlaceWhatsApp(c.contacto.telefono, undefined) ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-wa !min-h-8 !text-xs"
+              >
+                <IconoWhatsApp /> WhatsApp
+              </a>
+            )}
           </div>
         </div>
         {plan && (

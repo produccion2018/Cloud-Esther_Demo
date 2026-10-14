@@ -16,12 +16,15 @@ import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
+  BarChart3,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
-import { contarPacientesActivos, leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { contarPacientesActivos, leerPacientes, usePacientes } from "@/lib/cloud-esther/pacientes";
 import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { salirYVolver, useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { NOMBRE_ROL } from "@/lib/clinica/permisos";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
 import { descargarPDFdeElemento } from "@/lib/descargas";
 
@@ -56,12 +59,12 @@ const PRODUCCION = [
 ];
 
 const ACTIVIDAD_INICIAL: Actividad[] = [
-  { id: 1, hora: "09:42", quien: "Mariana Costa", accion: "Confirmó el turno de María González" },
-  { id: 2, hora: "09:31", quien: "Dra. Ana Martínez", accion: "Actualizó la historia clínica de Paula Medina" },
+  { id: 1, hora: "09:42", quien: "Ketty Margarita", accion: "Confirmó el turno de Mauro Pinto" },
+  { id: 2, hora: "09:31", quien: "Dra. Mireya Becerra", accion: "Actualizó la historia clínica de Mauro Pinto" },
   { id: 3, hora: "09:18", quien: "Automatización", accion: "Envió 34 recordatorios de turno por WhatsApp" },
-  { id: 4, hora: "08:55", quien: "Esteban Rivas", accion: "Emitió la factura F-0001-00184" },
+  { id: 4, hora: "08:55", quien: "Ketty Margarita", accion: "Emitió la factura F-0001-00184" },
   { id: 5, hora: "08:40", quien: "Sistema", accion: "Alerta de stock crítico: Guantes nitrilo M" },
-  { id: 6, hora: "08:12", quien: "Dr. Carlos López", accion: "Aprobó el presupuesto PR-2026-0141" },
+  { id: 6, hora: "08:12", quien: "Dr. Andrés Becerra", accion: "Aprobó el presupuesto PR-2026-0141" },
 ];
 
 const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
@@ -97,7 +100,48 @@ const TEXTAREA =
   "min-h-24 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const ACCESO_BTN =
-  "flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium transition-all hover:-translate-y-0.5 hover:bg-primary/5";
+  "group flex min-h-[3.25rem] flex-col items-center justify-center gap-2 rounded-2xl border border-primary/12 bg-gradient-to-br from-background to-primary/[0.04] px-2.5 py-3 text-center text-[13px] font-semibold sm:flex-row sm:justify-start sm:gap-3 sm:px-3 sm:py-2.5 sm:text-left sm:text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_26px_-18px_rgba(124,58,237,0.8)]";
+
+/* Encabezado de tarjeta con el mismo ADN del portal: ícono en degradé, título y bajada. */
+function CabeceraCard({
+  icon: Icon,
+  titulo,
+  detalle,
+  acciones,
+}: {
+  icon: typeof Clock;
+  titulo: string;
+  detalle?: string;
+  acciones?: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+          <Icon className="size-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="truncate font-display text-[15px] font-bold tracking-tight">{titulo}</h2>
+          {detalle && <p className="truncate text-xs text-muted-foreground">{detalle}</p>}
+        </div>
+      </div>
+      {acciones}
+    </div>
+  );
+}
+
+/* Estado vacío prolijo (mismo estilo en todas las tarjetas) */
+function VacioCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`grid place-items-center rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-5 py-8 text-center text-sm text-muted-foreground ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/* Botón de exportar: en el celular solo el ícono (no se amontonan) */
+const EXPORT_BTN =
+  "inline-flex size-9 items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-background text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/35 hover:text-primary sm:size-auto sm:px-3 sm:py-1.5";
 
 /* ───────────── Utilidades ───────────── */
 
@@ -731,6 +775,8 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
 
   // Los portales del paciente y del profesional son exclusivos de Enterprise.
   const { plan: planMenu } = useCloudEsther();
+  const real = useClinicaReal();
+  const rolTexto = real ? NOMBRE_ROL[real.rol] : "Dueño/a";
   const TODOS: { href: string; titulo: string; detalle: string; nueva?: boolean; icon: typeof Users; enterprise?: boolean }[] = [
     { href: "/portal", titulo: "Portal del paciente", detalle: "Así lo ven tus pacientes (DNI + código)", nueva: true, icon: UserRound, enterprise: true },
     { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope, enterprise: true },
@@ -739,7 +785,14 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
     // Etapa de pruebas: entrar a los perfiles (propietario, clínica, profesional, secretaría, paciente).
     { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", detalle: "Propietario, clínica, profesional, secretaría y paciente · PC, tablet y celular", icon: ShieldCheck },
   ];
-  const ITEMS = TODOS.filter((it) => !it.enterprise || planMenu === "grupo");
+  const ITEMS = real
+    ? [
+        { href: "/demo/mi-cuenta", titulo: "Mi cuenta", detalle: "Tus datos y tu contraseña", icon: UserRound },
+        ...(real.rol === "admin"
+          ? [{ href: "/demo/accesos", titulo: "Accesos del equipo", detalle: "Quién entra a la clínica y con qué rol", icon: ShieldCheck }]
+          : []),
+      ]
+    : TODOS.filter((it) => !it.enterprise || planMenu === "grupo");
 
   return (
     <div ref={ref} className="relative">
@@ -753,7 +806,7 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
         <span className="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">{iniciales}</span>
         <span className="hidden min-w-0 text-left leading-tight sm:block">
           <span className="block truncate text-xs font-semibold text-foreground">{nombre}</span>
-          <span className="block truncate text-[10px] text-muted-foreground">{clinica ? `Dueño/a · ${clinica}` : "Dueño/a"}</span>
+          <span className="block truncate text-[10px] text-muted-foreground">{clinica ? `${rolTexto} · ${clinica}` : rolTexto}</span>
         </span>
         <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${abierto ? "rotate-180" : ""}`} />
       </button>
@@ -761,9 +814,9 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
         <div role="menu" className="absolute right-0 top-11 z-40 w-80 overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-2xl">
           <div className="bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 px-4 py-3 text-white">
             <p className="text-sm font-semibold">{nombre}</p>
-            <p className="text-[11px] text-white/80">{clinica ? `Dueño/a · ${clinica}` : "Dueño/a · Demo"}</p>
+            <p className="text-[11px] text-white/80">{clinica ? `${rolTexto} · ${clinica}` : "Dueño/a · Demo"}</p>
           </div>
-          <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{planMenu === "grupo" ? "Portales para probar" : "Accesos"}</p>
+          <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{real ? "Tu cuenta" : planMenu === "grupo" ? "Portales para probar" : "Accesos"}</p>
           <ul className="px-2 pb-2">
             {ITEMS.map((it) => (
               <li key={it.href}>
@@ -788,9 +841,19 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
               </li>
             ))}
           </ul>
-          <p className="border-t border-border bg-primary/[0.03] px-4 py-2.5 text-[10.5px] leading-snug text-muted-foreground">
-            Paciente de prueba: DNI <b>95193944</b>. Profesional: <b>jesus.mendez@cloudesther.com</b>. El código se muestra con “Recibir el código”.
-          </p>
+          {real ? (
+            <button
+              type="button"
+              onClick={() => salirYVolver()}
+              className="flex w-full items-center gap-2 border-t border-border px-4 py-2.5 text-left text-sm font-medium text-destructive hover:bg-destructive/5"
+            >
+              Salir
+            </button>
+          ) : (
+            <p className="border-t border-border bg-primary/[0.03] px-4 py-2.5 text-[10.5px] leading-snug text-muted-foreground">
+              Paciente de prueba: DNI <b>95193944</b>. Profesional: <b>andres.becerra@cloudesther.com</b>. El código se muestra con “Recibir el código”.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -965,20 +1028,25 @@ function SearchBar({
   );
 }
 
-function ProduccionOdontologo() {
-  const max = Math.max(...PRODUCCION.map((p) => p.valor));
+function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: string; valor: number }[]; unidad?: string }) {
+  const PRODUCCION_ = datos ?? PRODUCCION;
+  const max = Math.max(1, ...PRODUCCION_.map((p) => p.valor));
   return (
-    <div className={CARD}>
-      <h2 className="font-semibold">Producción por odontólogo</h2>
-      <p className="text-xs text-muted-foreground">Mes en curso</p>
-      <div className="mt-4 flex h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4">
-        {PRODUCCION.map((p) => (
+    <div className={`${CARD} flex flex-col`}>
+      <CabeceraCard icon={Stethoscope} titulo={datos ? "Turnos atendidos por odontólogo" : "Producción por odontólogo"} detalle="Mes en curso" />
+      {datos && datos.length === 0 && (
+        <VacioCard className="flex-1">
+          Cuando los odontólogos atiendan turnos este mes, acá vas a ver cuántos atendió cada uno.
+        </VacioCard>
+      )}
+      <div className={`h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4 ${datos && datos.length === 0 ? "hidden" : "flex"}`}>
+        {PRODUCCION_.map((p) => (
           <div key={p.nombre} className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex w-full flex-1 items-end justify-center">
               <div
                 className="w-full max-w-14 rounded-t-xl bg-gradient-to-t from-primary to-fuchsia-500 shadow-[0_10px_22px_-14px_rgba(124,58,237,0.9)] transition-all duration-300 hover:opacity-85"
                 style={{ height: `${(p.valor / max) * 100}%` }}
-                title={`${p.nombre}: $ ${p.valor} M`}
+                title={unidad === "turnos" ? `${p.nombre}: ${p.valor} turnos` : `${p.nombre}: $ ${p.valor} M`}
               />
             </div>
             <span className="truncate text-[11px] text-muted-foreground sm:text-xs">{p.nombre}</span>
@@ -989,15 +1057,16 @@ function ProduccionOdontologo() {
   );
 }
 
-function ActividadReciente({ items }: { items: Actividad[] }) {
+function ActividadReciente({ items, buscando }: { items: Actividad[]; buscando: boolean }) {
   return (
-    <div className={CARD}>
-      <h2 className="font-semibold">Actividad reciente</h2>
-      <p className="text-xs text-muted-foreground">Trazabilidad del día</p>
+    <div className={`${CARD} flex flex-col`}>
+      <CabeceraCard icon={Clock} titulo="Actividad reciente" detalle="Trazabilidad del día" />
       {items.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">Sin movimientos que coincidan con la búsqueda.</p>
+        <VacioCard className="flex-1">
+          {buscando ? "Sin movimientos que coincidan con la búsqueda." : "Todavía no hay movimientos hoy."}
+        </VacioCard>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="space-y-3">
           {items.slice(0, 8).map((a) => (
             <li key={a.id} className="flex items-start gap-3 text-sm">
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
@@ -1025,26 +1094,34 @@ function AccesosRapidos({
 }) {
   return (
     <div className={CARD}>
-      <h2 className="font-semibold">Accesos rápidos</h2>
-      <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3">
+      <CabeceraCard icon={ExternalLink} titulo="Accesos rápidos" detalle="Lo que más se usa, a un toque" />
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Link to="/demo/agenda" className={ACCESO_BTN}>
-          <CalendarCheck className="size-4 text-primary" />
-          Agenda del día
+          <IconoAcceso icon={CalendarCheck} />
+          <span className="min-w-0 leading-tight">Agenda del día</span>
         </Link>
         <button onClick={onBuscar} className={ACCESO_BTN}>
-          <UserSearch className="size-4 text-primary" />
-          Buscar paciente
+          <IconoAcceso icon={UserSearch} />
+          <span className="min-w-0 leading-tight">Buscar paciente</span>
         </button>
         <button onClick={onPresupuesto} className={ACCESO_BTN}>
-          <ReceiptText className="size-4 text-primary" />
-          Crear presupuesto
+          <IconoAcceso icon={ReceiptText} />
+          <span className="min-w-0 leading-tight">Crear presupuesto</span>
         </button>
         <button onClick={onRecordatorios} className={ACCESO_BTN}>
-          <BellRing className="size-4 text-primary" />
-          Recordatorios
+          <IconoAcceso icon={BellRing} />
+          <span className="min-w-0 leading-tight">Recordatorios</span>
         </button>
       </div>
     </div>
+  );
+}
+
+function IconoAcceso({ icon: Icon }: { icon: typeof Clock }) {
+  return (
+    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white">
+      <Icon className="size-4" />
+    </span>
   );
 }
 
@@ -1053,6 +1130,9 @@ function AccesosRapidos({
 function DashboardInner() {
   const { plan } = useCloudEsther();
   const { usuario, clinica } = useSesion();
+  // Clínica real: todo sale de SUS datos (nada de ejemplo)
+  const real = useClinicaReal();
+  const { pacientes: pacientesReales, setPacientes } = usePacientes();
   const nombreUsuario = usuario?.nombre ?? "Invitado";
 
   const { message, show } = useToast();
@@ -1073,8 +1153,15 @@ function DashboardInner() {
       detalle: `${t.tratamiento} · ${t.odontologo}`,
       estado: t.estado,
     }));
-  const [actividad, setActividad] = useState<Actividad[]>(ACTIVIDAD_INICIAL);
-  const [sinLeer, setSinLeer] = useState(3);
+  const [actividad, setActividad] = useState<Actividad[]>(() => (real ? [] : ACTIVIDAD_INICIAL));
+  const [sinLeer, setSinLeer] = useState(() => (real ? 0 : 3));
+  // Al saber que es una clínica real (después de abrir la página), nada de actividad de ejemplo
+  const esReal = !!real;
+  useEffect(() => {
+    if (!esReal) return;
+    setActividad((prev) => (prev === ACTIVIDAD_INICIAL ? [] : prev));
+    setSinLeer((n) => (n === 3 ? 0 : n));
+  }, [esReal]);
   const [recordatoriosExtra, setRecordatoriosExtra] = useState(0);
   const [presupuestosNuevos, setPresupuestosNuevos] = useState(0);
   const [pacientesNuevos, setPacientesNuevos] = useState<{ nombre: string; documento: string }[]>([]);
@@ -1119,6 +1206,24 @@ function DashboardInner() {
   };
 
   const agregarPaciente = (p: NuevoPaciente) => {
+    if (real) {
+      // Se guarda en Pacientes (lo ve toda la clínica)
+      const activosReales = contarPacientesActivos(pacientesReales);
+      if (!dentroDelLimite(plan, "pacientes", activosReales)) {
+        show(MENSAJE_LIMITE.pacientes);
+        return;
+      }
+      if (pacientesReales.some((x) => x.documento && x.documento === p.documento)) {
+        show("Ya hay un paciente con ese documento");
+        return;
+      }
+      const id = Math.max(0, ...pacientesReales.map((x) => x.id)) + 1;
+      setPacientes((prev) => [...prev, { ...p, id, estado: "Activo", foto: null }]);
+      registrar(nombreUsuario, `Registró al paciente ${p.nombre} ${p.apellido}`);
+      cerrarModal();
+      show("Paciente registrado");
+      return;
+    }
     const activos = contarPacientesActivos(leerPacientes()) + pacientesNuevos.length;
     if (!dentroDelLimite(plan, "pacientes", activos)) {
       show(MENSAJE_LIMITE.pacientes);
@@ -1132,6 +1237,11 @@ function DashboardInner() {
   };
 
   const crearPresupuesto = (p: { paciente: string; tratamiento: string; monto: number }) => {
+    if (real) {
+      cerrarModal();
+      show("Presupuestos se está preparando para tu clínica");
+      return;
+    }
     const numero = `PR-2026-${String(142 + presupuestosNuevos).padStart(4, "0")}`;
     setPresupuestosNuevos((n) => n + 1);
     registrar(
@@ -1155,6 +1265,10 @@ function DashboardInner() {
   };
 
   const enviarRecordatorios = () => {
+    if (real) {
+      show("Los recordatorios automáticos se están preparando para tu clínica");
+      return;
+    }
     const pendientes = turnos.filter((t) => t.estado === "Pendiente").length;
     if (pendientes === 0) {
       show("No hay turnos pendientes para recordar");
@@ -1201,7 +1315,7 @@ function DashboardInner() {
     const url = window.location.href;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Cloud Esther · Demo", url });
+        await navigator.share({ title: real ? `Cloud Esther · ${clinica?.nombre ?? ""}` : "Cloud Esther · Demo", url });
       } else {
         await navigator.clipboard.writeText(url);
         show("Enlace copiado al portapapeles");
@@ -1218,12 +1332,37 @@ function DashboardInner() {
   const confirmadosHoy = turnos.filter((t) => t.estado === "Confirmada" || t.estado === "Atendida").length;
   const pendientesHoy = turnos.filter((t) => t.estado === "Pendiente").length;
   const [s0, s1, s2, s3] = STATS as unknown as [Stat, Stat, Stat, Stat];
-  const stats: Stat[] = [
-    { ...s0, value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
-    s1,
-    { ...s2, value: String(34 + recordatoriosExtra) },
-    s3,
-  ];
+  // Clínica real: números de verdad (turnos, pacientes y la semana que viene)
+  const en7 = (() => {
+    const d = new Date(`${hoy}T12:00:00`);
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  })();
+  const turnosSemana = turnosAgenda.filter((t) => t.estado !== "Cancelada" && t.fecha > hoy && t.fecha <= en7).length;
+  const activosReales = contarPacientesActivos(pacientesReales);
+  const stats: Stat[] = real
+    ? [
+        { ...s0, value: String(turnos.length), delta: "", sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
+        { ...s1, label: "Pacientes activos", value: String(activosReales), valueColor: "text-emerald-600", icon: Users, delta: "", sub: `${pacientesReales.length} en total` },
+        { ...s2, label: "Próximos 7 días", value: String(turnosSemana), icon: CalendarCheck, delta: "", sub: "turnos agendados" },
+        { ...s3, label: "Equipo", value: String(odontologosEquipo.length), valueColor: "text-primary", icon: Stethoscope, delta: "", sub: "odontólogos en la agenda" },
+      ]
+    : [
+        { ...s0, value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
+        s1,
+        { ...s2, value: String(34 + recordatoriosExtra) },
+        s3,
+      ];
+  // Turnos atendidos por odontólogo en el mes (clínica real)
+  const mes = hoy.slice(0, 7);
+  const atendidosMes = real
+    ? odontologosEquipo
+        .map((nombre) => ({
+          nombre: nombre.split(" ")[0] ?? nombre,
+          valor: turnosAgenda.filter((t) => t.odontologo === nombre && t.estado === "Atendida" && t.fecha.startsWith(mes)).length,
+        }))
+        .filter((x) => x.valor > 0)
+    : undefined;
 
   return (
     <AppShell>
@@ -1265,7 +1404,7 @@ function DashboardInner() {
               {(s.delta || s.sub) && (
                 <p className="relative mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs">
                   <span className={s.deltaColor}>{s.delta}</span>
-                  <span className="truncate text-muted-foreground">{s.sub}</span>
+                  <span className="line-clamp-2 leading-snug text-muted-foreground">{s.sub}</span>
                 </p>
               )}
             </div>
@@ -1274,36 +1413,53 @@ function DashboardInner() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className={`${CARD} lg:col-span-2`}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">Evolución de la clínica</h2>
-                <p className="text-xs text-muted-foreground">Últimos 6 meses · datos ficticios</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <button onClick={guardarPdf} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><FileText className="size-3.5" /> PDF</button>
-                <button onClick={exportarExcel} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><FileSpreadsheet className="size-3.5" /> Excel</button>
-                <button onClick={imprimir} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><Printer className="size-3.5" /> Imprimir</button>
-                <button onClick={compartir} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><Share2 className="size-3.5" /> Compartir</button>
-              </div>
-            </div>
+            <CabeceraCard
+              icon={BarChart3}
+              titulo="Evolución de la clínica"
+              detalle={real ? "Últimos 6 meses" : "Últimos 6 meses · datos ficticios"}
+              acciones={
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  <button onClick={guardarPdf} className={EXPORT_BTN} aria-label="Descargar PDF" title="PDF"><FileText className="size-3.5" /> <span className="hidden sm:inline">PDF</span></button>
+                  <button onClick={exportarExcel} className={EXPORT_BTN} aria-label="Descargar Excel" title="Excel"><FileSpreadsheet className="size-3.5" /> <span className="hidden sm:inline">Excel</span></button>
+                  <button onClick={imprimir} className={EXPORT_BTN} aria-label="Imprimir" title="Imprimir"><Printer className="size-3.5" /> <span className="hidden sm:inline">Imprimir</span></button>
+                  <button onClick={compartir} className={EXPORT_BTN} aria-label="Compartir" title="Compartir"><Share2 className="size-3.5" /> <span className="hidden sm:inline">Compartir</span></button>
+                </div>
+              }
+            />
+            {real ? (
+              <VacioCard className="h-40 sm:h-56">
+                Cuando la clínica registre cobros, acá vas a ver cómo evolucionan mes a mes.
+              </VacioCard>
+            ) : (
             <div className="h-64 w-full rounded-xl bg-[linear-gradient(to_top,theme(colors.primary/12%),transparent)]">
               <svg viewBox="0 0 400 160" className="size-full" preserveAspectRatio="none">
                 <polyline points={EVOLUCION_PUNTOS} fill="none" stroke="currentColor" className="text-primary" strokeWidth="2.5" />
                 <polyline points="0,90 400,80" fill="none" stroke="currentColor" strokeDasharray="4 4" className="text-destructive/60" strokeWidth="1.5" />
               </svg>
             </div>
+            )}
           </div>
 
-          <div className={CARD}>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">Próximos turnos</h2>
-                <p className="text-xs text-muted-foreground">Agenda de hoy</p>
-              </div>
-              <Link to="/demo/agenda" className="text-xs font-medium text-primary">Ver agenda y horarios →</Link>
-            </div>
+          <div className={`${CARD} flex flex-col`}>
+            <CabeceraCard
+              icon={CalendarCheck}
+              titulo="Próximos turnos"
+              detalle="Agenda de hoy"
+              acciones={<Link to="/demo/agenda" className="text-xs font-semibold text-primary hover:underline">Ver agenda →</Link>}
+            />
             {turnosFiltrados.length === 0 ? (
-              <p className="py-4 text-sm text-muted-foreground">Sin turnos que coincidan con la búsqueda.</p>
+              <VacioCard className="flex-1">
+                {q ? (
+                  "Sin turnos que coincidan con la búsqueda."
+                ) : (
+                  <span className="grid justify-items-center gap-3">
+                    Todavía no hay turnos para hoy.
+                    <button type="button" onClick={() => setModal("cita")} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110">
+                      <CalendarPlus className="size-3.5" /> Nueva cita
+                    </button>
+                  </span>
+                )}
+              </VacioCard>
             ) : (
               <ul className="divide-y divide-border">
                 {turnosFiltrados.map((t) => (
@@ -1323,8 +1479,8 @@ function DashboardInner() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <ProduccionOdontologo />
-          <ActividadReciente items={actividadFiltrada} />
+          <ProduccionOdontologo {...(atendidosMes ? { datos: atendidosMes, unidad: "turnos" } : {})} />
+          <ActividadReciente items={actividadFiltrada} buscando={!!q} />
         </div>
 
         <div className="mt-4">
@@ -1342,7 +1498,7 @@ function DashboardInner() {
             onSubmit={agregarCita}
             onCancel={cerrarModal}
             pacientes={sugerenciasPacientes}
-            odontologos={odontologosEquipo.length ? odontologosEquipo : ODONTOLOGOS}
+            odontologos={odontologosEquipo.length || real ? odontologosEquipo : ODONTOLOGOS}
           />
         </Modal>
       )}
@@ -1351,7 +1507,7 @@ function DashboardInner() {
           <NuevoPacienteForm
             onSubmit={agregarPaciente}
             onCancel={cerrarModal}
-            documentosExistentes={pacientesNuevos.map((p) => p.documento)}
+            documentosExistentes={real ? pacientesReales.map((p) => p.documento) : pacientesNuevos.map((p) => p.documento)}
           />
         </Modal>
       )}

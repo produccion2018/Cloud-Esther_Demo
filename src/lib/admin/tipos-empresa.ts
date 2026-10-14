@@ -276,3 +276,158 @@ export type PaisOperacion = {
   desde: string;
   notas: string;
 };
+
+/* ───────────── Atención y Soporte: llamadas, respuestas listas y guías ───────────── */
+
+/** Llamada registrada: por teléfono, WhatsApp (gratis) o videollamada. */
+export type Llamada = {
+  id: string;
+  fecha: string; // ISO
+  direccion: "Entrante" | "Saliente";
+  clinica: string;
+  contacto: string;
+  telefono: string;
+  duracionMin: number;
+  resultado: "Atendida" | "No atendió" | "Ocupado" | "Buzón de voz" | "Número equivocado";
+  motivo: string;
+  notas: string;
+  atendio: string;
+  casoId: string | null;
+  origen: "Manual" | "Pedido web";
+  medio: "Teléfono" | "WhatsApp" | "Videollamada";
+  proximoSeguimiento: string | null; // yyyy-mm-dd
+};
+
+/** «Te llamamos gratis»: una clínica pidió desde la web que la llamen. */
+export type PedidoLlamada = {
+  id: string;
+  fecha: string; // ISO
+  nombre: string;
+  telefono: string;
+  pais: string; // AR, CL…
+  clinica: string;
+  motivo: string;
+  horario: "Cuanto antes" | "Mañana (9 a 12)" | "Mediodía (12 a 15)" | "Tarde (15 a 19)";
+  estado: "Pendiente" | "Llamado" | "No contestó" | "Descartado";
+  atendidoPor: string | null;
+  llamadaId: string | null;
+  notas: string;
+  origen: "Web";
+};
+
+/** Respuesta lista para copiar (WhatsApp, correo). */
+export type Plantilla = {
+  id: string;
+  titulo: string;
+  area: "Atención" | "Soporte" | "Marketing";
+  canal: "WhatsApp" | "Email" | "General";
+  texto: string;
+  etiquetas: string[];
+};
+
+/** Guía de Soporte: un problema común y cómo se resuelve. */
+export type Guia = {
+  id: string;
+  titulo: string;
+  categoria: TicketSoporte["categoria"];
+  problema: string;
+  solucion: string;
+  etiquetas: string[];
+  autor: string;
+  actualizada: string; // yyyy-mm-dd
+};
+
+/* ───────────── Redes y marketing ───────────── */
+
+export type RedSocial = "Instagram" | "Facebook" | "TikTok" | "LinkedIn" | "YouTube" | "X" | "WhatsApp" | "Otra";
+
+export type Publicacion = {
+  id: string;
+  red: RedSocial;
+  fecha: string; // yyyy-mm-dd
+  hora: string; // HH:MM o ""
+  titulo: string;
+  texto: string;
+  hashtags: string;
+  estado: "Idea" | "En preparación" | "Lista" | "Publicada";
+  campanaId: string | null;
+  enlace: string;
+  responsable: string | null;
+  alcance: number;
+  interacciones: number;
+  mensajes: number;
+};
+
+export type Campana = {
+  id: string;
+  nombre: string;
+  objetivo: string;
+  redes: RedSocial[];
+  desde: string;
+  hasta: string | null;
+  presupuesto: number | null;
+  moneda: "USD" | "ARS";
+  estado: "Planificada" | "Activa" | "Terminada";
+  alcance: number;
+  clics: number;
+  mensajes: number;
+  demos: number;
+  clientes: number;
+  notas: string;
+};
+
+export type IdeaMarketing = {
+  id: string;
+  tipo: "Texto" | "Hashtags" | "Idea" | "Imagen / video";
+  titulo: string;
+  contenido: string;
+  red: RedSocial | null;
+  etiquetas: string[];
+};
+
+/** Interesado que escribió por redes: se sigue hasta que prueba el demo o contrata. */
+export type ContactoRed = {
+  id: string;
+  fecha: string; // yyyy-mm-dd
+  red: RedSocial;
+  nombre: string;
+  usuario: string;
+  telefono: string;
+  email: string;
+  pais: string;
+  clinica: string;
+  mensaje: string;
+  estado: "Nuevo" | "Contactado" | "Probando demo" | "Contrató" | "Descartado";
+  responsable: string | null;
+  campanaId: string | null;
+  proximoContacto: string | null;
+  notas: { fecha: string; autor: string; texto: string }[];
+};
+
+/* ───────────── Uso de herramientas de IA del equipo (solo Dueño y Socio) ───────────── */
+
+export type HerramientaIA = "ChatGPT" | "Claude" | "Gemini" | "Generador de video" | "Generador de imágenes" | "Otra";
+
+/** Cuánto puede gastar una persona por mes en una herramienta de IA. */
+export type PresupuestoIA = {
+  id: string;
+  persona: string;
+  herramienta: HerramientaIA;
+  periodo: string; // AAAA-MM
+  montoUSD: number;
+  notas: string;
+};
+
+/** Lo que consumió (se copia del panel de facturación de cada herramienta). */
+export type ConsumoIA = {
+  id: string;
+  fecha: string; // yyyy-mm-dd
+  persona: string;
+  herramienta: HerramientaIA;
+  para: string;
+  cantidad: number;
+  unidad: "Videos" | "Imágenes" | "Textos" | "Minutos" | "Créditos" | "Otro";
+  costoUSD: number;
+  enlace: string;
+  notas: string;
+};

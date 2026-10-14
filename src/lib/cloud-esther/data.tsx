@@ -3,6 +3,8 @@ import { registrarPlanDemo } from "@/lib/cloud-esther/demo-seguimiento";
 import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { modulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { PLAN_DE_CODIGO } from "@/lib/clinica/permisos";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -502,18 +504,22 @@ export function CloudEstherProvider({ children }: { children: ReactNode }) {
   const [plan, setPlanState] = useState<PlanId>("avanzada");
   const tenant = useTenantActual();
   const [planListo, setPlanListo] = useState(false);
+  // Clínica real (Etapa 8b): el plan y el rol vienen del servidor; no se pueden cambiar acá
+  const real = useClinicaReal();
+  const planReal = real ? (PLAN_DE_CODIGO[real.sesion.clinica.plan ?? ""] ?? "inicial") : null;
   useEffect(() => {
-    setPlanState(getStoredPlan());
+    setPlanState(planReal ?? getStoredPlan());
     setPlanListo(true);
-  }, [tenant]);
+  }, [tenant, planReal]);
   const [clinic, setClinic] = useState("centro");
-  const [role] = useState("admin");
+  const [roleDemo] = useState("admin");
   const [disabled] = useState<string[]>([]);
 
   // Demo (sin sesión o cuenta creada desde «Probar demo»): se recorren los 4 planes libremente.
   // Solo una empresa con contratación real (tipo "cliente", la crea el backend) tiene el plan fijo.
   const { sesion } = useSesion();
-  const planContratado = tenant !== TENANT_DEMO && sesion?.tipo === "cliente";
+  const planContratado = !!real || (tenant !== TENANT_DEMO && sesion?.tipo === "cliente");
+  const role = real?.rol ?? roleDemo;
   const setPlan = (p: PlanId) => {
     if (planContratado) return;
     setPlanState(p);

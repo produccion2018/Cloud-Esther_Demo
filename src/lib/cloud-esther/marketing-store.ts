@@ -143,7 +143,7 @@ function leadsEjemplo(): Lead[] {
     telefono: "",
     email: "",
     valor: 0,
-    responsable: "Sofía Rodríguez",
+    responsable: "Ketty Margarita",
     creado: hace(3),
     seguimiento: "",
     campaniaId: "",
@@ -155,9 +155,9 @@ function leadsEjemplo(): Lead[] {
   return [
     base({
       id: "l1",
-      nombre: "Camila Herrera",
+      nombre: "Alejo Becerra",
       telefono: "+54 11 6123-4410",
-      email: "camila.herrera@example.com",
+      email: "alejo.becerra@example.com",
       fuente: "Instagram",
       interes: "Blanqueamiento",
       valor: 90000,
@@ -251,7 +251,7 @@ function leadsEjemplo(): Lead[] {
       valor: 480000,
       etapa: "Convertido",
       creado: hace(15),
-      referidoPor: "Julián Ortega",
+      referidoPor: "Alejo Becerra",
     }),
     base({
       id: "l9",
@@ -279,7 +279,7 @@ function leadsEjemplo(): Lead[] {
     }),
     base({
       id: "l10",
-      nombre: "Brenda Castro",
+      nombre: "Mauro Pinto",
       telefono: "+54 11 6012-5530",
       fuente: "Sitio web",
       interes: "Primera consulta",
@@ -287,7 +287,8 @@ function leadsEjemplo(): Lead[] {
       etapa: "Convertido",
       creado: hace(20),
     }),
-  ];
+    // El demo deja solo dos interesados de ejemplo (pedido de Camilo, 13 oct)
+  ].filter((l) => l.id === "l1" || l.id === "l10");
 }
 
 const CAMPANIAS: CampaniaAds[] = [
@@ -391,7 +392,7 @@ const PROMOS: Promocion[] = [
 const RESENAS: Resena[] = [
   {
     id: "r1",
-    autor: "María G.",
+    autor: "Mauro P.",
     fuente: "Google",
     estrellas: 5,
     texto:
@@ -401,16 +402,16 @@ const RESENAS: Resena[] = [
   },
   {
     id: "r2",
-    autor: "Pablo R.",
+    autor: "Alejo B.",
     fuente: "Google",
     estrellas: 4,
     texto: "Muy buena atención. Tuve que esperar 15 minutos, pero el tratamiento fue impecable.",
     fecha: dia(-6),
-    respuesta: "¡Gracias Pablo! Estamos trabajando para reducir las esperas.",
+    respuesta: "¡Gracias Alejo! Estamos trabajando para reducir las esperas.",
   },
   {
     id: "r3",
-    autor: "Sol B.",
+    autor: "Mauro P.",
     fuente: "Doctoralia",
     estrellas: 5,
     texto: "Me hice un blanqueamiento y quedé feliz. Consultorio muy limpio y moderno.",
@@ -419,7 +420,7 @@ const RESENAS: Resena[] = [
   },
   {
     id: "r4",
-    autor: "Ezequiel M.",
+    autor: "Alejo B.",
     fuente: "Facebook",
     estrellas: 3,
     texto: "Buena atención, pero me costó conseguir turno por teléfono.",

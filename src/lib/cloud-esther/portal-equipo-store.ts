@@ -65,17 +65,11 @@ export const storeEquipoPortal = crearStorePorEmpresa<Estado>(
         ultimoIngreso: new Date(Date.now() - 3 * 3_600_000).toISOString(),
         ingresos: 18,
       },
-      "3": {
-        codigo: codigoInicial("3"),
+      "2": {
+        codigo: codigoInicial("2"),
         estado: "Activo",
         ultimoIngreso: new Date(Date.now() - 5 * 3_600_000).toISOString(),
         ingresos: 11,
-      },
-      "8": {
-        codigo: codigoInicial("8"),
-        estado: "Activo",
-        ultimoIngreso: new Date(Date.now() - 1 * 3_600_000).toISOString(),
-        ingresos: 9,
       },
       "4": {
         codigo: codigoInicial("4"),
@@ -85,7 +79,7 @@ export const storeEquipoPortal = crearStorePorEmpresa<Estado>(
       },
     },
     fichajes: [
-      { id: "f0", miembroId: "8", fecha: hoyISO(), entrada: "08:52" },
+      { id: "f0", miembroId: "2", fecha: hoyISO(), entrada: "08:52" },
       { id: "f1", miembroId: "4", fecha: hoyISO(), entrada: "07:56" },
       { id: "f2", miembroId: "1", fecha: hoyISO(), entrada: "07:58" },
     ],

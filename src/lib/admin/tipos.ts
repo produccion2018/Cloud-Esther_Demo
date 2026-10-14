@@ -8,12 +8,32 @@
  *  customer-care = Asistente / Secretaría. */
 export type AdminRole = "owner" | "partner" | "support" | "customer-care";
 
+/** Permisos que se eligen persona por persona en «Equipo y accesos» (el servidor los valida). */
+export type Permiso =
+  | "demos"
+  | "contrataciones"
+  | "cobranza"
+  | "importes"
+  | "atencion"
+  | "soporte"
+  | "personal"
+  | "nomina"
+  | "gastos"
+  | "paises"
+  | "ia"
+  | "reportes"
+  | "auditoria"
+  | "actividad"
+  | "marketing";
+
 export type AdminUser = {
   id: string;
   nombre: string;
   email: string;
   telefono: string;
   rol: AdminRole;
+  /** Permisos que tiene (Dueño y Socio: todos). Lo manda el servidor. */
+  permisos?: Permiso[];
   activo: boolean;
   ultimoAcceso: string | null; // ISO
   creado: string; // ISO
@@ -125,6 +145,69 @@ export type Contratacion = {
   resueltaPor: string | null;
   /** Referencia del pago (activada) o motivo (rechazada) */
   nota: string;
+  /** Pago en línea (Paddle): sin_iniciar · iniciado · pagado · fallido */
+  pagoEnLinea?: "sin_iniciar" | "iniciado" | "pagado" | "fallido";
+  /** Historial de notas del equipo (la más nueva primero). Las tareas sin hacer se ven en rojo. */
+  historial?: NotaContratacion[];
+  /** Cuántas tareas faltan hacer */
+  tareasPendientes?: number;
+};
+
+export type NotaContratacion = {
+  id: string;
+  texto: string;
+  autor: string;
+  fecha: string;
+  tarea: boolean;
+  hecha: boolean;
+  hechaPor: string | null;
+  hechaEl: string | null;
+};
+
+/* ───────────── Facturación en línea (Paddle) — solo Dueño y Socio ───────────── */
+
+export type Facturacion = {
+  pagosEnLinea: boolean;
+  suscripciones: {
+    id: string;
+    paddleId: string;
+    clinica: string;
+    plan: PlanId | null;
+    ciclo: "Mensual" | "Anual";
+    /** pendiente · activa · gracia · pago_rechazado · vencida · suspendida · cancelada */
+    estado: string;
+    proximoCobro: string | null;
+    periodoHasta: string | null;
+    canceladaEl: string | null;
+  }[];
+  pagos: {
+    id: string;
+    paddleId: string;
+    clinica: string;
+    /** alta · renovacion · otro */
+    tipo: string;
+    /** pagado · fallido · vencido */
+    estado: string;
+    moneda: string;
+    sinImpuestos: number;
+    impuestos: number;
+    total: number;
+    pais: string | null;
+    comprobante: string | null;
+    fecha: string;
+  }[];
+  ajustes: {
+    id: string;
+    paddleId: string;
+    cobro: string;
+    tipo: string;
+    estado: string;
+    moneda: string;
+    impuestos: number;
+    total: number;
+    motivo: string;
+    fecha: string;
+  }[];
 };
 
 /* ───────────── Demos (espejo de lo que hacen en el demo) ───────────── */

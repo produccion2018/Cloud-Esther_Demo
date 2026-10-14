@@ -34,8 +34,18 @@ import type {
   Anticipo,
   Asistencia,
   Ausencia,
+  Campana,
   CasoAtencion,
+  ConsumoIA,
+  ContactoRed,
   Contrato,
+  Guia,
+  IdeaMarketing,
+  Llamada,
+  PedidoLlamada,
+  Plantilla,
+  PresupuestoIA,
+  Publicacion,
   DocumentoInterno,
   Empleado,
   Gasto,
@@ -53,8 +63,10 @@ import type {
 import type {
   AdminRole,
   AdminUser,
+  Permiso,
   Clinica,
   Contratacion,
+  Facturacion,
   ConsumoIAMensual,
   ConfigDemo,
   CuentaDemo,
@@ -90,6 +102,8 @@ import type {
    GET    /admin/clinicas                                            → Clinica[]
    GET    /admin/contrataciones                                      → Contratacion[]
    PATCH  /admin/contrataciones/:id { notas }                        → Contratacion
+   POST   /admin/contrataciones/:id/notas { texto, tarea }           → Contratacion (historial)
+   POST   /admin/contrataciones/:id/notas/:notaId/hecha              → Contratacion
    POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion
    POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
@@ -169,6 +183,16 @@ export type Colecciones = {
   tareas: TareaInterna[];
   paises: PaisOperacion[];
   atencionClinicas: CasoAtencion[];
+  llamadas: Llamada[];
+  plantillas: Plantilla[];
+  guias: Guia[];
+  publicaciones: Publicacion[];
+  campanas: Campana[];
+  ideasMarketing: IdeaMarketing[];
+  contactosRedes: ContactoRed[];
+  presupuestosIA: PresupuestoIA[];
+  consumosIA: ConsumoIA[];
+  pedidosLlamada: PedidoLlamada[];
 };
 
 const COLECCIONES_INICIALES: Colecciones = {
@@ -187,6 +211,16 @@ const COLECCIONES_INICIALES: Colecciones = {
   tareas: TAREAS_INICIALES,
   paises: PAISES_INICIALES,
   atencionClinicas: ATENCION_CLINICAS_INICIAL,
+  llamadas: [],
+  plantillas: [],
+  guias: [],
+  publicaciones: [],
+  campanas: [],
+  ideasMarketing: [],
+  contactosRedes: [],
+  presupuestosIA: [],
+  consumosIA: [],
+  pedidosLlamada: [],
 };
 
 type BaseLocal = {
@@ -359,6 +393,12 @@ export async function iniciarSesionAdmin(email: string, clave: string): Promise<
 }
 
 /** Devuelve el enlace solo en modo sin backend (para poder probar sin correo). */
+/** Mis datos y permisos de ahora (si el Dueño cambió mis permisos, se ven al instante). */
+export async function obtenerMiUsuario(): Promise<AdminUser | null> {
+  if (!CON_BACKEND) return null;
+  return http<AdminUser>("GET", "/admin/auth/sesion");
+}
+
 export async function solicitarRecuperacion(email: string): Promise<{ enlacePrueba?: string }> {
   const correo = email.trim().toLowerCase();
   if (CON_BACKEND) {
@@ -433,6 +473,7 @@ export async function invitarAdmin(datos: {
   nombre: string;
   email: string;
   rol: AdminRole;
+  permisos?: Permiso[];
 }): Promise<{ usuario: AdminUser; clavePrueba?: string }> {
   if (CON_BACKEND) return { usuario: await http<AdminUser>("POST", "/admin/equipo", datos) };
   await espera();
@@ -458,7 +499,10 @@ export async function invitarAdmin(datos: {
   return { usuario, clavePrueba };
 }
 
-export async function actualizarAdmin(id: string, cambios: { rol?: AdminRole; activo?: boolean }) {
+export async function actualizarAdmin(
+  id: string,
+  cambios: { rol?: AdminRole; activo?: boolean; permisos?: Permiso[] },
+) {
   if (CON_BACKEND) return http<AdminUser>("PATCH", `/admin/equipo/${id}`, cambios);
   await espera();
   const b = await db();
@@ -582,7 +626,11 @@ export async function actualizarNotificaciones(
 /* ───────────── Módulos internos (CRUD genérico) ───────────── */
 
 export async function listar<K extends keyof Colecciones>(k: K): Promise<Colecciones[K]> {
-  if (CON_BACKEND) return http("GET", `/admin/empresa/${k}`);
+  if (CON_BACKEND) {
+    const datos = await http<Colecciones[K]>("GET", `/admin/empresa/${k}`);
+    // Países: se muestran también los de la lista base que todavía no se guardaron
+    return (k === "paises" ? completarPaises(datos as PaisOperacion[]) : datos) as Colecciones[K];
+  }
   return copia((await db()).colecciones[k]);
 }
 
@@ -618,6 +666,11 @@ export async function borrarDe<K extends keyof Colecciones>(k: K, id: string, ac
 }
 
 export const nuevoIdLocal = nuevoId;
+
+/** Número corto y único para casos y tickets (ej. «AT-K9F2QX»). No depende de cuántos hay:
+ *  dos personas que crean uno al mismo tiempo no se pisan. */
+export const nuevoNumero = (prefijo: string) =>
+  `${prefijo}-${Date.now().toString(36).slice(-4).toUpperCase()}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
 
 /* ───────────── Planes ───────────── */
 
@@ -677,10 +730,28 @@ export async function obtenerContrataciones(): Promise<Contratacion[]> {
   return [];
 }
 
+/** Facturación en línea (Paddle): cobros, suscripciones y reembolsos. Solo Dueño y Socio. */
+export async function obtenerFacturacion(): Promise<Facturacion> {
+  if (CON_BACKEND) return http("GET", "/admin/facturacion");
+  return { pagosEnLinea: false, suscripciones: [], pagos: [], ajustes: [] };
+}
+
 /** Notas internas (Dueño, Socio y Secretaría). */
 export async function guardarNotasContratacion(a: { id: string; notas: string }): Promise<Contratacion> {
   if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
   return http("PATCH", `/admin/contrataciones/${a.id}`, { notas: a.notas });
+}
+
+/** Historial: agregar una nota o una tarea pendiente (no se borran ni se editan). */
+export async function agregarNotaContratacion(a: { id: string; texto: string; tarea: boolean }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/notas`, { texto: a.texto, tarea: a.tarea });
+}
+
+/** Historial: marcar una tarea como hecha (queda quién y cuándo). */
+export async function marcarTareaHecha(a: { id: string; notaId: string }): Promise<Contratacion> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/notas/${a.notaId}/hecha`, {});
 }
 
 /** ACTIVAR (Dueño, Socio y Secretaría): después de revisar y cobrar. Crea la clínica. */
@@ -693,6 +764,12 @@ export async function activarContratacion(a: {
     confirmo: true,
     ...(a.referenciaPago?.trim() ? { referenciaPago: a.referenciaPago.trim() } : {}),
   });
+}
+
+/** Etapa 8a: reenviar al Administrador de la clínica el enlace para crear su contraseña. */
+export async function reenviarAccesoClinica(a: { id: string }): Promise<{ direccion: string }> {
+  if (!CON_BACKEND) throw new ErrorApi(SOLO_CON_SERVIDOR);
+  return http("POST", `/admin/contrataciones/${a.id}/reenviar-acceso`, {});
 }
 
 /** RECHAZAR (Dueño, Socio y Secretaría), con motivo. */
@@ -724,7 +801,7 @@ export async function guardarMontosClinica(a: {
 }
 
 export async function enviarRecordatorioPago(id: string) {
-  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`);
+  if (CON_BACKEND) return http<void>("POST", `/admin/clinicas/${id}/recordatorio`, {});
   await espera();
   const c = (await db()).clinicas.find((x) => x.id === id);
   await registrar(`Envió recordatorio de pago a ${c?.nombre ?? id}`, "pago");
@@ -733,6 +810,67 @@ export async function enviarRecordatorioPago(id: string) {
 export async function obtenerDemos(): Promise<CuentaDemo[]> {
   if (CON_BACKEND) return http("GET", "/admin/demos");
   return copia((await db()).demos);
+}
+
+/* ───────────── Papelera de demos (solo Dueño y Socio, con servidor) ───────────── */
+
+export type DemoEnPapelera = {
+  id: string;
+  email: string;
+  nombre: string;
+  clinica: string;
+  pais: string;
+  registrado: string;
+  enviadoPor: string;
+  enviado: string;
+  motivo: string;
+  /** Unido a una contratación: no se puede eliminar definitivamente */
+  conContratacion: boolean;
+};
+export type RegistroPapelera = {
+  id: string;
+  accion: "papelera" | "restaurar" | "eliminar";
+  email: string;
+  nombre: string;
+  clinica: string;
+  quien: string;
+  motivo: string;
+  fecha: string;
+};
+export type PapeleraDemos = { demos: DemoEnPapelera[]; registro: RegistroPapelera[] };
+export type ResultadoPapelera = { hechos: number; omitidos: { id: string; motivo: string }[] };
+
+const SIN_SERVIDOR_PAPELERA = "La papelera necesita el servidor conectado.";
+
+export async function obtenerPapeleraDemos(): Promise<PapeleraDemos> {
+  if (!CON_BACKEND) return { demos: [], registro: [] };
+  return http<PapeleraDemos>("GET", "/admin/demos/papelera");
+}
+export async function moverDemosAPapelera(a: { ids: string[]; motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera", a);
+}
+export async function restaurarDemos(a: { ids: string[] }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/restaurar", a);
+}
+export async function eliminarDemosDefinitivo(a: { ids: string[]; motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/eliminar", a);
+}
+export async function vaciarPapeleraDemos(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/vaciar", a);
+}
+/** Todos los demos de la lista a la papelera (sin límite) */
+export async function moverTodosLosDemosAPapelera(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/todos", a);
+}
+/** Eliminar TODOS los demos para siempre (los de la lista y los de la papelera), con registro */
+export async function eliminarTodosLosDemos(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/eliminar-todo", a);
 }
 
 /** Con servidor, la configuración general es: tiempo de cada demo nuevo y aviso antes del cierre.

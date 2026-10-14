@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { accesoTotal, puede, useRole } from "@/components/admin/role";
+
 import * as api from "./api";
 
 /* Ubicación: src/lib/admin/consultas.ts
@@ -9,6 +11,8 @@ import * as api from "./api";
 export const useEquipo = () => useQuery({ queryKey: ["equipo"], queryFn: api.obtenerEquipo });
 export const usePlanes = () => useQuery({ queryKey: ["planes"], queryFn: api.obtenerPlanes });
 export const useClinicas = () => useQuery({ queryKey: ["clinicas"], queryFn: api.obtenerClinicas });
+export const useFacturacion = (habilitado = true) =>
+  useQuery({ queryKey: ["facturacion"], queryFn: api.obtenerFacturacion, enabled: habilitado, refetchInterval: 60_000 });
 export const useContrataciones = (habilitado = true) =>
   useQuery({
     queryKey: ["contrataciones"],
@@ -16,13 +20,27 @@ export const useContrataciones = (habilitado = true) =>
     refetchInterval: 60_000,
     enabled: habilitado,
   });
-export const useDemos = () =>
-  useQuery({ queryKey: ["demos"], queryFn: api.obtenerDemos, refetchInterval: 60_000 });
+export const useDemos = () => {
+  const { role } = useRole();
+  return useQuery({ queryKey: ["demos"], queryFn: api.obtenerDemos, refetchInterval: 60_000, enabled: puede(role, "demos") });
+};
+/** Papelera de demos: solo Dueño y Socio (el servidor valida igual) */
+export const usePapeleraDemos = () => {
+  const { role } = useRole();
+  return useQuery({ queryKey: ["papelera-demos"], queryFn: api.obtenerPapeleraDemos, enabled: accesoTotal(role) && api.CON_BACKEND });
+};
 export const useHistorialTiempoDemo = (id: string) =>
   useQuery({ queryKey: ["demos", id, "tiempo"], queryFn: () => api.obtenerHistorialTiempoDemo(id) });
 export const useConfigDemo = () =>
   useQuery({ queryKey: ["config-demo"], queryFn: api.obtenerConfigDemo });
-export const useTickets = () => useColeccion("ticketsSoporte");
+export const useTickets = () => {
+  const { role } = useRole();
+  return useQuery({
+    queryKey: ["ticketsSoporte"],
+    queryFn: () => api.listar("ticketsSoporte"),
+    enabled: puede(role, "soporte", "atencion"),
+  });
+};
 
 /** Colección de los módulos internos (personal, nómina, gastos, soporte…). */
 export function useColeccion<K extends keyof api.Colecciones>(k: K) {
@@ -37,8 +55,10 @@ export const useNotificaciones = () =>
 export const useSesionesPanel = () =>
   useQuery({ queryKey: ["sesiones"], queryFn: api.obtenerSesiones });
 export const useIntentos = () => useQuery({ queryKey: ["intentos"], queryFn: api.obtenerIntentos });
-export const useActividad = () =>
-  useQuery({ queryKey: ["actividad"], queryFn: api.obtenerActividad });
+export const useActividad = () => {
+  const { role } = useRole();
+  return useQuery({ queryKey: ["actividad"], queryFn: api.obtenerActividad, enabled: puede(role, "actividad") });
+};
 export const useConsumoIA = () =>
   useQuery({ queryKey: ["consumo-ia"], queryFn: api.obtenerConsumoIA });
 export const useCrecimiento = () =>

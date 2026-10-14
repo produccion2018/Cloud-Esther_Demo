@@ -52,19 +52,9 @@ export const PACIENTE_EJEMPLO: Paciente = {
   foto: null,
 };
 
-/* Más pacientes de ejemplo para practicar: son los mismos que aparecen en la Agenda. */
+/* Segundo paciente de ejemplo (el demo usa solo dos: Mauro Pinto y Alejo Becerra). */
 const EJEMPLOS: [string, string, string, string, string, string, string, EstadoPaciente][] = [
-  ["Marina", "Delgado", "30111222", "1990-06-03", "Femenino", "Swiss Medical", "Clínica Centro", "Activo"],
-  ["Julián", "Ortega", "28444555", "1985-11-20", "Masculino", "OSDE", "Clínica Centro", "Activo"],
-  ["Lucía", "Paz", "35666777", "1994-02-14", "Femenino", "Galeno", "Clínica Norte", "Activo"],
-  ["Ramiro", "Sosa", "26888999", "1979-09-08", "Masculino", "No aplica / particular", "Clínica Centro", "Activo"],
-  ["Paula", "Medina", "33222111", "1992-12-01", "Femenino", "Medicus", "Clínica Centro", "Activo"],
-  ["Sergio", "Luna", "31555444", "1989-03-27", "Masculino", "IOMA", "Clínica Norte", "Activo"],
-  ["Ana", "Torres", "40123456", "1998-07-19", "Femenino", "OSDE", "Clínica Sur", "Activo"],
-  ["Diego", "Ruiz", "27999888", "1981-05-05", "Masculino", "PAMI", "Clínica Centro", "Activo"],
-  ["Valeria", "Gómez", "36777666", "1995-10-30", "Femenino", "Swiss Medical", "Clínica Norte", "Activo"],
-  ["Carlos", "Méndez", "22333444", "1970-01-15", "Masculino", "PAMI", "Clínica Centro", "Inactivo"],
-  ["Florencia", "Díaz", "38444333", "1996-08-22", "Femenino", "Galeno", "Clínica Sur", "Activo"],
+  ["Alejo", "Becerra", "38444333", "1996-08-22", "Masculino", "Swiss Medical", "Clínica Centro", "Activo"],
 ];
 
 const PACIENTES_EJEMPLO: Paciente[] = [
@@ -98,7 +88,12 @@ type Estado = {
 };
 
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes. */
-const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), { persistir: "pacientes" });
+const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO, activoId: null }), {
+  persistir: "pacientes",
+  vacio: () => ({ pacientes: [], activoId: null }),
+  // El paciente elegido es de cada pantalla: no se comparte con el resto de la clínica
+  soloLocal: ["activoId"],
+});
 
 /** Lectura sin hooks (Esther IA). */
 export function leerPacientes(): Paciente[] {

@@ -117,3 +117,19 @@ export function periodoTexto(p: string) {
     ? p
     : d.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 }
+
+/** Enlace de WhatsApp para un teléfono. Si el número no trae el código del país (+54…),
+ *  se le agrega el del país de la clínica (AR, CL…). null = no es un teléfono usable. */
+const CODIGO_TELEFONO: Record<string, string> = {
+  AR: "54", CL: "56", CO: "57", PE: "51", EC: "593", VE: "58", MX: "52", ES: "34",
+};
+export function enlaceWhatsApp(telefono: string, paisCodigo?: string): string | null {
+  const t = telefono.trim();
+  let digitos = t.replace(/[^0-9]/g, "");
+  if (digitos.length < 7) return null;
+  if (!t.startsWith("+")) {
+    const codigo = paisCodigo ? CODIGO_TELEFONO[paisCodigo.toUpperCase()] : undefined;
+    if (codigo && !digitos.startsWith(codigo)) digitos = codigo + digitos.replace(/^0+/, "");
+  }
+  return `https://wa.me/${digitos}`;
+}

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-import { useSesionAdmin } from "@/lib/admin/sesion";
-import type { AdminRole } from "@/lib/admin/tipos";
+import { leerSesion, useSesionAdmin } from "@/lib/admin/sesion";
+import type { AdminRole, Permiso } from "@/lib/admin/tipos";
 
 export type { AdminRole };
 
@@ -34,55 +34,109 @@ export const ROLES_ASIGNABLES: AdminRole[] = ["partner", "support", "customer-ca
 /** Dueño y Socio ven y administran TODO el panel, sin restricciones (decisión del 9 oct). */
 export const accesoTotal = (r: AdminRole) => r === "owner" || r === "partner";
 
+/* ───────────── Permisos por persona (pedido de Camilo, 13 oct) ─────────────
+   Dueño y Socio: todo. El resto: lo que el Dueño o el Socio les tildaron en «Equipo y accesos».
+   El rol solo da las casillas iniciales. Esto controla lo que se VE: el servidor valida igual. */
+export const PERMISOS: { id: Permiso; nombre: string; detalle: string }[] = [
+  { id: "demos", nombre: "Demos e interesados", detalle: "Ver los demos, dar más tiempo o ingresos y responder pedidos." },
+  { id: "contrataciones", nombre: "Contrataciones", detalle: "Ver las solicitudes, dejar notas, activar y rechazar." },
+  { id: "cobranza", nombre: "Pagos y cobranza", detalle: "Estado de pagos de las clínicas y recordatorios de pago." },
+  { id: "importes", nombre: "Importes y facturación", detalle: "Montos de cada clínica y cobros en línea (Paddle)." },
+  { id: "atencion", nombre: "Atención a clínicas", detalle: "Casos, llamadas, respuestas listas y seguimientos con las clínicas." },
+  { id: "marketing", nombre: "Redes y marketing", detalle: "Calendario de publicaciones, textos, campañas y contactos que llegan por redes." },
+  { id: "soporte", nombre: "Soporte técnico", detalle: "Tickets, ficha técnica de cada clínica, guías, incidentes y tareas." },
+  { id: "personal", nombre: "Personal", detalle: "Empleados, asistencia, ausencias y documentos." },
+  { id: "nomina", nombre: "Nómina y sueldos", detalle: "Liquidaciones, pagos de sueldos y anticipos." },
+  { id: "gastos", nombre: "Gastos, proveedores y contratos", detalle: "Gastos de la empresa, proveedores y contratos." },
+  { id: "paises", nombre: "Países", detalle: "Ver los países donde se vende (cambiarlos: solo Dueño y Socio)." },
+  { id: "ia", nombre: "Consumo de IA", detalle: "Minutos de IA usados por las clínicas." },
+  { id: "reportes", nombre: "Reportes", detalle: "Reportes del negocio." },
+  { id: "auditoria", nombre: "Auditoría", detalle: "Ingresos al panel, sesiones e intentos fallidos." },
+  { id: "actividad", nombre: "Actividad del equipo", detalle: "Qué hizo cada persona del equipo." },
+];
+const TODOS: Permiso[] = PERMISOS.map((p) => p.id);
+
+/** Casillas iniciales de cada rol (las mismas que usa el servidor). */
+export const PERMISOS_DEL_ROL: Record<AdminRole, Permiso[]> = {
+  owner: TODOS,
+  partner: TODOS,
+  "customer-care": ["demos", "contrataciones", "cobranza", "atencion", "soporte", "paises", "marketing"],
+  support: ["soporte", "ia", "auditoria"],
+};
+
+/** Permisos de quien está usando el panel (vista previa de otro rol: los iniciales de ese rol). */
+export function permisosDe(r: AdminRole): Permiso[] {
+  if (accesoTotal(r)) return TODOS;
+  const s = leerSesion();
+  if (s && s.usuario.rol === r && s.usuario.permisos) return s.usuario.permisos;
+  return PERMISOS_DEL_ROL[r];
+}
+export const puede = (r: AdminRole, ...p: Permiso[]) => {
+  const mios = permisosDe(r);
+  return p.some((x) => mios.includes(x));
+};
+
+const TODOS_LOS_ROLES = (_r: AdminRole) => true;
+const SOLO_DUENO_Y_SOCIO = (r: AdminRole) => accesoTotal(r);
+const con =
+  (...p: Permiso[]) =>
+  (r: AdminRole) =>
+    puede(r, ...p);
+
 /**
- * Qué roles ven cada sección del panel.
+ * Qué se necesita para entrar a cada sección del panel.
  * Ruta que no figura acá = nadie accede (denegado por defecto).
- * IMPORTANTE: esto solo controla lo que se ve. El backend valida el rol en cada endpoint.
  */
-export const sectionAccess: Record<string, AdminRole[]> = {
-  "/admin": ROLES,
-  "/admin/demos": ROLES,
-  "/admin/clinicas": ROLES,
-  "/admin/pagos": ["owner", "partner", "customer-care"],
-  "/admin/planes": ["owner", "partner"],
-  "/admin/paises": ["owner", "partner", "customer-care"],
-  "/admin/ia": ["owner", "partner", "support"],
-  "/admin/soporte": ROLES,
-  "/admin/atencion": ["owner", "partner", "customer-care", "support"],
-  "/admin/personal": ["owner", "partner"],
-  "/admin/nomina": ["owner", "partner"],
-  "/admin/gastos": ["owner", "partner"],
-  "/admin/reportes": ["owner", "partner"],
-  "/admin/auditoria": ["owner", "partner", "support"],
-  "/admin/notificaciones": ROLES,
-  "/admin/cuenta": ROLES,
-  "/admin/accesos": ["owner", "partner"],
+export const sectionAccess: Record<string, (r: AdminRole) => boolean> = {
+  "/admin": TODOS_LOS_ROLES,
+  "/admin/demos": con("demos"),
+  "/admin/clinicas": TODOS_LOS_ROLES,
+  "/admin/pagos": con("cobranza", "importes"),
+  "/admin/planes": SOLO_DUENO_Y_SOCIO,
+  "/admin/paises": con("paises"),
+  "/admin/ia": con("ia"),
+  "/admin/soporte": con("soporte"),
+  "/admin/atencion": con("atencion", "soporte"),
+  "/admin/marketing": con("marketing"),
+  "/admin/personal": con("personal"),
+  "/admin/nomina": con("nomina"),
+  "/admin/gastos": con("gastos"),
+  "/admin/reportes": con("reportes"),
+  "/admin/auditoria": con("auditoria"),
+  "/admin/actividad": con("actividad"),
+  "/admin/notificaciones": TODOS_LOS_ROLES,
+  "/admin/cuenta": TODOS_LOS_ROLES,
+  "/admin/accesos": SOLO_DUENO_Y_SOCIO,
 };
 
 export function canAccess(role: AdminRole, path: string): boolean {
-  const allowed = sectionAccess[path];
-  return allowed ? allowed.includes(role) : false;
+  const regla = sectionAccess[path];
+  return regla ? regla(role) : false;
 }
 
 /** Permisos finos dentro de las secciones. */
 export const permisos = {
-  verImportes: (r: AdminRole) => accesoTotal(r),
+  verImportes: (r: AdminRole) => puede(r, "importes"),
   editarPlanes: (r: AdminRole) => accesoTotal(r),
   /** Habilitar países y cambiar sus datos fiscales: Dueño y Socio. */
   editarPaises: (r: AdminRole) => accesoTotal(r),
   /** Límites del período de prueba (duración, espera, cuentas sin límite). */
   configurarDemo: (r: AdminRole) => accesoTotal(r),
-  gestionarDemos: (r: AdminRole) => r !== "support",
-  /** Ver las contrataciones y escribir notas: Dueño, Socio y Secretaría. */
-  verContrataciones: (r: AdminRole) => r !== "support",
-  /** Botón «Activar» (y «Rechazar») de una contratación: Dueño, Socio y Secretaría
-   *  (decisión de Camilo, 11 oct 20:44). */
-  activarContrataciones: (r: AdminRole) => r !== "support",
-  /** Sueldos e importes de nómina: solo Dueño y Socio. */
-  verSueldos: (r: AdminRole) => accesoTotal(r),
-  gestionarTickets: (r: AdminRole) => accesoTotal(r) || r === "support" || r === "customer-care",
+  gestionarDemos: (r: AdminRole) => puede(r, "demos"),
+  /** Ver las contrataciones y escribir notas. */
+  verContrataciones: (r: AdminRole) => puede(r, "contrataciones"),
+  /** Botón «Activar» (y «Rechazar») de una contratación. */
+  activarContrataciones: (r: AdminRole) => puede(r, "contrataciones"),
+  /** Recordatorios de pago a las clínicas. */
+  cobranza: (r: AdminRole) => puede(r, "cobranza"),
+  /** Sueldos e importes de nómina. */
+  verSueldos: (r: AdminRole) => puede(r, "nomina"),
+  /** Datos del personal (cargar y editar empleados). */
+  editarPersonal: (r: AdminRole) => puede(r, "personal"),
+  gestionarTickets: (r: AdminRole) => puede(r, "soporte", "atencion"),
   /** Atención a clínicas (secretaría de Cloud Esther): registrar y gestionar casos. */
-  gestionarAtencion: (r: AdminRole) => accesoTotal(r) || r === "customer-care",
+  gestionarAtencion: (r: AdminRole) => puede(r, "atencion"),
+  verActividad: (r: AdminRole) => puede(r, "actividad"),
 };
 
 const RoleContext = createContext<{

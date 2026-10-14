@@ -11,7 +11,7 @@ const bars = [42, 66, 51, 78, 60, 88, 72];
 const days = ["L", "M", "M", "J", "V", "S", "D"];
 
 const citas = [
-  { hora: "09:00", paciente: "Laura Gómez", trat: "Limpieza" },
+  { hora: "09:00", paciente: "Mauro Pinto", trat: "Limpieza" },
   { hora: "10:30", paciente: "Marcos Ruiz", trat: "Conducto" },
   { hora: "12:00", paciente: "Sofía Paz", trat: "Ortodoncia" },
   { hora: "15:15", paciente: "Martín Fernández", trat: "Control" },

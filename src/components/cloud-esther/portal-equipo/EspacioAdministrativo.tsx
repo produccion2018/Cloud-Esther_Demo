@@ -346,7 +346,7 @@ export function EspacioAdministrativo({
             />
           </div>
 
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] xl:items-start">
             <Bloque
               titulo="Turnos por confirmar"
               icono={CalendarCheck2}

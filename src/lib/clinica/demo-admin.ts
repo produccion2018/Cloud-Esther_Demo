@@ -18,7 +18,7 @@ const NOMBRE_ROL: Record<RolClinica, string> = {
 
 /** El equipo de ejemplo (el mismo de la Comunicación interna del demo) */
 export const EQUIPO_DEMO: { id: string; nombre: string; email: string; rol: RolClinica }[] = [
-  { id: "demo-yo", nombre: "Dueña de la Clínica", email: "duenio@tuclinica.com", rol: "admin" },
+  { id: "demo-yo", nombre: "Carolina Méndez", email: "duenio@tuclinica.com", rol: "admin" },
   { id: "demo-1", nombre: "Mireya Becerra", email: "mireya.becerra@tuclinica.com", rol: "odontologo" },
   { id: "demo-2", nombre: "Andrés Becerra", email: "andres.becerra@tuclinica.com", rol: "odontologo" },
   { id: "demo-4", nombre: "Ketty Margarita", email: "ketty.margarita@tuclinica.com", rol: "secretaria" },

@@ -391,6 +391,18 @@ export default function PortalEquipo() {
 
 /* Clínica real: el Administrador (dueño) entra como integrante «Administración» con todos los
    permisos. No es un integrante cargado en Equipo: es la persona con la sesión abierta. */
+const DUENO_DEMO: TeamMember = {
+  id: "demo-yo",
+  firstName: "Carolina",
+  lastName: "Méndez",
+  role: "administrador",
+  email: "duenio@tuclinica.com",
+  phone: "",
+  status: "activo",
+  schedule: [],
+  permissions: permsFor("administrador"),
+};
+
 function duenoComoIntegrante(r: NonNullable<ReturnType<typeof useClinicaReal>>): TeamMember {
   const [nombre = "", ...resto] = r.sesion.usuario.nombre.trim().split(/\s+/);
   return {
@@ -448,6 +460,8 @@ function GateEquipo() {
 
   if (!montado || esInvitado || sinLlave) return <div className="min-h-screen bg-background" />;
   if (real) return <AppEquipo miembro={duenoComoIntegrante(real)} real onSalir={() => salirYVolver()} />;
+  // Demo: la vista «Administración» del Dueño/a, con los datos de ejemplo (igual que una clínica real)
+  if (vista === "dueno") return <AppEquipo miembro={DUENO_DEMO} duenoDemo onSalir={() => window.location.assign("/demo")} />;
   if (vista) {
     const m = miembros.find((x) => x.id === vista);
     if (m) return <AppEquipo miembro={m} vista onSalir={() => {}} />;
@@ -633,10 +647,13 @@ function AppEquipo({
   miembro,
   vista = false,
   real = false,
+  duenoDemo = false,
   onSalir,
 }: {
   miembro: TeamMember;
   vista?: boolean;
+  /** Demo: el Dueño/a entra a la Administración desde «Tu vista» (con los datos de ejemplo) */
+  duenoDemo?: boolean;
   /** Clínica real (dueño): datos del servidor, solo los módulos que ya guardan ahí. */
   real?: boolean;
   onSalir: () => void;
@@ -1008,7 +1025,8 @@ function AppEquipo({
         acciones={<NotificacionesUniversales items={notifs} clave={`equipo:${miembro.id}`} />}
         prefs={prefs}
         onPrefs={cambiarPrefs}
-        vistaDueno={real ? "administracion" : undefined}
+        vistaDueno={real || duenoDemo ? "administracion" : undefined}
+        vistaDuenoDemo={duenoDemo}
         onSalir={vista ? () => window.location.assign("/demo/equipo-profesional") : onSalir}
         salirLabel={vista ? "Volver a Equipo" : "Cerrar sesión"}
         principales={

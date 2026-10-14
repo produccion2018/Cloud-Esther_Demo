@@ -415,6 +415,14 @@ function DemosPage() {
                           <p className="text-xs text-muted-foreground">
                             {demo.nombre} · {demo.pais}
                           </p>
+                          {demo.eliminadoAntes && (
+                            <span
+                              className="mt-1 inline-block rounded-full bg-destructive/10 px-2 py-0.5 text-[10.5px] font-semibold text-destructive"
+                              title="Este correo ya tuvo un demo que se eliminó definitivamente"
+                            >
+                              Tuvo un demo eliminado el {fecha(demo.eliminadoAntes)}
+                            </span>
+                          )}
                           {(demo.pedidosPendientes ?? 0) > 0 && (
                             <span className="mt-1 inline-block rounded-full bg-warning/20 px-2 py-0.5 text-[10.5px] font-semibold">
                               {demo.pedidosPendientes === 1

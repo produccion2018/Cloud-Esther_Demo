@@ -1,4 +1,22 @@
-import { Check, CheckCircle2, Copy, FileSpreadsheet, Pencil, Phone, PhoneCall, PhoneIncoming, PhoneOutgoing, Plus, Search, Trash2, Video } from "lucide-react";
+import {
+  Building2,
+  Check,
+  CheckCircle2,
+  Clock,
+  Copy,
+  FileSpreadsheet,
+  MapPin,
+  MessageCircle,
+  Pencil,
+  Phone,
+  PhoneCall,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Plus,
+  Search,
+  Trash2,
+  Video,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
@@ -8,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { borrarDe, guardarEn, nuevoIdLocal } from "@/lib/admin/api";
 import { useAccion, useClinicas, useColeccion } from "@/lib/admin/consultas";
 import { descargarExcel } from "@/lib/admin/excel";
-import { enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
+import { clinicaProlija, enlaceWhatsApp, fecha, haceCuanto, nombreProlijo } from "@/lib/admin/formato";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { useSesionAdmin } from "@/lib/admin/sesion";
 import type { Llamada, PedidoLlamada, Plantilla } from "@/lib/admin/tipos-empresa";
@@ -65,14 +83,14 @@ export function BotonesContacto({ telefono, pais, compacto = false }: { telefono
         </a>
       )}
       {tel && (
-        <Button asChild size="sm" variant="outline" title="Llamar">
+        <Button asChild size="sm" variant="outline" title="Llamar" className="rounded-full">
           <a href={tel}>
             <Phone className="h-3.5 w-3.5" />
             {!compacto && <span className="ml-1">Llamar</span>}
           </a>
         </Button>
       )}
-      <Button size="sm" variant="outline" title="Armar enlace de videollamada (gratis)" onClick={() => void armarVideo()}>
+      <Button size="sm" variant="outline" title="Armar enlace de videollamada (gratis)" className="rounded-full" onClick={() => void armarVideo()}>
         <Video className="h-3.5 w-3.5" />
         {!compacto && <span className="ml-1">Videollamada</span>}
       </Button>
@@ -621,15 +639,29 @@ const TONO_PEDIDO: Record<PedidoLlamada["estado"], "primario" | "ok" | "alerta" 
   Descartado: "neutro",
 };
 
+const NOMBRE_PAIS: Record<string, string> = {
+  AR: "Argentina", CL: "Chile", CO: "Colombia", MX: "México", PE: "Perú", UY: "Uruguay", PY: "Paraguay", BO: "Bolivia",
+  EC: "Ecuador", ES: "España", US: "Estados Unidos", BR: "Brasil",
+};
+const inicialesDe = (n: string) =>
+  n
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((x) => x[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+
 export function PedidosLlamada({ editable }: { editable: boolean }) {
   const autor = useAutor();
   const { data, isLoading } = useColeccion("pedidosLlamada");
   const guardar = useAccion((p: PedidoLlamada) => guardarEn("pedidosLlamada", p), ["pedidosLlamada"], "Pedido actualizado");
   const [filtro, setFiltro] = useState<"pendientes" | "todos">("pendientes");
   const [llamando, setLlamando] = useState<PedidoLlamada | null>(null);
-  const lista = (data ?? [])
-    .filter((p) => filtro === "todos" || p.estado === "Pendiente" || p.estado === "No contestó")
-    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  // Nombres prolijos también en los pedidos que llegaron antes («PINTO CASTRO MAURO» → «Pinto Castro Mauro»)
+  const todos = (data ?? []).map((p) => ({ ...p, nombre: nombreProlijo(p.nombre), clinica: clinicaProlija(p.clinica ?? "") }));
+  const porLlamar = todos.filter((p) => p.estado === "Pendiente" || p.estado === "No contestó");
+  const lista = (filtro === "todos" ? todos : porLlamar).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const llamados = todos.filter((p) => p.estado === "Llamado").length;
 
   const exportar = () =>
     descargarExcel("pedidos-de-llamada", "Pedidos", [
@@ -645,16 +677,48 @@ export function PedidosLlamada({ editable }: { editable: boolean }) {
       titulo="Pedidos de llamada"
       descripcion="Clínicas que pidieron «Te llamamos gratis» en la página. Llamalas por WhatsApp (gratis) o por teléfono y marcá cómo te fue: la llamada queda registrada."
       acciones={
-        <div className="flex flex-wrap gap-2">
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)} className={`${INPUT} w-auto`} aria-label="Mostrar">
-            <option value="pendientes">Por llamar</option>
-            <option value="todos">Todos</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-full bg-muted/70 p-1" role="group" aria-label="Mostrar">
+            {(
+              [
+                ["pendientes", `Por llamar (${porLlamar.length})`],
+                ["todos", `Todos (${todos.length})`],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setFiltro(id)}
+                aria-pressed={filtro === id}
+                className={
+                  filtro === id
+                    ? "rounded-full bg-card px-4 py-1.5 text-xs font-bold text-primary shadow-sm"
+                    : "rounded-full px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <BotonExcel onClick={exportar} />
         </div>
       }
       sinPadding
     >
+      {!isLoading && todos.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 border-b border-border/60 px-5 py-3 sm:gap-3">
+          {[
+            { l: "Por llamar", v: porLlamar.length, c: "text-primary", b: "bg-primary/[0.06]" },
+            { l: "Llamados", v: llamados, c: "text-success", b: "bg-success/[0.08]" },
+            { l: "Total", v: todos.length, c: "text-foreground", b: "bg-muted/60" },
+          ].map((k) => (
+            <div key={k.l} className={`rounded-2xl px-3 py-2.5 ${k.b}`}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{k.l}</p>
+              <p className={`text-xl font-extrabold tabular-nums ${k.c}`}>{k.v}</p>
+            </div>
+          ))}
+        </div>
+      )}
       {isLoading ? (
         <div className="p-5">
           <Cargando />
@@ -664,54 +728,84 @@ export function PedidosLlamada({ editable }: { editable: boolean }) {
           <Vacio titulo={filtro === "pendientes" ? "No hay pedidos por llamar" : "Todavía no llegó ningún pedido"} texto="Llegan desde el botón «Te llamamos gratis» de la página." />
         </div>
       ) : (
-        <ul className="divide-y divide-border/60">
-          {lista.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-start gap-3 px-5 py-4">
-              <div className="min-w-[220px] flex-1">
-                <p className="font-semibold">
-                  {p.nombre}
-                  {p.clinica && <span className="font-normal text-muted-foreground"> · {p.clinica}</span>}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {p.telefono} · {p.pais} · pidió {haceCuanto(p.fecha)}
-                </p>
-                <p className="mt-1 text-xs">
-                  <b>Horario:</b> {p.horario}
-                  {p.motivo && (
-                    <>
-                      {" · "}
-                      <b>Motivo:</b> {p.motivo}
-                    </>
-                  )}
-                </p>
-                {p.atendidoPor && p.estado !== "Pendiente" && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">Atendió: {p.atendidoPor}</p>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Pildora tono={TONO_PEDIDO[p.estado]}>{p.estado}</Pildora>
-                <BotonesContacto telefono={p.telefono} pais={p.pais} />
-                {editable && (p.estado === "Pendiente" || p.estado === "No contestó") && (
-                  <div className="flex flex-wrap justify-end gap-1">
-                    <Button size="sm" onClick={() => setLlamando(p)}>
-                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Ya lo llamé
-                    </Button>
-                    <Button size="sm" variant="outline" disabled={guardar.isPending} onClick={() => marcar(p, "No contestó")}>
-                      No contestó
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={guardar.isPending}
-                      onClick={() => confirmar("¿Descartar este pedido?") && marcar(p, "Descartado")}
-                    >
-                      Descartar
-                    </Button>
+        <ul className="space-y-3 p-4 sm:p-5">
+          {lista.map((p) => {
+            const abierto = p.estado === "Pendiente" || p.estado === "No contestó";
+            return (
+              <li
+                key={p.id}
+                className={`group relative overflow-hidden rounded-3xl border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-26px_rgba(76,29,149,0.55)] sm:p-5 ${
+                  abierto ? "border-primary/20" : "border-border/70 opacity-80"
+                }`}
+              >
+                {abierto && <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary to-fuchsia-500" />}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                  {/* Quién */}
+                  <div className="flex min-w-0 flex-1 gap-3.5">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-sm font-bold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]">
+                      {inicialesDe(p.nombre)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <p className="truncate text-base font-extrabold tracking-tight sm:text-[17px]">{p.nombre}</p>
+                        <Pildora tono={TONO_PEDIDO[p.estado]}>{p.estado}</Pildora>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+                        {p.clinica && (
+                          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary/[0.07] px-2.5 py-1 font-semibold text-primary">
+                            <Building2 className="size-3.5 shrink-0" />
+                            <span className="truncate">{p.clinica}</span>
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 font-semibold tabular-nums text-foreground/80">
+                          <Phone className="size-3.5" /> {p.telefono}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 font-medium text-muted-foreground">
+                          <MapPin className="size-3.5" /> {NOMBRE_PAIS[p.pais.toUpperCase()] ?? p.pais.toUpperCase()}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:text-amber-200">
+                          <Clock className="size-3.5" /> {p.horario}
+                        </span>
+                      </div>
+                      {p.motivo && (
+                        <p className="mt-2.5 flex gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-foreground/85">
+                          <MessageCircle className="mt-0.5 size-4 shrink-0 text-primary" />
+                          <span className="whitespace-pre-wrap break-words">{p.motivo}</span>
+                        </p>
+                      )}
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        Pidió {haceCuanto(p.fecha).replace(/^Hace/, "hace")}
+                        {p.atendidoPor && p.estado !== "Pendiente" && <> · Atendió: {p.atendidoPor}</>}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </li>
-          ))}
+                  {/* Acciones */}
+                  <div className="flex flex-col gap-2 lg:items-end">
+                    <BotonesContacto telefono={p.telefono} pais={p.pais} />
+                    {editable && abierto && (
+                      <div className="flex flex-wrap gap-1.5 lg:justify-end">
+                        <Button size="sm" onClick={() => setLlamando(p)} className="rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+                          <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Ya lo llamé
+                        </Button>
+                        <Button size="sm" variant="outline" className="rounded-full" disabled={guardar.isPending} onClick={() => marcar(p, "No contestó")}>
+                          No contestó
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-full text-muted-foreground"
+                          disabled={guardar.isPending}
+                          onClick={() => confirmar("¿Descartar este pedido?") && marcar(p, "Descartado")}
+                        >
+                          Descartar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
       {llamando && (

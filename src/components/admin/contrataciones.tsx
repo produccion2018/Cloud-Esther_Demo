@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, FileSignature, Mail, Phone, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileSignature, Mail, MessageCircle, Phone, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
@@ -14,7 +14,7 @@ import {
   reenviarAccesoClinica,
 } from "@/lib/admin/api";
 import { useAccion, useContrataciones } from "@/lib/admin/consultas";
-import { NOMBRE_PLAN, enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
+import { NOMBRE_PLAN, clinicaProlija, enlaceWhatsApp, fecha, haceCuanto, nombreProlijo } from "@/lib/admin/formato";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import type { Contratacion, EstadoContratacion } from "@/lib/admin/tipos";
 
@@ -97,10 +97,18 @@ export function SolicitudesContratacion() {
                     <FileSignature className="h-4 w-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{c.clinica}</span>
+                    <span className="block font-semibold">{clinicaProlija(c.clinica)}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {c.codigo} · {c.contacto.nombre} · {c.paisNombre} · {haceCuanto(c.fecha)}
+                      {c.codigo} · {nombreProlijo(c.contacto.nombre)} · {c.paisNombre} · {haceCuanto(c.fecha)}
                     </span>
+                    {c.comentarios && (
+                      <span className="mt-1.5 flex max-w-xl items-start gap-1.5 rounded-xl bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-900 dark:text-amber-100">
+                        <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span className="line-clamp-2 break-words">
+                          <b>Comentario:</b> {c.comentarios}
+                        </span>
+                      </span>
+                    )}
                   </span>
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     {NOMBRE_PLAN[c.plan]} · {c.ciclo}
@@ -163,7 +171,7 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
         className="px-6 pb-5 pt-6 text-primary-foreground"
         style={{ background: "var(--gradient-primary)" }}
       >
-        <SheetTitle className="text-xl font-extrabold text-primary-foreground">{c.clinica}</SheetTitle>
+        <SheetTitle className="text-xl font-extrabold text-primary-foreground">{clinicaProlija(c.clinica)}</SheetTitle>
         <p className="text-sm opacity-90">Solicitud de contratación {c.codigo}</p>
         <div className="mt-3">
           <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold">
@@ -219,7 +227,7 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
 
         <div className="rounded-2xl border border-border p-4">
           <p className="text-sm font-bold">Contacto</p>
-          <p className="mt-1 text-sm">{c.contacto.nombre}</p>
+          <p className="mt-1 text-sm">{nombreProlijo(c.contacto.nombre)}</p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
             <a
               href={`mailto:${c.contacto.email}`}
@@ -246,6 +254,15 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
           </div>
         </div>
 
+        {c.comentarios && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
+              <MessageCircle className="h-4 w-4" /> Comentarios del cliente
+            </p>
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-sm">{c.comentarios}</p>
+          </div>
+        )}
+
         <dl className="divide-y divide-border/60 rounded-2xl border border-border">
           {filas.map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3 px-4 py-2.5 text-sm">
@@ -254,13 +271,6 @@ function DetalleContratacion({ c, puedeActivar }: { c: Contratacion; puedeActiva
             </div>
           ))}
         </dl>
-
-        {c.comentarios && (
-          <div className="rounded-2xl border border-border p-4">
-            <p className="text-sm font-bold">Comentarios del cliente</p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{c.comentarios}</p>
-          </div>
-        )}
 
         <HistorialNotas c={c} />
       </div>

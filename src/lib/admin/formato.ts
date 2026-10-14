@@ -133,3 +133,34 @@ export function enlaceWhatsApp(telefono: string, paisCodigo?: string): string | 
   }
   return `https://wa.me/${digitos}`;
 }
+
+/* NOMBRES PROLIJOS en el panel (también los que llegaron antes de que el servidor los acomode):
+   cada palabra escrita toda en mayúsculas o toda en minúsculas se acomoda
+   («PINTO CASTRO mauro» → «Pinto Castro Mauro»); las que traen números o mezcla se respetan. */
+const PARTICULAS = new Set(["de", "del", "la", "las", "los", "y", "e", "da", "das", "do", "dos", "van", "von", "di"]);
+const may = (w: string) => (w ? w.charAt(0).toLocaleUpperCase("es") + w.slice(1) : w);
+export function nombreProlijo(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((w, i) => {
+      if (/\d/.test(w)) return w;
+      const lower = w.toLocaleLowerCase("es");
+      if (w !== lower && w !== w.toLocaleUpperCase("es")) return w;
+      if (i > 0 && PARTICULAS.has(lower)) return lower;
+      return lower
+        .split("-")
+        .map((p) => p.split("'").map(may).join("'"))
+        .join("-");
+    })
+    .join(" ");
+}
+/** Clínicas: solo si vinieron todo en mayúsculas o todo en minúsculas («OSDE Dental» queda igual) */
+export function clinicaProlija(raw: string): string {
+  const limpio = raw.trim().replace(/\s+/g, " ");
+  const letras = limpio.replace(/[^\p{L}]/gu, "");
+  return letras && (letras === letras.toLocaleLowerCase("es") || letras === letras.toLocaleUpperCase("es"))
+    ? nombreProlijo(limpio)
+    : limpio;
+}

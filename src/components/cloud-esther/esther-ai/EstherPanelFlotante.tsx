@@ -22,7 +22,7 @@ const SUGERENCIAS: Record<string, string[]> = {
   agenda: [
     "¿Qué turnos hay hoy?",
     "¿Qué turnos hay mañana?",
-    "¿Cuántas citas tenemos esta semana?",
+    "¿Cuántos turnos tenemos esta semana?",
   ],
   pacientes: ["¿Cuántos pacientes activos tenemos?", "Pacientes que no regresaron"],
   historia: ["Resumí la historia clínica del paciente", "¿Qué tratamientos están pendientes?"],

@@ -116,7 +116,7 @@ export const estherQuickActions: EstherQuickAction[] = [
     id: "analizar-agenda",
     label: "Analizar agenda",
     section: "turnos",
-    prompt: "¿Cuántas citas tenemos esta semana?",
+    prompt: "¿Cuántos turnos tenemos esta semana?",
   },
   {
     id: "pacientes-inactivos",

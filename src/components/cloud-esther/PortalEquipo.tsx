@@ -1406,7 +1406,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
                   onClick={() => setNuevaCita(true)}
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow"
                 >
-                  <CalendarPlus className="size-4" /> Nueva cita
+                  <CalendarPlus className="size-4" /> Nuevo turno
                 </button>
               )}
               {ctx.puedeIr("agenda") && (
@@ -1631,7 +1631,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
       </div>
 
       {nuevaCita && (
-        <Hoja titulo="Nueva cita" onClose={() => setNuevaCita(false)}>
+        <Hoja titulo="Nuevo turno" onClose={() => setNuevaCita(false)}>
           <NuevaCitaForm ctx={ctx} onDone={() => setNuevaCita(false)} />
         </Hoja>
       )}
@@ -1687,8 +1687,8 @@ function NuevaCitaForm({ ctx, onDone }: { ctx: Ctx; onDone: () => void }) {
             notas: `Cargado desde el portal del equipo por ${nombreDe(ctx.yo)}`,
           },
         ]);
-        registrarEventoEquipo(ctx.yo.id, "Nueva cita", `${paciente} · ${fecha} ${hora}`);
-        ctx.onToast(`Cita agendada: ${paciente} ${etiquetaDia(fecha).toLowerCase()} ${hora}`);
+        registrarEventoEquipo(ctx.yo.id, "Nuevo turno", `${paciente} · ${fecha} ${hora}`);
+        ctx.onToast(`Turno agendado: ${paciente} ${etiquetaDia(fecha).toLowerCase()} ${hora}`);
         onDone();
       }}
     >

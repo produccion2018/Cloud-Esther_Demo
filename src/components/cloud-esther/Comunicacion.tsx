@@ -65,6 +65,9 @@ import {
   type TipoEnvio,
 } from "@/lib/cloud-esther/comunicacion-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { abrirRecordatorioWhatsApp, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/Comunicacion.tsx
 
@@ -575,6 +578,11 @@ function ComunicacionInner() {
   const { pacientes } = usePacientes();
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("bandeja");
+  // Entrar directo a una sección (ej. desde el Dashboard: #recordatorios)
+  useEffect(() => {
+    const h = window.location.hash.slice(1);
+    if (SECCIONES.some((x) => x.id === h)) setSeccion(h as Seccion);
+  }, []);
   const [chatId, setChatId] = useState<number | null>(null);
   const [borrador, setBorrador] = useState<{ id: number; texto: string } | null>(null);
   const [nuevaConv, setNuevaConv] = useState(false);
@@ -927,7 +935,11 @@ function Bandeja({
           pacientes que escriban reciben la respuesta automática.
         </p>
       )}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[290px_minmax(0,1fr)] xl:grid-cols-[290px_minmax(0,1fr)_230px] 2xl:grid-cols-[320px_minmax(0,1fr)_280px]">
+      <div
+        className={`grid grid-cols-1 gap-3 lg:grid-cols-[290px_minmax(0,1fr)] ${
+          activa ? "xl:grid-cols-[290px_minmax(0,1fr)_230px] 2xl:grid-cols-[320px_minmax(0,1fr)_280px]" : "2xl:grid-cols-[320px_minmax(0,1fr)]"
+        }`}
+      >
         {/* Lista */}
         <div className="card-grad flex h-[620px] flex-col overflow-hidden">
           <div className="space-y-2 border-b border-primary/10 p-3">
@@ -991,8 +1003,14 @@ function Bandeja({
           </div>
           <ul className="flex-1 overflow-y-auto p-1.5">
             {lista.length === 0 && (
-              <li className="p-6 text-center text-xs text-muted-foreground">
-                No hay conversaciones con ese filtro.
+              <li className="m-2 rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-5 text-center">
+                <MessagesSquare className="mx-auto size-7 text-primary/50" />
+                <p className="mt-2 text-xs font-semibold text-foreground">
+                  {conversaciones.length === 0 ? "Todavía no hay conversaciones" : "No hay conversaciones con ese filtro"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {conversaciones.length === 0 ? "Empezá una con el botón +" : "Probá con otro filtro."}
+                </p>
               </li>
             )}
             {lista.map((c) => {
@@ -1071,11 +1089,20 @@ function Bandeja({
             limpiarBorrador={limpiarBorrador}
           />
         ) : (
-          <div className="card-grad grid h-[620px] place-items-center text-center">
-            <div>
-              <MessagesSquare className="mx-auto size-10 text-primary/50" />
-              <p className="mt-2 text-sm font-semibold">Elegí una conversación</p>
-              <p className="text-xs text-muted-foreground">O empezá una nueva con el botón +</p>
+          <div className="card-grad relative grid h-[620px] place-items-center overflow-hidden px-6 text-center">
+            <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-60 rounded-full bg-[#25D366]/10 blur-2xl" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-20 -left-16 size-60 rounded-full bg-primary/10 blur-2xl" />
+            <div className="relative">
+              <span className="mx-auto grid size-16 place-items-center rounded-[22px] bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_16px_34px_-14px_rgba(124,58,237,0.9)]">
+                <MessagesSquare className="size-7" />
+              </span>
+              <p className="mt-4 font-display text-lg font-bold tracking-tight">Elegí una conversación</p>
+              <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
+                O empezá una nueva con el botón +. Los recordatorios de turnos están en la pestaña Recordatorios.
+              </p>
+              <button type="button" onClick={() => setNueva(true)} className={`${BTN_PRIMARIO} mx-auto mt-4`}>
+                <Plus className="size-4" /> Nueva conversación
+              </button>
             </div>
           </div>
         )}
@@ -1710,6 +1737,8 @@ function PanelPaciente({ conv, ctx }: { conv: Conversacion; ctx: Ctx }) {
 /* ───────────── Recordatorios ───────────── */
 
 function Recordatorios({ ctx }: { ctx: Ctx }) {
+  // Clínica real: el recordatorio sale por el WhatsApp de la clínica con un toque (todos los planes)
+  const real = !!useClinicaReal();
   const { turnos } = storeAgenda.usar();
   const { recordatorios, config, plantillas } = storeComunicacion.usar();
   const [dias, setDias] = useState<"1" | "3" | "7">("7");
@@ -1742,6 +1771,25 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
     }));
 
   const enviar = (t: Turno, silencioso = false) => {
+    if (real) {
+      if (!abrirRecordatorioWhatsApp(t, ctx.clinica)) {
+        ctx.onToast(`${t.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
+        return false;
+      }
+      setComunicacion("recordatorios", (prev) => ({
+        ...prev,
+        [t.id]: { estado: "Enviado", fecha: new Date().toISOString(), canal: "WhatsApp" },
+      }));
+      registrarEnvio({
+        paciente: t.paciente,
+        canal: "WhatsApp",
+        tipo: "Recordatorio",
+        texto: textoRecordatorioTurno(t, ctx.clinica),
+        estado: "enviado",
+      });
+      if (!silencioso) ctx.onToast(`Se abrió WhatsApp con el recordatorio para ${t.paciente}. Tocá «Enviar» ahí.`);
+      return true;
+    }
     if (!config.canales[cfg.canal].conectado) {
       ctx.onToast(`${cfg.canal} está desconectado. Conectalo en "Canales y horarios".`);
       return false;
@@ -1809,6 +1857,12 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
   };
 
   const enviarTodos = () => {
+    // Clínica real: WhatsApp se abre de a uno (se envía el siguiente pendiente)
+    if (real) {
+      const sig = sinEnviar[0];
+      if (sig) enviar(sig);
+      return;
+    }
     let n = 0;
     for (const t of sinEnviar) if (enviar(t, true)) n++;
     if (n) ctx.onToast(`${n} recordatorios enviados por ${cfg.canal}`);
@@ -1849,8 +1903,8 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
           />
         </div>
         <button className={BTN_PRIMARIO} onClick={enviarTodos} disabled={sinEnviar.length === 0}>
-          <Send className="size-4" />
-          Enviar pendientes ({sinEnviar.length})
+          {real ? <IconoWhatsApp className="size-4" /> : <Send className="size-4" />}
+          {real ? `Enviar el siguiente (${sinEnviar.length})` : `Enviar pendientes (${sinEnviar.length})`}
         </button>
       </EncabezadoSeccion>
 
@@ -1927,9 +1981,9 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
                         </Pill>
                         <div className="flex flex-wrap gap-1.5">
                           {estado === "Sin enviar" && (
-                            <button className={BTN_SECUNDARIO} onClick={() => enviar(t)}>
-                              <Send className="size-3.5" />
-                              Enviar
+                            <button className={real ? "btn-wa" : BTN_SECUNDARIO} onClick={() => enviar(t)}>
+                              {real ? <IconoWhatsApp className="size-3.5" /> : <Send className="size-3.5" />}
+                              {real ? "WhatsApp" : "Enviar"}
                             </button>
                           )}
                           {(estado === "Enviado" || estado === "Reprogramar") && (
@@ -1968,7 +2022,34 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
           )}
         </div>
 
-        {/* Configuración de envío automático */}
+        {/* Clínica real: cómo funciona el recordatorio por WhatsApp */}
+        {real ? (
+          <div className="card-grad h-fit space-y-3 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <span className="grid size-8 place-items-center rounded-xl bg-[#25D366] text-white shadow-sm">
+                <IconoWhatsApp className="size-4" />
+              </span>
+              Recordatorios por WhatsApp
+            </p>
+            <ol className="space-y-2 text-xs text-muted-foreground">
+              <li className="flex gap-2"><b className="text-primary">1.</b> Tocá <b className="text-foreground">WhatsApp</b> en el turno.</li>
+              <li className="flex gap-2"><b className="text-primary">2.</b> Se abre el WhatsApp de la clínica con el mensaje listo.</li>
+              <li className="flex gap-2"><b className="text-primary">3.</b> Tocá enviar. Cuando el paciente responda, confirmá el turno acá o en la Agenda.</li>
+            </ol>
+            <div className="rounded-xl border border-primary/10 bg-white p-3">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Mensaje</p>
+              <p className="text-xs">
+                {textoRecordatorioTurno(
+                  { paciente: "Lucía", fecha: sumarDias(hoy, 1), hora: "10:30", odontologo: "Dra. Becerra" },
+                  ctx.clinica,
+                )}
+              </p>
+            </div>
+            <p className="rounded-xl bg-primary/[0.05] p-2.5 text-[11px] text-muted-foreground">
+              Para que los recordatorios salgan solos, sin tocar nada, hay que conectar WhatsApp Business. Pedíselo a Cloud Esther.
+            </p>
+          </div>
+        ) : (
         <div className="card-grad h-fit space-y-3 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-sm font-semibold">
@@ -2046,6 +2127,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

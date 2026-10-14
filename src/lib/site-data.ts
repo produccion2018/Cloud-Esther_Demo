@@ -61,6 +61,7 @@ export const plans: Plan[] = [
     features: [
       "Dashboard",
       "Agenda y turnos",
+      "Recordatorios de turnos por WhatsApp",
       "Gestión de pacientes",
       "Historia clínica",
       "Odontograma 2D",

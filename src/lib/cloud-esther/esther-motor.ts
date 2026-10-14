@@ -806,8 +806,8 @@ function turnos(q: string, ctx: ContextoIA): RespuestaEsther | null {
   }));
   return {
     texto: estado
-      ? `${lista.length} cita${lista.length === 1 ? "" : "s"} ${estado === "Cancelada" ? "cancelada" : "con ausente"}${lista.length === 1 ? "" : "s"} ${p.nombre}.`
-      : `Hay ${lista.length} cita${lista.length === 1 ? "" : "s"} ${p.nombre}${ctx.sede !== "Todas" ? ` en ${ctx.sede}` : ""}.`,
+      ? `${lista.length} turno${lista.length === 1 ? "" : "s"} ${estado === "Cancelada" ? "cancelado" : "con ausente"}${lista.length === 1 ? "" : "s"} ${p.nombre}.`
+      : `Hay ${lista.length} turno${lista.length === 1 ? "" : "s"} ${p.nombre}${ctx.sede !== "Todas" ? ` en ${ctx.sede}` : ""}.`,
     bloques: [
       ...(estado
         ? []
@@ -1156,12 +1156,12 @@ function reporte(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/reporte|informe|prepara(me)?|arma(me)?/.test(q)) return null;
   const temas: [RegExp, string][] = [
     [/presupuesto/, "presupuestos pendientes"],
-    [/cancelac/, "citas canceladas este mes"],
+    [/cancelac/, "turnos cancelados este mes"],
     [/inactiv|no regres/, "pacientes que no regresaron"],
     [/factur|cobr/, "facturación de este mes"],
     [/tratamiento/, "tratamientos pendientes"],
     [/inventario|stock/, "stock bajo de inventario"],
-    [/agenda|turno|cita/, "citas de esta semana"],
+    [/agenda|turno|cita/, "turnos de esta semana"],
     [/paciente/, "cuántos pacientes tenemos"],
     [/productividad|profesional/, "productividad"],
   ];
@@ -1235,11 +1235,11 @@ function pendientes(q: string, ctx: ContextoIA): RespuestaEsther | null {
     const t = turnosVisibles(ctx).filter((x) => x.fecha === hoy);
     const sinConf = t.filter((x) => x.estado === "Pendiente");
     items.push({
-      texto: `${t.length} citas hoy, ${sinConf.length} sin confirmar`,
+      texto: `${t.length} turnos hoy, ${sinConf.length} sin confirmar`,
       detalle: sinConf.map((x) => `${x.hora} ${x.paciente}`).join(" · "),
       tono: sinConf.length ? "alerta" : "ok",
     });
-    acciones.push({ label: "Citas de mañana", pregunta: "¿Cuántas citas tenemos mañana?" });
+    acciones.push({ label: "Turnos de mañana", pregunta: "¿Cuántos turnos tenemos mañana?" });
   }
   if (!verificar("presupuestos", ctx)) {
     const regs = leerRegistros();
@@ -1303,7 +1303,7 @@ function pendientes(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 export const EJEMPLOS = [
   "¿Cuántos pacientes tenemos?",
-  "¿Cuántas citas tenemos mañana?",
+  "¿Cuántos turnos tenemos mañana?",
   "¿Cuántos presupuestos pendientes hay?",
   "¿Cuánto facturamos este mes?",
   "¿Quién tiene acceso al módulo de facturación?",
@@ -1401,7 +1401,7 @@ export function responder(pregunta: string, ctx: ContextoIA, interno = false): R
           items: [
             "presupuestos pendientes",
             "facturación del mes",
-            "citas canceladas",
+            "turnos cancelados",
             "pacientes inactivos",
             "tratamientos pendientes",
             "productividad",

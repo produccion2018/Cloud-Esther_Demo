@@ -912,7 +912,7 @@ export function PortalEquipoMonitor({ onToast }: { onToast: (m: string) => void 
           <p className="text-sm font-semibold">Actividad del equipo</p>
           {eventos.length === 0 ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              Cuando el equipo use el portal, acá vas a ver fichajes, evoluciones, cobros y citas.
+              Cuando el equipo use el portal, acá vas a ver fichajes, evoluciones, cobros y turnos.
             </p>
           ) : (
             <ol className="mt-2 space-y-2 border-l-2 border-primary/15 pl-3">

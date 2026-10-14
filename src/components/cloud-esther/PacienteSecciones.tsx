@@ -844,7 +844,7 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
         hora: "09:20",
         profesional: "Dra. Mireya Becerra",
         tipo: "Seguimiento",
-        texto: "Confirmar control de pieza 21 antes de la próxima cita.",
+        texto: "Confirmar control de pieza 21 antes del próximo turno.",
       },
     ],
     tratamientos: [
@@ -7958,6 +7958,46 @@ function ProfesionalesSec({ datos, cambiar, onToast }: PropsSeccion) {
 
 /* ───────────── Laboratorio ───────────── */
 
+/* Laboratorio: se elige uno de la lista (los habituales y los que la clínica ya usó) o se escribe
+   el nombre de uno nuevo. Lo escrito queda como sugerencia para la próxima vez. */
+function CampoLaboratorio({ valor, onChange }: { valor: string; onChange: (v: string) => void }) {
+  const todos = useTodosLosRegistros();
+  const usados = Object.values(todos).flatMap((r) => (r?.laboratorio ?? []).map((t) => t.proveedor?.trim() ?? ""));
+  const opciones = [...new Set([...usados.filter(Boolean), ...LABORATORIOS_PROVEEDORES])].slice(0, 8);
+  return (
+    <div className="space-y-2">
+      <input
+        list="dl-laboratorios"
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT}
+        placeholder="Elegí uno o escribí el nombre de tu laboratorio"
+        maxLength={80}
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {opciones.map((n) => {
+          const on = valor.trim().toLowerCase() === n.toLowerCase();
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(on ? "" : n)}
+              aria-pressed={on}
+              className={`max-w-full truncate rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 ${
+                on
+                  ? "border-primary bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_6px_16px_-8px_rgba(124,58,237,0.9)]"
+                  : "border-primary/15 bg-white text-muted-foreground hover:-translate-y-px hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LaboratorioForm({
   inicial,
   onSubmit,
@@ -8029,13 +8069,7 @@ function LaboratorioForm({
           />
         </Field>
         <Field label="Laboratorio proveedor">
-          <input
-            list="dl-laboratorios"
-            value={proveedor}
-            onChange={(e) => setProveedor(e.target.value)}
-            className={INPUT}
-            placeholder="Nombre del laboratorio"
-          />
+          <CampoLaboratorio valor={proveedor} onChange={setProveedor} />
         </Field>
         <Field label="Profesional">
           <SelectField

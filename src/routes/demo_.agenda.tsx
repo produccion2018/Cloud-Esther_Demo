@@ -1,5 +1,5 @@
 import { useNivel } from "@/lib/cloud-esther/niveles";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -31,6 +31,10 @@ import {
   ChevronRight,
   Search,
 } from "lucide-react";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { abrirRecordatorioWhatsApp } from "@/lib/clinica/whatsapp";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { toast as avisoWhatsApp } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
@@ -653,7 +657,7 @@ function CitaForm({
         />
       </Field>
 
-      <FormActions submitLabel={inicial ? "Guardar cambios" : "Crear cita"} onCancel={onCancel} />
+      <FormActions submitLabel={inicial ? "Guardar cambios" : "Crear turno"} onCancel={onCancel} />
     </form>
   );
 }
@@ -943,6 +947,30 @@ const VISTAS: { id: Vista; label: string; icon: LucideIcon }[] = [
   { id: "turnos", label: "Turnos", icon: Clock },
 ];
 
+/* Día sin nadie atendiendo: en vez de una lista de horarios vacíos, se explica qué falta */
+function SinAtencionEseDia() {
+  return (
+    <div className="relative overflow-hidden rounded-[26px] border border-dashed border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.06] px-6 py-10 text-center dark:from-card dark:via-card">
+      <span aria-hidden className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-primary/[0.07] blur-2xl" />
+      <span className="relative mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
+        <CalendarDays className="size-6" />
+      </span>
+      <p className="relative mt-4 font-display text-lg font-bold tracking-tight">Nadie atiende este día todavía</p>
+      <p className="relative mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+        La agenda ofrece turnos según los horarios de cada odontólogo. Cargá a tu equipo y sus días de atención, y acá vas a ver los horarios libres.
+      </p>
+      <div className="relative mt-5 flex flex-wrap justify-center gap-2">
+        <Link to={"/demo/equipo-profesional" as never} className="btn-ce">
+          Cargar odontólogos
+        </Link>
+        <Link to={"/demo/equipo-profesional/agendas-horarios" as never} className="btn-ce-outline">
+          Agendas y horarios
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 /* ───────────── Card de turno ───────────── */
 
 function TurnoCard({
@@ -960,6 +988,12 @@ function TurnoCard({
 }) {
   const accent = ESTADO_ACCENT[turno.estado];
   const activo = turno.estado === "Pendiente" || turno.estado === "Confirmada";
+  const { clinica } = useSesion();
+  // Recordatorio por WhatsApp con un toque (todos los planes): se abre el WhatsApp de la clínica
+  const recordarPorWhatsApp = () => {
+    if (!abrirRecordatorioWhatsApp(turno, clinica?.nombre ?? "la clínica"))
+      avisoWhatsApp.warning(`${turno.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
+  };
   const ICONO_BTN =
     "grid size-8 place-items-center rounded-xl border border-primary/12 bg-white text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary";
 
@@ -1041,6 +1075,17 @@ function TurnoCard({
           )}
           {turno.estado === "Atendida" && (
             <BotonAccion label="Marcar ausente" onClick={() => onEstado(turno, "Ausente")} />
+          )}
+          {activo && (
+            <button
+              type="button"
+              onClick={recordarPorWhatsApp}
+              className="grid size-8 place-items-center rounded-xl border border-emerald-500/25 bg-white text-emerald-600 transition-all hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-[#25D366] hover:text-white hover:shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]"
+              aria-label="Recordar el turno por WhatsApp"
+              title="Recordar por WhatsApp"
+            >
+              <IconoWhatsApp className="size-3.5" />
+            </button>
           )}
           {activo && (
             <button
@@ -1272,6 +1317,9 @@ function DiaTimeline({
         />
       </div>
 
+      {turnos.length === 0 && libres.length === 0 && bloqueos.length === 0 ? (
+        <SinAtencionEseDia />
+      ) : (
       <ol className="relative">
         {filas.map((f, i) => (
           <li key={f.slot}>
@@ -1350,6 +1398,7 @@ function DiaTimeline({
           </li>
         ))}
       </ol>
+      )}
     </div>
   );
 }
@@ -2067,7 +2116,7 @@ function AgendaInner() {
     if (editando) {
       setTurnos((prev) => prev.map((t) => (t.id === editando.id ? { ...t, ...c } : t)));
 
-      show("Cita actualizada");
+      show("Turno actualizado");
     } else {
       setTurnos((prev) => [
         ...prev,
@@ -2079,7 +2128,7 @@ function AgendaInner() {
       ]);
 
       show(
-        c.fecha === hoy ? "Cita creada para hoy" : `Cita creada para el ${formatearFecha(c.fecha)}`,
+        c.fecha === hoy ? "Turno creado para hoy" : `Turno creado para el ${formatearFecha(c.fecha)}`,
       );
 
       // Si la cita vino de la lista de espera, el paciente sale de la lista.
@@ -2193,7 +2242,7 @@ function AgendaInner() {
 
   const mensajeVacio = hayFiltros
     ? "No hay turnos para los filtros elegidos."
-    : "Todavía no hay turnos. Creá el primero con «Nueva cita».";
+    : "Todavía no hay turnos. Creá el primero con «Nuevo turno».";
 
   return (
     <OpcionesAgendaCtx.Provider value={opcionesAgenda}>
@@ -2218,7 +2267,7 @@ function AgendaInner() {
                     </h1>
                     <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                       {agendaAvanzada
-                        ? "Gestioná citas, disponibilidad, profesionales, gabinetes y lista de espera desde una única agenda."
+                        ? "Gestioná turnos, disponibilidad, profesionales, gabinetes y lista de espera desde una única agenda."
                         : "Organizá los turnos del día y de la semana de cada profesional."}
                     </p>
                   </div>
@@ -2234,7 +2283,7 @@ function AgendaInner() {
                     )}
                     <button onClick={() => setModal({ tipo: "cita" })} className="btn-ce">
                       <Plus className="size-3.5" />
-                      Nueva cita
+                      Nuevo turno
                     </button>
                   </div>
                 </div>
@@ -2750,6 +2799,25 @@ function AgendaInner() {
                 </div>
                 )}
 
+                {/* Recordatorios por WhatsApp (Start y Pro): con un toque desde cada turno */}
+                {!agendaCompleta && (
+                  <div className={`${CARD} relative overflow-hidden`}>
+                    <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-[#25D366]/10 blur-2xl" />
+                    <div className="relative flex items-center gap-2">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]">
+                        <IconoWhatsApp className="size-4" />
+                      </span>
+                      <div>
+                        <h2 className="text-sm font-semibold tracking-tight">Recordatorios por WhatsApp</h2>
+                        <p className="text-[10px] text-muted-foreground">Incluido en tu plan</p>
+                      </div>
+                    </div>
+                    <p className="relative mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                      En cada turno pendiente o confirmado tocá el botón verde: se abre WhatsApp con el recordatorio listo para el paciente. También podés mandarlos todos desde Comunicación → Recordatorios.
+                    </p>
+                  </div>
+                )}
+
                 {/* Recordatorios automáticos (Plus y Enterprise) */}
 
                 {agendaCompleta && (
@@ -2769,7 +2837,7 @@ function AgendaInner() {
                   </div>
 
                   <p className="mb-3 mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Mensajes que se envían solos antes de cada cita.
+                    Mensajes que se envían solos antes de cada turno.
                   </p>
 
                   <ul className="space-y-2.5">
@@ -2830,7 +2898,7 @@ function AgendaInner() {
 
         {modalCita && (
           <Modal
-            title={modalCita.turno ? "Editar cita" : "Nueva cita"}
+            title={modalCita.turno ? "Editar turno" : "Nuevo turno"}
             subtitle="Asigná paciente, odontólogo, gabinete y horario."
             onClose={cerrarModal}
           >
@@ -2847,7 +2915,7 @@ function AgendaInner() {
         {modal?.tipo === "bloqueo" && (
           <Modal
             title="Bloquear horario"
-            subtitle="Reservá un rango horario para que no se agenden citas."
+            subtitle="Reservá un rango horario para que no se agenden turnos."
             onClose={cerrarModal}
           >
             <BloqueoForm onSubmit={agregarBloqueo} onCancel={cerrarModal} />

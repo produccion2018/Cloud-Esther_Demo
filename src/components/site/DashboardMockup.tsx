@@ -300,7 +300,7 @@ export function DashboardMockup() {
               <div className="rounded-2xl border border-border p-4 lg:col-span-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold">
-                    Próximas citas
+                    Próximos turnos
                   </p>
 
                   <CalendarDays className="size-3.5 text-primary" />

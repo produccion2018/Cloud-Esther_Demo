@@ -419,17 +419,22 @@ export function Odontogram({
       {/* Herramientas */}
       <div className="card-clinic p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-semibold">Herramientas de hallazgos</h2>
-            <p className="text-xs text-muted-foreground">
-              Elegí una herramienta y tocá la superficie de la pieza.
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+              <MousePointerClick className="size-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-display text-[15px] font-bold tracking-tight">Herramientas de hallazgos</h2>
+              <p className="text-xs text-muted-foreground">
+                Elegí una herramienta y tocá la superficie de la pieza.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {completo && (
               <>
                 <div
-                  className="flex rounded-lg border border-border p-0.5"
+                  className="flex rounded-full border border-primary/15 bg-white p-0.5"
                   role="group"
                   aria-label="Dentición"
                 >
@@ -439,9 +444,9 @@ export function Odontogram({
                       type="button"
                       onClick={() => setDenticion(d)}
                       aria-pressed={denticion === d}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors ${
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${
                         denticion === d
-                          ? "bg-primary text-primary-foreground"
+                          ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -452,14 +457,14 @@ export function Odontogram({
                 <button
                   type="button"
                   onClick={imprimir}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3.5 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:-translate-y-px hover:border-primary/40 hover:text-primary"
                 >
                   <Printer className="h-3.5 w-3.5" /> Imprimir
                 </button>
                 <button
                   type="button"
                   onClick={exportar}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3.5 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:-translate-y-px hover:border-primary/40 hover:text-primary"
                 >
                   <Download className="h-3.5 w-3.5" /> Exportar
                 </button>
@@ -467,7 +472,7 @@ export function Odontogram({
             )}
             <button
               onClick={clearAll}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex min-h-9 items-center rounded-full border border-primary/15 bg-white px-3.5 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:-translate-y-px hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
             >
               Limpiar odontograma
             </button>
@@ -484,13 +489,16 @@ export function Odontogram({
                 type="button"
                 onClick={() => setTool(t)}
                 aria-pressed={active}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex min-h-9 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
                   active
-                    ? "border-primary bg-primary/15 text-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_18%,transparent)]"
-                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    ? "border-primary bg-white text-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_18%,transparent),0_10px_22px_-14px_rgba(124,58,237,0.9)]"
+                    : "border-primary/12 bg-white/70 text-muted-foreground hover:-translate-y-px hover:border-primary/40 hover:text-foreground"
                 }`}
               >
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span
+                  className={`h-3 w-3 rounded-full ring-2 ring-white transition-transform ${active ? "scale-125" : ""}`}
+                  style={{ backgroundColor: color, boxShadow: `0 0 0 1px ${color}` }}
+                />
                 {nombre}
               </button>
             );
@@ -500,7 +508,7 @@ export function Odontogram({
 
       {/* Odontograma */}
       <div className="card-clinic p-3 sm:p-5 lg:p-6">
-        <div className="space-y-5">
+        <div className="relative space-y-5 rounded-[20px] bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_7%,transparent),transparent_60%)] py-2">
           <ArchLabel>Arcada superior (Maxilar)</ArchLabel>
           {verPermanente && renderArch([...Q1, ...Q2], "Arcada superior permanente")}
           {verTemporal && renderArch([...Q5, ...Q6], "Arcada superior temporal", true)}
@@ -755,7 +763,7 @@ function HistorialLista({
 function ArchLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex justify-center">
-      <span className="rounded-full bg-secondary px-3 py-1 text-[0.7rem] font-medium text-muted-foreground">
+      <span className="rounded-full border border-primary/12 bg-white px-3.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-primary/80 shadow-sm">
         {children}
       </span>
     </div>

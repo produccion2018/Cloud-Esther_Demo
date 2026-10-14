@@ -401,7 +401,7 @@ function NuevaCitaForm({
         />
       </Field>
 
-      <FormActions submitLabel="Crear cita" onCancel={onCancel} />
+      <FormActions submitLabel="Crear turno" onCancel={onCancel} />
     </form>
   );
 }
@@ -970,7 +970,7 @@ function CentroOperacionesBanner({
             className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-2.5 text-[13px] font-semibold sm:px-5 sm:text-sm text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
             <CalendarPlus className="size-4" />
-            Nueva cita
+            Nuevo turno
           </button>
           <button
             onClick={onNuevoPaciente}
@@ -1266,7 +1266,8 @@ function DashboardInner() {
 
   const enviarRecordatorios = () => {
     if (real) {
-      show("Los recordatorios automáticos se están preparando para tu clínica");
+      // Clínica real: se mandan por WhatsApp con un toque desde Comunicación → Recordatorios
+      window.location.assign("/demo/comunicaciones#recordatorios");
       return;
     }
     const pendientes = turnos.filter((t) => t.estado === "Pendiente").length;
@@ -1455,7 +1456,7 @@ function DashboardInner() {
                   <span className="grid justify-items-center gap-3">
                     Todavía no hay turnos para hoy.
                     <button type="button" onClick={() => setModal("cita")} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110">
-                      <CalendarPlus className="size-3.5" /> Nueva cita
+                      <CalendarPlus className="size-3.5" /> Nuevo turno
                     </button>
                   </span>
                 )}
@@ -1493,7 +1494,7 @@ function DashboardInner() {
       </div>
 
       {modal === "cita" && (
-        <Modal title="Nueva cita" subtitle="Asigná paciente, odontólogo, gabinete y horario." onClose={cerrarModal}>
+        <Modal title="Nuevo turno" subtitle="Asigná paciente, odontólogo, gabinete y horario." onClose={cerrarModal}>
           <NuevaCitaForm
             onSubmit={agregarCita}
             onCancel={cerrarModal}

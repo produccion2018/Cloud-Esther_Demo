@@ -4,7 +4,7 @@ import {
   motion,
   useReducedMotion,
 } from "framer-motion";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarCheck,
   Users,
@@ -254,110 +254,6 @@ const titleLines = [
   "Todo el poder de tu clínica,",
   "en un solo lugar.",
 ] as const;
-
-type VarianteTitulo = "destello" | "marca";
-
-function estiloVariante(variante: VarianteTitulo): CSSProperties {
-  const base: CSSProperties = {
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
-  };
-
-  if (variante === "destello") {
-    return {
-      ...base,
-      backgroundImage:
-        "linear-gradient(105deg,#111827 0%,#111827 40%,#7c3aed 47%,#c084fc 50%,#7c3aed 53%,#111827 60%,#111827 100%)",
-      backgroundSize: "250% 100%",
-    };
-  }
-
-  return {
-    ...base,
-    backgroundImage:
-      "linear-gradient(100deg,#5b21b6 0%,#8b5cf6 25%,#c084fc 50%,#8b5cf6 75%,#5b21b6 100%)",
-    backgroundSize: "200% 100%",
-  };
-}
-
-function AnimatedLetters({
-  text,
-  delay = 0,
-  variante = "destello",
-}: {
-  text: string;
-  delay?: number;
-  variante?: VarianteTitulo;
-}) {
-  const reducir = useReducedMotion();
-
-  return (
-    <motion.span
-      className="inline-block pb-[0.14em] -mb-[0.14em]"
-      style={estiloVariante(variante)}
-      animate={
-        reducir
-          ? undefined
-          : {
-              backgroundPosition: [
-                "0% 50%",
-                variante === "destello" ? "250% 50%" : "200% 50%",
-              ],
-            }
-      }
-      transition={{
-        duration: variante === "destello" ? 6 : 7,
-        repeat: Infinity,
-        ease: "linear",
-      }}
-    >
-      {text.split("").map((char, index) => (
-        <motion.span
-          key={`${char}-${index}`}
-          initial={{
-            opacity: 0,
-            y: 24,
-            rotateX: -70,
-            filter: "blur(6px)",
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-            rotateX: 0,
-            filter: "blur(0px)",
-          }}
-          transition={{
-            duration: 0.65,
-            delay: delay + index * 0.035,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-          className="inline-block"
-          style={{
-            whiteSpace: char === " " ? "pre" : undefined,
-          }}
-        >
-          {/* Onda suave infinita, letra por letra */}
-          <motion.span
-            className="inline-block"
-            style={{
-              whiteSpace: char === " " ? "pre" : undefined,
-            }}
-            animate={reducir ? undefined : { y: [0, -4, 0] }}
-            transition={{
-              duration: 3.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: delay + 1.2 + index * 0.07,
-            }}
-          >
-            {char}
-          </motion.span>
-        </motion.span>
-      ))}
-    </motion.span>
-  );
-}
 
 /* =========================================================
    EXPLORADOR DE MÓDULOS (lista + panel de detalle)
@@ -651,76 +547,14 @@ function Caracteristicas() {
             </motion.span>
           </motion.div>
 
-          {/* TITULO */}
-          <div className="perspective-[1000px] relative mt-6 text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-7xl">
-            {/* Glow detrás del título */}
-            <motion.div
-              animate={{
-                opacity: [0.15, 0.35, 0.15],
-                scale: [0.92, 1.05, 0.92],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[220px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[90px]"
-            />
+          {/* TITULO (fijo, sin animaciones) */}
+          <div className="relative mt-6 text-4xl font-bold leading-[1.1] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-7xl">
+            <div>{titleLines[0]}</div>
 
-            <div>
-              <AnimatedLetters
-                text={titleLines[0]}
-                delay={0.15}
-                variante="destello"
-              />
-            </div>
-
-            <div className="relative mt-1 inline-block drop-shadow-[0_8px_28px_rgba(124,58,237,0.28)]">
-              <AnimatedLetters
-                text={titleLines[1]}
-                delay={0.5}
-                variante="marca"
-              />
-
-              {/* Barrido de luz infinito */}
-              <motion.span
-                initial={{
-                  x: "-120%",
-                  opacity: 0,
-                }}
-                animate={{
-                  x: ["-120%", "120%"],
-                  opacity: [0, 0.75, 0],
-                }}
-                transition={{
-                  duration: 1.9,
-                  delay: 1.5,
-                  repeat: Infinity,
-                  repeatDelay: 3,
-                  ease: "easeInOut",
-                }}
-                className="pointer-events-none absolute inset-y-0 left-0 w-1/3 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/70 to-transparent blur-md"
-              />
-
-              {/* Segundo barrido, más sutil y desfasado */}
-              <motion.span
-                initial={{
-                  x: "-120%",
-                  opacity: 0,
-                }}
-                animate={{
-                  x: ["-120%", "120%"],
-                  opacity: [0, 0.35, 0],
-                }}
-                transition={{
-                  duration: 1.9,
-                  delay: 2.9,
-                  repeat: Infinity,
-                  repeatDelay: 3,
-                  ease: "easeInOut",
-                }}
-                className="pointer-events-none absolute inset-y-0 left-0 w-1/4 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/50 to-transparent blur-sm"
-              />
+            <div className="mt-1">
+              <span className="inline-block bg-[linear-gradient(100deg,#5b21b6_0%,#8b5cf6_50%,#a855f7_100%)] bg-clip-text pb-[0.14em] text-transparent">
+                {titleLines[1]}
+              </span>
             </div>
           </div>
 
@@ -736,7 +570,7 @@ function Caracteristicas() {
             }}
             transition={{
               duration: 0.7,
-              delay: 1.25,
+              delay: 0.3,
               ease: [0.22, 1, 0.36, 1],
             }}
             className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-lg"
@@ -757,7 +591,7 @@ function Caracteristicas() {
             }}
             transition={{
               duration: 0.8,
-              delay: 1.55,
+              delay: 0.5,
               ease: [0.22, 1, 0.36, 1],
             }}
             className="mx-auto mt-7 h-0.5 rounded-full bg-primary/50"

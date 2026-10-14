@@ -10,6 +10,7 @@ import { HeroModulo } from "@/components/clinica/hero-modulo";
 import type { EquipoClinica } from "@/lib/clinica/api";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
 
 /* Ubicación: src/routes/demo_.accesos.tsx
    ACCESOS DEL EQUIPO (clínica real, solo el Administrador): quién entra a la clínica y con qué rol.
@@ -29,6 +30,9 @@ export const Route = createFileRoute("/demo_/accesos")({
 
 function Accesos() {
   const real = useClinicaReal();
+  // Demo: las mismas pantallas con el equipo de ejemplo (en el demo sos el Dueño/a)
+  const slug = real?.slug ?? SLUG_DEMO;
+  const esAdmin = !real || real.rol === "admin";
   const [equipo, setEquipo] = useState<EquipoClinica | null>(null);
   const [pestana, setPestana] = useState<"equipo" | "actividad">("equipo");
   useEffect(() => {
@@ -56,7 +60,7 @@ function Accesos() {
           },
         ]}
       />
-      {real?.rol === "admin" ? (
+      {esAdmin ? (
         <>
           <div className="flex w-full gap-1 rounded-full bg-card p-1 shadow-[0_1px_2px_rgba(30,0,60,0.06)] ring-1 ring-border sm:w-fit" role="tablist">
             {(
@@ -87,9 +91,9 @@ function Accesos() {
             ))}
           </div>
           {pestana === "equipo" ? (
-            <EquipoClinicaPanel slug={real.slug} onEquipo={setEquipo} />
+            <EquipoClinicaPanel slug={slug} onEquipo={setEquipo} />
           ) : (
-            <ActividadEquipo slug={real.slug} />
+            <ActividadEquipo slug={slug} />
           )}
         </>
       ) : (

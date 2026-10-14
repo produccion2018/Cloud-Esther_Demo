@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { SLUG_DEMO, pedidoDemo } from "@/lib/clinica/demo-admin";
 
 /* Ubicación: src/lib/clinica/api.ts
    ACCESO DE LAS CLÍNICAS (Etapa 8a): la dirección de cada clínica es /c/<slug>.
@@ -143,6 +144,8 @@ function sesionProlija<T extends { usuario: UsuarioClinica }>(s: T): T {
 /* ───────────── Pedidos al servidor ───────────── */
 
 async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
+  // Demo: la administración de la clínica con un equipo de ejemplo (sin servidor)
+  if (slug === SLUG_DEMO) return pedidoDemo<T>(metodo, ruta, cuerpo);
   if (!API_URL) throw new ErrorClinica("El acceso de las clínicas no está disponible en la vista previa.", 503);
   const token = leerSesionClinica(slug)?.token;
   let r: Response;
@@ -252,8 +255,10 @@ export type RolConPermisos = "odontologo" | "secretaria" | "asistente";
 export type PermisosPorRol = {
   /** Lo elegido para cada rol (null = todo lo que permite el rol) */
   roles: Record<RolConPermisos, string[] | null>;
-  /** Lo máximo que puede ver cada rol */
+  /** Lo que se le puede dar a cada rol (todos los módulos) */
   maximos: Record<RolConPermisos, string[]>;
+  /** Con qué arranca cada rol si el Administrador no eligió nada */
+  predeterminados?: Record<RolConPermisos, string[]>;
   siempre: string[];
 };
 export const verPermisosPorRol = (slug: string) => http<PermisosPorRol>(slug, "GET", "/equipo/permisos");

@@ -12,7 +12,10 @@ export function TelefonoPais({
   id = "telefono",
   name = "telefono",
   placeholder = "11 5555 5555",
+  premium = false,
 }: {
+  /** Estilo de los formularios destacados (más alto y redondeado) */
+  premium?: boolean;
   /** Código del país elegido (AR, CL…). Vacío = todavía no eligió. */
   pais: string;
   id?: string;
@@ -32,7 +35,11 @@ export function TelefonoPais({
     <div>
       <div className="flex">
         <span
-          className="inline-flex h-10 min-w-[64px] items-center justify-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm font-semibold text-muted-foreground"
+          className={
+            premium
+              ? "inline-flex h-12 min-w-[72px] items-center justify-center rounded-l-2xl border border-r-0 border-primary/20 bg-primary/[0.07] px-3 text-sm font-bold text-primary"
+              : "inline-flex h-10 min-w-[64px] items-center justify-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm font-semibold text-muted-foreground"
+          }
           title="Código del país elegido (no se puede cambiar)"
         >
           {prefijo ? `+${prefijo}` : "+ —"}
@@ -47,7 +54,11 @@ export function TelefonoPais({
           value={limpio}
           onChange={(e) => setNumero(e.target.value)}
           placeholder={prefijo ? placeholder : "Primero elegí el país"}
-          className="h-10 rounded-l-none"
+          className={
+            premium
+              ? "h-12 rounded-l-none rounded-r-2xl border-primary/15 bg-white text-[15px] shadow-[0_1px_2px_rgba(30,0,60,0.05)] focus-visible:ring-primary/40 dark:bg-card"
+              : "h-10 rounded-l-none"
+          }
         />
       </div>
       <input type="hidden" name={name} value={prefijo && limpio ? `+${prefijo} ${limpio}` : ""} />

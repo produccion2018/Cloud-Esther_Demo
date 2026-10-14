@@ -20,21 +20,14 @@ import { PLAN_DE_CODIGO } from "@/lib/clinica/permisos";
    Para cada rol (Odontólogo/a, Secretaría, Asistente) se prende o apaga cada módulo del plan, y en el
    mismo lugar qué puede hacer en la Comunicación interna. Se aplica al instante a todas las personas
    de ese rol (quien tenga permisos elegidos a mano con «Ve todo su rol» usa los suyos).
-   Lo que un rol no puede tener por seguridad aparece con candado y el motivo. */
+   Todos los módulos del plan se le pueden dar a cualquier rol (decisión de Camilo, 14 oct): cada rol
+   arranca con lo recomendado y el Administrador prende o apaga lo que quiera. */
 
 const ROLES: { id: RolConPermisos; nombre: string; plural: string; chip: string; punto: string }[] = [
   { id: "odontologo", nombre: "Odontólogo/a", plural: "Odontólogos", chip: "bg-sky-500/10 text-sky-700 dark:text-sky-300", punto: "bg-sky-600" },
   { id: "secretaria", nombre: "Secretaría", plural: "Secretaría", chip: "bg-amber-500/15 text-amber-800 dark:text-amber-200", punto: "bg-amber-500" },
   { id: "asistente", nombre: "Asistente", plural: "Asistentes", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", punto: "bg-emerald-600" },
 ];
-
-const CLINICOS = new Set(["historia", "odontograma", "odontograma3d", "recetas", "estudios", "laboratorio", "tratamientos"]);
-const SOLO_ADMIN = new Set(["equipo", "configuracion", "finanzas", "rrhh", "bi", "integraciones", "automatizaciones", "multiempresa", "admin"]);
-function motivoBloqueo(rol: RolConPermisos, id: string) {
-  if (SOLO_ADMIN.has(id)) return "Solo el Administrador";
-  if (rol === "secretaria" && CLINICOS.has(id)) return "Datos de salud: solo el equipo clínico";
-  return "No corresponde a este rol";
-}
 
 export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: EquipoClinica | null }) {
   const ctx = useCloudEstherOpcional();
@@ -52,11 +45,8 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
     Promise.all([verPermisosPorRol(slug), verChat().catch(() => null)])
       .then(([p, c]) => {
         setDatos(p);
-        setMods({
-          odontologo: p.roles.odontologo ?? p.maximos.odontologo,
-          secretaria: p.roles.secretaria ?? p.maximos.secretaria,
-          asistente: p.roles.asistente ?? p.maximos.asistente,
-        });
+        const base = (r: RolConPermisos) => p.roles[r] ?? p.predeterminados?.[r] ?? p.maximos[r];
+        setMods({ odontologo: base("odontologo"), secretaria: base("secretaria"), asistente: base("asistente") });
         if (c?.permisosPorRol) {
           setChat(c.permisosPorRol);
           setPerms(c.permisosPorRol);
@@ -92,13 +82,13 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
     );
   }
 
-  const maximos = datos.maximos[rol];
   const elegidos = mods[rol];
   const siempre = new Set([...datos.siempre, "comunicacion-interna"]);
-  const habilitables = modulosPlan.filter((m) => maximos.includes(m.id) && !siempre.has(m.id));
+  const habilitables = modulosPlan.filter((m) => !siempre.has(m.id));
   const prendidos = habilitables.filter((m) => elegidos.includes(m.id)).length;
+  const recomendados = (r: RolConPermisos) => datos.predeterminados?.[r] ?? datos.maximos[r];
   const cambiosMods = ROLES.some((r) => {
-    const antes = datos.roles[r.id] ?? datos.maximos[r.id];
+    const antes = datos.roles[r.id] ?? recomendados(r.id);
     const ahora = mods[r.id];
     return antes.length !== ahora.length || antes.some((x) => !ahora.includes(x));
   });
@@ -110,19 +100,23 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
     setMods((prev) =>
       prev ? { ...prev, [rol]: prev[rol].includes(id) ? prev[rol].filter((x) => x !== id) : [...prev[rol], id] } : prev,
     );
-  const todo = (on: boolean) =>
-    setMods((prev) => (prev ? { ...prev, [rol]: on ? [...datos.maximos[rol]] : [...datos.siempre] } : prev));
+  const todo = (modo: "todo" | "basico" | "recomendado") =>
+    setMods((prev) =>
+      prev
+        ? {
+            ...prev,
+            [rol]: modo === "todo" ? modulosPlan.map((m) => m.id) : modo === "basico" ? [...datos.siempre] : [...recomendados(rol)],
+          }
+        : prev,
+    );
 
   const guardar = async () => {
     setGuardando(true);
     try {
       if (cambiosMods) {
+        // Se manda la lista elegida (si coincide con lo recomendado, el servidor la guarda como «lo de siempre»)
         const cuerpo: Partial<Record<RolConPermisos, string[] | null>> = {};
-        for (const r of ROLES) {
-          const max = datos.maximos[r.id];
-          const lista = mods[r.id];
-          cuerpo[r.id] = max.every((m) => lista.includes(m) || datos.siempre.includes(m)) ? null : lista;
-        }
+        for (const r of ROLES) cuerpo[r.id] = mods[r.id];
         setDatos(await guardarPermisosPorRol(slug, cuerpo));
       }
       if (cambiosChat && perms) {
@@ -149,8 +143,8 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
             </p>
             <h2 className="mt-3 text-xl font-extrabold tracking-tight sm:text-2xl">Permisos por rol</h2>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Elegí qué ve cada rol de tu clínica. Se aplica al instante a todas las personas de ese rol, en el Centro de
-              operaciones y en Administración. El servidor también lo cumple: lo que apagás, no se entrega.
+              Todos los módulos de tu plan, para cualquier rol: vos decidís qué ve cada uno según cómo trabaja tu clínica.
+              Se aplica al instante a todas las personas de ese rol, en el Centro de operaciones y en Administración.
             </p>
           </div>
           <Button onClick={() => void guardar()} disabled={guardando || (!cambiosMods && !cambiosChat)} className="ce-boton h-11 rounded-full px-6">
@@ -195,13 +189,16 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary/[0.05] px-4 py-3">
           <p className="text-sm">
             <span className={cn("mr-2 rounded-full px-2.5 py-0.5 text-xs font-semibold", infoRol.chip)}>{infoRol.nombre}</span>
-            ve <span className="font-extrabold text-primary">{prendidos}</span> de {habilitables.length} módulos que puede tener
+            ve <span className="font-extrabold text-primary">{prendidos}</span> de {habilitables.length} módulos de tu plan
           </p>
-          <div className="flex gap-3 text-xs font-semibold">
-            <button type="button" onClick={() => todo(true)} className="text-primary hover:underline">
+          <div className="flex flex-wrap gap-3 text-xs font-semibold">
+            <button type="button" onClick={() => todo("todo")} className="text-primary hover:underline">
               Prender todo
             </button>
-            <button type="button" onClick={() => todo(false)} className="text-muted-foreground hover:text-foreground hover:underline">
+            <button type="button" onClick={() => todo("recomendado")} className="text-primary hover:underline">
+              Lo recomendado
+            </button>
+            <button type="button" onClick={() => todo("basico")} className="text-muted-foreground hover:text-foreground hover:underline">
               Solo lo básico
             </button>
           </div>
@@ -218,7 +215,8 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
                 .filter((m) => m.group === g)
                 .map((m) => {
                   const fijo = siempre.has(m.id);
-                  const puede = maximos.includes(m.id) || m.id === "comunicacion-interna";
+                  const puede = true;
+                  const recomendado = recomendados(rol).includes(m.id);
                   const on = fijo || (puede && elegidos.includes(m.id));
                   const bloqueado = !puede;
                   return (
@@ -254,11 +252,7 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
                               ? "Todo el equipo (permisos abajo)"
                               : fijo
                                 ? "Siempre visible"
-                                : bloqueado
-                                  ? motivoBloqueo(rol, m.id)
-                                  : on
-                                    ? "Lo ve"
-                                    : "No lo ve"}
+                                : `${on ? "Lo ve" : "No lo ve"}${recomendado ? " · recomendado" : ""}`}
                           </span>
                         </span>
                         {fijo || bloqueado ? (
@@ -334,7 +328,7 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
           <p className="text-xs text-muted-foreground">
             {aMano > 0
               ? `${aMano} ${aMano === 1 ? "persona de este rol tiene" : "personas de este rol tienen"} permisos elegidos a mano (usan los suyos: «Acceso elegido por vos» en la lista).`
-              : "Para una persona en particular, usá «Ve todo su rol» en la lista del equipo."}
+              : "Para una persona en particular, usá «Usa los permisos de su rol» en la lista del equipo."}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={cargar} disabled={guardando} className="rounded-full" title="Descartar cambios">

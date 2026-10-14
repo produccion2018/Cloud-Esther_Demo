@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, PhoneCall } from "lucide-react";
+import { Building2, CheckCircle2, Clock, Loader2, MessageCircle, PhoneCall, ShieldCheck, Sparkles, User } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { TelefonoPais } from "@/components/site/TelefonoPais";
@@ -21,11 +21,15 @@ import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
 
 const API_URL = (import.meta.env["VITE_ADMIN_API_URL"] as string | undefined)?.replace(/\/$/, "");
 const HORARIOS = ["Cuanto antes", "Mañana (9 a 12)", "Mediodía (12 a 15)", "Tarde (15 a 19)"] as const;
-const CAMPO = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+// Campos grandes y redondeados (formulario de venta: tiene que verse impecable)
+const CAMPO =
+  "h-12 w-full rounded-2xl border border-primary/15 bg-white px-4 text-[15px] shadow-[0_1px_2px_rgba(30,0,60,0.05)] outline-none transition placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:bg-card";
+const ETIQUETA = "text-[13px] font-semibold tracking-tight text-foreground/85";
 
 export function TeLlamamos() {
   const [abierto, setAbierto] = useState(false);
   const [pais, setPais] = useState("");
+  const [horario, setHorario] = useState<string>(HORARIOS[0]);
   const [estado, setEstado] = useState<"inicio" | "enviando" | "listo">("inicio");
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +76,7 @@ export function TeLlamamos() {
     if (!v && estado === "listo") {
       setEstado("inicio");
       setPais("");
+      setHorario(HORARIOS[0]);
     }
   };
 
@@ -100,84 +105,148 @@ export function TeLlamamos() {
       </button>
 
       <Dialog open={abierto} onOpenChange={cerrar}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Te llamamos gratis</DialogTitle>
-            <DialogDescription>
-              Dejanos tus datos y alguien del equipo de Cloud Esther te llama (por teléfono o WhatsApp) en el horario que
-              elijas. Sin costo.
-            </DialogDescription>
-          </DialogHeader>
-
-          {estado === "listo" ? (
-            <div className="space-y-4 text-center">
-              <CheckCircle2 className="mx-auto size-10 text-success" />
-              <p className="font-semibold">¡Listo! Recibimos tu pedido.</p>
-              <p className="text-sm text-muted-foreground">Te vamos a llamar en el horario que elegiste.</p>
-              <Button onClick={() => cerrar(false)} className="w-full">
-                Cerrar
-              </Button>
+        <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[28px] [&>button:last-child]:z-10 [&>button:last-child]:text-white [&>button:last-child]:opacity-90 border-primary/15 p-0 shadow-[0_40px_90px_-40px_rgba(76,29,149,0.6)] sm:max-w-[480px]">
+          {/* Encabezado con la marca */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 px-6 pb-6 pt-7 text-white sm:px-8">
+            <span aria-hidden className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-white/15 blur-2xl" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-20 -left-10 size-40 rounded-full bg-fuchsia-300/30 blur-2xl" />
+            <DialogHeader className="relative space-y-2 text-left">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ring-1 ring-white/25">
+                <Sparkles className="size-3" /> Asesoría sin costo
+              </span>
+              <DialogTitle className="flex items-center gap-3 text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-white">
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-primary shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)]">
+                  <PhoneCall className="size-5" />
+                </span>
+                Te llamamos gratis
+              </DialogTitle>
+              <DialogDescription className="text-[14px] leading-relaxed text-white/85">
+                Dejanos tus datos y alguien del equipo de Cloud Esther te llama por teléfono o WhatsApp, en el horario que elijas.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="relative mt-4 flex flex-wrap gap-2 text-[11px] font-semibold">
+              {[
+                { i: CheckCircle2, t: "Sin costo" },
+                { i: MessageCircle, t: "Teléfono o WhatsApp" },
+                { i: ShieldCheck, t: "Datos protegidos" },
+              ].map((x) => (
+                <span key={x.t} className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 ring-1 ring-white/20">
+                  <x.i className="size-3.5" /> {x.t}
+                </span>
+              ))}
             </div>
-          ) : (
-            <form onSubmit={(e) => void enviar(e)} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-nombre">Tu nombre</Label>
-                <Input id="ll-nombre" name="nombre" maxLength={120} required autoComplete="name" />
+          </div>
+
+          <div className="px-6 py-6 sm:px-8">
+            {estado === "listo" ? (
+              <div className="space-y-4 py-4 text-center">
+                <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_16px_30px_-14px_rgba(16,185,129,0.8)]">
+                  <CheckCircle2 className="size-8" />
+                </span>
+                <p className="text-xl font-extrabold tracking-tight">¡Listo! Recibimos tu pedido</p>
+                <p className="text-sm text-muted-foreground">Te vamos a llamar en el horario que elegiste. ¡Gracias por elegir Cloud Esther!</p>
+                <Button onClick={() => cerrar(false)} className="h-12 w-full rounded-2xl text-[15px] font-bold">
+                  Cerrar
+                </Button>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-clinica">Clínica (opcional)</Label>
-                <Input id="ll-clinica" name="clinica" maxLength={160} autoComplete="organization" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-pais">País</Label>
-                <select id="ll-pais" value={pais} onChange={(e) => setPais(e.target.value)} className={CAMPO} required>
-                  <option value="">Elegí tu país</option>
-                  {PAISES_DEMO.map((p) => (
-                    <option key={p.codigo} value={p.codigo}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-telefono">Teléfono o WhatsApp</Label>
-                <TelefonoPais pais={pais} id="ll-telefono" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-horario">¿Cuándo te llamamos?</Label>
-                <select id="ll-horario" name="horario" className={CAMPO} defaultValue="Cuanto antes">
-                  {HORARIOS.map((h) => (
-                    <option key={h}>{h}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ll-motivo">¿Sobre qué querés hablar? (opcional)</Label>
-                <textarea
-                  id="ll-motivo"
-                  name="motivo"
-                  maxLength={500}
-                  rows={3}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Ej.: precios para 2 sucursales"
-                />
-              </div>
-              {/* Campo trampa para robots (las personas no lo ven) */}
-              <input type="text" name="web" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
-              {error && (
-                <p role="alert" className="text-sm font-medium text-destructive">
-                  {error}
+            ) : (
+              <form onSubmit={(e) => void enviar(e)} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ll-nombre" className={ETIQUETA}>
+                      Tu nombre
+                    </Label>
+                    <div className="relative">
+                      <User className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+                      <Input id="ll-nombre" name="nombre" maxLength={120} required autoComplete="name" placeholder="Nombre y apellido" className={`${CAMPO} pl-10`} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ll-clinica" className={ETIQUETA}>
+                      Clínica <span className="font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <div className="relative">
+                      <Building2 className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+                      <Input id="ll-clinica" name="clinica" maxLength={160} autoComplete="organization" placeholder="Nombre de la clínica" className={`${CAMPO} pl-10`} />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ll-pais" className={ETIQUETA}>
+                    País
+                  </Label>
+                  <select id="ll-pais" value={pais} onChange={(e) => setPais(e.target.value)} className={CAMPO} required>
+                    <option value="">Elegí tu país</option>
+                    {PAISES_DEMO.map((p) => (
+                      <option key={p.codigo} value={p.codigo}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ll-telefono" className={ETIQUETA}>
+                    Teléfono o WhatsApp
+                  </Label>
+                  <TelefonoPais pais={pais} id="ll-telefono" premium />
+                </div>
+                <fieldset className="space-y-2">
+                  <legend className={`${ETIQUETA} mb-1.5 flex items-center gap-1.5`}>
+                    <Clock className="size-3.5 text-primary" /> ¿Cuándo te llamamos?
+                  </legend>
+                  <input type="hidden" name="horario" value={horario} />
+                  <div className="grid grid-cols-2 gap-2">
+                    {HORARIOS.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setHorario(h)}
+                        aria-pressed={horario === h}
+                        className={
+                          horario === h
+                            ? "rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 px-3 py-2.5 text-[13px] font-bold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]"
+                            : "rounded-2xl border border-primary/15 bg-white px-3 py-2.5 text-[13px] font-semibold text-foreground/75 transition hover:border-primary/40 hover:text-primary dark:bg-card"
+                        }
+                      >
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ll-motivo" className={ETIQUETA}>
+                    ¿Sobre qué querés hablar? <span className="font-normal text-muted-foreground">(opcional)</span>
+                  </Label>
+                  <textarea
+                    id="ll-motivo"
+                    name="motivo"
+                    maxLength={500}
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-primary/15 bg-white px-4 py-3 text-[15px] shadow-[0_1px_2px_rgba(30,0,60,0.05)] outline-none transition placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:bg-card"
+                    placeholder="Ej.: precios para 2 sucursales"
+                  />
+                </div>
+                {/* Campo trampa para robots (las personas no lo ven) */}
+                <input type="text" name="web" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+                {error && (
+                  <p role="alert" className="rounded-xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+                    {error}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  disabled={estado === "enviando"}
+                  className="h-13 w-full rounded-2xl bg-gradient-to-r from-primary via-violet-600 to-fuchsia-500 py-3.5 text-[15px] font-bold text-white shadow-[0_16px_32px_-14px_rgba(124,58,237,0.9)] transition hover:-translate-y-0.5 hover:opacity-95"
+                >
+                  {estado === "enviando" ? <Loader2 className="size-4 animate-spin" /> : <PhoneCall className="size-4" />}
+                  Pedir que me llamen
+                </Button>
+                <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+                  <ShieldCheck className="size-3.5 text-emerald-600" /> Usamos tus datos solo para llamarte. No los compartimos.
                 </p>
-              )}
-              <Button type="submit" className="w-full" disabled={estado === "enviando"}>
-                {estado === "enviando" ? <Loader2 className="size-4 animate-spin" /> : <PhoneCall className="size-4" />}
-                Pedir que me llamen
-              </Button>
-              <p className="text-[11px] text-muted-foreground">
-                Usamos tus datos solo para llamarte por Cloud Esther. No los compartimos.
-              </p>
-            </form>
-          )}
+              </form>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

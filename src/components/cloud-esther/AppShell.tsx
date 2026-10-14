@@ -356,16 +356,17 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
           </div>
         );
       })}
-      {real && (
+      {/* Clínica real: Tu cuenta. Demo: la administración de la clínica con el equipo de ejemplo. */}
+      {(real || montado) && (
         <div>
           <p className="flex items-center gap-2 px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/45">
             <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
-            Tu cuenta
+            {real ? "Tu cuenta" : "Administración de la clínica"}
           </p>
           <ul className="space-y-0.5">
             {[
-              ...(real.rol === "admin" ? [{ to: "/demo/accesos", label: "Accesos del equipo", icon: ShieldCheck }] : []),
-              { to: "/demo/mi-cuenta", label: "Mi cuenta", icon: UserRound },
+              ...(!real || real.rol === "admin" ? [{ to: "/demo/accesos", label: "Accesos del equipo", icon: ShieldCheck }] : []),
+              ...(real ? [{ to: "/demo/mi-cuenta", label: "Mi cuenta", icon: UserRound }] : []),
             ].map((it) => {
               const activo = pathname === it.to;
               return (

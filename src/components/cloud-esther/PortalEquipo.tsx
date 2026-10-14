@@ -134,6 +134,7 @@ import { ActividadEquipo } from "@/components/clinica/actividad-equipo";
 import { ComunicacionInterna } from "@/components/clinica/comunicacion-interna";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { useAvisosChat } from "@/lib/clinica/chat";
+import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
 import { permsFor } from "@/lib/cloud-esther/equipo-profesional-data";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
@@ -660,7 +661,7 @@ function AppEquipo({
   }, [real]);
   // Comunicación interna: mensajes sin leer + comunicados por confirmar (para el menú)
   const avisosChat = useAvisosChat();
-  const chatPend = real ? avisosChat.noLeidos + avisosChat.pendientes : 0;
+  const chatPend = avisosChat.noLeidos + avisosChat.pendientes;
   const { clinica, clinicId } = useSesion();
   const { plan } = useCloudEsther();
   const { miembros } = useEquipo();
@@ -888,7 +889,8 @@ function AppEquipo({
               ),
               ...item("mensajes", "Comunicación", MessageCircle, puede("mensajes")),
               // Clínica real: el chat del equipo (estilo Teams), conectado al servidor
-              ...item("interna", "Comunicación interna", MessagesSquare, real, chatPend),
+              // El chat del equipo (estilo Teams): en la clínica real y en el demo (con el equipo de ejemplo)
+              ...item("interna", "Comunicación interna", MessagesSquare, true, chatPend),
               ...item("tareas", "Tareas", ClipboardList, puede("tareas")),
               ...item("documentos", "Documentos y plantillas", FileText, puede("documentos")),
             ],
@@ -910,8 +912,8 @@ function AppEquipo({
               ...item("especialidades", "Especialidades", Stethoscope, puede("equipo")),
               ...item("agendas-horarios", "Agendas y horarios", Clock3, puede("equipo")),
               // Clínica real: invitar al equipo por correo (solo el Administrador)
-              ...item("accesos", "Accesos del equipo", ShieldCheck, real),
-              ...item("actividad", "Actividad del equipo", Activity, real),
+              ...item("accesos", "Accesos del equipo", ShieldCheck),
+              ...item("actividad", "Actividad del equipo", Activity),
             ],
           },
           {
@@ -1168,15 +1170,15 @@ function AppEquipo({
         {actual === "equipo" && <EquipoProfesional embebido />}
         {actual === "especialidades" && <EquipoSeccion seccion="especialidades" embebido />}
         {actual === "agendas-horarios" && <EquipoSeccion seccion="agendas" embebido />}
-        {actual === "accesos" && clinicaReal && (
+        {actual === "accesos" && (
           <div className="ce-clinica">
-            <EquipoClinicaPanel slug={clinicaReal.slug} />
+            <EquipoClinicaPanel slug={clinicaReal?.slug ?? SLUG_DEMO} />
           </div>
         )}
-        {actual === "interna" && clinicaReal && <ComunicacionInterna conEncabezado={false} />}
-        {actual === "actividad" && clinicaReal && (
+        {actual === "interna" && <ComunicacionInterna conEncabezado={false} />}
+        {actual === "actividad" && (
           <div className="ce-clinica">
-            <ActividadEquipo slug={clinicaReal.slug} />
+            <ActividadEquipo slug={clinicaReal?.slug ?? SLUG_DEMO} />
           </div>
         )}
         {actual === "auditoria" && <AuditoriaPortal clinicId={clinicId} miembros={miembros} />}

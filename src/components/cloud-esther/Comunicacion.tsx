@@ -15,6 +15,7 @@ import {
   FileText,
   FolderOpen,
   Inbox,
+  MessagesSquare,
   Lock,
   Mail,
   Megaphone,
@@ -68,6 +69,8 @@ import { normalizarBusqueda } from "@/lib/utils";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { abrirRecordatorioWhatsApp, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { ComunicacionInterna } from "@/components/clinica/comunicacion-interna";
+import { useAvisosChat } from "@/lib/clinica/chat";
 
 /* Ubicación: src/components/cloud-esther/Comunicacion.tsx
 
@@ -76,13 +79,15 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
    y configuración de canales. Todo es de práctica y separado por empresa.
    TODO backend: conectar con WhatsApp Business API, proveedor de SMS y correo. */
 
-type Seccion = "bandeja" | "recordatorios" | "plantillas" | "campanas" | "historial" | "canales";
+type Seccion = "bandeja" | "interna" | "recordatorios" | "plantillas" | "campanas" | "historial" | "canales";
 
 /* Nivel mínimo de cada sección según el plan (uso interno, no se muestra):
    Start: bandeja, recordatorios e historial. Pro: además plantillas y canales.
    Plus y Enterprise: además campañas. */
 const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; desde: NivelModulo }[] = [
   { id: "bandeja", label: "Bandeja", icon: Inbox, desde: "basico" },
+  // Chat del equipo (estilo Teams): todos los planes
+  { id: "interna", label: "Comunicación interna", icon: MessagesSquare, desde: "basico" },
   { id: "recordatorios", label: "Recordatorios", icon: Bell, desde: "basico" },
   { id: "plantillas", label: "Plantillas", icon: FileText, desde: "avanzado" },
   { id: "campanas", label: "Campañas", icon: Megaphone, desde: "completo" },
@@ -611,6 +616,7 @@ function ComunicacionInner() {
   const nivelCom = useNivel("comunicaciones");
   const conCampanas = nivelCom.desde("completo");
   const secciones = SECCIONES.filter((x) => nivelCom.desde(x.desde));
+  const chatInterno = useAvisosChat();
   const seccionVisible: Seccion = secciones.some((x) => x.id === seccion) ? seccion : "bandeja";
 
   const onToast = (msg: string) => {
@@ -783,6 +789,8 @@ function ComunicacionInner() {
                   const contador =
                     s.id === "bandeja" && montado && noLeidos > 0
                       ? noLeidos
+                      : s.id === "interna" && montado && chatInterno.noLeidos + chatInterno.pendientes > 0
+                        ? chatInterno.noLeidos + chatInterno.pendientes
                       : s.id === "recordatorios" && montado && mananaSinAviso > 0
                         ? mananaSinAviso
                         : 0;
@@ -826,6 +834,8 @@ function ComunicacionInner() {
                 nueva={nuevaConv}
                 setNueva={setNuevaConv}
               />
+            ) : seccionVisible === "interna" ? (
+              <ComunicacionInterna conEncabezado={false} />
             ) : seccionVisible === "recordatorios" ? (
               <Recordatorios ctx={ctx} />
             ) : seccionVisible === "plantillas" ? (

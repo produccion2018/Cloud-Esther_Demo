@@ -32,6 +32,8 @@ import {
   LogOut,
   Mail,
   MessageCircle,
+  MessagesSquare,
+  Activity,
   Package,
   Phone,
   Search,
@@ -128,6 +130,10 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { volverSiEsPrueba } from "@/lib/acceso-prueba";
 import { EquipoSeccion } from "@/components/cloud-esther/EquipoSeccion";
 import { EquipoClinicaPanel } from "@/components/clinica/equipo";
+import { ActividadEquipo } from "@/components/clinica/actividad-equipo";
+import { ComunicacionInterna } from "@/components/clinica/comunicacion-interna";
+import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
+import { useAvisosChat } from "@/lib/clinica/chat";
 import { permsFor } from "@/lib/cloud-esther/equipo-profesional-data";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
@@ -169,6 +175,8 @@ type Seccion =
   | "especialidades"
   | "agendas-horarios"
   | "accesos"
+  | "interna"
+  | "actividad"
   | "auditoria"
   | "facturacion"
   | "finanzas"
@@ -206,7 +214,9 @@ const DESCRIPCION_ADMIN: Partial<Record<Seccion, string>> = {
   equipo: "Integrantes, roles y accesos del equipo.",
   especialidades: "Especialidades de la clínica y quién atiende cada una.",
   "agendas-horarios": "Días, horarios, pausas y consultorio de cada integrante.",
-  accesos: "Quién entra a la clínica, con qué rol y desde cuándo. Invitá por correo.",
+  accesos: "Quién entra, con qué rol y qué ve cada persona. Invitá por correo o con un Excel.",
+  interna: "El chat de tu equipo: comunicados con confirmación de lectura, canales por área y archivos.",
+  actividad: "Todo lo que hace tu equipo: ingresos, cambios por módulo y comunicados (sin datos de pacientes).",
   auditoria: "Quién hizo qué y cuándo dentro de la clínica.",
   facturacion: "Comprobantes, cuentas corrientes y cobranzas.",
   finanzas: "Ingresos, egresos, proveedores y flujo de caja.",
@@ -406,6 +416,8 @@ const SECCIONES_CLINICA_REAL = new Set<Seccion>([
   "especialidades",
   "agendas-horarios",
   "accesos",
+  "interna",
+  "actividad",
 ]);
 
 function GateEquipo() {
@@ -646,6 +658,9 @@ function AppEquipo({
     window.addEventListener("beforeunload", avisar);
     return () => window.removeEventListener("beforeunload", avisar);
   }, [real]);
+  // Comunicación interna: mensajes sin leer + comunicados por confirmar (para el menú)
+  const avisosChat = useAvisosChat();
+  const chatPend = real ? avisosChat.noLeidos + avisosChat.pendientes : 0;
   const { clinica, clinicId } = useSesion();
   const { plan } = useCloudEsther();
   const { miembros } = useEquipo();
@@ -872,6 +887,8 @@ function AppEquipo({
                 autPend,
               ),
               ...item("mensajes", "Comunicación", MessageCircle, puede("mensajes")),
+              // Clínica real: el chat del equipo (estilo Teams), conectado al servidor
+              ...item("interna", "Comunicación interna", MessagesSquare, real, chatPend),
               ...item("tareas", "Tareas", ClipboardList, puede("tareas")),
               ...item("documentos", "Documentos y plantillas", FileText, puede("documentos")),
             ],
@@ -894,6 +911,7 @@ function AppEquipo({
               ...item("agendas-horarios", "Agendas y horarios", Clock3, puede("equipo")),
               // Clínica real: invitar al equipo por correo (solo el Administrador)
               ...item("accesos", "Accesos del equipo", ShieldCheck, real),
+              ...item("actividad", "Actividad del equipo", Activity, real),
             ],
           },
           {
@@ -993,7 +1011,7 @@ function AppEquipo({
         salirLabel={vista ? "Volver a Equipo" : "Cerrar sesión"}
         principales={
           administrativo
-            ? ["escritorio", "agenda", "pacientes-admin", "mensajes"]
+            ? ["escritorio", "agenda", "pacientes-admin", real ? "interna" : "mensajes"]
             : ["hoy", "agenda", "pacientes", "mensajes"]
         }
         aviso={
@@ -1155,6 +1173,12 @@ function AppEquipo({
             <EquipoClinicaPanel slug={clinicaReal.slug} />
           </div>
         )}
+        {actual === "interna" && clinicaReal && <ComunicacionInterna conEncabezado={false} />}
+        {actual === "actividad" && clinicaReal && (
+          <div className="ce-clinica">
+            <ActividadEquipo slug={clinicaReal.slug} />
+          </div>
+        )}
         {actual === "auditoria" && <AuditoriaPortal clinicId={clinicId} miembros={miembros} />}
         {actual === "facturacion" && <Facturacion />}
         {actual === "finanzas" && <Finanzas />}
@@ -1168,6 +1192,7 @@ function AppEquipo({
           </div>
         )}
       </PortalShell>
+      {real && <AvisosChatGlobal onVer={() => ir("interna")} silencio={actual === "interna"} />}
       {disponibles.includes("ia") && actual !== "ia" && (
         <EstherFlotante moduloId={actual} modulo={etiqueta || "el portal"} />
       )}

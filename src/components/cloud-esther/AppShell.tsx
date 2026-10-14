@@ -27,6 +27,8 @@ import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinic
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
 import { refrescarSesionClinica } from "@/lib/clinica/api";
+import { useAvisosChat } from "@/lib/clinica/chat";
+import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
 import { useAlmacenClinicoListo } from "@/lib/clinica/almacen-clinico";
 import { Toaster } from "@/components/ui/sonner";
@@ -190,6 +192,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
     setOpenMap((prev) => ({ ...prev, [key]: !current }));
   // Contador de avisos sin leer (solo en el cliente, para no generar diferencias de hidratación).
   const { sinLeer } = useNotificaciones();
+  // Comunicación interna: mensajes sin leer y comunicados por confirmar
+  const chat = useAvisosChat();
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
 
@@ -198,7 +202,9 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
         // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
-        const visible = items.filter((m) => availableIn(m, plan) && (!real || puedeVer(real.rol, m.id)));
+        const visible = items.filter(
+          (m) => availableIn(m, plan) && (!real || puedeVer(real.rol, m.id, real.sesion.usuario.modulos)),
+        );
         if (!visible.length) return null;
 
         return (
@@ -322,6 +328,17 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                       )}
                       {off && (
                         <span className="ml-auto text-[9px] uppercase tracking-wider">off</span>
+                      )}
+                      {!off && m.id === "comunicacion-interna" && montado && chat.noLeidos + chat.pendientes > 0 && (
+                        <span
+                          className={cn(
+                            "ml-auto grid min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold",
+                            chat.pendientes > 0 ? "bg-amber-500 text-white" : "bg-sidebar-primary text-sidebar-primary-foreground",
+                          )}
+                          aria-label={`${chat.noLeidos} mensajes sin leer, ${chat.pendientes} comunicados por confirmar`}
+                        >
+                          {chat.noLeidos + chat.pendientes > 99 ? "99+" : chat.noLeidos + chat.pendientes}
+                        </span>
                       )}
                       {!off && m.id === "notificaciones" && montado && sinLeer > 0 && (
                         <span
@@ -715,7 +732,10 @@ function BarraInferior({ onMas }: { onMas: () => void }) {
     { to: "/demo/agenda", label: "Agenda", icon: CalendarDays },
     { to: "/demo/pacientes", label: "Pacientes", icon: Users },
     { to: "/demo/notificaciones", label: "Avisos", icon: Bell },
-  ].filter((it) => !real || puedeVer(real.rol, MODULES.find((m) => m.path === it.to)?.id ?? "dashboard"));
+  ].filter(
+    (it) =>
+      !real || puedeVer(real.rol, MODULES.find((m) => m.path === it.to)?.id ?? "dashboard", real.sesion.usuario.modulos),
+  );
   return (
     <nav
       aria-label="Accesos rápidos"
@@ -966,6 +986,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background">
       {DEMO_EN_SERVIDOR && !real && <ControlSesionDemo />}
       {real && <Toaster position="top-right" richColors closeButton />}
+      {real && (
+        <AvisosChatGlobal onVer={(id) => window.location.assign(`/demo/comunicacion-interna#canal=${id}`)} />
+      )}
       {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
           blanco debajo aunque el contenido sea largo) y el menú queda fijo al hacer scroll. */}
       <aside
@@ -1015,7 +1038,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           ) : subBloqueada ? (
             <ModuloNoIncluido label={subBloqueada.label} minPlan={subBloqueada.minPlan} />
-          ) : real && modulo && !puedeVer(real.rol, modulo.id) ? (
+          ) : real && modulo && !puedeVer(real.rol, modulo.id, real.sesion.usuario.modulos) ? (
             <AvisoClinica
               titulo="No tenés acceso a este módulo"
               texto="Lo maneja otra persona de tu clínica. Si lo necesitás, pedíselo al Administrador."

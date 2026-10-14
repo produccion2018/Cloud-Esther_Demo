@@ -18,7 +18,15 @@ export const ROLES_CLINICA: { id: RolClinica; nombre: string; detalle: string }[
   { id: "asistente", nombre: "Asistente", detalle: "Ayuda en el consultorio" },
 ];
 
-export type UsuarioClinica = { id: string; nombre: string; email: string; rol: RolClinica; rolNombre: string };
+export type UsuarioClinica = {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: RolClinica;
+  rolNombre: string;
+  /** Módulos que el Administrador le dejó ver (null o ausente = todo lo de su rol) */
+  modulos?: string[] | null;
+};
 export type InfoClinica = { nombre: string; slug: string; plan: string | null; modulos: string[] };
 export type SesionClinica = { token: string; usuario: UsuarioClinica; clinica: InfoClinica };
 
@@ -31,6 +39,12 @@ export type PersonaEquipo = {
   estado: "invitada" | "activa" | "desactivada";
   ultimoIngreso: string | null;
   soyYo: boolean;
+  /** Módulos que ve (null = todo: el Administrador) */
+  modulos?: string[] | null;
+  /** Módulos que se le pueden dar según su rol */
+  modulosRol?: string[];
+  /** ¿El Administrador eligió a mano qué ve? */
+  modulosPersonalizados?: boolean;
 };
 export type EquipoClinica = { personas: PersonaEquipo[]; usados: number; limite: number | null; plan: string | null };
 
@@ -197,8 +211,42 @@ export const invitarVarios = async (slug: string, personas: { nombre: string; em
   const r = await http<{ equipo: EquipoClinica; enviadas: number; sinCorreo: string[] }>(slug, "POST", "/equipo/varios", { personas });
   return { ...r, equipo: conNombres(r.equipo) };
 };
-export const cambiarPersonaEquipo = async (slug: string, id: string, cambios: { rol?: RolClinica; activo?: boolean }) =>
+export const cambiarPersonaEquipo = async (
+  slug: string,
+  id: string,
+  cambios: { rol?: RolClinica; activo?: boolean; modulos?: string[] | null },
+) =>
   conNombres(await http<EquipoClinica>(slug, "PATCH", `/equipo/${id}`, cambios));
+/* ───────────── Actividad del equipo (solo el Administrador) ───────────── */
+export type CambioCantidad = { a: number; m: number; b: number };
+export type ActividadPersona = {
+  id: string;
+  nombre: string;
+  rol: RolClinica;
+  rolNombre: string;
+  estado: "invitada" | "activa" | "desactivada";
+  ultimoIngreso: string | null;
+  ultimaActividad: string | null;
+  enLinea: boolean;
+  cambios: number;
+  ingresos: number;
+};
+export type ActividadEvento = {
+  id: string;
+  tipo: "cambio" | "consulta" | "ingreso" | "salida" | "comunicado";
+  personaId: string;
+  modulo: string | null;
+  detalle: Record<string, CambioCantidad> | null;
+  motivo: string | null;
+  fecha: string;
+};
+export type ActividadEquipo = { desde: string; personas: ActividadPersona[]; eventos: ActividadEvento[] };
+export const verActividad = async (slug: string, dias: number, persona?: string) => {
+  const q = `?dias=${dias}${persona ? `&persona=${encodeURIComponent(persona)}` : ""}`;
+  const r = await http<ActividadEquipo>(slug, "GET", `/actividad${q}`);
+  return { ...r, personas: r.personas.map((p) => ({ ...p, nombre: nombrePersona(p.nombre) })) };
+};
+
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});
 
 /** Las mismas reglas que el servidor */

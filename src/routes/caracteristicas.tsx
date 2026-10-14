@@ -3,8 +3,9 @@ import {
   AnimatePresence,
   motion,
   useReducedMotion,
+  type Variants,
 } from "framer-motion";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   CalendarCheck,
   Users,
@@ -254,6 +255,102 @@ const titleLines = [
   "Todo el poder de tu clínica,",
   "en un solo lugar.",
 ] as const;
+
+/* =========================================================
+   TÍTULO ANIMADO
+   Se anima cada vez que entra en pantalla y se oculta al salir,
+   así que al subir y bajar con el scroll vuelve a repetirse.
+========================================================= */
+const letraVariants: Variants = {
+  oculto: {
+    opacity: 0,
+    y: 30,
+    rotateX: -80,
+    scale: 0.9,
+    filter: "blur(8px)",
+    transition: { duration: 0.25 },
+  },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    rotateX: 0,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.6,
+      delay: i * 0.035,
+      ease: "easeOut",
+    },
+  }),
+};
+
+// Violeta oscuro -> violeta claro, letra por letra (colores sólidos).
+function colorVioleta(t: number) {
+  const desde = [91, 33, 182];
+  const hasta = [168, 85, 247];
+  const rgb = desde.map((c, i) => Math.round(c + (hasta[i] - c) * t));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
+function TituloAnimado() {
+  const reducir = useReducedMotion();
+
+  if (reducir) {
+    return (
+      <>
+        <div>{titleLines[0]}</div>
+        <div className="mt-1 text-primary">{titleLines[1]}</div>
+      </>
+    );
+  }
+
+  let indice = 0;
+
+  const renderLinea = (texto: string, violeta: boolean) => {
+    const palabras = texto.split(" ");
+    const totalLetras = texto.replace(/ /g, "").length;
+    let letraN = 0;
+
+    return palabras.map((palabra, pi) => (
+      <Fragment key={`${palabra}-${pi}`}>
+        <span className="inline-block whitespace-nowrap">
+          {palabra.split("").map((letra, li) => {
+            const i = indice++;
+            const t = totalLetras > 1 ? letraN++ / (totalLetras - 1) : 0;
+
+            return (
+              <motion.span
+                key={`${letra}-${li}`}
+                custom={i}
+                variants={letraVariants}
+                className="inline-block"
+                style={violeta ? { color: colorVioleta(t) } : undefined}
+              >
+                {letra}
+              </motion.span>
+            );
+          })}
+        </span>
+        {pi < palabras.length - 1 && " "}
+      </Fragment>
+    ));
+  };
+
+  return (
+    <motion.div
+      aria-label={`${titleLines[0]} ${titleLines[1]}`}
+      initial="oculto"
+      whileInView="visible"
+      viewport={{ once: false, amount: 0.6 }}
+      style={{ perspective: 1000 }}
+    >
+      <div aria-hidden="true">{renderLinea(titleLines[0], false)}</div>
+      <div aria-hidden="true" className="mt-1">
+        {renderLinea(titleLines[1], true)}
+      </div>
+    </motion.div>
+  );
+}
 
 /* =========================================================
    EXPLORADOR DE MÓDULOS (lista + panel de detalle)
@@ -547,15 +644,9 @@ function Caracteristicas() {
             </motion.span>
           </motion.div>
 
-          {/* TITULO (fijo, sin animaciones) */}
+          {/* TITULO (se anima cada vez que entra en pantalla) */}
           <div className="relative mt-6 text-4xl font-bold leading-[1.1] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-7xl">
-            <div>{titleLines[0]}</div>
-
-            <div className="mt-1">
-              <span className="inline-block bg-[linear-gradient(100deg,#5b21b6_0%,#8b5cf6_50%,#a855f7_100%)] bg-clip-text pb-[0.14em] text-transparent">
-                {titleLines[1]}
-              </span>
-            </div>
+            <TituloAnimado />
           </div>
 
           {/* SUBTITULO */}

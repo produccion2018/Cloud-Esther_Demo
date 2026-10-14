@@ -320,10 +320,33 @@
 
 /* Tarjetas del Odontograma 2D (mismo estilo que el resto de las tarjetas de la app) */
 @utility card-clinic {
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-soft);
+  /* Tarjetas del Odontograma 2D: mismo ADN que los módulos (franja de color, borde violeta suave) */
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--color-card) 0%,
+    var(--color-card) 62%,
+    color-mix(in oklab, var(--color-primary) 5%, var(--color-card)) 100%
+  );
+  border: 1px solid color-mix(in oklab, var(--color-primary) 14%, transparent);
+  border-radius: 26px;
+  box-shadow: 0 14px 36px -28px rgba(124, 58, 237, 0.6);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-primary) 55%, transparent),
+      var(--color-primary),
+      #f472b6
+    );
+    opacity: 0.7;
+    pointer-events: none;
+  }
 }
 
 @utility card-premium {

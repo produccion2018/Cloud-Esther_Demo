@@ -77,7 +77,7 @@ const categories = [
     items: [
       {
         icon: CalendarDays,
-        name: "Agenda y gestión de citas",
+        name: "Agenda y gestión de turnos",
         desc: "Vista diaria, semanal y por profesional, con alta de turnos en segundos.",
       },
       {

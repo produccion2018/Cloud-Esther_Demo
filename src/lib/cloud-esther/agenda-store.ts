@@ -178,7 +178,7 @@ const TAREA_EJEMPLO: Omit<Tarea, "id" | "fecha"> = {
 };
 
 const RECORDATORIOS_INICIAL: Recordatorio[] = [
-  { id: 1, canal: "WhatsApp", cuando: "24 h antes de la cita", activo: true },
-  { id: 2, canal: "SMS", cuando: "2 h antes de la cita", activo: true },
-  { id: 3, canal: "Correo", cuando: "Al confirmar la cita", activo: true },
+  { id: 1, canal: "WhatsApp", cuando: "24 h antes del turno", activo: true },
+  { id: 2, canal: "SMS", cuando: "2 h antes del turno", activo: true },
+  { id: 3, canal: "Correo", cuando: "Al confirmar el turno", activo: true },
 ];

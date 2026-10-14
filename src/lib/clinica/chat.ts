@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { pedirAClinica, nombrePersona, type RolClinica } from "@/lib/clinica/api";
 import { clinicaReal } from "@/lib/clinica/modo-clinica";
-import { TEAM_MEMBERS } from "@/lib/cloud-esther/equipo-profesional-data";
+import { EQUIPO_DEMO } from "@/lib/clinica/demo-admin";
 
 /* Ubicación: src/lib/clinica/chat.ts
    COMUNICACIÓN INTERNA (estilo Teams) — todos los planes.
@@ -325,12 +325,6 @@ export function useAvisosChat(onNuevo?: AlLlegar): AvisosChat {
 
 /* ───────────── DEMO: una conversación de ejemplo (en memoria) ───────────── */
 const demo = (() => {
-  const ROL_DEMO: Record<string, RolClinica> = {
-    odontologo: "odontologo",
-    asistente: "asistente",
-    secretaria: "secretaria",
-    administrador: "admin",
-  };
   const NOMBRE_ROL: Record<RolClinica, string> = {
     admin: "Administrador",
     odontologo: "Odontólogo/a",
@@ -338,13 +332,7 @@ const demo = (() => {
     asistente: "Asistente",
   };
   const YO = "demo-yo";
-  const personas: PersonaChat[] = [
-    { id: YO, nombre: "Vos (Dueño/a)", rol: "admin", rolNombre: "Administrador", estado: "activa" },
-    ...TEAM_MEMBERS.slice(0, 6).map((m) => {
-      const rol = ROL_DEMO[m.role] ?? "asistente";
-      return { id: `demo-${m.id}`, nombre: `${m.firstName} ${m.lastName}`, rol, rolNombre: NOMBRE_ROL[rol], estado: "activa" };
-    }),
-  ];
+  const personas: PersonaChat[] = EQUIPO_DEMO.map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol, rolNombre: NOMBRE_ROL[p.rol], estado: "activa" }));
   const otros = personas.filter((p) => p.id !== YO);
   const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
   let permisos: Record<RolChat, PermisosChat> = {
@@ -379,15 +367,16 @@ const demo = (() => {
       tipo: "comunicado",
       acks: Object.fromEntries(otros.slice(0, 2).map((p, i) => [p.id, hace(100 - i * 10)])),
     }),
-    m("demo-recepcion", pid(2), "Llegó el paciente de las 10:30, lo hago pasar a sala de espera.", 45),
-    m("demo-recepcion", YO, "Perfecto, avisale que en 5 minutos lo atienden.", 43),
-    m("demo-recepcion", pid(3), "Se reprogramó el turno de las 15 hs para el jueves.", 12),
-    m("demo-clinica", pid(1), "Les comparto el protocolo actualizado de esterilización.", 380, {
+    m("demo-recepcion", "demo-4", "Llegó Mauro Pinto para su control de las 10:30, lo hago pasar a sala de espera.", 45),
+    m("demo-recepcion", YO, "Perfecto, avisale que en 5 minutos lo atiende la Dra. Becerra.", 43),
+    m("demo-recepcion", "demo-4", "Alejo Becerra pidió pasar su limpieza al jueves a las 15 hs. Ya lo cambié en la agenda ✅", 12),
+    m("demo-clinica", "demo-1", "Mauro Pinto: le actualicé el odontograma después del control. Queda pendiente la restauración de la 16.", 420),
+    m("demo-clinica", "demo-5", "Les comparto el protocolo actualizado de esterilización.", 380, {
       archivo: { id: "demo-a1", nombre: "protocolo-esterilizacion.pdf", tipo: "application/pdf", tamano: 182_400 },
     }),
-    m("demo-clinica", pid(0), "Gracias, lo imprimo para el gabinete 2.", 360),
+    m("demo-clinica", "demo-2", "Gracias Lucía, lo imprimo para el gabinete 2. Mañana evalúo el implante de Alejo Becerra.", 360),
   ];
-  if (otros[0]) mensajes.push(m(`demo-dm-${otros[0].id}`, otros[0].id, "¿Mañana puedo entrar 30 minutos más tarde? Tengo un trámite.", 90));
+  if (otros[0]) mensajes.push(m(`demo-dm-${otros[0].id}`, otros[0].id, "¿Mañana puedo entrar 30 minutos más tarde? El primer turno es Mauro Pinto a las 10:30, llego bien.", 90));
 
   const visible = (c: CanalDemo) => c.tipo !== "directo" || c.miembros.includes(YO);
   const aDto = (x: MsgDemo): MensajeChat => {

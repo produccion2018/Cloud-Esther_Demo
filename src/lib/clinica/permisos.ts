@@ -41,9 +41,10 @@ const SIEMPRE = new Set(["dashboard", "notificaciones"]);
     El servidor aplica lo mismo: la pantalla solo lo oculta. */
 export function puedeVer(rol: RolClinica | null, moduloId: string, modulos?: string[] | null): boolean {
   if (!rol) return false;
-  if (rol === "admin" || PARA_TODOS.has(moduloId)) return true;
-  if (!(ACCESO_ROL[rol]?.includes(moduloId) ?? false)) return false;
-  return !modulos || SIEMPRE.has(moduloId) || modulos.includes(moduloId);
+  if (rol === "admin" || PARA_TODOS.has(moduloId) || SIEMPRE.has(moduloId)) return true;
+  // Lo que eligió el Administrador (cualquier módulo del plan, para cualquier rol)
+  if (modulos) return modulos.includes(moduloId);
+  return ACCESO_ROL[rol]?.includes(moduloId) ?? false;
 }
 
 /** Módulos que el Administrador le puede dar (o sacar) a cada rol, en orden */
@@ -77,13 +78,13 @@ const SECCION_MODULO: Record<string, string> = {
   turnos: "agenda",
 };
 export function puedeVerSeccionPaciente(rol: RolClinica | null, seccion: string, modulos?: string[] | null): boolean {
-  if (rol === "secretaria" && !SECCIONES_SECRETARIA.has(seccion)) return false;
+  if (!rol || rol === "admin") return true;
   const mod = SECCION_MODULO[seccion];
-  if (rol && rol !== "admin" && modulos && mod && ACCESO_ROL[rol]?.includes(mod) && !modulos.includes(mod)) {
+  if (modulos && mod) {
     // El odontograma 2D o 3D: alcanza con tener uno de los dos
-    if (mod === "odontograma" && modulos.includes("odontograma3d")) return true;
-    return false;
+    return modulos.includes(mod) || (mod === "odontograma" && modulos.includes("odontograma3d"));
   }
+  if (rol === "secretaria") return SECCIONES_SECRETARIA.has(seccion);
   return true;
 }
 

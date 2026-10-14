@@ -1,5 +1,6 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { TEAM_MEMBERS } from "@/lib/cloud-esther/equipo-profesional-data";
+import { capitalizarNombre } from "@/lib/utils";
 
 /* Ubicación: src/lib/cloud-esther/agenda-store.ts
 
@@ -152,8 +153,30 @@ export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(
       tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
     };
   },
-  { persistir: "agenda" },
+  { persistir: "agenda", normalizar: nombresProlijosAgenda },
 );
+
+/* El nombre del paciente en turnos, lista de espera y tareas: mayúscula inicial siempre. */
+function arreglarLista<X>(lista: X[] | undefined, campo: keyof X): [X[] | undefined, boolean] {
+  if (!Array.isArray(lista)) return [lista, false];
+  let cambio = false;
+  const nueva = lista.map((x) => {
+    const v = x[campo];
+    if (typeof v !== "string") return x;
+    const bien = capitalizarNombre(v);
+    if (bien === v) return x;
+    cambio = true;
+    return { ...x, [campo]: bien };
+  });
+  return [cambio ? nueva : lista, cambio];
+}
+function nombresProlijosAgenda(e: EstadoAgenda): EstadoAgenda {
+  if (!e || typeof e !== "object") return e;
+  const [turnos, a] = arreglarLista(e.turnos, "paciente");
+  const [espera, b] = arreglarLista(e.espera, "nombre");
+  const [tareas, c] = arreglarLista(e.tareas, "paciente");
+  return a || b || c ? ({ ...e, turnos, espera, tareas } as EstadoAgenda) : e;
+}
 
 type Actualizar<T> = T | ((prev: T) => T);
 function setterAgenda<K extends keyof EstadoAgenda>(clave: K) {

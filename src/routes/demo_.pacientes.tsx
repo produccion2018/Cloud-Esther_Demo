@@ -1093,7 +1093,7 @@ function CarpetaPaciente({
     useState<Seccion>("resumen");
   // Clínica real: la Secretaría no ve las secciones de salud (el servidor tampoco se las da)
   const real = useClinicaReal();
-  const secciones = real ? SECCIONES.filter((x) => puedeVerSeccionPaciente(real.rol, x.id)) : SECCIONES;
+  const secciones = real ? SECCIONES.filter((x) => puedeVerSeccionPaciente(real.rol, x.id, real.sesion.usuario.modulos)) : SECCIONES;
 
   const tratamientosEnCurso =
     datos.tratamientos.filter(

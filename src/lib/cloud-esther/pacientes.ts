@@ -1,4 +1,5 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { capitalizarNombre } from "@/lib/utils";
 
 /* Ubicación sugerida: src/lib/cloud-esther/pacientes.ts
 
@@ -93,6 +94,20 @@ const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO
   vacio: () => ({ pacientes: [], activoId: null }),
   // El paciente elegido es de cada pantalla: no se comparte con el resto de la clínica
   soloLocal: ["activoId"],
+  // Nombre y apellido SIEMPRE con mayúscula inicial, como sea que se escriban
+  // («andres felipe», «ANDRES FELIPE» → «Andres Felipe»). También arregla los ya guardados.
+  normalizar: (e) => {
+    if (!Array.isArray(e?.pacientes)) return e;
+    let cambio = false;
+    const pacientes = e.pacientes.map((p) => {
+      const nombre = capitalizarNombre(p.nombre ?? "");
+      const apellido = capitalizarNombre(p.apellido ?? "");
+      if (nombre === p.nombre && apellido === p.apellido) return p;
+      cambio = true;
+      return { ...p, nombre, apellido };
+    });
+    return cambio ? { ...e, pacientes } : e;
+  },
 });
 
 /** Lectura sin hooks (Esther IA). */

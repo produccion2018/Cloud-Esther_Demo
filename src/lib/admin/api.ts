@@ -862,6 +862,16 @@ export async function vaciarPapeleraDemos(a: { motivo?: string }): Promise<Resul
   if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
   return http<ResultadoPapelera>("POST", "/admin/demos/papelera/vaciar", a);
 }
+/** Todos los demos de la lista a la papelera (sin límite) */
+export async function moverTodosLosDemosAPapelera(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/todos", a);
+}
+/** Eliminar TODOS los demos para siempre (los de la lista y los de la papelera), con registro */
+export async function eliminarTodosLosDemos(a: { motivo?: string }): Promise<ResultadoPapelera> {
+  if (!CON_BACKEND) throw new ErrorApi(SIN_SERVIDOR_PAPELERA);
+  return http<ResultadoPapelera>("POST", "/admin/demos/papelera/eliminar-todo", a);
+}
 
 /** Con servidor, la configuración general es: tiempo de cada demo nuevo y aviso antes del cierre.
  *  (El tiempo de cada demo se maneja uno por uno con su reloj.) */

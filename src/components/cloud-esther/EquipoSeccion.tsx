@@ -94,17 +94,21 @@ function useToast() {
   return { mensaje, mostrar };
 }
 
-export function EquipoSeccion({ seccion }: { seccion: EquipoSeccionId }) {
+/** `embebido`: dentro del portal de Administración (el portal ya muestra el título). */
+export function EquipoSeccion({ seccion, embebido = false }: { seccion: EquipoSeccionId; embebido?: boolean }) {
   const data = INFO[seccion];
   const { mensaje, mostrar } = useToast();
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
-      />
-      <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
+    <div className={embebido ? "relative" : "relative min-h-full overflow-hidden bg-[#faf9ff]"}>
+      {!embebido && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+        />
+      )}
+      <div className={embebido ? "relative w-full" : "relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8"}>
+        {!embebido && (
         <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] p-5 shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)] md:p-7">
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-sky-400/55" />
           <Link
@@ -121,8 +125,9 @@ export function EquipoSeccion({ seccion }: { seccion: EquipoSeccionId }) {
             {data.descripcion}
           </p>
         </section>
+        )}
 
-        <div className="mt-5">
+        <div className={embebido ? "" : "mt-5"}>
           {seccion === "especialidades" && <Especialidades onToast={mostrar} />}
           {seccion === "agendas" && <Agendas onToast={mostrar} />}
           {seccion === "permisos" && <Permisos onToast={mostrar} />}
@@ -391,7 +396,12 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
 
   if (!miembro)
     return (
-      <p className="text-sm text-muted-foreground">Todavía no hay integrantes en el equipo.</p>
+      <div className="rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-card to-primary/[0.04] px-6 py-12 text-center shadow-[0_14px_36px_-30px_rgba(124,58,237,0.6)]">
+        <p className="font-display text-base font-bold">Todavía no hay integrantes en el equipo</p>
+        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+          Sumá a los odontólogos, la secretaría y los asistentes en Equipo → Integrantes. Después vas a poder cargar acá sus días y horarios.
+        </p>
+      </div>
     );
 
   const totalSemana = miembro.schedule.reduce((t, d) => t + minutosDia(d), 0);
@@ -960,7 +970,12 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
 
   if (!miembro)
     return (
-      <p className="text-sm text-muted-foreground">Todavía no hay integrantes en el equipo.</p>
+      <div className="rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-card to-primary/[0.04] px-6 py-12 text-center shadow-[0_14px_36px_-30px_rgba(124,58,237,0.6)]">
+        <p className="font-display text-base font-bold">Todavía no hay integrantes en el equipo</p>
+        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+          Sumá a los odontólogos, la secretaría y los asistentes en Equipo → Integrantes. Después vas a poder cargar acá sus días y horarios.
+        </p>
+      </div>
     );
 
   const activos = miembro.permissions.filter((p) => p.enabled).length;

@@ -126,6 +126,14 @@ import { storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import { usePermisosPortal } from "@/lib/cloud-esther/permisos-portal";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { volverSiEsPrueba } from "@/lib/acceso-prueba";
+import { EquipoSeccion } from "@/components/cloud-esther/EquipoSeccion";
+import { EquipoClinicaPanel } from "@/components/clinica/equipo";
+import { permsFor } from "@/lib/cloud-esther/equipo-profesional-data";
+import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
+import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
+import { refrescarSesionClinica } from "@/lib/clinica/api";
+import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { hayCambiosSinGuardar } from "@/lib/clinica/sincronizar";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -158,6 +166,9 @@ type Seccion =
   | "caja"
   | "presupuestos"
   | "equipo"
+  | "especialidades"
+  | "agendas-horarios"
+  | "accesos"
   | "auditoria"
   | "facturacion"
   | "finanzas"
@@ -193,6 +204,9 @@ const DESCRIPCION_ADMIN: Partial<Record<Seccion, string>> = {
   presupuestos: "Presupuestos enviados, aprobados y en seguimiento.",
   reportes: "Indicadores de turnos, asistencia y atención.",
   equipo: "Integrantes, roles y accesos del equipo.",
+  especialidades: "Especialidades de la clínica y quién atiende cada una.",
+  "agendas-horarios": "Días, horarios, pausas y consultorio de cada integrante.",
+  accesos: "Quién entra a la clínica, con qué rol y desde cuándo. Invitá por correo.",
   auditoria: "Quién hizo qué y cuándo dentro de la clínica.",
   facturacion: "Comprobantes, cuentas corrientes y cobranzas.",
   finanzas: "Ingresos, egresos, proveedores y flujo de caja.",
@@ -364,7 +378,38 @@ export default function PortalEquipo() {
   );
 }
 
+/* Clínica real: el Administrador (dueño) entra como integrante «Administración» con todos los
+   permisos. No es un integrante cargado en Equipo: es la persona con la sesión abierta. */
+function duenoComoIntegrante(r: NonNullable<ReturnType<typeof useClinicaReal>>): TeamMember {
+  const [nombre = "", ...resto] = r.sesion.usuario.nombre.trim().split(/\s+/);
+  return {
+    id: `cuenta-${r.sesion.usuario.id}`,
+    firstName: nombre,
+    lastName: resto.join(" "),
+    role: "administrador",
+    email: r.sesion.usuario.email,
+    phone: "",
+    status: "activo",
+    schedule: [],
+    permissions: permsFor("administrador"),
+  };
+}
+
+/* Secciones del portal que ya guardan en el servidor para una clínica real (las demás se suman
+   cuando cada módulo esté listo, igual que en el Centro de operaciones). */
+const SECCIONES_CLINICA_REAL = new Set<Seccion>([
+  "escritorio",
+  "agenda",
+  "pacientes-admin",
+  "tareas",
+  "equipo",
+  "especialidades",
+  "agendas-horarios",
+  "accesos",
+]);
+
 function GateEquipo() {
+  const real = useClinicaReal();
   const { miembros } = useEquipo();
   const { accesos } = storeEquipoPortal.usar();
   const [montado, setMontado] = useState(false);
@@ -377,7 +422,19 @@ function GateEquipo() {
     setMontado(true);
   }, []);
 
-  if (!montado) return <div className="min-h-screen bg-background" />;
+  // Clínica real: los invitados trabajan en el Centro de operaciones; el dueño, en las dos vistas.
+  const esInvitado = montado && !!real && real.rol !== "admin";
+  const sinLlave = montado && !real && leerSesionActual()?.tipo === "cliente";
+  useEffect(() => {
+    if (esInvitado) window.location.replace("/demo");
+    else if (sinLlave) {
+      const slug = slugDeSesionGuardada();
+      window.location.replace(slug ? `/c/${slug}` : "/");
+    }
+  }, [esInvitado, sinLlave]);
+
+  if (!montado || esInvitado || sinLlave) return <div className="min-h-screen bg-background" />;
+  if (real) return <AppEquipo miembro={duenoComoIntegrante(real)} real onSalir={() => salirYVolver()} />;
   if (vista) {
     const m = miembros.find((x) => x.id === vista);
     if (m) return <AppEquipo miembro={m} vista onSalir={() => {}} />;
@@ -562,12 +619,33 @@ type Ctx = {
 function AppEquipo({
   miembro,
   vista = false,
+  real = false,
   onSalir,
 }: {
   miembro: TeamMember;
   vista?: boolean;
+  /** Clínica real (dueño): datos del servidor, solo los módulos que ya guardan ahí. */
+  real?: boolean;
   onSalir: () => void;
 }) {
+  const clinicaReal = useClinicaReal();
+  if (real && clinicaReal) ajustarCatalogosClinica(clinicaReal.sesion.clinica.nombre);
+  const slugReal = real ? clinicaReal?.slug : undefined;
+  // Rol y plan de ahora (si la sesión venció, se vuelve a ingresar)
+  useEffect(() => {
+    if (slugReal) void refrescarSesionClinica(slugReal).catch(() => undefined);
+  }, [slugReal]);
+  // Si se cierra la pestaña con algo sin guardar todavía, el navegador avisa
+  useEffect(() => {
+    if (!real) return;
+    const avisar = (e: BeforeUnloadEvent) => {
+      if (!hayCambiosSinGuardar()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [real]);
   const { clinica, clinicId } = useSesion();
   const { plan } = useCloudEsther();
   const { miembros } = useEquipo();
@@ -805,8 +883,17 @@ function AppEquipo({
               ...item("caja", "Caja del día", Landmark, puede("cobros")),
               ...item("presupuestos", "Presupuestos", ReceiptText, puede("presupuestos")),
               ...item("reportes", "Reportes", BarChart3, puede("reportes")),
-              ...item("equipo", "Gestión de equipo", UserCog, puede("equipo")),
               ...item("auditoria", "Auditoría", ShieldCheck, puede("auditoria")),
+            ],
+          },
+          {
+            titulo: "Equipo",
+            items: [
+              ...item("equipo", "Integrantes", UserCog, puede("equipo")),
+              ...item("especialidades", "Especialidades", Stethoscope, puede("equipo")),
+              ...item("agendas-horarios", "Agendas y horarios", Clock3, puede("equipo")),
+              // Clínica real: invitar al equipo por correo (solo el Administrador)
+              ...item("accesos", "Accesos del equipo", ShieldCheck, real),
             ],
           },
           {
@@ -863,7 +950,11 @@ function AppEquipo({
           },
           { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
         ]
-  ).filter((g) => g.items.length > 0);
+  )
+    .map((g) =>
+      real ? { ...g, items: g.items.filter((i) => SECCIONES_CLINICA_REAL.has(i.id as Seccion)) } : g,
+    )
+    .filter((g) => g.items.length > 0);
   const disponibles = grupos.flatMap((g) => g.items.map((i) => i.id));
   const actual: Seccion = disponibles.includes(seccion) ? seccion : (disponibles[0] as Seccion);
   const etiqueta = grupos.flatMap((g) => g.items).find((i) => i.id === actual)?.label ?? "";
@@ -897,6 +988,7 @@ function AppEquipo({
         acciones={<NotificacionesUniversales items={notifs} clave={`equipo:${miembro.id}`} />}
         prefs={prefs}
         onPrefs={cambiarPrefs}
+        vistaDueno={real ? "administracion" : undefined}
         onSalir={vista ? () => window.location.assign("/demo/equipo-profesional") : onSalir}
         salirLabel={vista ? "Volver a Equipo" : "Cerrar sesión"}
         principales={
@@ -913,7 +1005,7 @@ function AppEquipo({
           ) : null
         }
       >
-        {actual !== "escritorio" && actual !== "hoy" && actual !== "ia" && (
+        {actual !== "escritorio" && actual !== "hoy" && actual !== "ia" && actual !== "equipo" && (
           <EncabezadoSeccion
             area={
               grupoActual?.titulo ??
@@ -1055,7 +1147,14 @@ function AppEquipo({
             yo={miembro}
           />
         )}
-        {actual === "equipo" && <EquipoProfesional />}
+        {actual === "equipo" && <EquipoProfesional embebido />}
+        {actual === "especialidades" && <EquipoSeccion seccion="especialidades" embebido />}
+        {actual === "agendas-horarios" && <EquipoSeccion seccion="agendas" embebido />}
+        {actual === "accesos" && clinicaReal && (
+          <div className="ce-clinica">
+            <EquipoClinicaPanel slug={clinicaReal.slug} />
+          </div>
+        )}
         {actual === "auditoria" && <AuditoriaPortal clinicId={clinicId} miembros={miembros} />}
         {actual === "facturacion" && <Facturacion />}
         {actual === "finanzas" && <Finanzas />}

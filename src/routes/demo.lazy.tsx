@@ -16,6 +16,7 @@ import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
+  BarChart3,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -99,7 +100,48 @@ const TEXTAREA =
   "min-h-24 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const ACCESO_BTN =
-  "flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium transition-all hover:-translate-y-0.5 hover:bg-primary/5";
+  "group flex min-h-[3.25rem] flex-col items-center justify-center gap-2 rounded-2xl border border-primary/12 bg-gradient-to-br from-background to-primary/[0.04] px-2.5 py-3 text-center text-[13px] font-semibold sm:flex-row sm:justify-start sm:gap-3 sm:px-3 sm:py-2.5 sm:text-left sm:text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_26px_-18px_rgba(124,58,237,0.8)]";
+
+/* Encabezado de tarjeta con el mismo ADN del portal: ícono en degradé, título y bajada. */
+function CabeceraCard({
+  icon: Icon,
+  titulo,
+  detalle,
+  acciones,
+}: {
+  icon: typeof Clock;
+  titulo: string;
+  detalle?: string;
+  acciones?: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+          <Icon className="size-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="truncate font-display text-[15px] font-bold tracking-tight">{titulo}</h2>
+          {detalle && <p className="truncate text-xs text-muted-foreground">{detalle}</p>}
+        </div>
+      </div>
+      {acciones}
+    </div>
+  );
+}
+
+/* Estado vacío prolijo (mismo estilo en todas las tarjetas) */
+function VacioCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`grid place-items-center rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] px-5 py-8 text-center text-sm text-muted-foreground ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/* Botón de exportar: en el celular solo el ícono (no se amontonan) */
+const EXPORT_BTN =
+  "inline-flex size-9 items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-background text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/35 hover:text-primary sm:size-auto sm:px-3 sm:py-1.5";
 
 /* ───────────── Utilidades ───────────── */
 
@@ -990,15 +1032,14 @@ function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: strin
   const PRODUCCION_ = datos ?? PRODUCCION;
   const max = Math.max(1, ...PRODUCCION_.map((p) => p.valor));
   return (
-    <div className={CARD}>
-      <h2 className="font-semibold">{datos ? "Turnos atendidos por odontólogo" : "Producción por odontólogo"}</h2>
-      <p className="text-xs text-muted-foreground">Mes en curso</p>
+    <div className={`${CARD} flex flex-col`}>
+      <CabeceraCard icon={Stethoscope} titulo={datos ? "Turnos atendidos por odontólogo" : "Producción por odontólogo"} detalle="Mes en curso" />
       {datos && datos.length === 0 && (
-        <p className="mt-4 border-t border-dashed border-border pt-6 text-center text-sm text-muted-foreground">
+        <VacioCard className="flex-1">
           Cuando los odontólogos atiendan turnos este mes, acá vas a ver cuántos atendió cada uno.
-        </p>
+        </VacioCard>
       )}
-      <div className={`mt-4 h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4 ${datos && datos.length === 0 ? "hidden" : "flex"}`}>
+      <div className={`h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4 ${datos && datos.length === 0 ? "hidden" : "flex"}`}>
         {PRODUCCION_.map((p) => (
           <div key={p.nombre} className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex w-full flex-1 items-end justify-center">
@@ -1016,15 +1057,16 @@ function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: strin
   );
 }
 
-function ActividadReciente({ items }: { items: Actividad[] }) {
+function ActividadReciente({ items, buscando }: { items: Actividad[]; buscando: boolean }) {
   return (
-    <div className={CARD}>
-      <h2 className="font-semibold">Actividad reciente</h2>
-      <p className="text-xs text-muted-foreground">Trazabilidad del día</p>
+    <div className={`${CARD} flex flex-col`}>
+      <CabeceraCard icon={Clock} titulo="Actividad reciente" detalle="Trazabilidad del día" />
       {items.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">Sin movimientos que coincidan con la búsqueda.</p>
+        <VacioCard className="flex-1">
+          {buscando ? "Sin movimientos que coincidan con la búsqueda." : "Todavía no hay movimientos hoy."}
+        </VacioCard>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="space-y-3">
           {items.slice(0, 8).map((a) => (
             <li key={a.id} className="flex items-start gap-3 text-sm">
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
@@ -1052,26 +1094,34 @@ function AccesosRapidos({
 }) {
   return (
     <div className={CARD}>
-      <h2 className="font-semibold">Accesos rápidos</h2>
-      <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3">
+      <CabeceraCard icon={ExternalLink} titulo="Accesos rápidos" detalle="Lo que más se usa, a un toque" />
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Link to="/demo/agenda" className={ACCESO_BTN}>
-          <CalendarCheck className="size-4 text-primary" />
-          Agenda del día
+          <IconoAcceso icon={CalendarCheck} />
+          <span className="min-w-0 leading-tight">Agenda del día</span>
         </Link>
         <button onClick={onBuscar} className={ACCESO_BTN}>
-          <UserSearch className="size-4 text-primary" />
-          Buscar paciente
+          <IconoAcceso icon={UserSearch} />
+          <span className="min-w-0 leading-tight">Buscar paciente</span>
         </button>
         <button onClick={onPresupuesto} className={ACCESO_BTN}>
-          <ReceiptText className="size-4 text-primary" />
-          Crear presupuesto
+          <IconoAcceso icon={ReceiptText} />
+          <span className="min-w-0 leading-tight">Crear presupuesto</span>
         </button>
         <button onClick={onRecordatorios} className={ACCESO_BTN}>
-          <BellRing className="size-4 text-primary" />
-          Recordatorios
+          <IconoAcceso icon={BellRing} />
+          <span className="min-w-0 leading-tight">Recordatorios</span>
         </button>
       </div>
     </div>
+  );
+}
+
+function IconoAcceso({ icon: Icon }: { icon: typeof Clock }) {
+  return (
+    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white">
+      <Icon className="size-4" />
+    </span>
   );
 }
 
@@ -1354,7 +1404,7 @@ function DashboardInner() {
               {(s.delta || s.sub) && (
                 <p className="relative mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs">
                   <span className={s.deltaColor}>{s.delta}</span>
-                  <span className="truncate text-muted-foreground">{s.sub}</span>
+                  <span className="line-clamp-2 leading-snug text-muted-foreground">{s.sub}</span>
                 </p>
               )}
             </div>
@@ -1363,22 +1413,23 @@ function DashboardInner() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className={`${CARD} lg:col-span-2`}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">Evolución de la clínica</h2>
-                <p className="text-xs text-muted-foreground">{real ? "Últimos 6 meses" : "Últimos 6 meses · datos ficticios"}</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <button onClick={guardarPdf} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><FileText className="size-3.5" /> PDF</button>
-                <button onClick={exportarExcel} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><FileSpreadsheet className="size-3.5" /> Excel</button>
-                <button onClick={imprimir} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><Printer className="size-3.5" /> Imprimir</button>
-                <button onClick={compartir} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 hover:bg-muted"><Share2 className="size-3.5" /> Compartir</button>
-              </div>
-            </div>
+            <CabeceraCard
+              icon={BarChart3}
+              titulo="Evolución de la clínica"
+              detalle={real ? "Últimos 6 meses" : "Últimos 6 meses · datos ficticios"}
+              acciones={
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  <button onClick={guardarPdf} className={EXPORT_BTN} aria-label="Descargar PDF" title="PDF"><FileText className="size-3.5" /> <span className="hidden sm:inline">PDF</span></button>
+                  <button onClick={exportarExcel} className={EXPORT_BTN} aria-label="Descargar Excel" title="Excel"><FileSpreadsheet className="size-3.5" /> <span className="hidden sm:inline">Excel</span></button>
+                  <button onClick={imprimir} className={EXPORT_BTN} aria-label="Imprimir" title="Imprimir"><Printer className="size-3.5" /> <span className="hidden sm:inline">Imprimir</span></button>
+                  <button onClick={compartir} className={EXPORT_BTN} aria-label="Compartir" title="Compartir"><Share2 className="size-3.5" /> <span className="hidden sm:inline">Compartir</span></button>
+                </div>
+              }
+            />
             {real ? (
-              <div className="grid h-64 w-full place-items-center rounded-xl bg-[linear-gradient(to_top,theme(colors.primary/8%),transparent)] px-6 text-center text-sm text-muted-foreground">
+              <VacioCard className="h-40 sm:h-56">
                 Cuando la clínica registre cobros, acá vas a ver cómo evolucionan mes a mes.
-              </div>
+              </VacioCard>
             ) : (
             <div className="h-64 w-full rounded-xl bg-[linear-gradient(to_top,theme(colors.primary/12%),transparent)]">
               <svg viewBox="0 0 400 160" className="size-full" preserveAspectRatio="none">
@@ -1389,16 +1440,26 @@ function DashboardInner() {
             )}
           </div>
 
-          <div className={CARD}>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">Próximos turnos</h2>
-                <p className="text-xs text-muted-foreground">Agenda de hoy</p>
-              </div>
-              <Link to="/demo/agenda" className="text-xs font-medium text-primary">Ver agenda y horarios →</Link>
-            </div>
+          <div className={`${CARD} flex flex-col`}>
+            <CabeceraCard
+              icon={CalendarCheck}
+              titulo="Próximos turnos"
+              detalle="Agenda de hoy"
+              acciones={<Link to="/demo/agenda" className="text-xs font-semibold text-primary hover:underline">Ver agenda →</Link>}
+            />
             {turnosFiltrados.length === 0 ? (
-              <p className="py-4 text-sm text-muted-foreground">Sin turnos que coincidan con la búsqueda.</p>
+              <VacioCard className="flex-1">
+                {q ? (
+                  "Sin turnos que coincidan con la búsqueda."
+                ) : (
+                  <span className="grid justify-items-center gap-3">
+                    Todavía no hay turnos para hoy.
+                    <button type="button" onClick={() => setModal("cita")} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110">
+                      <CalendarPlus className="size-3.5" /> Nueva cita
+                    </button>
+                  </span>
+                )}
+              </VacioCard>
             ) : (
               <ul className="divide-y divide-border">
                 {turnosFiltrados.map((t) => (
@@ -1419,7 +1480,7 @@ function DashboardInner() {
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <ProduccionOdontologo {...(atendidosMes ? { datos: atendidosMes, unidad: "turnos" } : {})} />
-          <ActividadReciente items={actividadFiltrada} />
+          <ActividadReciente items={actividadFiltrada} buscando={!!q} />
         </div>
 
         <div className="mt-4">

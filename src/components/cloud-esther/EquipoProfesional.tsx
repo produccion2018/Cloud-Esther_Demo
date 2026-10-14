@@ -36,6 +36,7 @@ import {
   type MemberStatus,
 } from "@/lib/cloud-esther/equipo-profesional-data"
 import { useEquipo } from "@/lib/cloud-esther/equipo-store"
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
 import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
@@ -340,7 +341,8 @@ function Modal({
 
 type DetailTab = "info" | "agenda" | "permisos" | "comisiones"
 
-export function EquipoProfesional() {
+/** `embebido`: dentro del portal de Administración (sin el fondo ni los márgenes de página). */
+export function EquipoProfesional({ embebido = false }: { embebido?: boolean } = {}) {
   // Equipo compartido con Especialidades / Agendas / Permisos, separado por empresa.
   const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
   const { turnos } = storeAgenda.usar()
@@ -552,12 +554,14 @@ export function EquipoProfesional() {
   }
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
-      />
-    <div className="relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8">
+    <div className={embebido ? "relative" : "relative min-h-full overflow-hidden bg-[#faf9ff]"}>
+      {!embebido && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(56,189,248,0.10),transparent_27%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
+        />
+      )}
+    <div className={embebido ? "relative w-full" : "relative mx-auto w-full max-w-[1420px] px-4 py-6 md:px-6 lg:px-8"}>
       {/* Encabezado */}
       <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">
         <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary/55 via-primary to-sky-400/55" />
@@ -661,7 +665,28 @@ export function EquipoProfesional() {
             </div>
 
             {filtered.length === 0 ? (
-              <p className="card-grad py-10 text-center text-sm text-muted-foreground">No se encontraron integrantes con ese filtro.</p>
+              members.length === 0 ? (
+                <div className="card-grad px-6 py-12 text-center">
+                  <p className="font-display text-base font-bold">Tu equipo empieza acá</p>
+                  <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+                    Agregá a los odontólogos, la secretaría y los asistentes. Con sus horarios, la Agenda ofrece los turnos libres de cada uno.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(emptyMember())
+                      setEditingMember(null)
+                      setAddOpen(true)
+                    }}
+                    className="btn-ce mx-auto mt-4"
+                  >
+                    <Plus className="size-4" />
+                    Agregar integrante
+                  </button>
+                </div>
+              ) : (
+                <p className="card-grad py-10 text-center text-sm text-muted-foreground">No se encontraron integrantes con ese filtro.</p>
+              )
             ) : (
               <ul data-movil="1col" className="grid grid-cols-2 gap-2.5 sm:gap-3 2xl:grid-cols-3">
                 {filtered.map((m) => {
@@ -701,6 +726,11 @@ export function EquipoProfesional() {
                           {!!m.specialties?.length && <p className="mt-1 truncate text-[11px] text-muted-foreground">{m.specialties.join(" · ")}</p>}
                         </div>
                         <div className="absolute right-3 top-3 flex gap-1 sm:static" onClick={(e) => e.stopPropagation()}>
+                          {m.phone && (
+                            <a href={`https://wa.me/${m.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="grid size-8 place-items-center rounded-full border border-emerald-500/20 bg-white text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500 hover:text-white hover:shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]" aria-label={`Escribir por WhatsApp a ${fullName(m)}`} title="WhatsApp">
+                              <IconoWhatsApp className="size-3.5" />
+                            </a>
+                          )}
                           {m.phone && (
                             <a href={`tel:${m.phone.replace(/[^\d+]/g, "")}`} className="grid size-8 place-items-center rounded-full border border-primary/12 bg-white text-muted-foreground hover:bg-primary/10 hover:text-primary" aria-label="Llamar" title={m.phone}>
                               <Phone className="size-3.5" />

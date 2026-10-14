@@ -51,6 +51,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
 import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
+import { Route as DemoComunicacionInternaRouteImport } from './routes/demo_.comunicacion-interna'
 import { Route as DemoMiCuentaRouteImport } from './routes/demo_.mi-cuenta'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
@@ -292,6 +293,11 @@ const DemoAccesosRoute = DemoAccesosRouteImport.update({
   path: '/demo/accesos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoComunicacionInternaRoute = DemoComunicacionInternaRouteImport.update({
+  id: '/demo_/comunicacion-interna',
+  path: '/demo/comunicacion-interna',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoMiCuentaRoute = DemoMiCuentaRouteImport.update({
   id: '/demo_/mi-cuenta',
   path: '/demo/mi-cuenta',
@@ -487,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/accesos': typeof DemoAccesosRoute
+  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
@@ -560,6 +567,7 @@ export interface FileRoutesByTo {
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
   '/demo/accesos': typeof DemoAccesosRoute
+  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
@@ -635,6 +643,7 @@ export interface FileRoutesById {
   '/demo_/admin': typeof DemoAdminRoute
   '/demo_/agenda': typeof DemoAgendaRoute
   '/demo_/accesos': typeof DemoAccesosRoute
+  '/demo_/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo_/mi-cuenta': typeof DemoMiCuentaRoute
   '/c/$slug': typeof CSlugRoute
   '/c/$slug_/clave': typeof CSlugClaveRoute
@@ -711,6 +720,7 @@ export interface FileRouteTypes {
     | '/demo/admin'
     | '/demo/agenda'
     | '/demo/accesos'
+    | '/demo/comunicacion-interna'
     | '/demo/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug/clave'
@@ -784,6 +794,7 @@ export interface FileRouteTypes {
     | '/demo/admin'
     | '/demo/agenda'
     | '/demo/accesos'
+    | '/demo/comunicacion-interna'
     | '/demo/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug/clave'
@@ -858,6 +869,7 @@ export interface FileRouteTypes {
     | '/demo_/admin'
     | '/demo_/agenda'
     | '/demo_/accesos'
+    | '/demo_/comunicacion-interna'
     | '/demo_/mi-cuenta'
     | '/c/$slug'
     | '/c/$slug_/clave'
@@ -912,6 +924,7 @@ export interface RootRouteChildren {
   DemoAdminRoute: typeof DemoAdminRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
   DemoAccesosRoute: typeof DemoAccesosRoute
+  DemoComunicacionInternaRoute: typeof DemoComunicacionInternaRoute
   DemoMiCuentaRoute: typeof DemoMiCuentaRoute
   CSlugRoute: typeof CSlugRoute
   CSlugClaveRoute: typeof CSlugClaveRoute
@@ -1241,6 +1254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAccesosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/comunicacion-interna': {
+      id: '/demo_/comunicacion-interna'
+      path: '/demo/comunicacion-interna'
+      fullPath: '/demo/comunicacion-interna'
+      preLoaderRoute: typeof DemoComunicacionInternaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/mi-cuenta': {
       id: '/demo_/mi-cuenta'
       path: '/demo/mi-cuenta'
@@ -1526,6 +1546,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoAdminRoute: DemoAdminRoute,
   DemoAgendaRoute: DemoAgendaRoute,
   DemoAccesosRoute: DemoAccesosRoute,
+  DemoComunicacionInternaRoute: DemoComunicacionInternaRoute,
   DemoMiCuentaRoute: DemoMiCuentaRoute,
   CSlugRoute: CSlugRoute,
   CSlugClaveRoute: CSlugClaveRoute,

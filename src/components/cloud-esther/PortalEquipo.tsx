@@ -446,6 +446,8 @@ const SECCION_MODULO: Partial<Record<Seccion, string>> = {
   liquidaciones: "finanzas",
   rrhh: "rrhh",
   ia: "ia",
+  // El paciente firma las autorizaciones desde SU portal: va con el Portal del paciente (Enterprise)
+  autorizaciones: "portal-paciente",
 };
 
 function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {

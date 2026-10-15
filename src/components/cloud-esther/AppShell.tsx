@@ -5,6 +5,7 @@ import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, 
 import { cn } from "@/lib/utils";
 import {
   MODULES,
+  comprableEn,
   availableIn,
   etiquetaModulo,
   incluidoEnPlan,
@@ -26,7 +27,7 @@ import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store"
 import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
-import { refrescarSesionClinica } from "@/lib/clinica/api";
+import { avisarModuloAdicional, refrescarSesionClinica } from "@/lib/clinica/api";
 import { useAvisosChat } from "@/lib/clinica/chat";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
@@ -938,8 +939,25 @@ function ModuloNoIncluido({
   const modulo = MODULES.find((m) => m.id === moduloId);
   // Start, Pro y Plus pueden comprar el módulo suelto sin cambiar de plan.
   const real = useClinicaReal();
-  // En una clínica real los módulos adicionales se contratan con Cloud Esther (no desde acá)
-  const comprable = !real && !!modulo && planLevel(minPlan) > planLevel(plan);
+  // Se puede sumar como adicional (no los exclusivos de Enterprise). En una clínica real, solo el
+  // Administrador, y antes se le avisa al panel de Cloud Esther para facturarlo.
+  const comprable = !!modulo && comprableEn(modulo, plan) && (!real || real.rol === "admin");
+  const [agregando, setAgregando] = useState(false);
+  const agregar = async () => {
+    if (!modulo) return;
+    if (real) {
+      setAgregando(true);
+      try {
+        await avisarModuloAdicional(real.slug, modulo.id, "agregar");
+      } catch (e) {
+        window.alert(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
+        return;
+      } finally {
+        setAgregando(false);
+      }
+    }
+    agregarModuloExtra(modulo.id, usuario?.nombre ?? "Administración");
+  };
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
       <div className="card-premium max-w-md p-8 text-center">
@@ -956,12 +974,8 @@ function ModuloNoIncluido({
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {comprable && (
-            <button
-              type="button"
-              className="btn-ce"
-              onClick={() => agregarModuloExtra(modulo.id, usuario?.nombre ?? "Administración")}
-            >
-              {planContratado ? `Contratar ${label}` : `Agregar ${label} a mi plan`}
+            <button type="button" className="btn-ce" disabled={agregando} onClick={() => void agregar()}>
+              {agregando ? "Un momento…" : planContratado ? `Contratar ${label}` : `Agregar ${label} a mi plan`}
             </button>
           )}
           {!planContratado && (

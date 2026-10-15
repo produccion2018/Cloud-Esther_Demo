@@ -299,3 +299,7 @@ export function problemaClaveClinica(c: string): string | null {
   if (!/[0-9]/.test(c)) return "Agregá al menos un número.";
   return null;
 }
+
+/* ───────────── Módulos adicionales: aviso al panel de Cloud Esther para facturarlo ───────────── */
+export const avisarModuloAdicional = (slug: string, modulo: string, accion: "agregar" | "quitar") =>
+  http<void>(slug, "POST", "/modulos-adicionales", { modulo, accion });

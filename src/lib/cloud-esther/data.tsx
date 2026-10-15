@@ -398,9 +398,15 @@ export function incluidoEnPlan(module: AppModule, plan: PlanId) {
 }
 
 /** Módulos que el plan no incluye y se pueden comprar como adicionales (Start, Pro y Plus). */
+/** Módulos que solo vienen con el plan 4 (Enterprise) */
+export const EXCLUSIVOS_ENTERPRISE = new Set(["automatizaciones", "portal-paciente", "multiempresa"]);
+
 export function comprableEn(module: AppModule, plan: PlanId) {
   // Los odontogramas no se compran: el plan define cuál se usa (2D en Start/Pro, 3D en Plus/Enterprise).
   if (module.id === "odontograma" || module.id === "odontograma3d") return false;
+  // Exclusivos del plan 4 (Enterprise): Automatizaciones con n8n, Portal del paciente y Multiempresa.
+  // No se venden como adicionales en Start, Pro ni Plus (pedido de Camilo, 15 oct).
+  if (EXCLUSIVOS_ENTERPRISE.has(module.id)) return false;
   return planLevel(module.minPlan) > planLevel(plan);
 }
 

@@ -16,7 +16,7 @@ import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
-  BarChart3, ChevronRight,
+  BarChart3, ChevronRight, Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -690,11 +690,11 @@ function TopBanner({
             <button
               onClick={() => setAbierto((v) => !v)}
               aria-label="Notificaciones"
-              className="relative grid size-8 place-items-center rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-background"
+              className={`relative grid size-9 place-items-center rounded-full bg-background/90 shadow-sm ring-1 backdrop-blur-sm transition-all duration-200 hover:-translate-y-px hover:bg-background ${abierto ? "ring-primary/50" : "ring-white/40"}`}
             >
-              <Bell className="size-4 text-muted-foreground" />
+              <Bell className={`size-4 ${sinLeer > 0 ? "text-primary" : "text-muted-foreground"}`} />
               {sinLeer > 0 && (
-                <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-white">
+                <span className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-500 px-1 text-[9.5px] font-semibold leading-[18px] text-white shadow-[0_4px_10px_-3px_rgba(217,70,239,0.8)] ring-2 ring-white">
                   {sinLeer > 9 ? "9+" : sinLeer}
                 </span>
               )}
@@ -703,28 +703,68 @@ function TopBanner({
             {abierto && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
-                <div className="absolute right-0 top-10 z-40 w-80 rounded-2xl border border-border bg-card p-3 text-foreground shadow-xl">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Notificaciones</h3>
-                    <button
-                      onClick={onMarcarLeidas}
-                      disabled={sinLeer === 0}
-                      className="text-xs font-medium text-primary disabled:text-muted-foreground"
-                    >
-                      Marcar todo como leído
-                    </button>
+                <div className="ce-aparecer absolute right-0 top-11 z-40 w-[22rem] overflow-hidden rounded-3xl border border-primary/15 bg-card text-foreground shadow-[0_30px_70px_-30px_rgba(46,16,101,0.6)]">
+                  {/* Encabezado en degradé */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-primary via-violet-500 to-fuchsia-500 px-4 py-3.5 text-white">
+                    <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-36 rounded-full bg-white/15 blur-2xl" />
+                    <div className="relative flex items-center gap-3">
+                      <span className="grid size-9 place-items-center rounded-xl bg-white/20 ring-1 ring-white/30">
+                        <Bell className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold">Notificaciones</h3>
+                        <p className="text-[11px] text-white/80">
+                          {sinLeer > 0 ? `${sinLeer} sin leer` : "Estás al día"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={onMarcarLeidas}
+                        disabled={sinLeer === 0}
+                        className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium ring-1 ring-white/25 transition hover:bg-white/30 disabled:opacity-50"
+                      >
+                        Marcar leídas
+                      </button>
+                    </div>
                   </div>
-                  <ul className="max-h-64 space-y-2 overflow-y-auto">
-                    {notificaciones.slice(0, 6).map((n) => (
-                      <li key={n.id} className="flex items-start gap-2 text-xs">
-                        <span className="w-10 shrink-0 font-mono text-muted-foreground">{n.hora}</span>
-                        <span>
-                          <span className="font-medium">{n.quien}</span>{" "}
-                          <span className="text-muted-foreground">{n.accion}</span>
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="scroll-sutil max-h-80 divide-y divide-border/60 overflow-y-auto">
+                    {notificaciones.slice(0, 6).map((n, i) => {
+                      const nueva = i < sinLeer;
+                      const sistema = /sistema|automatizaci/i.test(n.quien);
+                      const ini = n.quien
+                        .replace(/^(Dra?\.)\s*/i, "")
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((w) => w.charAt(0).toUpperCase())
+                        .join("");
+                      return (
+                        <li
+                          key={n.id}
+                          style={{ animationDelay: `${i * 40}ms` }}
+                          className={`ce-aparecer flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.04] ${nueva ? "bg-primary/[0.035]" : ""}`}
+                        >
+                          <span
+                            className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white shadow-[0_6px_14px_-8px_rgba(76,29,149,0.8)] ${
+                              sistema ? "bg-gradient-to-br from-amber-400 to-rose-500" : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
+                            }`}
+                          >
+                            {sistema ? <Sparkles className="size-3.5" /> : ini || "•"}
+                          </span>
+                          <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
+                            <span className="font-medium text-foreground">{n.quien}</span>{" "}
+                            <span className="text-muted-foreground">{n.accion}</span>
+                            <span className="mt-0.5 block text-[10.5px] tabular-nums text-muted-foreground/80">Hoy · {n.hora}</span>
+                          </span>
+                          {nueva && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.7)]" />}
+                        </li>
+                      );
+                    })}
                   </ul>
+                  <a
+                    href="/demo/notificaciones"
+                    className="flex items-center justify-center gap-1.5 border-t border-border/60 bg-gradient-to-r from-primary/[0.04] to-fuchsia-500/[0.04] px-4 py-2.5 text-xs font-semibold text-primary transition hover:from-primary/[0.08] hover:to-fuchsia-500/[0.08]"
+                  >
+                    Ver todas las notificaciones <ChevronRight className="size-3.5" />
+                  </a>
                 </div>
               </>
             )}

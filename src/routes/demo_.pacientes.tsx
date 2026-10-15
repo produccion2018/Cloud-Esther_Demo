@@ -1047,13 +1047,13 @@ function StatCard({
       <div className="relative flex h-full items-start justify-between gap-3">
         <div className="min-w-0">
           <p
-            className={`max-w-[150px] text-[10px] font-bold uppercase leading-[1.25] tracking-[0.09em] ${t.label}`}
+            className={`max-w-[150px] text-[10px] font-semibold uppercase leading-[1.25] tracking-[0.09em] ${t.label}`}
           >
             {label}
           </p>
 
           <p
-            className={`mt-2 text-[27px] font-bold leading-none tracking-tight ${t.value}`}
+            className={`mt-2 text-[26px] font-semibold leading-none tracking-[-0.02em] ${t.value}`}
           >
             {value}
           </p>
@@ -1488,7 +1488,7 @@ function PacientesInner() {
                     </span>
                   </div>
 
-                  <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] text-foreground md:text-[42px]">
+                  <h1 className="ce-aparecer mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-[30px] font-semibold leading-[1.1] tracking-[-0.03em] text-transparent md:text-[38px]">
                     Pacientes
                   </h1>
 
@@ -1703,7 +1703,7 @@ function PacientesInner() {
                           <div className="flex min-w-0 items-center gap-3">
                             <Avatar paciente={p} className="size-11 text-sm ring-4 ring-primary/[0.035]" />
                             <div className="min-w-0">
-                              <p className="truncate font-semibold leading-tight">{nombre}</p>
+                              <p className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">{nombre}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
                                   DNI {formatearDocumento(p.documento)}

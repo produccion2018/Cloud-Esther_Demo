@@ -739,7 +739,7 @@ function UsuarioMovil() {
   const { usuario, clinica } = useSesion();
   const { plan, planContratado } = useCloudEsther();
   const real = useClinicaReal();
-  const rolTexto = real ? NOMBRE_ROL[real.rol] : "Dueño/a";
+  const rolTexto = real ? (real.sesion.usuario.rolNombre || NOMBRE_ROL[real.rol]) : "Dueño/a";
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {

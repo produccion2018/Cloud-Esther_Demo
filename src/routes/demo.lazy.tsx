@@ -769,7 +769,7 @@ function MenuUsuario({ nombre, clinica, iniciales }: { nombre: string; clinica?:
   // Los portales del paciente y del profesional son exclusivos de Enterprise.
   const { plan: planMenu } = useCloudEsther();
   const real = useClinicaReal();
-  const rolTexto = real ? NOMBRE_ROL[real.rol] : "Dueño/a";
+  const rolTexto = real ? (real.sesion.usuario.rolNombre || NOMBRE_ROL[real.rol]) : "Dueño/a";
   const TODOS: { href: string; titulo: string; detalle: string; nueva?: boolean; icon: typeof Users; enterprise?: boolean }[] = [
     { href: "/portal", titulo: "Portal del paciente", detalle: "Así lo ven tus pacientes (DNI + código)", nueva: true, icon: UserRound, enterprise: true },
     { href: "/equipo", titulo: "Portal del profesional", detalle: "Odontólogos, secretaria y asistentes, en celular o PC", nueva: true, icon: Stethoscope, enterprise: true },

@@ -29,27 +29,32 @@ export function HeroModulo({
       <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.055] blur-2xl" />
       <div className="relative p-5 md:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
             <Icon className="size-3.5" />
             {chip}
           </span>
           {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}
         </div>
-        <h1 className="mt-4 text-[30px] font-bold tracking-[-0.035em] md:text-[40px]">{titulo}</h1>
-        <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">{descripcion}</p>
+        <h1 className="ce-aparecer mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-transparent md:text-[36px]">
+          {titulo}
+        </h1>
+        <p className="ce-aparecer mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm" style={{ animationDelay: "60ms" }}>
+          {descripcion}
+        </p>
         {kpis && kpis.length > 0 && (
           <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {kpis.map((k) => (
+            {kpis.map((k, n) => (
               <div
                 key={k.l}
-                className="group relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-20px_rgba(124,58,237,0.6)] dark:from-card dark:via-card"
+                style={{ animationDelay: `${120 + n * 70}ms` }}
+                className="ce-aparecer group relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.055] p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_28px_-22px_rgba(124,58,237,0.5)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_20px_38px_-22px_rgba(124,58,237,0.6)] dark:from-card dark:via-card"
               >
                 <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
                 <div className="relative flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">{k.l}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary/70">{k.l}</p>
                     <p
-                      className={`mt-2 font-bold tracking-tight text-primary tabular-nums ${
+                      className={`mt-2 bg-gradient-to-br from-primary to-fuchsia-500 bg-clip-text font-semibold tracking-tight text-transparent tabular-nums ${
                         typeof k.v === "string" && k.v.length > 16
                           ? "break-all text-[15px] leading-tight"
                           : typeof k.v === "string" && k.v.length > 6
@@ -61,8 +66,8 @@ export function HeroModulo({
                     </p>
                     <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{k.s}</p>
                   </div>
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary transition group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white">
-                    <k.i className="size-4" />
+                  <span className="grid size-9 shrink-0 place-items-center rounded-[12px] bg-gradient-to-br from-primary/[0.12] to-fuchsia-500/[0.10] text-primary ring-1 ring-primary/10 transition-all duration-300 group-hover:scale-105 group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white group-hover:ring-transparent">
+                    <k.i className="size-4" strokeWidth={1.9} />
                   </span>
                 </div>
               </div>

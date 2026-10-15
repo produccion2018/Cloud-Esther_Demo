@@ -197,7 +197,7 @@ export function EquipoClinicaPanel({
       <section className="ce-tarjeta p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="flex items-baseline gap-3 text-xl font-extrabold tracking-tight">
+            <h2 className="flex items-baseline gap-3 text-xl font-semibold tracking-[-0.02em]">
               Tu equipo
               {equipo.limite !== null && (
                 <span className="text-sm font-semibold tabular-nums text-muted-foreground">
@@ -451,7 +451,7 @@ function QueVe({
     <Sheet open={!!persona} onOpenChange={(o) => !o && onCerrar()}>
       <SheetContent side="right" className="ce-clinica flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <SheetHeader className="border-b px-6 py-5 text-left">
-          <SheetTitle className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+          <SheetTitle className="flex items-center gap-2 text-xl font-semibold tracking-[-0.02em]">
             <Eye className="size-5 text-primary" /> Qué ve {persona?.nombre.split(" ")[0] ?? ""}
           </SheetTitle>
           <SheetDescription>
@@ -742,7 +742,7 @@ function SumarPersonas({
     <Sheet open={abierto} onOpenChange={(v) => !v && onCerrar()}>
       <SheetContent side="right" className="ce-clinica flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="border-b px-6 py-5 text-left">
-          <SheetTitle className="text-xl font-extrabold tracking-tight">Sumar personas</SheetTitle>
+          <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">Sumar personas</SheetTitle>
           <SheetDescription>
             Armá la lista y mandá todas las invitaciones juntas. A cada una le llega un correo para elegir su contraseña.
           </SheetDescription>

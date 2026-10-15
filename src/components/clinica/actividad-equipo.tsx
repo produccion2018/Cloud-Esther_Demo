@@ -240,7 +240,7 @@ export function ActividadEquipo({ slug }: { slug: string }) {
       <section className="ce-tarjeta p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.02em]">
               <Activity className="size-5 text-primary" /> Actividad del equipo
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -281,7 +281,7 @@ export function ActividadEquipo({ slug }: { slug: string }) {
             onClick={() => setPersona(null)}
             aria-pressed={persona === null}
             className={cn(
-              "flex items-center gap-3 rounded-2xl p-3.5 text-left ring-1 transition hover:-translate-y-0.5",
+              "ce-aparecer flex items-center gap-3 rounded-2xl p-3.5 text-left ring-1 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-22px_rgba(124,58,237,0.6)]",
               persona === null ? "bg-gradient-to-br from-primary to-fuchsia-500 text-white ring-transparent shadow-[0_14px_28px_-18px_rgba(124,58,237,0.9)]" : "bg-card ring-border hover:ring-primary/40",
             )}
           >
@@ -289,14 +289,15 @@ export function ActividadEquipo({ slug }: { slug: string }) {
               <Users className="size-5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-bold">Todo el equipo</span>
+              <span className="block text-sm font-semibold">Todo el equipo</span>
               <span className={cn("block text-xs", persona === null ? "text-white/80" : "text-muted-foreground")}>{todas.length} personas</span>
             </span>
           </button>
-          {todas.map((p) => (
+          {todas.map((p, n) => (
             <button
               key={p.id}
               type="button"
+              style={{ animationDelay: `${n * 50}ms` }}
               onClick={() => setPersona(persona === p.id ? null : p.id)}
               aria-pressed={persona === p.id}
               className={cn(
@@ -317,13 +318,13 @@ export function ActividadEquipo({ slug }: { slug: string }) {
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold">{p.nombre}</span>
+                <span className="block truncate text-sm font-semibold tracking-[-0.01em]">{p.nombre}</span>
                 <span className="block truncate text-xs text-muted-foreground">
                   {p.rolNombre} · {p.enLinea ? <span className="font-semibold text-emerald-600">En línea</span> : hace(p.ultimaActividad)}
                 </span>
               </span>
               <span className="shrink-0 text-right">
-                <span className="block text-base font-extrabold tabular-nums text-primary">{p.cambios}</span>
+                <span className="block text-base font-semibold tabular-nums text-primary">{p.cambios}</span>
                 <span className="block text-[10px] text-muted-foreground">{p.cambios === 1 ? "cambio" : "cambios"}</span>
               </span>
             </button>

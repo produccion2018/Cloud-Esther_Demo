@@ -48,7 +48,7 @@ type Props = {
 };
 
 const CARD =
-  "rounded-2xl border border-border/70 bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]";
+  "relative overflow-hidden rounded-3xl border border-primary/12 bg-gradient-to-br from-card via-card to-primary/[0.05] p-4 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.6)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-violet-500 before:via-fuchsia-500 before:to-pink-400 before:content-['']";
 
 /*
  * Datos clínicos locales de demostración.
@@ -178,12 +178,12 @@ export function ToothDetailPanel({
     <div className={CARD}>
       {/* Identificación de la pieza */}
       <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-lg font-semibold tabular-nums text-white shadow-[0_10px_22px_-10px_rgba(217,70,239,0.85)]">
           {def.fdi}
         </span>
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-foreground">
+          <p className="truncate text-sm font-semibold tracking-[-0.01em] text-foreground">
             {def.name}
           </p>
 
@@ -198,14 +198,14 @@ export function ToothDetailPanel({
           </p>
         </div>
 
-        <div className="ml-auto rounded-lg bg-muted/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+        <div className="ml-auto rounded-full bg-primary/[0.08] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-primary">
           FDI
         </div>
       </div>
 
       {/* Superficies */}
       <div className="mt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <LayoutGrid className="size-3.5" />
           Superficies
         </p>
@@ -216,10 +216,10 @@ export function ToothDetailPanel({
               key={s.id}
               type="button"
               onClick={() => setSuperficie(s.id)}
-              className={`rounded-lg border px-1.5 py-2 text-[10px] font-medium transition-colors ${
+              className={`rounded-xl border px-1.5 py-2 text-[10px] font-medium transition-all duration-200 ${
                 superficie === s.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-muted/60"
+                  ? "border-transparent bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(217,70,239,0.9)]"
+                  : "border-border/70 bg-background text-foreground hover:-translate-y-px hover:border-primary/30 hover:bg-primary/[0.04]"
               }`}
             >
               {s.label}
@@ -228,7 +228,7 @@ export function ToothDetailPanel({
         </div>
 
         {/* Información de la superficie seleccionada */}
-        <div className="mt-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="mt-2 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-foreground">
               {SUPERFICIES.find(
@@ -253,12 +253,12 @@ export function ToothDetailPanel({
 
       {/* Estado actual */}
       <div className="mt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <Info className="size-3.5" />
           Estado actual
         </p>
 
-        <div className="mt-2 rounded-xl border border-border/60 bg-muted/30 p-2">
+        <div className="mt-2 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-2">
           <div className="flex items-center gap-2">
             <span
               className="size-2.5 rounded-full"
@@ -283,10 +283,10 @@ export function ToothDetailPanel({
                 key={s}
                 type="button"
                 onClick={() => onSetEstado(def.fdi, s)}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all duration-200 ${
                   activo
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-foreground hover:bg-muted/60"
+                    ? "border-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(217,70,239,0.9)]"
+                    : "border-border/70 bg-background text-foreground hover:-translate-y-px hover:border-primary/30 hover:bg-primary/[0.04]"
                 }`}
               >
                 <span
@@ -306,12 +306,12 @@ export function ToothDetailPanel({
 
       {/* Diagnóstico */}
       <div className="mt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <Stethoscope className="size-3.5" />
           Diagnóstico
         </p>
 
-        <div className="mt-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="mt-2 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-3">
           <p className="text-xs font-semibold text-foreground">
             {datosClinicos?.diagnostico}
           </p>
@@ -324,7 +324,7 @@ export function ToothDetailPanel({
 
       {/* Datos clínicos rápidos */}
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Sensibilidad
           </p>
@@ -334,7 +334,7 @@ export function ToothDetailPanel({
           </p>
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Movilidad
           </p>
@@ -347,7 +347,7 @@ export function ToothDetailPanel({
 
       {/* Tratamiento planificado */}
       <div className="mt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <ClipboardList className="size-3.5" />
           Tratamiento planificado
         </p>
@@ -399,12 +399,12 @@ export function ToothDetailPanel({
 
       {/* Observaciones clínicas */}
       <div className="mt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <FileText className="size-3.5" />
           Observaciones clínicas
         </p>
 
-        <div className="mt-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="mt-2 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.03] p-3">
           <p className="text-xs leading-relaxed text-foreground">
             {datosClinicos?.observaciones}
           </p>

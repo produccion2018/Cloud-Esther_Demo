@@ -1,10 +1,12 @@
 import {
   AlertTriangle,
+  CalendarCheck,
   CalendarDays,
   ChevronRight,
   Clock3,
   Droplets,
   FileText,
+  FolderOpen,
   Hash,
   HeartPulse,
   Mail,
@@ -14,6 +16,7 @@ import {
   Phone,
   Pill,
   ReceiptText,
+  ScanLine,
   ShieldCheck,
   Stethoscope,
   User,
@@ -455,8 +458,8 @@ export function ResumenPaciente({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        {/* Datos personales */}
-        <section className={PANEL}>
+        {/* Datos personales (la tarjeta crece con la columna de al lado: abajo va el resumen de atención) */}
+        <section className={`${PANEL} flex flex-col`}>
           <div className="mb-2 flex items-center justify-between">
             <h5 className="text-sm font-semibold tracking-[-0.01em]">Datos del paciente</h5>
             {ultimaVisita && (
@@ -480,6 +483,39 @@ export function ResumenPaciente({
             <Fila icon={HeartPulse} etiqueta="Sucursal" valor={paciente.sucursal} />
             <Fila icon={ShieldCheck} etiqueta="Obra social" valor={obraSocial} />
             <Fila icon={Hash} etiqueta="N.º de afiliado" valor={paciente.afiliado} />
+          </div>
+
+          {/* Resumen de atención: llena el espacio con lo útil y lleva a cada sección */}
+          <div className="mt-auto pt-4">
+            <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
+              Resumen de atención
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { icon: CalendarCheck, n: datos.turnos.length, t: "Turnos", s: "turnos", tono: "from-violet-500 to-fuchsia-500" },
+                  { icon: Stethoscope, n: datos.tratamientos.length, t: "Tratamientos", s: "tratamientos", tono: "from-emerald-500 to-teal-500" },
+                  { icon: ScanLine, n: datos.estudios.length, t: "Estudios", s: "estudios", tono: "from-sky-500 to-indigo-500" },
+                  { icon: FolderOpen, n: datos.documentos.length, t: "Documentos", s: "documentos", tono: "from-amber-500 to-rose-500" },
+                ] as const
+              ).map((x) => (
+                <button
+                  key={x.t}
+                  type="button"
+                  onClick={() => onIr(x.s)}
+                  className="group flex items-center gap-2.5 rounded-2xl border border-border/60 bg-card/80 p-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_24px_-18px_rgba(124,58,237,0.7)]"
+                >
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_6px_14px_-8px_rgba(76,29,149,0.8)] ${x.tono}`}>
+                    <x.icon className="size-3.5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold leading-none tabular-nums text-foreground">{x.n}</span>
+                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{x.t}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 

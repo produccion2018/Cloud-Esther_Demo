@@ -35,6 +35,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { MODULES, ModuleIcon, availableIn, useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { modulosDelRol } from "@/lib/clinica/permisos";
 import { PermisosPorRolPanel } from "@/components/clinica/permisos-rol";
+import { RolesPropiosPanel, tonoRolPropio } from "@/components/clinica/roles-propios";
 import { cn } from "@/lib/utils";
 import { descargarEquipoExcel, descargarPlantillaEquipo, leerPersonasDeArchivo } from "@/lib/clinica/excel-equipo";
 import {
@@ -47,6 +48,8 @@ import {
   type EquipoClinica,
   type PersonaEquipo,
   type RolClinica,
+  type RolElegido,
+  type RolPropio,
 } from "@/lib/clinica/api";
 
 /* Ubicación: src/components/clinica/equipo.tsx
@@ -93,14 +96,23 @@ const cuando = (iso: string | null) => {
   return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 };
 
-function Avatar({ p, chico = false }: { p: { nombre: string; rol: RolClinica }; chico?: boolean }) {
+function Avatar({
+  p,
+  chico = false,
+  degrade,
+}: {
+  p: { nombre: string; rol: RolClinica };
+  chico?: boolean;
+  /** Rol propio: su degradé (en vez del color del rol de siempre) */
+  degrade?: string | undefined;
+}) {
   const c = COLOR_ROL[p.rol];
   return (
     <span
       className={cn(
         "ce-avatar inline-flex shrink-0 items-center justify-center rounded-full font-bold",
-        c.fondo,
-        c.texto,
+        degrade ? `bg-gradient-to-br text-white ${degrade}` : c.fondo,
+        degrade ? "" : c.texto,
         chico ? "h-10 w-10 text-xs ring-2 ring-background" : "h-11 w-11 text-sm shadow-sm",
       )}
       aria-hidden="true"
@@ -127,7 +139,8 @@ export function EquipoClinicaPanel({
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [sumar, setSumar] = useState(false);
   const [buscar, setBuscar] = useState("");
-  const [filtro, setFiltro] = useState<RolClinica | "todos">("todos");
+  // Filtro: un rol de siempre o el código de un rol propio
+  const [filtro, setFiltro] = useState<string>("todos");
   const [queVe, setQueVe] = useState<PersonaEquipo | null>(null);
 
   const cargar = useCallback(() => {
@@ -140,7 +153,7 @@ export function EquipoClinicaPanel({
 
   const cambiar = async (
     p: PersonaEquipo,
-    cambios: { rol?: RolClinica; activo?: boolean; modulos?: string[] | null },
+    cambios: { rol?: RolElegido; activo?: boolean; modulos?: string[] | null },
     ok: string,
   ): Promise<boolean> => {
     setOcupado(p.id);
@@ -173,7 +186,7 @@ export function EquipoClinicaPanel({
     const q = buscar.trim().toLowerCase();
     return equipo.personas.filter(
       (p) =>
-        (filtro === "todos" || p.rol === filtro) &&
+        (filtro === "todos" || (p.rolPropio ?? p.rol) === filtro) &&
         (!q || p.nombre.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)),
     );
   }, [equipo, buscar, filtro]);
@@ -189,7 +202,9 @@ export function EquipoClinicaPanel({
 
   const libres = equipo.limite === null ? null : Math.max(0, equipo.limite - equipo.usados);
   const ocupan = equipo.personas.filter((p) => p.estado !== "desactivada");
-  const cuenta = (r: RolClinica) => equipo.personas.filter((p) => p.rol === r).length;
+  // Cuántas personas tiene cada rol (las de un rol propio cuentan en el suyo, no en Secretaría)
+  const cuenta = (r: string) => equipo.personas.filter((p) => (p.rolPropio ?? p.rol) === r).length;
+  const propios = equipo.rolesPropios ?? [];
 
   return (
     <div className="space-y-5">
@@ -245,6 +260,9 @@ export function EquipoClinicaPanel({
       {/* Panel de control: qué ve cada rol (siempre visible, aunque todavía no haya nadie invitado) */}
       <PermisosPorRolPanel slug={slug} equipo={equipo} />
 
+      {/* Roles propios de la clínica (Plus y Enterprise): Facturación, Recursos humanos… */}
+      <RolesPropiosPanel slug={slug} equipo={equipo} onEquipo={setEquipo} />
+
       {/* Buscar y filtrar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative sm:w-72">
@@ -267,6 +285,12 @@ export function EquipoClinicaPanel({
               {PLURAL_ROL[r.id]} <span className="opacity-60">{cuenta(r.id)}</span>
             </Filtro>
           ))}
+          {propios.filter((r) => cuenta(r.codigo) > 0).map((r) => (
+            <Filtro key={r.codigo} activo={filtro === r.codigo} onClick={() => setFiltro(r.codigo)}>
+              <span className={cn("h-2 w-2 rounded-full", tonoRolPropio(r.codigo, propios).punto)} />
+              {r.nombre} <span className="opacity-60">{cuenta(r.codigo)}</span>
+            </Filtro>
+          ))}
         </div>
       </div>
 
@@ -287,7 +311,7 @@ export function EquipoClinicaPanel({
               aria-hidden="true"
               className="absolute inset-y-3 left-0 w-1 origin-center scale-y-0 rounded-r-full bg-primary transition-transform duration-300 group-hover:scale-y-100"
             />
-            <Avatar p={p} />
+            <Avatar p={p} degrade={p.rolPropio ? tonoRolPropio(p.rolPropio, propios).degrade : undefined} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">
                 {p.nombre} {p.soyYo && <span className="text-xs font-normal text-muted-foreground">(vos)</span>}
@@ -297,7 +321,12 @@ export function EquipoClinicaPanel({
                 <Estado p={p} />
               </div>
             </div>
-            <span className={cn("hidden rounded-full px-3 py-1 text-xs font-semibold sm:inline", CHIP_ROL[p.rol])}>
+            <span
+              className={cn(
+                "hidden rounded-full px-3 py-1 text-xs font-semibold sm:inline",
+                p.rolPropio ? tonoRolPropio(p.rolPropio, propios).chip : CHIP_ROL[p.rol],
+              )}
+            >
               {p.rolNombre}
             </span>
             <div className="hidden w-60 sm:block">
@@ -345,9 +374,14 @@ export function EquipoClinicaPanel({
                     <>
                       <DropdownMenuLabel>Rol</DropdownMenuLabel>
                       <DropdownMenuRadioGroup
-                        value={p.rol}
+                        value={p.rolPropio ?? p.rol}
                         onValueChange={(v) =>
-                          v !== p.rol && void cambiar(p, { rol: v as RolClinica }, `${p.nombre} ahora es ${NOMBRE_ROL[v as RolClinica]}.`)
+                          v !== (p.rolPropio ?? p.rol) &&
+                          void cambiar(
+                            p,
+                            { rol: v },
+                            `${p.nombre} ahora es ${propios.find((r) => r.codigo === v)?.nombre ?? NOMBRE_ROL[v as RolClinica]}.`,
+                          )
                         }
                       >
                         {ROLES_CLINICA.map((r) => (
@@ -355,6 +389,12 @@ export function EquipoClinicaPanel({
                             {r.nombre}
                           </DropdownMenuRadioItem>
                         ))}
+                        {equipo.puedeCrearRoles &&
+                          propios.map((r) => (
+                            <DropdownMenuRadioItem key={r.codigo} value={r.codigo}>
+                              {r.nombre}
+                            </DropdownMenuRadioItem>
+                          ))}
                       </DropdownMenuRadioGroup>
                       <DropdownMenuSeparator />
                     </>
@@ -404,6 +444,7 @@ export function EquipoClinicaPanel({
 
       <SumarPersonas
         slug={slug}
+        rolesPropios={equipo.puedeCrearRoles ? propios : []}
         abierto={sumar}
         libres={libres}
         onCerrar={() => setSumar(false)}
@@ -626,25 +667,28 @@ function Estado({ p }: { p: PersonaEquipo }) {
 
 /* ───────────── Sumar personas (varias a la vez) ───────────── */
 
-type Fila = { clave: number; nombre: string; email: string; rol: RolClinica };
+type Fila = { clave: number; nombre: string; email: string; rol: RolElegido };
 const CORREO = /[^\s,;<>"']+@[^\s,;<>"']+\.[^\s,;<>"']+/;
 let siguiente = 1;
-const filaNueva = (rol: RolClinica, nombre = "", email = ""): Fila => ({ clave: siguiente++, nombre, email, rol });
+const filaNueva = (rol: RolElegido, nombre = "", email = ""): Fila => ({ clave: siguiente++, nombre, email, rol });
 
 function SumarPersonas({
   slug,
+  rolesPropios,
   abierto,
   libres,
   onCerrar,
   onListo,
 }: {
   slug: string;
+  /** Roles propios de la clínica (Plus y Enterprise) */
+  rolesPropios: RolPropio[];
   abierto: boolean;
   libres: number | null;
   onCerrar: () => void;
   onListo: (e: EquipoClinica) => void;
 }) {
-  const [rolBase, setRolBase] = useState<RolClinica>("odontologo");
+  const [rolBase, setRolBase] = useState<RolElegido>("odontologo");
   const [filas, setFilas] = useState<Fila[]>(() => [filaNueva("odontologo")]);
   const [pegar, setPegar] = useState(false);
   const [texto, setTexto] = useState("");
@@ -773,6 +817,26 @@ function SumarPersonas({
                   </span>
                 </button>
               ))}
+              {rolesPropios.map((r) => (
+                <button
+                  key={r.codigo}
+                  type="button"
+                  onClick={() => setRolBase(r.codigo)}
+                  aria-pressed={rolBase === r.codigo}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition-all duration-200",
+                    rolBase === r.codigo
+                      ? "border-primary bg-primary/5 shadow-[0_10px_24px_-16px_rgba(76,29,149,0.8)] ring-2 ring-primary/20"
+                      : "hover:-translate-y-px hover:border-primary/40 hover:shadow-sm",
+                  )}
+                >
+                  <span className={cn("h-3 w-3 shrink-0 rounded-full", tonoRolPropio(r.codigo, rolesPropios).punto)} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{r.nombre}</span>
+                    <span className="block text-xs text-muted-foreground">Rol de tu clínica</span>
+                  </span>
+                </button>
+              ))}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Se usa para las personas que agregues. Cada una se puede cambiar abajo.</p>
           </div>
@@ -828,7 +892,7 @@ function SumarPersonas({
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={pasarLista} disabled={!texto.trim()}>
-                  Agregar como {NOMBRE_ROL[rolBase]}
+                  Agregar como {rolesPropios.find((r) => r.codigo === rolBase)?.nombre ?? NOMBRE_ROL[rolBase as RolClinica]}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setPegar(false)}>
                   Cancelar
@@ -856,7 +920,11 @@ function SumarPersonas({
             </p>
             {filas.map((f, i) => (
               <div key={f.clave} className="flex items-start gap-2 rounded-2xl bg-muted/50 p-2.5">
-                <Avatar p={{ nombre: f.nombre || "?", rol: f.rol }} chico />
+                <Avatar
+                  p={{ nombre: f.nombre || "?", rol: rolesPropios.some((r) => r.codigo === f.rol) ? "secretaria" : (f.rol as RolClinica) }}
+                  degrade={rolesPropios.some((r) => r.codigo === f.rol) ? tonoRolPropio(f.rol, rolesPropios).degrade : undefined}
+                  chico
+                />
                 <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
                   <Input
                     value={f.nombre}
@@ -877,12 +945,17 @@ function SumarPersonas({
                   />
                   <select
                     value={f.rol}
-                    onChange={(e) => cambiarFila(f.clave, { rol: e.target.value as RolClinica })}
+                    onChange={(e) => cambiarFila(f.clave, { rol: e.target.value })}
                     aria-label={`Rol de la persona ${i + 1}`}
                     className="h-9 rounded-md border border-input bg-background px-2 text-sm sm:col-span-2"
                   >
                     {ROLES_CLINICA.map((r) => (
                       <option key={r.id} value={r.id}>
+                        {r.nombre}
+                      </option>
+                    ))}
+                    {rolesPropios.map((r) => (
+                      <option key={r.codigo} value={r.codigo}>
                         {r.nombre}
                       </option>
                     ))}

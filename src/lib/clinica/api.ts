@@ -25,6 +25,8 @@ export type UsuarioClinica = {
   email: string;
   rol: RolClinica;
   rolNombre: string;
+  /** Código del rol propio de la clínica (ej.: «Facturación»), si tiene uno */
+  rolPropio?: string | null;
   /** Módulos que el Administrador le dejó ver (null o ausente = todo lo de su rol) */
   modulos?: string[] | null;
 };
@@ -37,6 +39,8 @@ export type PersonaEquipo = {
   email: string;
   rol: RolClinica;
   rolNombre: string;
+  /** Código del rol propio (Plus y Enterprise) o null */
+  rolPropio?: string | null;
   estado: "invitada" | "activa" | "desactivada";
   ultimoIngreso: string | null;
   soyYo: boolean;
@@ -47,7 +51,19 @@ export type PersonaEquipo = {
   /** ¿El Administrador eligió a mano qué ve? */
   modulosPersonalizados?: boolean;
 };
-export type EquipoClinica = { personas: PersonaEquipo[]; usados: number; limite: number | null; plan: string | null };
+/** Rol propio de la clínica (Plus y Enterprise): lo crea el Administrador, ej.: «Facturación» */
+export type RolPropio = { codigo: string; nombre: string; modulos: string[]; personas: number };
+export type EquipoClinica = {
+  personas: PersonaEquipo[];
+  usados: number;
+  limite: number | null;
+  plan: string | null;
+  rolesPropios?: RolPropio[];
+  /** ¿Su plan le deja crear roles propios? (Plus y Enterprise) */
+  puedeCrearRoles?: boolean;
+};
+/** Rol al invitar o cambiar: uno de siempre o el código de un rol propio («extra-…») */
+export type RolElegido = RolClinica | string;
 
 export class ErrorClinica extends Error {
   constructor(
@@ -207,19 +223,28 @@ export const cambiarClaveClinica = (slug: string, actual: string, nueva: string)
   http<void>(slug, "POST", "/cambiar-clave", { actual, nueva });
 
 export const verEquipo = async (slug: string) => conNombres(await http<EquipoClinica>(slug, "GET", "/equipo"));
-export const invitarAlEquipo = async (slug: string, datos: { nombre: string; email: string; rol: RolClinica }) =>
+export const invitarAlEquipo = async (slug: string, datos: { nombre: string; email: string; rol: RolElegido }) =>
   conNombres(await http<EquipoClinica>(slug, "POST", "/equipo", datos));
 /** Varias personas a la vez (todo o nada). Devuelve el equipo y a quién no le salió el correo. */
-export const invitarVarios = async (slug: string, personas: { nombre: string; email: string; rol: RolClinica }[]) => {
+export const invitarVarios = async (slug: string, personas: { nombre: string; email: string; rol: RolElegido }[]) => {
   const r = await http<{ equipo: EquipoClinica; enviadas: number; sinCorreo: string[] }>(slug, "POST", "/equipo/varios", { personas });
   return { ...r, equipo: conNombres(r.equipo) };
 };
 export const cambiarPersonaEquipo = async (
   slug: string,
   id: string,
-  cambios: { rol?: RolClinica; activo?: boolean; modulos?: string[] | null },
+  cambios: { rol?: RolElegido; activo?: boolean; modulos?: string[] | null },
 ) =>
   conNombres(await http<EquipoClinica>(slug, "PATCH", `/equipo/${id}`, cambios));
+
+/* ───────────── Roles propios (Plus y Enterprise, solo el Administrador) ───────────── */
+export const crearRolPropio = async (slug: string, datos: { nombre: string; modulos: string[] }) =>
+  conNombres(await http<EquipoClinica>(slug, "POST", "/equipo/roles", datos));
+export const editarRolPropio = async (slug: string, codigo: string, datos: { nombre?: string; modulos?: string[] }) =>
+  conNombres(await http<EquipoClinica>(slug, "PATCH", `/equipo/roles/${encodeURIComponent(codigo)}`, datos));
+export const borrarRolPropio = async (slug: string, codigo: string) =>
+  conNombres(await http<EquipoClinica>(slug, "DELETE", `/equipo/roles/${encodeURIComponent(codigo)}`));
+export const esRolPropio = (rol: string): boolean => /^extra-[0-9a-f]{8}$/.test(rol);
 /* ───────────── Actividad del equipo (solo el Administrador) ───────────── */
 export type CambioCantidad = { a: number; m: number; b: number };
 export type ActividadPersona = {

@@ -1,4 +1,5 @@
 import type { RolClinica } from "@/lib/clinica/api";
+import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/demo-admin.ts
    ADMINISTRACIÓN DE LA CLÍNICA EN EL DEMO: las mismas pantallas de una clínica real
@@ -51,6 +52,19 @@ const MAXIMOS: Record<RolP, string[]> = { odontologo: TODOS, secretaria: TODOS, 
 
 const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
 
+/* ROLES PROPIOS en el demo (como en una clínica real con plan Plus o Enterprise):
+   «Facturación» (Sandra) y «Recursos humanos» (Luis). En Start y Pro no aparecen. */
+type RolPropioDemo = { codigo: string; nombre: string; modulos: string[] };
+const conRolesPropios = () => {
+  try {
+    const plan = localStorage.getItem(claveTenant("cloud-esther-demo:plan")) ?? "avanzada";
+    return plan === "avanzada" || plan === "grupo";
+  } catch {
+    return true;
+  }
+};
+const RESERVADOS = ["administrador", "odontologo", "odontólogo", "odontólogo/a", "secretaria", "secretaría", "asistente"];
+
 type PersonaDemo = {
   id: string;
   nombre: string;
@@ -59,6 +73,8 @@ type PersonaDemo = {
   estado: "invitada" | "activa" | "desactivada";
   ultimoIngreso: string | null;
   acceso: string[] | null;
+  /** Rol propio (Plus/Enterprise) */
+  rolPropio?: string | null;
 };
 
 const estado = (() => {
@@ -77,21 +93,37 @@ const estado = (() => {
     secretaria: PREDETERMINADOS.secretaria.filter((m) => m !== "marketing"),
     asistente: null,
   };
-  return { personas, porRol, limite: 15 };
+  const rolesPropios: RolPropioDemo[] = [
+    { codigo: "extra-0000fac1", nombre: "Facturación", modulos: ["dashboard", "notificaciones", "presupuestos", "facturacion", "finanzas"] },
+    { codigo: "extra-00001aa1", nombre: "Recursos humanos", modulos: ["dashboard", "notificaciones", "equipo", "rrhh"] },
+  ];
+  personas.push(
+    { id: "demo-6", nombre: "Sandra Ruiz", email: "sandra.ruiz@tuclinica.com", rol: "secretaria", estado: "activa", ultimoIngreso: hace(55), acceso: null, rolPropio: "extra-0000fac1" },
+    { id: "demo-7", nombre: "Luis Gómez", email: "luis.gomez@tuclinica.com", rol: "secretaria", estado: "activa", ultimoIngreso: hace(200), acceso: null, rolPropio: "extra-00001aa1" },
+  );
+  return { personas, porRol, limite: 15, rolesPropios };
 })();
 
+const rolPropioDe = (p: PersonaDemo) => (p.rolPropio ? estado.rolesPropios.find((r) => r.codigo === p.rolPropio) : undefined);
+/** Personas que se ven: en Start y Pro no están las de roles propios */
+const visibles = () => estado.personas.filter((p) => conRolesPropios() || !p.rolPropio);
+
 const efectivos = (p: PersonaDemo) =>
-  p.rol === "admin" ? null : (p.acceso ?? estado.porRol[p.rol as RolP] ?? PREDETERMINADOS[p.rol as RolP]);
+  p.rol === "admin"
+    ? null
+    : (p.acceso ?? (p.rolPropio ? (rolPropioDe(p)?.modulos ?? SIEMPRE) : (estado.porRol[p.rol as RolP] ?? PREDETERMINADOS[p.rol as RolP])));
 
 function equipo() {
-  const ocupan = estado.personas.filter((p) => p.estado !== "desactivada").length;
+  const ocupan = visibles().filter((p) => p.estado !== "desactivada").length;
+  const propios = conRolesPropios();
   return {
-    personas: estado.personas.map((p) => ({
+    personas: visibles().map((p) => ({
       id: p.id,
       nombre: p.nombre,
       email: p.email,
       rol: p.rol,
-      rolNombre: NOMBRE_ROL[p.rol],
+      rolNombre: rolPropioDe(p)?.nombre ?? NOMBRE_ROL[p.rol],
+      rolPropio: p.rolPropio ?? null,
       estado: p.estado,
       ultimoIngreso: p.ultimoIngreso,
       soyYo: p.id === "demo-yo",
@@ -101,7 +133,11 @@ function equipo() {
     })),
     usados: ocupan,
     limite: estado.limite,
-    plan: "PRO",
+    plan: propios ? "PLUS" : "PRO",
+    rolesPropios: propios
+      ? estado.rolesPropios.map((r) => ({ ...r, personas: estado.personas.filter((p) => p.rolPropio === r.codigo).length }))
+      : [],
+    puedeCrearRoles: propios,
   };
 }
 
@@ -142,7 +178,7 @@ function actividad(dias: number, persona?: string) {
     .filter((e) => new Date(e.fecha).getTime() > desde && (!persona || e.personaId === persona))
     .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const enLinea = new Set(["demo-yo", "demo-4", "demo-1"]);
-  const personas = estado.personas
+  const personas = visibles()
     .filter((p) => !persona || p.id === persona)
     .map((p) => {
       const suyos = eventos.filter((e) => e.personaId === p.id);
@@ -150,7 +186,7 @@ function actividad(dias: number, persona?: string) {
         id: p.id,
         nombre: p.nombre,
         rol: p.rol,
-        rolNombre: NOMBRE_ROL[p.rol],
+        rolNombre: rolPropioDe(p)?.nombre ?? NOMBRE_ROL[p.rol],
         estado: p.estado,
         ultimoIngreso: p.ultimoIngreso,
         ultimaActividad: suyos[0]?.fecha ?? p.ultimoIngreso,
@@ -200,7 +236,9 @@ export async function pedidoDemo<T>(metodo: string, ruta: string, cuerpo?: unkno
         id: `demo-n${estado.personas.length + 1}`,
         nombre: String(x.nombre ?? "Persona"),
         email,
-        rol: (x.rol as RolClinica) ?? "asistente",
+        ...(String(x.rol ?? "").startsWith("extra-")
+          ? { rol: "secretaria" as RolClinica, rolPropio: String(x.rol) }
+          : { rol: (x.rol as RolClinica) ?? "asistente", rolPropio: null }),
         estado: "invitada",
         ultimoIngreso: null,
         acceso: null,
@@ -209,14 +247,56 @@ export async function pedidoDemo<T>(metodo: string, ruta: string, cuerpo?: unkno
     const e = equipo();
     return r(camino === "/equipo" ? e : { equipo: e, enviadas: lista.length, sinCorreo: [] });
   }
+  // Roles propios (Plus y Enterprise)
+  const mr = /^\/equipo\/roles(?:\/(extra-[0-9a-f]{8}))?$/.exec(camino ?? "");
+  if (mr) {
+    if (!conRolesPropios()) throw new ErrorDemo("Los roles propios son de los planes Plus y Enterprise.", 403);
+    const limpiarLista = (l: unknown) =>
+      TODOS.filter((m) => (Array.isArray(l) ? (l as string[]).includes(m) : false) || SIEMPRE.includes(m));
+    const validarNombre = (n: unknown, salvo?: string) => {
+      const nombre = String(n ?? "").trim().replace(/\s+/g, " ");
+      if (nombre.length < 2) throw new ErrorDemo("Escribí el nombre del rol.", 400);
+      if (nombre.length > 40) throw new ErrorDemo("El nombre del rol es demasiado largo (máximo 40).", 400);
+      if (RESERVADOS.includes(nombre.toLowerCase())) throw new ErrorDemo("Ese nombre ya es un rol de siempre. Elegí otro.", 409);
+      if (estado.rolesPropios.some((r) => r.codigo !== salvo && r.nombre.toLowerCase() === nombre.toLowerCase()))
+        throw new ErrorDemo("Ya hay un rol con ese nombre.", 409);
+      return nombre;
+    };
+    if (!mr[1] && metodo === "POST") {
+      const codigo = `extra-${Math.random().toString(16).slice(2, 10).padEnd(8, "0")}`;
+      estado.rolesPropios.push({ codigo, nombre: validarNombre(body.nombre), modulos: limpiarLista(body.modulos) });
+      return r(equipo());
+    }
+    const rol = estado.rolesPropios.find((x) => x.codigo === mr[1]);
+    if (!rol) throw new ErrorDemo("Ese rol no existe.", 404);
+    if (metodo === "PATCH") {
+      if (body.nombre !== undefined) rol.nombre = validarNombre(body.nombre, rol.codigo);
+      if (body.modulos !== undefined) rol.modulos = limpiarLista(body.modulos);
+      return r(equipo());
+    }
+    if (metodo === "DELETE") {
+      const n = estado.personas.filter((p) => p.rolPropio === rol.codigo).length;
+      if (n > 0) throw new ErrorDemo(`Hay ${n === 1 ? "1 persona" : `${n} personas`} con este rol. Primero cambiales el rol.`, 409);
+      estado.rolesPropios = estado.rolesPropios.filter((x) => x !== rol);
+      return r(equipo());
+    }
+  }
   const m = /^\/equipo\/([\w-]+)(\/reenviar)?$/.exec(camino ?? "");
   if (m) {
     const p = estado.personas.find((x) => x.id === m[1]);
     if (!p) throw new ErrorDemo("Persona no encontrada.", 404);
     if (m[2]) return r(undefined);
-    if (body.rol && body.rol !== p.rol) {
+    const actual = p.rolPropio ?? p.rol;
+    if (body.rol && body.rol !== actual) {
       if (p.id === "demo-yo") throw new ErrorDemo("No podés quitarte el rol de Administrador a vos mismo.", 409);
-      p.rol = body.rol as RolClinica;
+      if (String(body.rol).startsWith("extra-")) {
+        if (!estado.rolesPropios.some((x) => x.codigo === body.rol)) throw new ErrorDemo("Ese rol ya no existe en tu clínica.", 409);
+        p.rol = "secretaria";
+        p.rolPropio = String(body.rol);
+      } else {
+        p.rol = body.rol as RolClinica;
+        p.rolPropio = null;
+      }
       p.acceso = null;
     }
     if (body.activo === false) {
@@ -227,7 +307,7 @@ export async function pedidoDemo<T>(metodo: string, ruta: string, cuerpo?: unkno
     if ("modulos" in body) {
       if (p.rol === "admin") throw new ErrorDemo("El Administrador ve toda la clínica.", 409);
       const lista = body.modulos as string[] | null;
-      p.acceso = lista === null ? null : MAXIMOS[p.rol as RolP].filter((m) => lista.includes(m) || SIEMPRE.includes(m));
+      p.acceso = lista === null ? null : TODOS.filter((m) => lista.includes(m) || SIEMPRE.includes(m));
     }
     return r(equipo());
   }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -466,9 +466,14 @@ function GateEquipo() {
   const [montado, setMontado] = useState(false);
   const [sesion, setSesion] = useState<string | null>(null);
   const [vista, setVista] = useState<string | null>(null);
+  // La vista llega en la dirección (?vista=dueno); se lee también al navegar sin recargar
+  const busqueda = useRouterState({ select: (s) => s.location.searchStr });
 
   useEffect(() => {
     setVista(new URLSearchParams(window.location.search).get("vista"));
+  }, [busqueda]);
+
+  useEffect(() => {
     setSesion(leerSesionEquipo());
     setMontado(true);
   }, []);

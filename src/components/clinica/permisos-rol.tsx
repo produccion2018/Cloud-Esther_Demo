@@ -93,7 +93,8 @@ export function PermisosPorRolPanel({ slug, equipo }: { slug: string; equipo: Eq
     return antes.length !== ahora.length || antes.some((x) => !ahora.includes(x));
   });
   const cambiosChat = !!chat && !!perms && JSON.stringify(chat) !== JSON.stringify(perms);
-  const personasDelRol = equipo?.personas.filter((p) => p.rol === rol && p.estado !== "desactivada") ?? [];
+  // Las personas con un rol propio (ej.: «Facturación») no cuentan como Secretaría: tienen el suyo
+  const personasDelRol = equipo?.personas.filter((p) => p.rol === rol && !p.rolPropio && p.estado !== "desactivada") ?? [];
   const aMano = personasDelRol.filter((p) => p.modulosPersonalizados).length;
 
   const alternar = (id: string) =>

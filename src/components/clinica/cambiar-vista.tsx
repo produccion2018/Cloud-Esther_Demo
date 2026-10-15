@@ -65,13 +65,23 @@ export function CambiarVista({
           // En el demo, la Administración se abre como Dueño/a (sin pedir usuario del equipo)
           if (demo && o.id === "administracion") {
             return (
-              <a key={o.id} href="/equipo?vista=dueno" role="tab" aria-selected={on} title={o.label} className={clase}>
+              // Navegación interna (sin recargar toda la app) y precarga al pasar el mouse
+              <Link
+                key={o.id}
+                to={"/equipo" as never}
+                search={{ vista: "dueno" } as never}
+                preload="intent"
+                role="tab"
+                aria-selected={on}
+                title={o.label}
+                className={clase}
+              >
                 {contenido}
-              </a>
+              </Link>
             );
           }
           return (
-            <Link key={o.id} to={o.to as never} role="tab" aria-selected={on} title={o.label} className={clase}>
+            <Link key={o.id} to={o.to as never} preload="intent" role="tab" aria-selected={on} title={o.label} className={clase}>
               {contenido}
             </Link>
           );

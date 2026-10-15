@@ -29,7 +29,6 @@ import { useInstalarApp } from "@/lib/pwa";
 import { BotonInstalarApp } from "@/components/cloud-esther/InstalarApp";
 import { VERSION_APP } from "@/lib/version";
 import { marcarAccesoPrueba } from "@/lib/acceso-prueba";
-import { AvatarEsther } from "@/components/cloud-esther/esther-ai/AvatarEsther";
 
 /* Ubicación: src/routes/acceso-prueba.tsx
    ACCESO DE PRUEBA (solo esta etapa): entrar con un toque a los perfiles de Cloud Esther
@@ -50,11 +49,11 @@ export const Route = createFileRoute("/acceso-prueba")({
   component: AccesoPrueba,
 });
 
-const PLANES: { id: PlanId; nombre: string; clave: string; tono: string }[] = [
-  { id: "inicial", nombre: "Start", clave: "Lo esencial · odontograma 2D", tono: "from-sky-400 to-indigo-500" },
-  { id: "profesional", nombre: "Pro", clave: "Facturación, presupuestos y reportes", tono: "from-violet-400 to-fuchsia-500" },
-  { id: "avanzada", nombre: "Plus", clave: "Odontograma 3D · IA Esther · RRHH", tono: "from-fuchsia-400 to-rose-500" },
-  { id: "grupo", nombre: "Enterprise", clave: "n8n · IA Esther · Portal del paciente", tono: "from-amber-300 to-rose-500" },
+const PLANES: { id: PlanId; nombre: string }[] = [
+  { id: "inicial", nombre: "Start" },
+  { id: "profesional", nombre: "Pro" },
+  { id: "avanzada", nombre: "Plus" },
+  { id: "grupo", nombre: "Enterprise" },
 ];
 
 type Perfil = {
@@ -207,8 +206,7 @@ function AccesoPrueba() {
           </span>
         </header>
 
-        <section className="relative mt-8 grid gap-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-xl sm:p-9 lg:grid-cols-[1.35fr_1fr] lg:items-center">
-          <div>
+        <section className="mt-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:p-9">
           <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85 ring-1 ring-white/20">
             <span className="size-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
             Demo en vivo · Versión {VERSION_APP}
@@ -241,41 +239,6 @@ function AccesoPrueba() {
               </span>
             ))}
           </div>
-          </div>
-
-          {/* Los 4 planes de un vistazo (lo que suma cada uno) */}
-          <div className="relative">
-            <div aria-hidden className="pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle,rgba(244,114,182,0.35),transparent_65%)] blur-2xl" />
-            <div className="relative space-y-2.5">
-              <div className="flex items-center gap-3 rounded-2xl bg-white/12 p-3 ring-1 ring-white/20 backdrop-blur-md">
-                <AvatarEsther tam="lg" sobreColor />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">Esther IA te acompaña</p>
-                  <p className="text-[11.5px] text-white/75">En Plus y Enterprise, en todos los módulos</p>
-                </div>
-              </div>
-              {PLANES.map((x, n) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  onClick={() => setPlan(x.id)}
-                  style={{ animationDelay: `${120 + n * 80}ms` }}
-                  className={`ce-aparecer flex w-full items-center gap-3 rounded-2xl p-2.5 text-left ring-1 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 ${
-                    plan === x.id ? "bg-white/22 ring-white/45 shadow-[0_14px_30px_-16px_rgba(0,0,0,0.6)]" : "bg-white/[0.08] ring-white/15 hover:bg-white/[0.14]"
-                  }`}
-                >
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-sm font-semibold text-white shadow-[0_8px_18px_-10px_rgba(0,0,0,0.7)] ${x.tono}`}>
-                    {n + 1}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">{x.nombre}</span>
-                    <span className="block truncate text-[11.5px] text-white/75">{x.clave}</span>
-                  </span>
-                  {plan === x.id && <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#6d28d9]">Elegido</span>}
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
 
         {error && (
@@ -305,7 +268,7 @@ function AccesoPrueba() {
                   <p.icon className="size-7" />
                 </span>
                 <div className="min-w-0 pt-0.5">
-                  <h2 className="font-display text-lg font-semibold tracking-[-0.02em]">{p.titulo}</h2>
+                  <h2 className="font-display text-lg font-bold tracking-tight">{p.titulo}</h2>
                   <p className="text-xs font-semibold text-primary">{p.quien}</p>
                 </div>
               </div>
@@ -340,7 +303,7 @@ function AccesoPrueba() {
                 type="button"
                 onClick={() => void entrar(p.id)}
                 disabled={cargando !== null}
-                className={`relative mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r ${p.color} text-sm font-semibold text-white shadow-[0_14px_28px_-14px_rgba(80,0,120,0.8),inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60`}
+                className={`relative mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r ${p.color} text-sm font-bold text-white shadow-[0_14px_28px_-14px_rgba(80,0,120,0.8)] transition hover:brightness-110 disabled:opacity-60`}
               >
                 {cargando === p.id ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -351,32 +314,30 @@ function AccesoPrueba() {
               </button>
             </article>
           ))}
-          {/* Sexta tarjeta: instalar la app (completa la grilla) */}
-          <article className="relative flex flex-col overflow-hidden rounded-[28px] border border-white/25 bg-white/10 p-5 text-white shadow-[0_24px_60px_-30px_rgba(20,0,60,0.7)] backdrop-blur-xl sm:p-6">
-            <span aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-44 rounded-full bg-white/15 blur-2xl" />
-            <div className="relative flex items-start gap-3.5">
-              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/30">
-                <Download className="size-7" />
-              </span>
-              <div className="min-w-0 pt-0.5">
-                <h2 className="font-display text-lg font-semibold tracking-[-0.02em]">Instalar como aplicación</h2>
-                <p className="text-xs font-semibold text-white/75">PC, tablet y celular</p>
-              </div>
-            </div>
-            <p className="relative mt-4 flex-1 text-sm leading-relaxed text-white/80">
-              {app.instalada
-                ? "Ya la estás usando como aplicación instalada."
-                : app.ios
-                  ? "En iPhone o iPad: tocá Compartir y después «Agregar a inicio»."
-                  : "Queda un ícono en el celular, la tablet o la PC y se abre en pantalla completa, como una app."}
-            </p>
-            {!app.instalada && (
-              <BotonInstalarApp className="relative mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-[#6d28d9] shadow-lg transition-all duration-300 hover:-translate-y-0.5" />
-            )}
-          </article>
         </div>
 
-
+        <section className="mt-6 rounded-[28px] border border-white/20 bg-white/10 p-5 backdrop-blur-xl sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+                <Download className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold">Instalar Cloud Esther como aplicación</h2>
+                <p className="mt-1 max-w-xl text-sm text-white/75">
+                  {app.instalada
+                    ? "Ya la estás usando como aplicación instalada."
+                    : app.ios
+                      ? "En iPhone o iPad: tocá Compartir y después «Agregar a inicio»."
+                      : "Queda un ícono en el celular, la tablet o la PC y se abre en pantalla completa, como una app."}
+                </p>
+              </div>
+            </div>
+            {!app.instalada && (
+              <BotonInstalarApp className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-[#6d28d9] shadow-lg transition hover:-translate-y-0.5" />
+            )}
+          </div>
+        </section>
 
         <p className="mt-6 text-center text-[11px] text-white/55">
           Cloud Esther · Gestión inteligente para clínicas odontológicas

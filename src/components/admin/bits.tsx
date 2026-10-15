@@ -97,10 +97,10 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[22px] border p-4 transition-transform hover:-translate-y-0.5",
+        "ce-aparecer group relative overflow-hidden rounded-[22px] border p-4 transition-all duration-300 ease-out hover:-translate-y-0.5",
         accent
           ? "border-transparent text-primary-foreground"
-          : "border-primary/20 bg-gradient-to-br from-card to-primary/[0.06]",
+          : "border-primary/15 bg-gradient-to-br from-card via-card to-primary/[0.06] hover:border-primary/30",
       )}
       style={
         accent
@@ -112,7 +112,7 @@ export function KpiCard({
       <div className="relative flex items-start justify-between gap-3">
         <p
           className={cn(
-            "text-[10.5px] font-bold uppercase tracking-[0.1em]",
+            "text-[10.5px] font-semibold uppercase tracking-[0.1em]",
             accent ? "text-white/80" : "text-primary/75",
           )}
         >
@@ -121,8 +121,8 @@ export function KpiCard({
         {icon && (
           <span
             className={cn(
-              "grid h-8 w-8 shrink-0 place-items-center rounded-full",
-              accent ? "bg-white/15" : "bg-primary/[0.08] text-primary",
+              "grid h-8 w-8 shrink-0 place-items-center rounded-[11px] transition-transform duration-300 group-hover:scale-105",
+              accent ? "bg-white/15 ring-1 ring-white/20" : "bg-gradient-to-br from-primary/[0.12] to-fuchsia-500/[0.10] text-primary ring-1 ring-primary/10",
             )}
           >
             {icon}
@@ -131,7 +131,7 @@ export function KpiCard({
       </div>
       <p
         className={cn(
-          "relative mt-1 text-[22px] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[28px]",
+          "relative mt-1 text-[22px] font-semibold leading-tight tracking-[-0.025em] tabular-nums sm:text-[27px]",
           accent ? "" : color,
         )}
       >
@@ -169,12 +169,12 @@ export function Seccion({
 }) {
   return (
     <section
-      className={cn("overflow-hidden rounded-[24px] border border-border/80 bg-card", className)}
+      className={cn("overflow-hidden rounded-[24px] border border-border/70 bg-card", className)}
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 bg-gradient-to-r from-primary/[0.035] via-transparent to-transparent px-5 py-4">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-bold tracking-tight">{titulo}</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em]">{titulo}</h2>
           {descripcion && <p className="mt-0.5 text-xs text-muted-foreground">{descripcion}</p>}
         </div>
         {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}

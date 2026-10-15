@@ -38,8 +38,14 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
               <span className="ce-esther-giro absolute -inset-[2.5px] rounded-full bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#ec4899,#38bdf8,#8b5cf6)]" />
             </>
           )}
+          {!abierto && (
+            // Lucecita que orbita alrededor de Esther (infinita)
+            <span className="ce-esther-orbita pointer-events-none absolute -inset-[5px] z-10">
+              <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-full bg-white shadow-[0_0_6px_2px_rgba(217,70,239,0.85)]" />
+            </span>
+          )}
           <span
-            className="relative grid size-10 place-items-center rounded-full bg-gradient-to-b from-primary/15 to-primary/35 bg-no-repeat text-primary ring-2 ring-card"
+            className={`relative grid size-10 place-items-center overflow-hidden rounded-full bg-gradient-to-b from-primary/15 to-primary/35 bg-no-repeat text-primary ring-2 ring-card${abierto ? "" : " ce-esther-cara"}`}
             style={
               abierto
                 ? {}

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Sparkles, Stethoscope, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Sparkles, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MODULES,
@@ -422,54 +422,161 @@ function EmpresaActiva() {
   );
 }
 
+/* Selector de plan del demo: menú propio (premium) que se abre hacia arriba, con el público
+   de cada plan, cuántos módulos trae y una marca en el elegido. Se cierra con Esc o tocando afuera. */
+const TONO_PLAN: Record<PlanId, string> = {
+  inicial: "from-sky-500 to-indigo-500",
+  profesional: "from-violet-500 to-fuchsia-500",
+  avanzada: "from-fuchsia-500 to-rose-500",
+  grupo: "from-amber-500 to-rose-500",
+};
+
+function SelectorPlan({
+  plan,
+  setPlan,
+  cantidad,
+}: {
+  plan: PlanId;
+  setPlan: (p: PlanId) => void;
+  cantidad: number;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const caja = useRef<HTMLDivElement>(null);
+  const idLista = useId();
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: MouseEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) setAbierto(false);
+    };
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", tecla);
+    };
+  }, [abierto]);
+  const ids = Object.keys(PLANS) as PlanId[];
+  return (
+    <div ref={caja} className="relative">
+      {abierto && (
+        <div
+          id={idLista}
+          role="listbox"
+          aria-label="Planes"
+          className="ce-aparecer absolute inset-x-0 bottom-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl border border-sidebar-border/80 bg-sidebar/95 p-1.5 shadow-[0_24px_48px_-20px_rgba(46,16,101,0.55)] backdrop-blur-xl"
+        >
+          <p className="px-2.5 pb-1.5 pt-1 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
+            Probá cada plan
+          </p>
+          {ids.map((id) => {
+            const on = id === plan;
+            const mods = MODULES.filter((m) => availableIn(m, id)).length;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="option"
+                aria-selected={on}
+                onClick={() => {
+                  setPlan(id);
+                  setAbierto(false);
+                }}
+                className={cn(
+                  "group/op flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-all duration-200",
+                  on ? "bg-gradient-to-r from-primary/[0.14] to-fuchsia-500/[0.08]" : "hover:bg-sidebar-accent/70",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-[11px] font-semibold text-white shadow-[0_4px_10px_-6px_rgba(76,29,149,0.8)] transition-transform duration-200 group-hover/op:scale-105",
+                    TONO_PLAN[id],
+                  )}
+                >
+                  {PLANS[id].name.charAt(0)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold leading-tight text-sidebar-foreground">{PLANS[id].name}</span>
+                  <span className="block truncate text-[10.5px] leading-tight text-sidebar-foreground/55">
+                    {mods} módulos · {PLANS[id].audience}
+                  </span>
+                </span>
+                {on && <Check className="size-3.5 shrink-0 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
+        aria-controls={abierto ? idLista : undefined}
+        aria-label="Probar otro plan"
+        className={cn(
+          "group/plan flex w-full items-center gap-2.5 rounded-2xl border bg-sidebar/70 p-1.5 pl-2 text-left shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_8px_24px_-18px_rgba(76,29,149,0.6)] backdrop-blur transition-all duration-200 hover:border-sidebar-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary/30",
+          abierto ? "border-sidebar-primary/40" : "border-sidebar-border/70",
+        )}
+      >
+        <span
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]",
+            TONO_PLAN[plan],
+          )}
+        >
+          <Sparkles className="size-3.5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block whitespace-nowrap text-[9.5px] font-semibold uppercase leading-none tracking-[0.12em] text-sidebar-foreground/45">
+            Plan del demo
+          </span>
+          <span className="mt-1 block truncate font-display text-sm font-semibold leading-tight text-sidebar-foreground">
+            {PLANS[plan].name}
+          </span>
+        </span>
+        <span
+          className="shrink-0 rounded-full bg-sidebar-accent px-2 py-0.5 text-[10px] font-semibold tabular-nums text-sidebar-foreground/65"
+          title={`${cantidad} módulos del plan ${PLANS[plan].name} en el menú`}
+        >
+          {cantidad} mód.
+        </span>
+        <ChevronDown
+          className={cn(
+            "mr-1 size-3.5 shrink-0 text-sidebar-foreground/45 transition-transform duration-300",
+            abierto ? "rotate-180" : "",
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
 function PlanFooter() {
   const { plan, setPlan, planContratado } = useCloudEsther();
   const real = useClinicaReal();
   const cantidad = MODULES.filter((m) => availableIn(m, plan)).length;
   return (
     <div className="relative shrink-0 border-t border-sidebar-border/70 px-3 pb-3 pt-2.5">
-      {/* Plan: una sola fila compacta (no tapa el menú) */}
-      <div className="group/plan flex items-center gap-2.5 rounded-2xl border border-sidebar-border/70 bg-sidebar/70 p-1.5 pl-2 shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_8px_24px_-18px_rgba(76,29,149,0.6)] backdrop-blur transition-colors hover:border-sidebar-primary/30">
-        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]">
-          {planContratado ? <Lock className="size-3.5" /> : <Sparkles className="size-3.5" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[9.5px] font-semibold uppercase leading-none tracking-[0.16em] text-sidebar-foreground/45">
-            {planContratado ? "Plan contratado" : "Plan del demo"}
-          </p>
-          {planContratado ? (
-            // Empresa con plan comprado: se muestra fijo, sin opción de cambiarlo.
+      {/* Plan: una sola fila compacta (no tapa el menú). En el demo abre un menú premium. */}
+      {planContratado ? (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-sidebar-border/70 bg-sidebar/70 p-1.5 pl-2 shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_8px_24px_-18px_rgba(76,29,149,0.6)] backdrop-blur">
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]">
+            <Lock className="size-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9.5px] font-semibold uppercase leading-none tracking-[0.16em] text-sidebar-foreground/45">
+              Plan contratado
+            </p>
+            {/* Empresa con plan comprado: se muestra fijo, sin opción de cambiarlo. */}
             <p className="mt-1 truncate font-display text-sm font-semibold leading-tight text-sidebar-foreground" title={PLANS[plan].audience}>
               {PLANS[plan].name}
             </p>
-          ) : (
-            // Demo: el visitante puede recorrer los planes para compararlos.
-            <div className="relative mt-0.5">
-              <select
-                value={plan}
-                onChange={(e) => setPlan(e.target.value as PlanId)}
-                aria-label="Probar otro plan"
-                className="w-full cursor-pointer appearance-none bg-transparent py-0 pr-5 font-display text-sm font-semibold leading-tight text-sidebar-foreground outline-none focus-visible:underline"
-              >
-                {(Object.keys(PLANS) as PlanId[]).map((id) => (
-                  <option key={id} value={id}>
-                    {PLANS[id].name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45 transition-transform group-hover/plan:translate-y-[-35%]" />
-            </div>
-          )}
+          </div>
         </div>
-        {!planContratado && (
-          <span
-            className="shrink-0 rounded-full bg-sidebar-accent px-2 py-0.5 text-[10px] font-semibold tabular-nums text-sidebar-foreground/65"
-            title={`${cantidad} módulos del plan ${PLANS[plan].name} en el menú`}
-          >
-            {cantidad} mód.
-          </span>
-        )}
-      </div>
+      ) : (
+        <SelectorPlan plan={plan} setPlan={setPlan} cantidad={cantidad} />
+      )}
       <div className="mt-2 flex items-center gap-1.5">
         <Link
           to={"/" as never}

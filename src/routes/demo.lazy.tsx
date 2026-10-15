@@ -26,6 +26,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { salirYVolver, useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { NOMBRE_ROL } from "@/lib/clinica/permisos";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
+import { GraficoBarras, GraficoEvolucion } from "@/components/cloud-esther/graficos-premium";
 import { descargarPDFdeElemento } from "@/lib/descargas";
 
 export const Route = createLazyFileRoute("/demo")({
@@ -79,16 +80,11 @@ const EVOLUCION = [
   { mes: "Septiembre", ingresos: 33600000 },
 ];
 
-const EVOLUCION_PUNTOS = (() => {
-  const valores = EVOLUCION.map((e) => e.ingresos);
-  const min = Math.min(...valores);
-  const max = Math.max(...valores);
-  return EVOLUCION.map((e, i) => {
-    const x = (i * 400) / (EVOLUCION.length - 1);
-    const y = 140 - ((e.ingresos - min) / (max - min)) * 120;
-    return `${x},${y}`;
-  }).join(" ");
-})();
+/** Meta mensual de ingresos del demo (línea punteada del gráfico). */
+const META_MENSUAL = 28000000;
+
+/** $ 21,4 M (pesos en millones, para ejes y tarjetas) */
+const millones = (v: number) => `$ ${(v / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`;
 
 const CARD =
   "relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_14px_36px_-28px_rgba(124,58,237,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-26px_rgba(124,58,237,0.75)] sm:p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-primary before:via-fuchsia-500 before:to-pink-400 before:opacity-70 before:content-['']";
@@ -1027,7 +1023,6 @@ function SearchBar({
 
 function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: string; valor: number }[]; unidad?: string }) {
   const PRODUCCION_ = datos ?? PRODUCCION;
-  const max = Math.max(1, ...PRODUCCION_.map((p) => p.valor));
   return (
     <div className={`${CARD} flex flex-col`}>
       <CabeceraCard icon={Stethoscope} titulo={datos ? "Turnos atendidos por odontólogo" : "Producción por odontólogo"} detalle="Mes en curso" />
@@ -1036,20 +1031,15 @@ function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: strin
           Cuando los odontólogos atiendan turnos este mes, acá vas a ver cuántos atendió cada uno.
         </VacioCard>
       )}
-      <div className={`h-56 items-stretch gap-3 border-t border-dashed border-border pt-3 sm:gap-4 ${datos && datos.length === 0 ? "hidden" : "flex"}`}>
-        {PRODUCCION_.map((p) => (
-          <div key={p.nombre} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <div className="flex w-full flex-1 items-end justify-center">
-              <div
-                className="w-full max-w-14 rounded-t-xl bg-gradient-to-t from-primary to-fuchsia-500 shadow-[0_10px_22px_-14px_rgba(124,58,237,0.9)] transition-all duration-300 hover:opacity-85"
-                style={{ height: `${(p.valor / max) * 100}%` }}
-                title={unidad === "turnos" ? `${p.nombre}: ${p.valor} turnos` : `${p.nombre}: $ ${p.valor} M`}
-              />
-            </div>
-            <span className="truncate text-[11px] text-muted-foreground sm:text-xs">{p.nombre}</span>
-          </div>
-        ))}
-      </div>
+      {!(datos && datos.length === 0) && (
+        <div className="mt-1 flex-1">
+          <GraficoBarras
+            datos={PRODUCCION_}
+            formato={unidad === "turnos" ? (v) => `${Math.round(v)}` : (v) => `$ ${v.toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`}
+            detalle={unidad === "turnos" ? "turnos del mes" : "producción del mes"}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1468,12 +1458,13 @@ function DashboardInner() {
                 Cuando la clínica registre cobros, acá vas a ver cómo evolucionan mes a mes.
               </VacioCard>
             ) : (
-            <div className="h-64 w-full rounded-xl bg-[linear-gradient(to_top,theme(colors.primary/12%),transparent)]">
-              <svg viewBox="0 0 400 160" className="size-full" preserveAspectRatio="none">
-                <polyline points={EVOLUCION_PUNTOS} fill="none" stroke="currentColor" className="text-primary" strokeWidth="2.5" />
-                <polyline points="0,90 400,80" fill="none" stroke="currentColor" strokeDasharray="4 4" className="text-destructive/60" strokeWidth="1.5" />
-              </svg>
-            </div>
+            <GraficoEvolucion
+              datos={EVOLUCION.map((e) => ({ etiqueta: e.mes, valor: e.ingresos }))}
+              meta={META_MENSUAL}
+              formato={millones}
+              nombreSerie="Ingresos"
+              nombreMeta="Meta mensual"
+            />
             )}
           </div>
 

@@ -161,7 +161,7 @@ export function JornadaPortal({
               return (
                 <li key={d} className="flex items-center gap-3 py-2.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold capitalize">
+                    <span className="block text-sm font-semibold first-letter:uppercase">
                       {new Date(`${d}T12:00:00`).toLocaleDateString("es-AR", {
                         weekday: "long",
                         day: "numeric",

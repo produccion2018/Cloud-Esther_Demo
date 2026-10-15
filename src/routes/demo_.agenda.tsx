@@ -1188,7 +1188,7 @@ function PeriodNavigator({
               : "Calendario mensual"}
         </p>
 
-        <h2 className="mt-1 truncate text-lg font-semibold capitalize tracking-tight">{titulo}</h2>
+        <h2 className="mt-1 truncate text-lg font-semibold tracking-tight">{titulo.charAt(0).toUpperCase() + titulo.slice(1)}</h2>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -1666,7 +1666,7 @@ function TurnosTabla({
             <div key={g.fecha}>
               <div className="flex items-center justify-between gap-2 border-b border-primary/10 bg-gradient-to-r from-primary/[0.06] to-transparent px-4 py-2">
                 <p
-                  className={`text-xs font-bold capitalize ${g.fecha === hoy ? "text-primary" : "text-foreground"}`}
+                  className={`text-xs font-semibold first-letter:uppercase ${g.fecha === hoy ? "text-primary" : "text-foreground"}`}
                 >
                   {etiquetaDia(g.fecha, hoy)}
                 </p>
@@ -1771,57 +1771,83 @@ function MiniCalendario({
   };
   return (
     <div className={CARD}>
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold capitalize tracking-tight">{nombreMes(mes)}</p>
-        <div className="flex gap-1">
+      {/* Mini calendario premium: mes y año, «Hoy», día elegido en degradé, hoy con anillo y
+          puntitos según cuántos turnos tiene cada día (1, 2 o 3+). */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-[15px] font-semibold tracking-[-0.01em]">
+          {(() => {
+            const t = nombreMes(mes);
+            const [m, ...resto] = t.split(" ");
+            const anio = resto.filter((x) => /\d/.test(x)).join(" ");
+            return (
+              <>
+                {(m ?? "").charAt(0).toUpperCase() + (m ?? "").slice(1)}{" "}
+                <span className="font-normal text-muted-foreground">{anio}</span>
+              </>
+            );
+          })()}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onElegir(hoy)}
+            className="h-7 rounded-full border border-border/70 px-2.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+          >
+            Hoy
+          </button>
           <button
             type="button"
             onClick={() => moverMes(-1)}
             aria-label="Mes anterior"
-            className="grid size-7 place-items-center rounded-full hover:bg-primary/10"
+            className="grid size-7 place-items-center rounded-full border border-border/70 text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-3.5" />
           </button>
           <button
             type="button"
             onClick={() => moverMes(1)}
             aria-label="Mes siguiente"
-            className="grid size-7 place-items-center rounded-full hover:bg-primary/10"
+            className="grid size-7 place-items-center rounded-full border border-border/70 text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-3.5" />
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 text-center text-[10px] font-bold uppercase text-muted-foreground">
+      <div className="grid grid-cols-7 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
-          <span key={i} className="py-1">
+          <span key={i} className={`py-1 ${i >= 5 ? "text-muted-foreground/55" : ""}`}>
             {d}
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="mt-1 grid grid-cols-7 gap-1">
         {dias.map((d, i) => {
           if (!d) return <span key={`v-${i}`} />;
           const n = turnos.filter((t) => t.fecha === d && t.estado !== "Cancelada").length;
           const elegido = d === fecha;
+          const esHoy = d === hoy;
+          const finde = i % 7 >= 5;
           return (
             <button
               key={d}
               type="button"
               onClick={() => onElegir(d)}
-              className={`relative grid aspect-square place-items-center rounded-xl text-xs font-semibold tabular-nums transition ${
+              aria-label={`${parseISO(d).getDate()}: ${n} turno${n === 1 ? "" : "s"}`}
+              className={`group relative grid aspect-square place-items-center rounded-full text-[12.5px] tabular-nums transition-all duration-200 ${
                 elegido
-                  ? "bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_rgba(124,58,237,0.8)]"
-                  : d === hoy
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-primary/[0.06]"
+                  ? "bg-gradient-to-br from-primary to-fuchsia-500 font-semibold text-white shadow-[0_8px_18px_-8px_rgba(124,58,237,0.9)]"
+                  : esHoy
+                    ? "font-semibold text-primary ring-1 ring-inset ring-primary/40"
+                    : `${finde ? "text-foreground/55" : "text-foreground/85"} hover:bg-primary/[0.07] hover:text-primary`
               }`}
             >
               {parseISO(d).getDate()}
               {n > 0 && (
-                <span
-                  className={`absolute bottom-1 size-1 rounded-full ${elegido ? "bg-white" : "bg-primary"}`}
-                />
+                <span className="absolute bottom-[3px] flex gap-[2px]">
+                  {Array.from({ length: Math.min(3, n) }, (_, k) => (
+                    <span key={k} className={`size-[3px] rounded-full ${elegido ? "bg-white" : "bg-fuchsia-500"}`} />
+                  ))}
+                </span>
               )}
             </button>
           );
@@ -1845,13 +1871,13 @@ function MesView({
   const dias = obtenerDiasMes(fecha);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-primary/20 bg-white/75 shadow-sm shadow-primary/5">
-      <div className="min-w-[720px] overflow-hidden rounded-2xl">
-        <div className="grid grid-cols-7 border-b border-primary/15 bg-primary/[0.035]">
+    <div className="overflow-x-auto rounded-3xl border border-primary/12 bg-card shadow-[0_18px_40px_-30px_rgba(76,29,149,0.55)]">
+      <div className="min-w-[720px] overflow-hidden rounded-3xl">
+        <div className="grid grid-cols-7 border-b border-primary/10 bg-gradient-to-r from-primary/[0.05] via-transparent to-fuchsia-500/[0.04]">
           {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((dia) => (
             <div
               key={dia}
-              className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+              className="px-2 py-3 text-center text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
             >
               {dia}
             </div>
@@ -1878,21 +1904,23 @@ function MesView({
             return (
               <div
                 key={fechaDia}
-                className={`min-h-[92px] border-b border-r border-primary/10 p-1.5 transition-colors hover:bg-primary/[0.025] ${
-                  esHoy ? "bg-primary/[0.045]" : ""
+                className={`min-h-[104px] border-b border-r border-primary/[0.08] p-2 transition-colors duration-200 hover:bg-primary/[0.035] ${
+                  esHoy ? "bg-gradient-to-br from-primary/[0.08] to-fuchsia-500/[0.05]" : index % 7 >= 5 ? "bg-primary/[0.02]" : ""
                 }`}
               >
                 <div className="mb-1.5 flex items-center justify-between">
                   <span
-                    className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${
-                      esHoy ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    className={`grid size-7 place-items-center rounded-full text-[12px] tabular-nums ${
+                      esHoy
+                        ? "bg-gradient-to-br from-primary to-fuchsia-500 font-semibold text-white shadow-[0_6px_14px_-6px_rgba(124,58,237,0.9)]"
+                        : "font-medium text-foreground/75"
                     }`}
                   >
                     {parseISO(fechaDia).getDate()}
                   </span>
 
                   {turnosDia.length > 0 && (
-                    <span className="text-[9px] font-semibold text-primary">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
                       {turnosDia.length}
                     </span>
                   )}

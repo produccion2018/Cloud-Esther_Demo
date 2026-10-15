@@ -446,9 +446,13 @@ const SECCION_MODULO: Partial<Record<Seccion, string>> = {
   liquidaciones: "finanzas",
   rrhh: "rrhh",
   ia: "ia",
+  // El paciente firma las autorizaciones desde SU portal: va con el Portal del paciente (Enterprise)
+  autorizaciones: "portal-paciente",
 };
 
 function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {
+  // «Documentos de la clínica» viene desde el plan Pro (así figura en los planes)
+  if (id === "documentos" && plan === "inicial") return false;
   const modulo = SECCION_MODULO[id];
   if (!modulo) return true;
   const m = MODULES.find((x) => x.id === modulo);

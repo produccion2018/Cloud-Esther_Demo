@@ -1949,34 +1949,75 @@ label {
   }
 }
 
-/* ───────── Esther IA: movimiento sutil (flota, respira, anillo de luz y un brillo) ───────── */
+/* ───────── Esther IA: movimiento infinito (flota, respira, inclina la cabeza, anillo de luz,
+   lucecita que orbita y un brillo). Con «menos movimiento» queda un respirar suave. ───────── */
 @keyframes ce-esther-flotar {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+  50% { transform: translateY(-3px); }
 }
 @keyframes ce-esther-halo {
   0%, 100% { opacity: 0.55; transform: scale(0.96); }
-  50% { opacity: 1; transform: scale(1.06); }
+  50% { opacity: 1; transform: scale(1.08); }
 }
 @keyframes ce-esther-giro {
   to { transform: rotate(360deg); }
+}
+@keyframes ce-esther-cara {
+  0%, 100% { background-size: auto 440%; background-position: 50% 3%; transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  50% { background-size: auto 470%; background-position: 50% 3.5%; transform: rotate(0deg); }
+  75% { transform: rotate(4deg); }
 }
 @keyframes ce-esther-brillo {
   0%, 72% { transform: translateX(-120%); }
   100% { transform: translateX(120%); }
 }
-.ce-esther-flotar { animation: ce-esther-flotar 4.2s ease-in-out infinite; }
-.ce-esther-halo { animation: ce-esther-halo 3.2s ease-in-out infinite; }
-.ce-esther-giro { animation: ce-esther-giro 7s linear infinite; will-change: transform; }
+.ce-esther-flotar { animation: ce-esther-flotar 3.6s ease-in-out infinite; }
+.ce-esther-halo { animation: ce-esther-halo 3s ease-in-out infinite; }
+.ce-esther-giro { animation: ce-esther-giro 6s linear infinite; will-change: transform; }
+.ce-esther-orbita { animation: ce-esther-giro 4.5s linear infinite; will-change: transform; }
+.ce-esther-cara { animation: ce-esther-cara 5s ease-in-out infinite; }
 .ce-esther-brillo {
   background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
   animation: ce-esther-brillo 6.5s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ce-esther-flotar,
-  .ce-esther-halo,
   .ce-esther-giro,
-  .ce-esther-brillo {
+  .ce-esther-orbita,
+  .ce-esther-brillo,
+  .ce-esther-flotar {
+    animation: none;
+  }
+  .ce-esther-cara { animation-duration: 8s; }
+  .ce-esther-halo { animation-duration: 5s; }
+}
+
+/* ───────── Gráficos premium: la línea se dibuja, el área aparece y las barras crecen ───────── */
+@keyframes ce-grafico-trazo {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+@keyframes ce-grafico-area {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ce-grafico-barra {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes ce-grafico-pulso {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
+}
+.ce-grafico-trazo { animation: ce-grafico-trazo 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ce-grafico-area { animation: ce-grafico-area 0.9s ease-out 0.3s both; }
+.ce-grafico-barra { transform-origin: bottom; animation: ce-grafico-barra 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ce-grafico-pulso { animation: ce-grafico-pulso 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-grafico-trazo,
+  .ce-grafico-area,
+  .ce-grafico-barra,
+  .ce-grafico-pulso {
     animation: none;
   }
 }

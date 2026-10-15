@@ -449,6 +449,8 @@ const SECCION_MODULO: Partial<Record<Seccion, string>> = {
 };
 
 function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {
+  // «Documentos de la clínica» viene desde el plan Pro (así figura en los planes)
+  if (id === "documentos" && plan === "inicial") return false;
   const modulo = SECCION_MODULO[id];
   if (!modulo) return true;
   const m = MODULES.find((x) => x.id === modulo);

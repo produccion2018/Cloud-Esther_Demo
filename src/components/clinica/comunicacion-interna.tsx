@@ -11,6 +11,7 @@ import {
   Lock,
   Megaphone,
   MessagesSquare,
+  Palette,
   Paperclip,
   Pencil,
   Plus,
@@ -18,6 +19,7 @@ import {
   SendHorizontal,
   ShieldCheck,
   Trash2,
+  Upload,
   UserPlus,
   Users,
   X,
@@ -26,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { toast } from "sonner";
 
 import { HeroModulo } from "@/components/clinica/hero-modulo";
+import { FONDOS, prepararImagenFondo, useFondoChat, type FondoChat } from "@/lib/clinica/fondo-chat";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -676,6 +679,9 @@ function Conversacion({
   };
 
   const otro = canal.tipo === "directo" ? res.personas.find((x) => canal.miembros.includes(x.id) && x.id !== res.yo.id) : undefined;
+  // Fondo del chat elegido por esta persona (solo en su navegador, separado por clínica)
+  const fondo = useFondoChat(res.yo.id, canal.id);
+  const [eligiendoFondo, setEligiendoFondo] = useState(false);
   const sub =
     canal.tipo === "directo"
       ? (otro?.rolNombre ?? "Mensaje privado")
@@ -726,6 +732,16 @@ function Conversacion({
             )}
           </div>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEligiendoFondo(true)}
+          className="ce-levanta h-9 shrink-0 rounded-full px-3"
+          title="Cambiar el fondo del chat"
+        >
+          <Palette className="size-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">Fondo</span>
+        </Button>
         {canal.puedoAdministrar && (
           <Button variant="outline" size="sm" onClick={onEditar} className="ce-levanta h-9 shrink-0 rounded-full px-3">
             <Pencil className="size-3.5 sm:mr-1.5" />
@@ -733,9 +749,14 @@ function Conversacion({
           </Button>
         )}
       </header>
+      <ElegirFondo abierto={eligiendoFondo} onCerrar={() => setEligiendoFondo(false)} fondo={fondo} nombreChat={canal.nombre} />
 
       {/* Mensajes */}
-      <div ref={listaRef} className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(120%_60%_at_100%_0%,color-mix(in_oklab,var(--primary)_5%,transparent),transparent)] px-3 py-4 scroll-sutil sm:px-6">
+      <div
+        ref={listaRef}
+        style={fondo.estilo}
+        className={`min-h-0 flex-1 overflow-y-auto px-3 py-4 text-foreground transition-[background] duration-500 scroll-sutil sm:px-6 ${fondo.oscuro ? "dark" : ""}`}
+      >
         {error && <p className="mb-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
         {!mensajes ? (
           <p className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -846,6 +867,147 @@ function Conversacion({
 }
 
 /* ───────────── Un mensaje ───────────── */
+/* Elegir el fondo del chat: fondos listos o una foto propia; para todos los chats o solo este. */
+function ElegirFondo({
+  abierto,
+  onCerrar,
+  fondo,
+  nombreChat,
+}: {
+  abierto: boolean;
+  onCerrar: () => void;
+  fondo: ReturnType<typeof useFondoChat>;
+  nombreChat: string;
+}) {
+  const [soloEste, setSoloEste] = useState(fondo.soloEsteChat);
+  const [subiendo, setSubiendo] = useState(false);
+  const archivoRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (abierto) setSoloEste(fondo.soloEsteChat);
+  }, [abierto, fondo.soloEsteChat]);
+  const elegir = (f: FondoChat) => {
+    try {
+      fondo.guardar(f, soloEste);
+      toast.success(soloEste ? `Fondo aplicado a «${nombreChat}»` : "Fondo aplicado a todos tus chats");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar el fondo.");
+    }
+  };
+  const actualId = fondo.actual.tipo === "preset" ? fondo.actual.id : "imagen";
+  return (
+    <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
+      <DialogContent className="ce-clinica max-h-[92dvh] overflow-y-auto rounded-3xl sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white">
+              <Palette className="size-4" />
+            </span>
+            Fondo del chat
+          </DialogTitle>
+          <DialogDescription>Elegí cómo se ve tu chat. Solo lo ves vos, en este navegador.</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex w-full gap-1 rounded-full bg-muted/60 p-1 text-xs font-medium" role="radiogroup" aria-label="Dónde se aplica">
+          {[
+            [false, "Todos mis chats"],
+            [true, `Solo «${nombreChat}»`],
+          ].map(([v, l]) => (
+            <button
+              key={String(v)}
+              type="button"
+              role="radio"
+              aria-checked={soloEste === v}
+              onClick={() => setSoloEste(v as boolean)}
+              className={`flex-1 truncate rounded-full px-3 py-1.5 transition-all ${soloEste === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {l as string}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+          {FONDOS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => elegir({ tipo: "preset", id: f.id })}
+              className={`group relative overflow-hidden rounded-2xl text-left ring-1 transition-all duration-200 hover:-translate-y-0.5 ${
+                actualId === f.id ? "ring-2 ring-primary shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]" : "ring-border/70 hover:ring-primary/40"
+              }`}
+            >
+              <span className="block h-20" style={{ background: f.fondo }}>
+                {/* Mini burbujas de muestra */}
+                <span className="flex h-full flex-col justify-center gap-1 px-2.5">
+                  <span className={`h-2.5 w-3/5 rounded-full ${f.oscuro ? "bg-white/25" : "bg-white/90 shadow-sm"}`} />
+                  <span className="ml-auto h-2.5 w-1/2 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
+                </span>
+              </span>
+              <span className="flex items-center justify-between gap-1 bg-card px-2.5 py-1.5 text-[11.5px] font-medium">
+                {f.nombre}
+                {actualId === f.id && <Check className="size-3.5 text-primary" />}
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            disabled={subiendo}
+            onClick={() => archivoRef.current?.click()}
+            className={`group relative flex flex-col overflow-hidden rounded-2xl text-left ring-1 transition-all duration-200 hover:-translate-y-0.5 ${
+              actualId === "imagen" ? "ring-2 ring-primary" : "ring-border/70 hover:ring-primary/40"
+            }`}
+          >
+            <span
+              className="grid h-20 place-items-center bg-gradient-to-br from-primary/[0.08] to-fuchsia-500/[0.08] text-primary"
+              style={fondo.actual.tipo === "imagen" ? { background: `url("${fondo.actual.url}") center / cover` } : undefined}
+            >
+              {fondo.actual.tipo !== "imagen" && (subiendo ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" />)}
+            </span>
+            <span className="flex items-center justify-between gap-1 bg-card px-2.5 py-1.5 text-[11.5px] font-medium">
+              {fondo.actual.tipo === "imagen" ? "Tu foto" : "Subir foto"}
+              {actualId === "imagen" && <Check className="size-3.5 text-primary" />}
+            </span>
+          </button>
+          <input
+            ref={archivoRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={async (e) => {
+              const a = e.target.files?.[0];
+              e.target.value = "";
+              if (!a) return;
+              setSubiendo(true);
+              try {
+                elegir({ tipo: "imagen", url: await prepararImagenFondo(a) });
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "No se pudo usar esa imagen.");
+              } finally {
+                setSubiendo(false);
+              }
+            }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              fondo.restablecer();
+              toast.success("Volviste al fondo clásico");
+            }}
+            className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Volver al clásico
+          </button>
+          <Button size="sm" onClick={onCerrar} className="rounded-full px-5">
+            Listo
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boolean; res: ResumenChat; onCambio: (m: MensajeChat) => void }) {
   const autor = res.personas.find((x) => x.id === m.autor.id);
   const rol = autor?.rol ?? "asistente";

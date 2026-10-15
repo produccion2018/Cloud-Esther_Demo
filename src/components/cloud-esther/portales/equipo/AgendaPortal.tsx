@@ -315,17 +315,23 @@ export function AgendaPortal({
 
       {vista === "mes" && (
         <TarjetaPortal>
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
-              <span key={d} className="py-1">
+          {/* Calendario mensual premium: cada día muestra sus primeros turnos, cuán cargado está
+              (barra de ocupación) y «Hoy» resaltado. Tocar un día abre su agenda. */}
+          <div className="grid grid-cols-7 gap-1.5 pb-1 text-center text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d, i) => (
+              <span key={d} className={`py-1.5 ${i >= 5 ? "text-muted-foreground/60" : ""}`}>
                 {d}
               </span>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {celdasMes.map((d) => {
-              const n = delDia(d).filter((t) => t.estado !== "Cancelada").length;
+          <div className="grid grid-cols-7 gap-1.5">
+            {celdasMes.map((d, idx) => {
+              const turnosDia = delDia(d).filter((t) => t.estado !== "Cancelada");
+              const n = turnosDia.length;
               const fuera = desdeISO(d).getMonth() !== mesActual;
+              const esHoy = d === hoy;
+              const finde = idx % 7 >= 5;
+              const carga = Math.min(1, n / 8);
               return (
                 <button
                   key={d}
@@ -334,24 +340,63 @@ export function AgendaPortal({
                     setFecha(d);
                     setVista("dia");
                   }}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-xl text-xs transition sm:aspect-auto sm:h-16 ${
-                    d === hoy
-                      ? "bg-gradient-to-br from-primary to-fuchsia-500 text-white"
-                      : "hover:bg-primary/10"
-                  } ${fuera ? "opacity-35" : ""}`}
+                  aria-label={`${Number(d.slice(8, 10))}: ${n} turno${n === 1 ? "" : "s"}`}
+                  className={`group relative flex aspect-square flex-col overflow-hidden rounded-2xl border p-1.5 text-left transition-all duration-300 ease-out sm:aspect-auto sm:h-[104px] sm:p-2 ${
+                    esHoy
+                      ? "border-transparent bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-16px_rgba(124,58,237,0.9)]"
+                      : `${finde ? "bg-primary/[0.025]" : "bg-card"} border-border/60 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_28px_-20px_rgba(124,58,237,0.6)]`
+                  } ${fuera ? "opacity-40" : ""}`}
                 >
-                  <span className="font-semibold">{Number(d.slice(8, 10))}</span>
+                  <span className="flex items-center justify-between gap-1">
+                    <span className={`text-[13px] font-semibold tabular-nums leading-none ${esHoy ? "" : "text-foreground/85"}`}>
+                      {Number(d.slice(8, 10))}
+                    </span>
+                    {esHoy && (
+                      <span className="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide sm:inline">Hoy</span>
+                    )}
+                    {!esHoy && n > 0 && (
+                      <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary sm:hidden">{n}</span>
+                    )}
+                  </span>
+                  {/* Primeros turnos del día (solo en pantallas medianas en adelante) */}
+                  <span className="mt-1.5 hidden min-w-0 flex-1 flex-col gap-1 sm:flex">
+                    {turnosDia.slice(0, 2).map((t) => (
+                      <span
+                        key={t.id}
+                        className={`flex min-w-0 items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10.5px] leading-tight ${
+                          esHoy ? "bg-white/18 text-white" : "bg-primary/[0.07] text-foreground/80"
+                        }`}
+                      >
+                        <span className={`shrink-0 tabular-nums ${esHoy ? "text-white/80" : "text-primary"}`}>{t.hora}</span>
+                        <span className="truncate">{t.paciente}</span>
+                      </span>
+                    ))}
+                    {n > 2 && (
+                      <span className={`px-1 text-[10px] ${esHoy ? "text-white/80" : "text-muted-foreground"}`}>+{n - 2} más</span>
+                    )}
+                  </span>
+                  {/* Barra de ocupación */}
                   {n > 0 && (
-                    <span
-                      className={`mt-0.5 rounded-full px-1.5 text-[10px] font-bold ${d === hoy ? "bg-white/25" : "bg-primary/10 text-primary"}`}
-                    >
-                      {n}
+                    <span className={`absolute inset-x-2 bottom-1.5 hidden h-1 overflow-hidden rounded-full sm:block ${esHoy ? "bg-white/20" : "bg-primary/10"}`}>
+                      <span
+                        className={`block h-full rounded-full ${esHoy ? "bg-white/80" : "bg-gradient-to-r from-primary to-fuchsia-500"}`}
+                        style={{ width: `${Math.max(12, carga * 100)}%` }}
+                      />
                     </span>
                   )}
                 </button>
               );
             })}
           </div>
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" /> Hoy
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1 w-5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" /> Ocupación del día
+            </span>
+            <span>Tocá un día para ver su agenda</span>
+          </p>
         </TarjetaPortal>
       )}
 

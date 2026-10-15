@@ -23,6 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { storeEquipoPortal } from "@/lib/cloud-esther/portal-equipo-store";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { AvatarEsther } from "@/components/cloud-esther/esther-ai/AvatarEsther";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
 import {
@@ -308,12 +309,18 @@ export function RRHH() {
         <button
           type="button"
           onClick={() => setChat(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 py-2 pl-2 pr-4 text-sm font-semibold text-white shadow-[0_16px_34px_-14px_rgba(124,58,237,0.9)] transition-transform hover:-translate-y-0.5"
+          aria-label="Preguntale a Esther de Recursos humanos"
+          title="Preguntale a Esther de Recursos humanos"
+          className="group fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_44px_-16px_rgba(124,58,237,0.85)] sm:pr-4 lg:bottom-5 lg:right-5"
         >
-          <span className="grid size-8 place-items-center rounded-full bg-white/20">
-            <Sparkles className="size-4" />
+          <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />
+          <AvatarEsther />
+          <span className="relative hidden text-left leading-tight sm:block">
+            <span className="block bg-gradient-to-r from-foreground to-primary bg-clip-text text-xs font-semibold text-transparent">
+              Esther IA
+            </span>
+            <span className="block text-[10.5px] text-muted-foreground">Recursos humanos</span>
           </span>
-          Esther RRHH
         </button>
       )}
       {chat && (
@@ -363,15 +370,12 @@ function ChatEsther({
     <aside
       role="dialog"
       aria-label="Esther RRHH"
-      className="fixed bottom-4 right-4 z-50 flex max-h-[min(640px,calc(100vh-2rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[26px] border border-primary/20 bg-white shadow-[0_30px_70px_-30px_rgba(76,29,149,0.7)]"
+      className="ce-aparecer fixed bottom-4 right-4 z-50 flex max-h-[min(640px,calc(100vh-2rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[26px] border border-primary/20 bg-card shadow-[0_30px_70px_-30px_rgba(76,29,149,0.7)]"
     >
       <div className="relative overflow-hidden bg-gradient-to-br from-primary via-violet-500 to-fuchsia-500 p-4 text-white">
         <div className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-white/15 blur-2xl" />
         <div className="relative flex items-center gap-3">
-          <span className="relative grid size-11 place-items-center rounded-2xl bg-white/20 font-display text-lg font-bold">
-            E
-            <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white bg-emerald-400" />
-          </span>
+          <AvatarEsther tam="lg" sobreColor />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Esther · Recursos humanos</p>
             <p className="text-[11px] text-white/80">Respondo con los datos reales de tu equipo</p>
@@ -388,7 +392,7 @@ function ChatEsther({
       </div>
       <div className="scroll-sutil flex-1 space-y-2.5 overflow-y-auto bg-gradient-to-b from-primary/[0.03] to-transparent p-3">
         {mensajes.length === 0 && (
-          <div className="rounded-2xl bg-white p-3 text-sm ring-1 ring-primary/10">
+          <div className="rounded-2xl bg-card p-3 text-sm ring-1 ring-primary/10">
             ¡Hola! Soy Esther. Puedo contarte quién falta hoy, qué vence, cuánto cuesta el equipo,
             quién llega tarde o el saldo de vacaciones. También podés preguntarme por una persona.
           </div>
@@ -396,7 +400,7 @@ function ChatEsther({
         {mensajes.map((m) => (
           <div key={m.id} className={`flex ${m.de === "yo" ? "justify-end" : "justify-start"}`}>
             <p
-              className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3 py-2 text-[13px] leading-5 ${m.de === "yo" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-white ring-1 ring-primary/10"}`}
+              className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3 py-2 text-[13px] leading-5 ${m.de === "yo" ? "rounded-br-md bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-12px_rgba(124,58,237,0.9)]" : "rounded-bl-md bg-card ring-1 ring-primary/10"}`}
             >
               {m.texto}
             </p>
@@ -404,7 +408,7 @@ function ChatEsther({
         ))}
         {pensando && (
           <div
-            className="flex w-fit items-center gap-1 rounded-2xl rounded-bl-md bg-white px-3 py-2.5 ring-1 ring-primary/10"
+            className="flex w-fit items-center gap-1 rounded-2xl rounded-bl-md bg-card px-3 py-2.5 ring-1 ring-primary/10"
             aria-label="Esther está pensando"
           >
             {[0, 1, 2].map((i) => (
@@ -445,13 +449,13 @@ function ChatEsther({
             onChange={(e) => setTxt(e.target.value)}
             placeholder="Preguntale a Esther…"
             aria-label="Pregunta para Esther"
-            className="h-10 min-w-0 flex-1 rounded-xl border border-primary/15 bg-white px-3 text-sm outline-none focus:border-primary/45"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-primary/15 bg-background px-3 text-sm outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
           />
           <button
             type="submit"
             aria-label="Enviar pregunta"
             disabled={pensando || !txt.trim()}
-            className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white disabled:opacity-40"
+            className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)] transition hover:-translate-y-px disabled:opacity-40"
           >
             <Send className="size-4" />
           </button>
@@ -647,9 +651,7 @@ function Resumen({
           <div className="pointer-events-none absolute -right-14 -top-14 size-48 rounded-full bg-white/15 blur-2xl" />
           <div className="relative">
             <div className="flex items-center gap-3">
-              <span className="grid size-12 place-items-center rounded-2xl bg-white/20 font-display text-xl font-bold">
-                E
-              </span>
+              <AvatarEsther tam="lg" sobreColor />
               <div>
                 <p className="font-semibold">Esther, tu asistente de RRHH</p>
                 <p className="text-[11px] text-white/80">

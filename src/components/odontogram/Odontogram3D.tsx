@@ -48,6 +48,10 @@ export interface Odontogram3DProps {
   estadosEnPanel?: boolean;
 }
 
+/** Paneles de vidrio oscuro con degradé violeta (premium) sobre el modelo 3D */
+const VIDRIO =
+  "rounded-2xl border border-white/10 bg-gradient-to-br from-[#22124a]/85 via-[#170c35]/85 to-[#0f0824]/90 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl";
+
 const VIEW_ICONS: Record<CameraView, typeof Eye> = {
   anterior: Eye,
   oclusal: ArrowUp,
@@ -152,7 +156,19 @@ export function Odontogram3D({
   const def = selected ? TEETH_BY_FDI[selected] : null;
 
   return (
-    <div className={cn("relative h-full w-full overflow-hidden bg-background", className)}>
+    <div
+      className={cn(
+        "relative h-full w-full overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,#2a1460_0%,#160b33_45%,#0b0618_100%)]",
+        className,
+      )}
+    >
+      {/* Fondo premium: halos de color detrás del modelo (el lienzo 3D es transparente) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="ce-odo-halo absolute left-1/2 top-[38%] size-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.28),transparent_62%)]" />
+        <div className="absolute -left-24 bottom-[-6rem] size-[26rem] rounded-full bg-[radial-gradient(circle,rgba(217,70,239,0.22),transparent_65%)]" />
+        <div className="absolute -right-24 top-[-5rem] size-[24rem] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.18),transparent_65%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(70%_60%_at_50%_45%,black,transparent)]" />
+      </div>
       <Canvas
         shadows
         dpr={[1, 1.5]}
@@ -161,14 +177,13 @@ export function Odontogram3D({
           position: CAMERA_VIEWS.anterior.position,
           fov: 38,
         }}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, alpha: true }}
         onPointerMissed={() => {
           setSelected(null);
           onSelectTooth?.(null);
         }}
       >
-        <color attach="background" args={["#0f1720"]} />
-        <fog attach="fog" args={["#0f1720", 22, 46]} />
+        <fog attach="fog" args={["#160b33", 24, 48]} />
 
         <ambientLight intensity={0.55} />
 
@@ -232,10 +247,13 @@ export function Odontogram3D({
       </Canvas>
 
       {!listo && (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-[#0f1720]">
-          <div className="flex flex-col items-center gap-3 text-white/80">
-            <span className="size-9 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-            <p className="text-sm font-medium">Cargando modelo 3D…</p>
+        <div className="absolute inset-0 z-20 grid place-items-center bg-[radial-gradient(120%_90%_at_50%_0%,#2a1460_0%,#160b33_45%,#0b0618_100%)]">
+          <div className="flex flex-col items-center gap-3 text-white/85">
+            <span className="relative grid size-12 place-items-center">
+              <span className="absolute inset-0 animate-spin rounded-full bg-[conic-gradient(from_0deg,transparent,#a78bfa,#e879f9,transparent)] [mask:radial-gradient(farthest-side,transparent_calc(100%-3px),black_calc(100%-2px))]" />
+              <span className="size-2 rounded-full bg-fuchsia-300 shadow-[0_0_12px_4px_rgba(232,121,249,0.6)]" />
+            </span>
+            <p className="bg-gradient-to-r from-white to-violet-200 bg-clip-text text-sm font-medium text-transparent">Preparando el modelo 3D…</p>
           </div>
         </div>
       )}
@@ -256,8 +274,9 @@ export function Odontogram3D({
       {showUI && (
         <>
           {/* Camera controls */}
-          <div className="pointer-events-auto absolute left-2 right-2 top-2 z-20 flex flex-col gap-2 rounded-2xl border border-white/10 bg-[#171e2c]/85 p-2 shadow-xl shadow-black/30 backdrop-blur-md sm:right-auto sm:left-4 sm:top-4 sm:gap-2.5 sm:p-4">
-            <span className="hidden text-[11px] font-bold uppercase tracking-wider text-white/50 sm:block">
+          <div className={`pointer-events-auto absolute left-2 right-2 top-2 z-20 flex flex-col gap-2 p-2 sm:right-auto sm:left-4 sm:top-4 sm:gap-2.5 sm:p-4 ${VIDRIO}`}>
+            <span className="hidden items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/55 sm:flex">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400" />
               Vistas
             </span>
 
@@ -276,10 +295,10 @@ export function Odontogram3D({
                     aria-label={`Vista ${CAMERA_VIEWS[v].label}`}
                     aria-pressed={activo}
                     className={cn(
-                      "flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-[11px] font-semibold transition-all duration-150 sm:px-3 sm:text-xs",
+                      "flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-[11px] font-medium transition-all duration-200 sm:px-3 sm:text-xs",
                       activo
-                        ? "bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(124,58,237,0.4)]"
-                        : "bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white",
+                        ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_6px_18px_-6px_rgba(217,70,239,0.75),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                        : "bg-white/[0.06] text-white/70 ring-1 ring-inset ring-white/[0.06] hover:bg-white/[0.12] hover:text-white",
                     )}
                   >
                     <Icon className="size-3.5 shrink-0" />
@@ -349,7 +368,7 @@ export function Odontogram3D({
               </label>
             ) : null}
 
-            <p className="text-[10.5px] leading-snug text-white/45 sm:max-w-[13rem]">
+            <p className="text-[10.5px] leading-snug text-white/50 sm:max-w-[13rem]">
               {modo === "boca" ? (
                 "Separá dos dedos para abrir la boca y juntalos para cerrarla (o arrastrá hacia arriba / abajo)."
               ) : (
@@ -370,11 +389,12 @@ export function Odontogram3D({
           {/* Legend */}
           <div
             className={cn(
-              "absolute right-2 top-[9.5rem] z-20 rounded-2xl border border-white/10 bg-[#171e2c]/90 p-3 shadow-xl shadow-black/30 backdrop-blur-md sm:right-4 sm:top-4 sm:block sm:p-4",
+              `absolute right-2 top-[9.5rem] z-20 p-3 sm:right-4 sm:top-4 sm:block sm:p-4 ${VIDRIO}`,
               leyenda ? "block" : "hidden",
             )}
           >
-            <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">
+            <span className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/55">
+              <span className="h-1 w-3 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400" />
               Estados
             </span>
 
@@ -382,9 +402,10 @@ export function Odontogram3D({
               {TOOTH_STATES.map((s) => (
                 <li key={s} className="flex items-center gap-2.5 text-xs font-medium text-white/85">
                   <span
-                    className="size-3 shrink-0 rounded-full ring-2 ring-white/10"
+                    className="size-3 shrink-0 rounded-full ring-2 ring-white/15"
                     style={{
                       backgroundColor: TOOTH_STATE_META[s].color,
+                      boxShadow: `0 0 10px 1px ${TOOTH_STATE_META[s].color}66`,
                     }}
                   />
 
@@ -395,18 +416,18 @@ export function Odontogram3D({
           </div>
 
           {/* Selection panel */}
-          <div className="absolute bottom-2 left-1/2 z-20 w-[calc(100%-1rem)] -translate-x-1/2 rounded-2xl border border-border/60 bg-card/90 p-2.5 shadow-xl backdrop-blur-md sm:bottom-4 sm:w-[min(46rem,calc(100%-2rem))] sm:p-3.5">
+          <div className={`absolute bottom-2 left-1/2 z-20 w-[calc(100%-1rem)] -translate-x-1/2 p-2.5 sm:bottom-4 sm:w-[min(46rem,calc(100%-2rem))] sm:p-3.5 ${VIDRIO}`}>
             {def ? (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-xl bg-primary px-2.5 py-1.5 text-sm font-bold text-primary-foreground shadow-sm">
+                  <span className="rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 px-2.5 py-1.5 text-sm font-semibold tabular-nums text-white shadow-[0_6px_16px_-6px_rgba(217,70,239,0.8)]">
                     {def.fdi}
                   </span>
 
                   <div className="leading-tight">
-                    <p className="text-sm font-semibold text-foreground">{def.name}</p>
+                    <p className="text-sm font-semibold text-white">{def.name}</p>
 
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-white/55">
                       {def.arch === "upper" ? "Arcada superior" : "Arcada inferior"} ·{" "}
                       {def.side === "right" ? "derecha" : "izquierda"}
                     </p>
@@ -423,10 +444,10 @@ export function Odontogram3D({
                           key={s}
                           onClick={() => setState(def.fdi, s)}
                           className={cn(
-                            "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
+                            "flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-all duration-200",
                             active
-                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                              : "border-border bg-secondary text-secondary-foreground hover:bg-accent",
+                              ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_6px_16px_-6px_rgba(217,70,239,0.8)]"
+                              : "bg-white/[0.07] text-white/80 ring-1 ring-inset ring-white/10 hover:bg-white/[0.14] hover:text-white",
                           )}
                         >
                           <span
@@ -442,7 +463,7 @@ export function Odontogram3D({
                     })}
                   </div>
                 ) : (
-                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs font-semibold text-foreground">
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white ring-1 ring-inset ring-white/10">
                     <span
                       className="size-2.5 rounded-full"
                       style={{ backgroundColor: TOOTH_STATE_META[chart[def.fdi] ?? "sano"].color }}
@@ -452,7 +473,7 @@ export function Odontogram3D({
                 )}
               </div>
             ) : (
-              <p className="text-center text-xs text-muted-foreground sm:text-sm">
+              <p className="text-center text-xs text-white/60 sm:text-sm">
                 <span className="sm:hidden">Tocá un diente para seleccionarlo.</span>
                 <span className="hidden sm:inline">
                   Hacé click en cualquier diente para seleccionarlo y cambiar su estado.
@@ -464,7 +485,7 @@ export function Odontogram3D({
               type="button"
               onClick={() => setPiezas((v) => !v)}
               aria-expanded={piezas}
-              className="mt-2 flex w-full items-center justify-center gap-1 text-[11px] font-semibold text-primary sm:hidden"
+              className="mt-2 flex w-full items-center justify-center gap-1 text-[11px] font-semibold text-violet-200 sm:hidden"
             >
               {piezas ? "Ocultar piezas" : "Elegir por número de pieza"}
               <ChevronDown
@@ -474,7 +495,7 @@ export function Odontogram3D({
 
             <div
               className={cn(
-                "mt-2 grid-cols-2 gap-x-3 gap-y-1 border-t border-border/60 pt-2 sm:mt-3 sm:grid sm:gap-x-4 sm:pt-3",
+                "mt-2 grid-cols-2 gap-x-3 gap-y-1 border-t border-white/10 pt-2 sm:mt-3 sm:grid sm:gap-x-4 sm:pt-3",
                 piezas ? "grid" : "hidden",
               )}
             >
@@ -495,10 +516,10 @@ export function Odontogram3D({
                       onMouseLeave={() => setHovered(null)}
                       title={`${fdi} · ${TOOTH_STATE_META[chart[fdi] ?? "sano"].label}`}
                       className={cn(
-                        "flex h-7 min-w-0 flex-1 items-center justify-center rounded border text-[10px] font-semibold transition-colors sm:size-6 sm:flex-none",
+                        "flex h-7 min-w-0 flex-1 items-center justify-center rounded-md border text-[10px] font-semibold tabular-nums transition-all duration-150 sm:size-6 sm:flex-none",
                         selected === fdi
-                          ? "border-primary text-primary"
-                          : "border-border/70 text-muted-foreground hover:border-primary/60",
+                          ? "border-fuchsia-300 text-white shadow-[0_0_10px_rgba(232,121,249,0.6)]"
+                          : "border-white/10 text-white/70 hover:-translate-y-px hover:border-violet-300/60 hover:text-white",
                       )}
                       style={{
                         backgroundColor: `${TOOTH_STATE_META[chart[fdi] ?? "sano"].color}33`,
@@ -536,10 +557,10 @@ function BotonHerramienta({
       aria-pressed={activo}
       title={etiqueta}
       className={cn(
-        "inline-flex min-h-8 min-w-8 items-center justify-center gap-1 rounded-xl px-1.5 text-xs font-semibold transition-colors sm:min-h-9 sm:min-w-9 sm:px-2",
+        "inline-flex min-h-8 min-w-8 items-center justify-center gap-1 rounded-xl px-1.5 text-xs font-medium transition-all duration-200 sm:min-h-9 sm:min-w-9 sm:px-2",
         activo
-          ? "bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(124,58,237,0.4)]"
-          : "bg-white/[0.06] text-white/75 hover:bg-white/[0.12] hover:text-white",
+          ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_6px_18px_-6px_rgba(217,70,239,0.75),inset_0_1px_0_rgba(255,255,255,0.25)]"
+          : "bg-white/[0.06] text-white/75 ring-1 ring-inset ring-white/[0.06] hover:bg-white/[0.12] hover:text-white",
       )}
     >
       {children}

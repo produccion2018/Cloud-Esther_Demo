@@ -2021,3 +2021,13 @@ label {
     animation: none;
   }
 }
+
+/* Odontograma 3D: halo que respira detrás del modelo */
+@keyframes ce-odo-halo {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(0.96); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+}
+.ce-odo-halo { animation: ce-odo-halo 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-odo-halo { animation: none; }
+}

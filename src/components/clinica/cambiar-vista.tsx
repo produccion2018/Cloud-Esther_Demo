@@ -42,21 +42,23 @@ export function CambiarVista({
         role="tablist"
         aria-label="Cambiar de vista"
         className={cn(
-          "relative grid gap-1 rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-1 shadow-inner",
+          "relative grid gap-1 rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-1 shadow-[inset_0_1px_2px_rgba(76,29,149,0.08)]",
           compacto ? "grid-cols-1" : "grid-cols-2",
         )}
       >
         {OPCIONES.map((o) => {
           const on = o.id === actual;
           const clase = cn(
-            "group flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight transition-all duration-200",
+            compacto
+              ? "group flex min-h-[2.75rem] flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight transition-all duration-300"
+              : "group flex h-9 items-center justify-center gap-1 rounded-xl px-1 text-center text-[10.5px] font-semibold leading-none tracking-[-0.005em] transition-all duration-300",
             on
               ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_20px_-10px_rgba(124,58,237,0.9)]"
               : "text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground",
           );
           const contenido = (
             <>
-              <o.icon className={cn("size-4 shrink-0 transition-transform", !on && "group-hover:scale-110")} />
+              <o.icon className={cn("size-3.5 shrink-0 transition-transform duration-300", !on && "group-hover:scale-110")} />
               {!compacto && <span className="max-w-full truncate">{o.corto}</span>}
             </>
           );

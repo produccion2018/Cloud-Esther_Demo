@@ -433,6 +433,28 @@ const SECCIONES_CLINICA_REAL = new Set<Seccion>([
   "actividad",
 ]);
 
+/* Secciones de la Administración que dependen de un módulo del plan: se muestran solo si el
+   plan elegido (o un módulo adicional comprado) lo incluye. Mismo criterio que el menú del
+   Centro de operaciones (availableIn), así lo que se ve coincide en las dos vistas. */
+const SECCION_MODULO: Partial<Record<Seccion, string>> = {
+  cobros: "facturacion",
+  caja: "facturacion",
+  facturacion: "facturacion",
+  presupuestos: "presupuestos",
+  reportes: "bi",
+  finanzas: "finanzas",
+  liquidaciones: "finanzas",
+  rrhh: "rrhh",
+  ia: "ia",
+};
+
+function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {
+  const modulo = SECCION_MODULO[id];
+  if (!modulo) return true;
+  const m = MODULES.find((x) => x.id === modulo);
+  return !m || availableIn(m, plan);
+}
+
 function GateEquipo() {
   const real = useClinicaReal();
   const { miembros } = useEquipo();
@@ -991,6 +1013,8 @@ function AppEquipo({
     .map((g) =>
       real ? { ...g, items: g.items.filter((i) => SECCIONES_CLINICA_REAL.has(i.id as Seccion)) } : g,
     )
+    // Solo los módulos del plan elegido (Start, Pro, Plus o Enterprise)
+    .map((g) => ({ ...g, items: g.items.filter((i) => seccionEnPlan(i.id as Seccion, plan)) }))
     .filter((g) => g.items.length > 0);
   const disponibles = grupos.flatMap((g) => g.items.map((i) => i.id));
   const actual: Seccion = disponibles.includes(seccion) ? seccion : (disponibles[0] as Seccion);

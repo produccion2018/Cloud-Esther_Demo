@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Sparkles, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MODULES,
@@ -198,7 +198,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   useEffect(() => setMontado(true), []);
 
   return (
-    <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6 [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:color-mix(in_oklab,var(--color-sidebar-foreground,currentColor)_18%,transparent)_transparent]">
+    <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 pb-6 pt-1 [mask-image:linear-gradient(to_bottom,transparent,#000_10px,#000_calc(100%-28px),transparent)] [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:color-mix(in_oklab,var(--color-sidebar-foreground,currentColor)_18%,transparent)_transparent]">
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
         // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
@@ -425,82 +425,94 @@ function EmpresaActiva() {
 function PlanFooter() {
   const { plan, setPlan, planContratado } = useCloudEsther();
   const real = useClinicaReal();
+  const cantidad = MODULES.filter((m) => availableIn(m, plan)).length;
   return (
-    <div className="border-t border-sidebar-border p-3">
-      <div className="rounded-xl bg-sidebar-accent/60 p-3">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
-          {planContratado ? "Plan contratado" : "Plan del demo"}
-        </p>
-        {planContratado ? (
-          // Empresa con plan comprado: se muestra fijo, sin opción de cambiarlo.
-          <p className="mt-1 flex items-center gap-1.5 rounded-lg border border-sidebar-border bg-sidebar px-2.5 py-2 font-display text-sm font-semibold text-sidebar-foreground">
-            <Lock className="size-3.5 shrink-0 text-sidebar-foreground/45" />
-            {PLANS[plan].name}
+    <div className="relative shrink-0 border-t border-sidebar-border/70 px-3 pb-3 pt-2.5">
+      {/* Plan: una sola fila compacta (no tapa el menú) */}
+      <div className="group/plan flex items-center gap-2.5 rounded-2xl border border-sidebar-border/70 bg-sidebar/70 p-1.5 pl-2 shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_8px_24px_-18px_rgba(76,29,149,0.6)] backdrop-blur transition-colors hover:border-sidebar-primary/30">
+        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]">
+          {planContratado ? <Lock className="size-3.5" /> : <Sparkles className="size-3.5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[9.5px] font-semibold uppercase leading-none tracking-[0.16em] text-sidebar-foreground/45">
+            {planContratado ? "Plan contratado" : "Plan del demo"}
           </p>
-        ) : (
-          // Demo: el visitante puede recorrer los planes para compararlos.
-          <div className="relative mt-1">
-            <select
-              value={plan}
-              onChange={(e) => setPlan(e.target.value as PlanId)}
-              aria-label="Probar otro plan"
-              className="w-full appearance-none rounded-lg border border-sidebar-border bg-sidebar px-2.5 py-2 pr-8 font-display text-sm font-semibold text-sidebar-foreground outline-none transition-colors hover:border-sidebar-primary/40 focus:border-sidebar-primary/60 focus:ring-2 focus:ring-sidebar-primary/15"
-            >
-              {(Object.keys(PLANS) as PlanId[]).map((id) => (
-                <option key={id} value={id}>
-                  {PLANS[id].name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45" />
-          </div>
+          {planContratado ? (
+            // Empresa con plan comprado: se muestra fijo, sin opción de cambiarlo.
+            <p className="mt-1 truncate font-display text-sm font-semibold leading-tight text-sidebar-foreground" title={PLANS[plan].audience}>
+              {PLANS[plan].name}
+            </p>
+          ) : (
+            // Demo: el visitante puede recorrer los planes para compararlos.
+            <div className="relative mt-0.5">
+              <select
+                value={plan}
+                onChange={(e) => setPlan(e.target.value as PlanId)}
+                aria-label="Probar otro plan"
+                className="w-full cursor-pointer appearance-none bg-transparent py-0 pr-5 font-display text-sm font-semibold leading-tight text-sidebar-foreground outline-none focus-visible:underline"
+              >
+                {(Object.keys(PLANS) as PlanId[]).map((id) => (
+                  <option key={id} value={id}>
+                    {PLANS[id].name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-3.5 -translate-y-1/2 text-sidebar-foreground/45 transition-transform group-hover/plan:translate-y-[-35%]" />
+            </div>
+          )}
+        </div>
+        {!planContratado && (
+          <span
+            className="shrink-0 rounded-full bg-sidebar-accent px-2 py-0.5 text-[10px] font-semibold tabular-nums text-sidebar-foreground/65"
+            title={`${cantidad} módulos del plan ${PLANS[plan].name} en el menú`}
+          >
+            {cantidad} mód.
+          </span>
         )}
-        <p className="mt-1.5 text-[11px] text-sidebar-foreground/55">
-          {planContratado
-            ? PLANS[plan].audience
-            : `${MODULES.filter((m) => availableIn(m, plan)).length} módulos del plan ${PLANS[plan].name} en el menú`}
-        </p>
       </div>
-      <Link
-        to={"/" as never}
-        onClick={(e) => {
-          if (real) {
-            e.preventDefault();
-            salirYVolver();
-            return;
-          }
-          cerrarSesion();
-          if (vieneDeAccesoPrueba()) {
-            e.preventDefault();
-            volverSiEsPrueba();
-          }
-        }}
-        className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-      >
-        <LogOut className="size-3.5" />
-        {planContratado ? "Cerrar sesión" : "Salir del demo"}
-      </Link>
+      <div className="mt-2 flex items-center gap-1.5">
+        <Link
+          to={"/" as never}
+          onClick={(e) => {
+            if (real) {
+              e.preventDefault();
+              salirYVolver();
+              return;
+            }
+            cerrarSesion();
+            if (vieneDeAccesoPrueba()) {
+              e.preventDefault();
+              volverSiEsPrueba();
+            }
+          }}
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl border border-sidebar-border/80 px-3 text-[11.5px] font-medium text-sidebar-foreground/70 transition-all duration-200 hover:border-sidebar-primary/30 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <LogOut className="size-3.5" />
+          {planContratado ? "Cerrar sesión" : "Salir del demo"}
+        </Link>
+        {!real && (
+          <button
+            type="button"
+            title="Restablecer datos de práctica"
+            aria-label="Restablecer datos de práctica"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.",
+                )
+              ) {
+                borrarDatosGuardados();
+                window.location.reload();
+              }
+            }}
+            className="grid size-8 shrink-0 place-items-center rounded-xl border border-sidebar-border/80 text-sidebar-foreground/55 transition-all duration-200 hover:rotate-[-30deg] hover:border-sidebar-primary/30 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          >
+            <RotateCcw className="size-3.5" />
+          </button>
+        )}
+      </div>
       {DEMO_EN_SERVIDOR && !real && <ContadorDemo />}
-      {real ? (
-        <IndicadorGuardado />
-      ) : (
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            window.confirm(
-              "¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.",
-            )
-          ) {
-            borrarDatosGuardados();
-            window.location.reload();
-          }
-        }}
-        className="mt-1.5 w-full text-center text-[10.5px] text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80"
-      >
-        Restablecer datos de práctica
-      </button>
-      )}
+      {real && <IndicadorGuardado />}
     </div>
   );
 }

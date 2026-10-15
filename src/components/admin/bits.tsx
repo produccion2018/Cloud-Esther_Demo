@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Inbox, Loader2 } from "lucide-react";
 
 import { ETIQUETA_PAGO, type Interes } from "@/lib/admin/formato";
@@ -97,10 +97,10 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[22px] border p-4 transition-transform hover:-translate-y-0.5",
+        "ce-aparecer group relative overflow-hidden rounded-[22px] border p-4 transition-all duration-300 ease-out hover:-translate-y-0.5",
         accent
           ? "border-transparent text-primary-foreground"
-          : "border-primary/20 bg-gradient-to-br from-card to-primary/[0.06]",
+          : "border-primary/15 bg-gradient-to-br from-card via-card to-primary/[0.06] hover:border-primary/30",
       )}
       style={
         accent
@@ -112,7 +112,7 @@ export function KpiCard({
       <div className="relative flex items-start justify-between gap-3">
         <p
           className={cn(
-            "text-[10.5px] font-bold uppercase tracking-[0.1em]",
+            "text-[10.5px] font-semibold uppercase tracking-[0.1em]",
             accent ? "text-white/80" : "text-primary/75",
           )}
         >
@@ -121,8 +121,8 @@ export function KpiCard({
         {icon && (
           <span
             className={cn(
-              "grid h-8 w-8 shrink-0 place-items-center rounded-full",
-              accent ? "bg-white/15" : "bg-primary/[0.08] text-primary",
+              "grid h-8 w-8 shrink-0 place-items-center rounded-[11px] transition-transform duration-300 group-hover:scale-105",
+              accent ? "bg-white/15 ring-1 ring-white/20" : "bg-gradient-to-br from-primary/[0.12] to-fuchsia-500/[0.10] text-primary ring-1 ring-primary/10",
             )}
           >
             {icon}
@@ -131,7 +131,7 @@ export function KpiCard({
       </div>
       <p
         className={cn(
-          "relative mt-1 text-[22px] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[28px]",
+          "relative mt-1 text-[22px] font-semibold leading-tight tracking-[-0.025em] tabular-nums sm:text-[27px]",
           accent ? "" : color,
         )}
       >
@@ -169,12 +169,12 @@ export function Seccion({
 }) {
   return (
     <section
-      className={cn("overflow-hidden rounded-[24px] border border-border/80 bg-card", className)}
+      className={cn("overflow-hidden rounded-[24px] border border-border/70 bg-card", className)}
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 bg-gradient-to-r from-primary/[0.035] via-transparent to-transparent px-5 py-4">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-bold tracking-tight">{titulo}</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em]">{titulo}</h2>
           {descripcion && <p className="mt-0.5 text-xs text-muted-foreground">{descripcion}</p>}
         </div>
         {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}
@@ -241,3 +241,107 @@ export const tooltipGrafico = {
     fontSize: 12,
   },
 };
+
+/* PAGINACIÓN: listas largas (clínicas, demos, contrataciones) en páginas, con «Anterior»,
+   los números de página y «Siguiente». Si cambian los filtros, vuelve a la página 1. */
+export function usePaginado<T>(lista: T[], porPagina = 10, clave = "") {
+  const [pagina, setPagina] = useState(1);
+  const paginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  useEffect(() => setPagina(1), [clave, porPagina]);
+  const actual = Math.min(pagina, paginas);
+  return {
+    items: lista.slice((actual - 1) * porPagina, actual * porPagina),
+    pagina: actual,
+    paginas,
+    total: lista.length,
+    desde: lista.length ? (actual - 1) * porPagina + 1 : 0,
+    hasta: Math.min(actual * porPagina, lista.length),
+    ir: (p: number) => setPagina(Math.min(Math.max(1, p), paginas)),
+  };
+}
+
+function numerosDePagina(actual: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set([1, total, actual - 1, actual, actual + 1].filter((n) => n >= 1 && n <= total));
+  const orden = [...set].sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  orden.forEach((n, i) => {
+    if (i > 0 && n - (orden[i - 1] ?? n) > 1) out.push("…");
+    out.push(n);
+  });
+  return out;
+}
+
+export function Paginacion({
+  pagina,
+  paginas,
+  total,
+  desde,
+  hasta,
+  ir,
+  nombre = "resultados",
+}: {
+  pagina: number;
+  paginas: number;
+  total: number;
+  desde: number;
+  hasta: number;
+  ir: (p: number) => void;
+  nombre?: string;
+}) {
+  if (total === 0) return null;
+  const boton =
+    "inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-full px-3 text-xs font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-40";
+  return (
+    <nav
+      aria-label="Paginación"
+      className="flex flex-col items-center justify-between gap-3 border-t border-border/60 px-5 py-3 sm:flex-row"
+    >
+      <p className="text-xs text-muted-foreground">
+        Mostrando <span className="font-semibold text-foreground">{desde}–{hasta}</span> de{" "}
+        <span className="font-semibold text-foreground">{total}</span> {nombre}
+      </p>
+      {paginas > 1 && (
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => ir(pagina - 1)}
+            disabled={pagina === 1}
+            className={`${boton} text-muted-foreground hover:bg-primary/[0.08] hover:text-primary`}
+          >
+            ‹ Anterior
+          </button>
+          {numerosDePagina(pagina, paginas).map((n, i) =>
+            n === "…" ? (
+              <span key={`e${i}`} className="px-1 text-xs text-muted-foreground">
+                …
+              </span>
+            ) : (
+              <button
+                key={n}
+                type="button"
+                onClick={() => ir(n)}
+                aria-current={n === pagina ? "page" : undefined}
+                className={
+                  n === pagina
+                    ? `${boton} bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_6px_16px_-8px_rgba(124,58,237,0.9)]`
+                    : `${boton} text-foreground/75 hover:bg-primary/[0.08] hover:text-primary`
+                }
+              >
+                {n}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            onClick={() => ir(pagina + 1)}
+            disabled={pagina === paginas}
+            className={`${boton} text-muted-foreground hover:bg-primary/[0.08] hover:text-primary`}
+          >
+            Siguiente ›
+          </button>
+        </div>
+      )}
+    </nav>
+  );
+}

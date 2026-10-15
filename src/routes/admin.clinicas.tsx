@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Building2, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide-react";
 import { useState } from "react";
 
-import { BarraUso, Cargando, KpiCard, Seccion, StatusBadge, Vacio } from "@/components/admin/bits";
+import {
+  BarraUso,
+  Cargando,
+  KpiCard,
+  Paginacion,
+  Seccion,
+  StatusBadge,
+  Vacio,
+  usePaginado,
+} from "@/components/admin/bits";
+import { RegistroEmpresasBorradas, ZonaBorrarPrueba } from "@/components/admin/borrar-empresa-prueba";
 import { SolicitudesContratacion } from "@/components/admin/contrataciones";
 import { Campo, INPUT } from "@/components/admin/formularios";
 import { permisos, useRole } from "@/components/admin/role";
@@ -61,6 +71,7 @@ function ClinicsPage() {
       (!plan || c.plan === plan),
   );
   const seleccionada = lista.find((c) => c.id === abierta) ?? null;
+  const pag = usePaginado(filtradas, 10, `${texto}|${estado}|${plan}`);
 
   return (
     <AdminShell
@@ -163,7 +174,7 @@ function ClinicsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtradas.map((c) => {
+                    {pag.items.map((c) => {
                       const p = limite(c.plan);
                       return (
                         <tr
@@ -215,7 +226,10 @@ function ClinicsPage() {
                 </table>
               </div>
             )}
+            <Paginacion {...pag} nombre="clínicas" />
           </Seccion>
+
+          <RegistroEmpresasBorradas />
         </>
       )}
 
@@ -227,6 +241,7 @@ function ClinicsPage() {
               plan={limite(seleccionada.plan)}
               importes={permisos.verImportes(role)}
               editarMontos={permisos.editarPlanes(role)}
+              onBorrada={() => setAbierta(null)}
             />
           )}
         </SheetContent>
@@ -240,11 +255,13 @@ function DetalleClinica({
   plan,
   importes,
   editarMontos,
+  onBorrada,
 }: {
   clinica: Clinica;
   plan: PlanConfig | undefined;
   importes: boolean;
   editarMontos: boolean;
+  onBorrada: () => void;
 }) {
   const filas: [string, string][] = [
     ["Plan", `${NOMBRE_PLAN[c.plan]} · ${c.ciclo}`],
@@ -328,6 +345,7 @@ function DetalleClinica({
             </div>
           ))}
         </dl>
+        <ZonaBorrarPrueba clinica={c} onBorrada={onBorrada} />
       </div>
     </div>
   );

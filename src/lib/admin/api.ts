@@ -984,3 +984,29 @@ export async function obtenerCrecimiento(): Promise<
   if (CON_BACKEND) return http("GET", "/admin/clinicas/crecimiento");
   return CRECIMIENTO_INICIAL;
 }
+
+/* ───────────── Borrar empresas de prueba (solo etapa de pruebas) ─────────────
+   El servidor decide si está prendido (ALLOW_TEST_PURGE). En producción está apagado:
+   «habilitado» viene en false y el panel ni muestra el botón. Sin backend, nunca aparece. */
+
+export type EmpresaBorrada = {
+  id: string;
+  clinica: string;
+  direccion: string;
+  quien: string;
+  motivo: string;
+  fecha: string;
+};
+
+export async function verBorradoPruebas(): Promise<{ habilitado: boolean; registro: EmpresaBorrada[] }> {
+  if (CON_BACKEND) return http("GET", "/admin/clinicas/borrado-pruebas");
+  return { habilitado: false, registro: [] };
+}
+
+export async function borrarEmpresaPrueba(a: { id: string; confirmacion: string; motivo: string }) {
+  if (!CON_BACKEND) throw new Error("Solo disponible con el servidor de pruebas.");
+  return http<{ ok: true }>("POST", `/admin/clinicas/${a.id}/borrar-prueba`, {
+    confirmacion: a.confirmacion,
+    motivo: a.motivo,
+  });
+}

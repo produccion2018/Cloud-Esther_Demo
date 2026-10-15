@@ -16,7 +16,7 @@ import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
-  BarChart3,
+  BarChart3, ChevronRight,
 } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -98,9 +98,6 @@ const INPUT =
 
 const TEXTAREA =
   "min-h-24 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
-
-const ACCESO_BTN =
-  "group flex min-h-[3.25rem] flex-col items-center justify-center gap-2 rounded-2xl border border-primary/12 bg-gradient-to-br from-background to-primary/[0.04] px-2.5 py-3 text-center text-[13px] font-semibold sm:flex-row sm:justify-start sm:gap-3 sm:px-3 sm:py-2.5 sm:text-left sm:text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_26px_-18px_rgba(124,58,237,0.8)]";
 
 /* Encabezado de tarjeta con el mismo ADN del portal: ícono en degradé, título y bajada. */
 function CabeceraCard({
@@ -967,23 +964,23 @@ function CentroOperacionesBanner({
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-2.5">
           <button
             onClick={onNuevaCita}
-            className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-2.5 text-[13px] font-semibold sm:px-5 sm:text-sm text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 text-[12.5px] font-medium tracking-[-0.005em] sm:px-4 sm:text-[13px] text-[oklch(0.45_0.22_292)] shadow-[0_8px_20px_-12px_rgba(30,0,80,0.6),inset_0_-1px_0_rgba(124,58,237,0.12)] dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-14px_rgba(30,0,80,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
-            <CalendarPlus className="size-4" />
+            <CalendarPlus className="size-3.5" />
             Nuevo turno
           </button>
           <button
             onClick={onNuevoPaciente}
-            className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-2.5 text-[13px] font-semibold sm:px-5 sm:text-sm text-[oklch(0.45_0.22_292)] shadow-md dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
+            className="flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 text-[12.5px] font-medium tracking-[-0.005em] sm:px-4 sm:text-[13px] text-[oklch(0.45_0.22_292)] shadow-[0_8px_20px_-12px_rgba(30,0,80,0.6),inset_0_-1px_0_rgba(124,58,237,0.12)] dark:bg-white dark:text-[oklch(0.42_0.22_292)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-14px_rgba(30,0,80,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.47_0.22_292)]"
           >
-            <UserPlus className="size-4" />
+            <UserPlus className="size-3.5" />
             Nuevo paciente
           </button>
           <Link
             to="/demo/agenda"
-            className="col-span-2 flex items-center justify-center gap-2 rounded-full border border-white/60 bg-white/10 px-4 py-2.5 text-[13px] font-semibold sm:col-span-1 sm:px-5 sm:text-sm text-white shadow-md backdrop-blur-sm dark:bg-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/20 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-full border border-white/35 bg-white/[0.08] px-4 text-[12.5px] font-medium tracking-[-0.005em] sm:col-span-1 sm:text-[13px] text-white backdrop-blur-md dark:bg-white/10 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            <Clock className="size-4" />
+            <Clock className="size-3.5" />
             Ver agenda y horarios
           </Link>
         </div>
@@ -1083,6 +1080,57 @@ function ActividadReciente({ items, buscando }: { items: Actividad[]; buscando: 
   );
 }
 
+/* Acceso rápido premium: cada tarjeta con su tono (degradé suave), ícono con brillo,
+   una bajada corta y una flecha que se desliza al pasar el mouse. */
+const TONOS_ACCESO = {
+  violeta: { icono: "from-violet-500 to-fuchsia-500", halo: "bg-violet-500/25", borde: "hover:border-violet-400/40" },
+  cielo: { icono: "from-sky-500 to-indigo-500", halo: "bg-sky-500/25", borde: "hover:border-sky-400/40" },
+  esmeralda: { icono: "from-emerald-500 to-teal-500", halo: "bg-emerald-500/25", borde: "hover:border-emerald-400/40" },
+  ambar: { icono: "from-amber-500 to-rose-500", halo: "bg-amber-500/25", borde: "hover:border-amber-400/40" },
+} as const;
+
+function ContenidoAcceso({
+  icon: Icon,
+  titulo,
+  detalle,
+  tono,
+}: {
+  icon: typeof Clock;
+  titulo: string;
+  detalle: string;
+  tono: keyof typeof TONOS_ACCESO;
+}) {
+  const t = TONOS_ACCESO[tono];
+  return (
+    <>
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute -right-6 -top-8 size-24 rounded-full ${t.halo} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
+      />
+      <span
+        className={`relative grid size-10 shrink-0 place-items-center rounded-[14px] bg-gradient-to-br ${t.icono} text-white shadow-[0_8px_18px_-10px_rgba(76,29,149,0.75),inset_0_1px_0_rgba(255,255,255,0.35)] transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3`}
+      >
+        <Icon className="size-[18px]" strokeWidth={1.9} />
+      </span>
+      <span className="relative min-w-0 flex-1">
+        <span className="block truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-foreground">
+          {titulo}
+        </span>
+        <span className="mt-0.5 block truncate text-[11.5px] font-normal leading-tight text-muted-foreground">
+          {detalle}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden
+        className="relative hidden size-4 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary sm:block"
+      />
+    </>
+  );
+}
+
+const claseAcceso = (tono: keyof typeof TONOS_ACCESO) =>
+  `group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/[0.03] p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-22px_rgba(76,29,149,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${TONOS_ACCESO[tono].borde}`;
+
 function AccesosRapidos({
   onBuscar,
   onPresupuesto,
@@ -1095,33 +1143,21 @@ function AccesosRapidos({
   return (
     <div className={CARD}>
       <CabeceraCard icon={ExternalLink} titulo="Accesos rápidos" detalle="Lo que más se usa, a un toque" />
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <Link to="/demo/agenda" className={ACCESO_BTN}>
-          <IconoAcceso icon={CalendarCheck} />
-          <span className="min-w-0 leading-tight">Agenda del día</span>
+      <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 min-[1380px]:grid-cols-4">
+        <Link to="/demo/agenda" className={claseAcceso("violeta")}>
+          <ContenidoAcceso icon={CalendarCheck} titulo="Agenda del día" detalle="Turnos y salas" tono="violeta" />
         </Link>
-        <button onClick={onBuscar} className={ACCESO_BTN}>
-          <IconoAcceso icon={UserSearch} />
-          <span className="min-w-0 leading-tight">Buscar paciente</span>
+        <button type="button" onClick={onBuscar} className={claseAcceso("cielo")}>
+          <ContenidoAcceso icon={UserSearch} titulo="Buscar paciente" detalle="Ficha en segundos" tono="cielo" />
         </button>
-        <button onClick={onPresupuesto} className={ACCESO_BTN}>
-          <IconoAcceso icon={ReceiptText} />
-          <span className="min-w-0 leading-tight">Crear presupuesto</span>
+        <button type="button" onClick={onPresupuesto} className={claseAcceso("esmeralda")}>
+          <ContenidoAcceso icon={ReceiptText} titulo="Crear presupuesto" detalle="Listo para enviar" tono="esmeralda" />
         </button>
-        <button onClick={onRecordatorios} className={ACCESO_BTN}>
-          <IconoAcceso icon={BellRing} />
-          <span className="min-w-0 leading-tight">Recordatorios</span>
+        <button type="button" onClick={onRecordatorios} className={claseAcceso("ambar")}>
+          <ContenidoAcceso icon={BellRing} titulo="Recordatorios" detalle="WhatsApp y correo" tono="ambar" />
         </button>
       </div>
     </div>
-  );
-}
-
-function IconoAcceso({ icon: Icon }: { icon: typeof Clock }) {
-  return (
-    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white">
-      <Icon className="size-4" />
-    </span>
   );
 }
 

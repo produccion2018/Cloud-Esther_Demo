@@ -412,7 +412,7 @@ export function AdminShell({
               <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/[0.06] blur-2xl" />
               <div className="relative flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h1 className="text-2xl font-extrabold tracking-tight md:text-[30px]">{title}</h1>
+                  <h1 className="ce-aparecer text-2xl font-semibold tracking-[-0.03em] md:text-[30px]">{title}</h1>
                   {description && (
                     <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-muted-foreground">
                       {description}

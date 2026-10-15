@@ -23,9 +23,11 @@ import {
   EstadoDemoBadge,
   InteresBadge,
   KpiCard,
+  Paginacion,
   Seccion,
   Vacio,
   tooltipGrafico,
+  usePaginado,
 } from "@/components/admin/bits";
 import { RestrictedView } from "@/components/admin/restricted";
 import { accesoTotal, canAccess, permisos, useRole } from "@/components/admin/role";
@@ -97,8 +99,6 @@ function DemosPage() {
 
   const filas = useMemo(() => (demos ?? []).map((d) => ({ demo: d, r: resumenDemo(d) })), [demos]);
 
-  if (!canAccess(role, "/admin/demos")) return <RestrictedView />;
-
   const texto = q.trim().toLowerCase();
   const lista = filas
     .filter(
@@ -115,6 +115,10 @@ function DemosPage() {
         ? b.r.minutos + b.r.ingresos * 20 - (a.r.minutos + a.r.ingresos * 20)
         : (b.r.ultimo ?? "").localeCompare(a.r.ultimo ?? ""),
     );
+
+  const pag = usePaginado(lista, 10, `${texto}|${estado}|${interes}|${orden}`);
+
+  if (!canAccess(role, "/admin/demos")) return <RestrictedView />;
 
   // Indicadores (últimos 30 días)
   const desde = Date.now() - 30 * 86_400_000;
@@ -390,7 +394,7 @@ function DemosPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {lista.map(({ demo, r }) => (
+                    {pag.items.map(({ demo, r }) => (
                       <tr
                         key={demo.id}
                         onClick={() => setAbierta(demo.id)}
@@ -480,6 +484,7 @@ function DemosPage() {
                 </table>
               </div>
             )}
+            <Paginacion {...pag} nombre="demos" />
           </Seccion>
         </>
       )}

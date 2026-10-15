@@ -49,20 +49,18 @@ export function ContadorDemo() {
   const dueno = useModoDueno();
   if (dueno) {
     return (
-      <div className="mt-2">
-        <p
-          className="flex items-center justify-center gap-1.5 rounded-lg bg-sidebar-accent/60 px-2 py-1.5 text-[11px] font-semibold text-sidebar-foreground/80"
-          title="Entraste como dueño: sin límite de tiempo y sin registrarse como demo"
-        >
-          <Crown className="size-3.5" />
-          Modo dueño · sin límite
-        </p>
+      <div
+        className="mt-2 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400/15 via-sidebar-accent/60 to-sidebar-accent/40 py-1 pl-2.5 pr-1 text-[11px] font-semibold text-sidebar-foreground/80"
+        title="Entraste como dueño: sin límite de tiempo y sin registrarse como demo"
+      >
+        <Crown className="size-3.5 shrink-0 text-amber-500" />
+        <span className="min-w-0 flex-1 truncate">Modo dueño · sin límite</span>
         <button
           type="button"
           onClick={salirModoDueno}
-          className="mt-1 w-full text-center text-[10px] text-sidebar-foreground/50 underline-offset-2 hover:underline"
+          className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-medium text-sidebar-foreground/55 transition-colors hover:bg-sidebar hover:text-sidebar-foreground"
         >
-          Salir del modo dueño
+          Salir
         </button>
       </div>
     );

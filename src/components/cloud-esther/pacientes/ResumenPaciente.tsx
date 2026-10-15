@@ -239,7 +239,7 @@ function Indicador({
     >
       <span className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-primary/[0.04] ring-[14px] ring-primary/[0.035]" />
       <div className="relative flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/85">
           {etiqueta}
         </p>
         <span
@@ -249,7 +249,7 @@ function Indicador({
         </span>
       </div>
       <p
-        className={`relative mt-1 line-clamp-2 text-[19px] font-bold leading-tight tracking-tight ${T.valor}`}
+        className={`relative mt-1 line-clamp-2 text-[18px] font-semibold leading-snug tracking-[-0.015em] ${T.valor}`}
         title={valor}
       >
         {valor}
@@ -279,10 +279,10 @@ function Fila({
         <Icon className="size-3.5" />
       </span>
       <div className="min-w-0">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
           {etiqueta}
         </p>
-        <p className="truncate text-sm font-semibold text-foreground/90" title={valor}>
+        <p className="mt-0.5 truncate text-[13.5px] font-medium leading-snug tracking-[-0.005em] text-foreground/85" title={valor}>
           {valor || "—"}
         </p>
       </div>
@@ -348,7 +348,7 @@ export function ResumenPaciente({
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h4 className="truncate text-[22px] font-bold tracking-[-0.02em] text-foreground">
+              <h4 className="truncate text-[22px] font-semibold tracking-[-0.025em] text-foreground">
                 {nombre}
               </h4>
               <span
@@ -458,7 +458,7 @@ export function ResumenPaciente({
         {/* Datos personales */}
         <section className={PANEL}>
           <div className="mb-2 flex items-center justify-between">
-            <h5 className="text-sm font-bold tracking-tight">Datos del paciente</h5>
+            <h5 className="text-sm font-semibold tracking-[-0.01em]">Datos del paciente</h5>
             {ultimaVisita && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/[0.07] px-2.5 py-1 text-[11px] font-semibold text-primary">
                 <Clock3 className="size-3" /> Última visita {fechaCorta(ultimaVisita)}
@@ -486,7 +486,7 @@ export function ResumenPaciente({
         <div className="space-y-4">
           {/* Contacto */}
           <section className={PANEL}>
-            <h5 className="mb-2 text-sm font-bold tracking-tight">Contacto</h5>
+            <h5 className="mb-2 text-sm font-semibold tracking-[-0.01em]">Contacto</h5>
             <div className="space-y-1">
               <Fila icon={Phone} etiqueta="Teléfono" valor={paciente.telefono} />
               <Fila icon={Mail} etiqueta="Correo" valor={paciente.email} />
@@ -502,7 +502,7 @@ export function ResumenPaciente({
           {/* Alertas médicas */}
           <section className={PANEL}>
             <div className="mb-2 flex items-center justify-between">
-              <h5 className="text-sm font-bold tracking-tight">Alertas médicas</h5>
+              <h5 className="text-sm font-semibold tracking-[-0.01em]">Alertas médicas</h5>
               <button
                 type="button"
                 onClick={() => onIr("historia")}

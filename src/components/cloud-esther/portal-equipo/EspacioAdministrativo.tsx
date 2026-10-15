@@ -300,9 +300,9 @@ export function EspacioAdministrativo({
                       key={a.id}
                       type="button"
                       onClick={() => onIr?.(a.id)}
-                      className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-semibold text-white backdrop-blur-md transition hover:bg-white/25 sm:px-3.5 sm:text-sm"
+                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.12] px-3 text-[12.5px] font-medium tracking-[-0.005em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md transition-all duration-300 hover:-translate-y-px hover:border-white/45 hover:bg-white/[0.22] sm:px-3.5 sm:text-[13px]"
                     >
-                      <a.icon className="size-4" />
+                      <a.icon className="size-3.5" />
                       <span className="sm:hidden">{a.corto}</span>
                       <span className="hidden sm:inline">{a.label}</span>
                     </button>
@@ -408,9 +408,9 @@ export function EspacioAdministrativo({
                           <button
                             type="button"
                             onClick={() => confirmar(t)}
-                            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 text-sm font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110 sm:flex-none"
+                            className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-4 text-[13px] font-medium tracking-[-0.005em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_8px_18px_-12px_rgba(124,58,237,0.9)] transition-all duration-300 hover:-translate-y-px hover:brightness-110 sm:flex-none"
                           >
-                            <Check className="size-4" /> Confirmar
+                            <Check className="size-3.5" /> Confirmar
                           </button>
                         </div>
                       </li>

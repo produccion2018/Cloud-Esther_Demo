@@ -64,6 +64,16 @@ export const useConsumoIA = () =>
 export const useCrecimiento = () =>
   useQuery({ queryKey: ["crecimiento"], queryFn: api.obtenerCrecimiento });
 
+/** Borrar empresas de prueba: solo Dueño y Socio, y solo si el servidor lo tiene prendido. */
+export const useBorradoPruebas = () => {
+  const { role } = useRole();
+  return useQuery({
+    queryKey: ["borrado-pruebas"],
+    queryFn: api.verBorradoPruebas,
+    enabled: accesoTotal(role) && api.CON_BACKEND,
+  });
+};
+
 /** Mutación con aviso y refresco de las listas afectadas. */
 export function useAccion<A, R = unknown>(
   fn: (a: A) => Promise<R>,

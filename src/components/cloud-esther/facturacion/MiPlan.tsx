@@ -258,12 +258,17 @@ export function MiPlan({
         </div>
         <div className="space-y-3">
           <div className="card-grad p-4">
-            <p className="text-sm font-semibold">Facturas de Cloud Esther</p>
+            <p className="flex items-center gap-2 text-sm font-semibold tracking-[-0.01em]">
+              <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+                <Receipt className="size-3.5" />
+              </span>
+              Facturas de Cloud Esther
+            </p>
             <ul className="scroll-sutil mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-1">
               {[...(pendiente ? [pendiente] : []), ...[...pagadas].reverse()].map((f) => (
                 <li
                   key={f.id}
-                  className="flex flex-wrap items-center gap-3 rounded-xl bg-white/85 px-3 py-2 ring-1 ring-primary/10"
+                  className="flex flex-wrap items-center gap-3 rounded-2xl bg-card/90 px-3 py-2 ring-1 ring-primary/10 transition-all duration-200 hover:ring-primary/25"
                 >
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                     <Receipt className="size-4" />
@@ -309,55 +314,87 @@ export function MiPlan({
             </ul>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="card-grad p-4">
-              <p className="text-sm font-semibold">Medio de pago</p>
-              <div className="mt-3 flex items-center gap-3 rounded-xl bg-white/85 px-3 py-2.5 ring-1 ring-primary/10">
-                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                  {sus.medio?.tipo === "Transferencia" ? (
-                    <Landmark className="size-4" />
-                  ) : (
-                    <CreditCard className="size-4" />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {sus.medio?.detalle ?? "Sin medio de pago"}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {sus.medio?.tipo ?? "Agregá uno para pagar más rápido"}
-                  </p>
-                </div>
-                <button type="button" className={BTN_SECUNDARIO} onClick={() => setMedio(true)}>
+            {/* Medio de pago: tarjeta premium (como una tarjeta real) + débito automático */}
+            <div className="relative overflow-hidden rounded-3xl border border-primary/12 bg-gradient-to-br from-card via-card to-primary/[0.05] p-4 shadow-[0_18px_40px_-30px_rgba(76,29,149,0.6)]">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-semibold tracking-[-0.01em]">
+                  <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+                    <CreditCard className="size-3.5" />
+                  </span>
+                  Medio de pago
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMedio(true)}
+                  className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-primary"
+                >
                   Cambiar
                 </button>
               </div>
-              <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-white/85 px-3 py-2.5 text-sm ring-1 ring-primary/10">
+              <div className="relative mt-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#2e1065] via-[#6d28d9] to-[#c026d3] p-4 text-white shadow-[0_18px_36px_-18px_rgba(109,40,217,0.85)]">
+                <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-white/15 blur-2xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-14 left-6 size-36 rounded-full bg-fuchsia-300/25 blur-2xl" />
+                <div className="relative flex items-start justify-between">
+                  <span className="h-6 w-8 rounded-md bg-gradient-to-br from-amber-200 via-amber-300 to-amber-500 shadow-inner" aria-hidden />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                    {sus.medio?.tipo ?? "Sin medio"}
+                  </span>
+                </div>
+                <p className="relative mt-4 truncate font-mono text-[15px] tracking-[0.12em]">
+                  {sus.medio?.detalle ?? "Agregá uno para pagar más rápido"}
+                </p>
+                <p className="relative mt-1 text-[10.5px] uppercase tracking-[0.14em] text-white/65">{razonSocial}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sus.debitoAutomatico}
+                disabled={sus.medio?.tipo !== "Tarjeta"}
+                onClick={() => {
+                  const v = !sus.debitoAutomatico;
+                  setSuscripcion((s2) => ({ ...s2, debitoAutomatico: v }));
+                  onToast(v ? "Débito automático activado" : "Débito automático desactivado");
+                }}
+                className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 px-3 py-2.5 text-left transition hover:border-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <span>
-                  <b className="block text-[13px]">Débito automático</b>
-                  <span className="text-[11px] text-muted-foreground">
-                    Se cobra solo el día de vencimiento
+                  <span className="block text-[13px] font-semibold">Débito automático</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    {sus.medio?.tipo === "Tarjeta" ? "Se cobra solo el día de vencimiento" : "Disponible con tarjeta"}
                   </span>
                 </span>
-                <input
-                  type="checkbox"
-                  className="size-4 accent-[var(--primary)]"
-                  checked={sus.debitoAutomatico}
-                  disabled={sus.medio?.tipo !== "Tarjeta"}
-                  onChange={(e) => {
-                    const v = e.target.checked;
-                    setSuscripcion((s) => ({ ...s, debitoAutomatico: v }));
-                    onToast(v ? "Débito automático activado" : "Débito automático desactivado");
-                  }}
-                />
-              </label>
+                <span
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${sus.debitoAutomatico ? "bg-gradient-to-r from-primary to-fuchsia-500" : "bg-muted-foreground/25"}`}
+                >
+                  <span className={`size-5 rounded-full bg-white shadow transition-transform ${sus.debitoAutomatico ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+                </span>
+              </button>
             </div>
-            <div className="card-grad p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold">
-                <Building2 className="size-4 text-primary" /> Datos de facturación
+
+            {/* Datos de facturación */}
+            <div className="relative overflow-hidden rounded-3xl border border-primary/12 bg-gradient-to-br from-card via-card to-fuchsia-500/[0.05] p-4 shadow-[0_18px_40px_-30px_rgba(76,29,149,0.6)]">
+              <p className="flex items-center gap-2 text-sm font-semibold tracking-[-0.01em]">
+                <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-500 text-white">
+                  <Building2 className="size-3.5" />
+                </span>
+                Datos de facturación
               </p>
-              <p className="mt-2 text-sm">{razonSocial}</p>
-              <p className="text-[12px] text-muted-foreground">{idFiscal}</p>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <dl className="mt-3 divide-y divide-border/60 rounded-2xl border border-border/60 bg-card/80">
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <dt className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">Razón social</dt>
+                  <dd className="truncate text-right text-[13px] font-medium">{razonSocial}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <dt className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">Identificación fiscal</dt>
+                  <dd className="truncate text-right font-mono text-[13px] tabular-nums">{idFiscal}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <dt className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">Factura</dt>
+                  <dd className="text-right text-[13px] font-medium">Tipo A · electrónica</dd>
+                </div>
+              </dl>
+              <p className="mt-3 flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" />
                 Cloud Esther te factura a los datos fiscales de la clínica (pestaña Datos fiscales).
               </p>
             </div>
@@ -730,19 +767,19 @@ function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
           {activos.filter((a) => comprables.some((m) => m.id === a.id)).length} activos
         </span>
       </div>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-4">
         {comprables.map((m) => {
           const activo = activos.some((a) => a.id === m.id);
           return (
             <li
               key={m.id}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ring-1 ${activo ? "bg-primary/[0.07] ring-primary/30" : "bg-white/85 ring-primary/10"}`}
+              className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(124,58,237,0.7)] ${activo ? "bg-gradient-to-br from-primary/[0.09] to-fuchsia-500/[0.06] ring-primary/30" : "bg-card/90 ring-primary/10 hover:ring-primary/25"}`}
             >
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+              <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${activo ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" : "bg-primary/10 text-primary"}`}>
                 <ModuleIcon name={m.icon} className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <b className="block truncate text-[13px]">{m.label}</b>
+                <b className="line-clamp-2 block text-[13px] font-semibold leading-snug" title={m.label}>{m.label}</b>
                 <span className="text-[11px] text-muted-foreground">
                   {activo ? "Activo en tu plan" : `Incluido desde ${PLANS[m.minPlan].name}`}
                 </span>

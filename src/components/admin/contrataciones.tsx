@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, FileSignature, Mail, MessageCircle, Phone, XCircle } from "lucide-react";
 import { useState } from "react";
 
-import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
+import { Cargando, Paginacion, Seccion, Vacio, usePaginado } from "@/components/admin/bits";
 import { Campo, DialogoFormulario, INPUT, Pestanas, Pildora } from "@/components/admin/formularios";
 import { permisos, useRole } from "@/components/admin/role";
 import { Button } from "@/components/ui/button";
@@ -46,10 +46,11 @@ export function SolicitudesContratacion() {
   const [filtro, setFiltro] = useState<"pendiente" | "todas">("pendiente");
   const [abierta, setAbierta] = useState<string | null>(null);
 
-  if (!permisos.verContrataciones(role)) return null;
   const lista = data ?? [];
   const pendientes = lista.filter((c) => c.estado === "pendiente");
   const visibles = filtro === "pendiente" ? pendientes : lista;
+  const pag = usePaginado(visibles, 8, filtro);
+  if (!permisos.verContrataciones(role)) return null;
   const seleccionada = lista.find((c) => c.id === abierta) ?? null;
 
   return (
@@ -86,7 +87,7 @@ export function SolicitudesContratacion() {
           </div>
         ) : (
           <ul className="divide-y divide-border/60">
-            {visibles.map((c) => (
+            {pag.items.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
@@ -128,6 +129,7 @@ export function SolicitudesContratacion() {
             ))}
           </ul>
         )}
+        {!isLoading && <Paginacion {...pag} nombre="solicitudes" />}
       </Seccion>
 
       <Sheet open={!!seleccionada} onOpenChange={(v) => !v && setAbierta(null)}>

@@ -1948,3 +1948,35 @@ label {
     animation: none;
   }
 }
+
+/* ───────── Esther IA: movimiento sutil (flota, respira, anillo de luz y un brillo) ───────── */
+@keyframes ce-esther-flotar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes ce-esther-halo {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes ce-esther-giro {
+  to { transform: rotate(360deg); }
+}
+@keyframes ce-esther-brillo {
+  0%, 72% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.ce-esther-flotar { animation: ce-esther-flotar 4.2s ease-in-out infinite; }
+.ce-esther-halo { animation: ce-esther-halo 3.2s ease-in-out infinite; }
+.ce-esther-giro { animation: ce-esther-giro 7s linear infinite; will-change: transform; }
+.ce-esther-brillo {
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  animation: ce-esther-brillo 6.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ce-esther-flotar,
+  .ce-esther-halo,
+  .ce-esther-giro,
+  .ce-esther-brillo {
+    animation: none;
+  }
+}

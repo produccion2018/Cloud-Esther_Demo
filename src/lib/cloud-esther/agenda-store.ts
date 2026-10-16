@@ -135,12 +135,17 @@ function turnosEjemplo(hoy: string): Turno[] {
 
 /* Estado de la agenda separado por empresa: se conserva al navegar por el demo
    y ninguna clínica ve los turnos de otra. TODO backend: API de turnos por clinicId. */
+/** Feriado o día que la clínica no atiende (lo carga cada clínica: varían por país y ciudad). */
+export type Feriado = { id: number; fecha: string; nombre: string };
+
 export type EstadoAgenda = {
   turnos: Turno[];
   bloqueos: Bloqueo[];
   espera: Espera[];
   recordatorios: Recordatorio[];
   tareas: Tarea[];
+  /** Feriados y cierres de la clínica (opcional: los datos guardados antes no lo traen). */
+  feriados?: Feriado[];
 };
 export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(
   () => {
@@ -192,6 +197,7 @@ export const setBloqueosStore = setterAgenda("bloqueos");
 export const setEsperaStore = setterAgenda("espera");
 export const setRecordatoriosStore = setterAgenda("recordatorios");
 export const setTareasStore = setterAgenda("tareas");
+export const setFeriadosStore = setterAgenda("feriados");
 
 const TAREA_EJEMPLO: Omit<Tarea, "id" | "fecha"> = {
   texto: "Llamar para confirmar el turno",

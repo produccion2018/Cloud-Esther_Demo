@@ -60,7 +60,8 @@ export function GraficoEvolucion({
   const w = Math.max(0, ancho - margen.izq - margen.der);
   const h = alto - margen.arr - margen.aba;
   const valores = datos.map((d) => d.valor).concat(meta != null ? [meta] : []);
-  const { desde, hasta, marcas } = marcasEje(Math.min(...valores) * 0.92, Math.max(...valores) * 1.04);
+  // Todo en cero: igual se dibuja un eje (0 a 1) en vez de dividir por cero
+  const { desde, hasta, marcas } = marcasEje(Math.min(...valores) * 0.92, Math.max(1, Math.max(...valores) * 1.04));
   const x = (i: number) => margen.izq + (datos.length <= 1 ? w / 2 : (i * w) / (datos.length - 1));
   const y = (v: number) => margen.arr + h - ((v - desde) / (hasta - desde)) * h;
   const linea = datos.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.valor).toFixed(1)}`).join(" ");

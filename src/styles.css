@@ -2031,3 +2031,29 @@ label {
 @media (prefers-reduced-motion: reduce) {
   .ce-odo-halo { animation: none; }
 }
+
+/* ───────── Administración premium (portal del equipo) ─────────
+   Brillo que cruza los encabezados, orbes que flotan y entrada escalonada de tarjetas. */
+@keyframes ce-portal-brillo {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  55%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+@keyframes ce-portal-orbe {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-14px, 10px) scale(1.08); }
+}
+@keyframes ce-portal-entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.ce-portal-brillo { animation: ce-portal-brillo 7s ease-in-out infinite; }
+.ce-portal-orbe { animation: ce-portal-orbe 9s ease-in-out infinite; }
+.ce-portal-entrar { animation: ce-portal-entrar 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes ce-portal-crecer {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.ce-portal-crecer { transform-origin: left; animation: ce-portal-crecer 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-portal-brillo, .ce-portal-orbe, .ce-portal-entrar, .ce-portal-crecer { animation: none; }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, X, FileText, ImageIcon } from "lucide-react";
+import { Contrast, Download, FileText, ImageIcon, Maximize2, RotateCw, Sun, Upload, X, ZoomIn, ZoomOut } from "lucide-react";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 type Registro = {
@@ -39,8 +39,86 @@ function guardar(pacienteId: string, registros: Registro[]) {
 const CARD =
   "rounded-2xl border border-border/70 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]";
 
+/* Visor de radiografías: zoom con la rueda, los botones o doble click; arrastrar para moverse;
+   girar; brillo, contraste y negativo (útil para leer radiografías). Pantalla completa. */
+function VisorImagen({ registro, onCerrar }: { registro: Registro; onCerrar: () => void }) {
+  const [zoom, setZoom] = useState(1);
+  const [giro, setGiro] = useState(0);
+  const [brillo, setBrillo] = useState(100);
+  const [contraste, setContraste] = useState(100);
+  const [negativo, setNegativo] = useState(false);
+  const [mover, setMover] = useState({ x: 0, y: 0 });
+  const arrastre = useRef<{ x: number; y: number } | null>(null);
+  const z = (v: number) => setZoom(Math.min(8, Math.max(0.5, Math.round(v * 100) / 100)));
+  const reiniciar = () => {
+    setZoom(1);
+    setGiro(0);
+    setBrillo(100);
+    setContraste(100);
+    setNegativo(false);
+    setMover({ x: 0, y: 0 });
+  };
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [onCerrar]);
+  const boton = "grid size-10 place-items-center rounded-xl bg-white/10 text-white transition hover:bg-white/20";
+  return (
+    <div role="dialog" aria-modal="true" aria-label={registro.nombre} className="fixed inset-0 z-[90] flex flex-col bg-[radial-gradient(circle_at_50%_30%,#1e1b4b,#05030f)]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-3 text-white">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">{registro.nombre}</p>
+          <p className="text-[11px] text-white/60">{registro.fdi ? `Pieza ${registro.fdi}` : "General"} · {registro.fecha}</p>
+        </div>
+        <button type="button" className={boton} aria-label="Alejar" onClick={() => z(zoom / 1.25)}><ZoomOut className="size-4" /></button>
+        <span className="w-14 text-center text-xs font-bold tabular-nums">{Math.round(zoom * 100)}%</span>
+        <button type="button" className={boton} aria-label="Acercar" onClick={() => z(zoom * 1.25)}><ZoomIn className="size-4" /></button>
+        <button type="button" className={boton} aria-label="Girar" onClick={() => setGiro((g) => (g + 90) % 360)}><RotateCw className="size-4" /></button>
+        <button type="button" className={`${boton} ${negativo ? "!bg-fuchsia-500" : ""}`} aria-label="Negativo" aria-pressed={negativo} onClick={() => setNegativo((v) => !v)}><Contrast className="size-4" /></button>
+        <button type="button" className={boton} aria-label="Ajustar a la pantalla" onClick={reiniciar}><Maximize2 className="size-4" /></button>
+        <a href={registro.dataUrl} download={registro.nombre} className={boton} aria-label="Descargar"><Download className="size-4" /></a>
+        <button type="button" className={`${boton} !bg-white/20`} aria-label="Cerrar visor" onClick={onCerrar}><X className="size-4" /></button>
+      </div>
+      <div
+        className="relative flex-1 cursor-grab touch-none overflow-hidden active:cursor-grabbing"
+        onWheel={(e) => z(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12))}
+        onDoubleClick={() => z(zoom >= 2.5 ? 1 : zoom * 2)}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          arrastre.current = { x: e.clientX - mover.x, y: e.clientY - mover.y };
+        }}
+        onPointerMove={(e) => arrastre.current && setMover({ x: e.clientX - arrastre.current.x, y: e.clientY - arrastre.current.y })}
+        onPointerUp={() => (arrastre.current = null)}
+      >
+        <img
+          src={registro.dataUrl}
+          alt={registro.nombre}
+          draggable={false}
+          className="absolute left-1/2 top-1/2 max-h-[85%] max-w-[90%] select-none"
+          style={{
+            transform: `translate(calc(-50% + ${mover.x}px), calc(-50% + ${mover.y}px)) rotate(${giro}deg) scale(${zoom})`,
+            filter: `brightness(${brillo}%) contrast(${contraste}%)${negativo ? " invert(1)" : ""}`,
+            transition: arrastre.current ? "none" : "transform 0.15s ease-out",
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-5 border-t border-white/10 px-4 py-3 text-xs text-white/80">
+        <label className="flex items-center gap-2"><Sun className="size-4" /> Brillo
+          <input type="range" min={40} max={200} value={brillo} onChange={(e) => setBrillo(Number(e.target.value))} className="accent-fuchsia-400" />
+        </label>
+        <label className="flex items-center gap-2"><Contrast className="size-4" /> Contraste
+          <input type="range" min={40} max={250} value={contraste} onChange={(e) => setContraste(Number(e.target.value))} className="accent-fuchsia-400" />
+        </label>
+        <span className="text-white/50">Rueda o doble click: zoom · Arrastrá para moverte · Esc: cerrar</span>
+      </div>
+    </div>
+  );
+}
+
 export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Props) {
   const [registros, setRegistros] = useState<Registro[]>(() => cargar(pacienteId));
+  const [viendo, setViendo] = useState<Registro | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,6 +172,7 @@ export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Prop
   };
 
   const abrir = (registro: Registro) => {
+    if (registro.tipo === "imagen") return setViendo(registro);
     const ventana = window.open();
     if (ventana) {
       if (registro.tipo === "pdf") {
@@ -110,6 +189,7 @@ export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Prop
 
   return (
     <div className={`${CARD} mt-4`}>
+      {viendo && <VisorImagen registro={viendo} onCerrar={() => setViendo(null)} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-foreground">Radiografías y estudios</h3>
@@ -156,7 +236,12 @@ export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Prop
             >
               <button type="button" onClick={() => abrir(r)} className="block w-full">
                 {r.tipo === "imagen" ? (
-                  <img src={r.dataUrl} alt={r.nombre} className="h-24 w-full object-cover" />
+                  <span className="relative block">
+                    <img src={r.dataUrl} alt={r.nombre} className="h-24 w-full object-cover transition group-hover:scale-105" />
+                    <span className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100">
+                      <ZoomIn className="size-5" />
+                    </span>
+                  </span>
                 ) : (
                   <div className="grid h-24 w-full place-items-center bg-muted/40">
                     <FileText className="size-8 text-muted-foreground" />

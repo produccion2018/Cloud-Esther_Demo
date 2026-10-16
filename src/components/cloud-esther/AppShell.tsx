@@ -3,6 +3,7 @@ import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Sparkles, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMarca } from "@/lib/cloud-esther/marca";
 import {
   MODULES,
   comprableEn,
@@ -100,19 +101,25 @@ export function BrandMark({ className }: { className?: string }) {
 }
 
 function Logo({ compact = false }: { compact?: boolean }) {
+  // Marca propia (Plus y Enterprise): el logo y el nombre de la clínica
+  const m = useMarca();
   return (
     <Link to={"/demo" as never} className="flex items-center gap-2.5">
       <span className="relative shrink-0">
         <span aria-hidden className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 opacity-40 blur-md" />
-        <BrandMark className="relative size-9" />
+        {m.activa ? (
+          <img src={m.marca.logo} alt="" className="relative size-9 rounded-xl bg-white object-contain p-1 shadow-sm" />
+        ) : (
+          <BrandMark className="relative size-9" />
+        )}
       </span>
       {!compact && (
-        <span className="leading-tight">
-          <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
-            Cloud Esther
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
+            {m.activa && m.nombre ? m.nombre : "Cloud Esther"}
           </span>
           <span className="block text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
-            Dental Suite
+            {m.activa ? "con Cloud Esther" : "Dental Suite"}
           </span>
         </span>
       )}

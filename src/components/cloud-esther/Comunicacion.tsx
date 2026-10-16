@@ -24,6 +24,7 @@ import {
   Pencil,
   Phone,
   Pin,
+  Palette,
   Plus,
   RefreshCcw,
   Search,
@@ -93,6 +94,14 @@ const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; desde: NivelMod
   { id: "historial", label: "Historial de envíos", icon: Clock3, desde: "basico" },
   { id: "canales", label: "Canales y horarios", icon: Settings2, desde: "avanzado" },
 ];
+
+const FONDOS_COMUNICACION = [
+  { id: "aurora", nombre: "Aurora", fondo: "radial-gradient(60% 50% at 15% 10%, rgba(167,139,250,0.28), transparent 70%), radial-gradient(50% 45% at 90% 30%, rgba(244,114,182,0.2), transparent 70%), #fbf9ff" },
+  { id: "lavanda", nombre: "Lavanda", fondo: "linear-gradient(160deg, #f5f0ff 0%, #ede4ff 45%, #fdf2fb 100%)" },
+  { id: "menta", nombre: "Menta", fondo: "linear-gradient(160deg, #ecfdf5 0%, #e0f7f4 50%, #f0f9ff 100%)" },
+  { id: "oceano", nombre: "Océano", fondo: "linear-gradient(160deg, #eff6ff 0%, #e0e7ff 50%, #ecfeff 100%)" },
+  { id: "atardecer", nombre: "Atardecer", fondo: "linear-gradient(160deg, #fff7ed 0%, #ffe4e6 55%, #f5f0ff 100%)" },
+] as const;
 
 const VARIABLES = ["paciente", "fecha", "hora", "profesional", "clinica", "tratamiento"] as const;
 const RESPUESTAS_RAPIDAS = [
@@ -582,6 +591,9 @@ function ComunicacionInner() {
   const { pacientes } = usePacientes();
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("bandeja");
+  const [mostrarFondos, setMostrarFondos] = useState(false);
+  const [fondoId, setFondoId] = useState<(typeof FONDOS_COMUNICACION)[number]["id"]>("aurora");
+  const fondoActual = FONDOS_COMUNICACION.find((f) => f.id === fondoId) ?? FONDOS_COMUNICACION[0];
   // Entrar directo a una sección (ej. desde el Dashboard: #recordatorios)
   useEffect(() => {
     const h = window.location.hash.slice(1);
@@ -593,7 +605,17 @@ function ComunicacionInner() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
-  useEffect(() => setMontado(true), []);
+  useEffect(() => {
+    setMontado(true);
+    try {
+      const guardado = window.localStorage.getItem("cloud-esther:comunicacion:fondo");
+      if (guardado && FONDOS_COMUNICACION.some((f) => f.id === guardado)) {
+        setFondoId(guardado as (typeof FONDOS_COMUNICACION)[number]["id"]);
+      }
+    } catch {
+      // Preferencia visual opcional: si el navegador bloquea el almacenamiento, se usa Aurora.
+    }
+  }, []);
 
   // WhatsApp refleja siempre lo que dice el módulo Integraciones.
   const { conectores } = useIntegraciones();
@@ -692,7 +714,7 @@ function ComunicacionInner() {
 
   return (
     <AppShell>
-      <div className="relative min-h-full overflow-hidden bg-[#faf9ff]">
+      <div className="relative min-h-full overflow-hidden transition-colors duration-300" style={{ background: fondoActual.fondo }}>
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(124,58,237,0.15),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(167,139,250,0.14),transparent_27%),radial-gradient(circle_at_78%_88%,rgba(52,211,153,0.07),transparent_30%),linear-gradient(135deg,#f8f6ff_0%,#f3effd_48%,#faf8ff_100%)]"
@@ -726,6 +748,15 @@ function ComunicacionInner() {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className={BTN_SECUNDARIO}
+                    aria-expanded={mostrarFondos}
+                    onClick={() => setMostrarFondos((v) => !v)}
+                  >
+                    <Palette className="size-4" />
+                    Fondo
+                  </button>
                   <button className={BTN_SECUNDARIO} onClick={() => setSeccion("plantillas")}>
                     <FileText className="size-4" />
                     Plantillas
@@ -777,6 +808,38 @@ function ComunicacionInner() {
                     trend={formatearMonto(costoMes)}
                     detail="costo estimado"
                   />
+                </div>
+              )}
+
+              {mostrarFondos && (
+                <div className="mt-5 rounded-2xl border border-primary/15 bg-white/90 p-3 shadow-[0_12px_35px_-24px_rgba(76,29,149,0.45)] backdrop-blur-sm">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-foreground">Personalizá el fondo de Comunicación</p>
+                    <p className="text-[11px] text-muted-foreground">Se guarda en este navegador</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    {FONDOS_COMUNICACION.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        aria-pressed={fondoId === f.id}
+                        onClick={() => {
+                          setFondoId(f.id);
+                          try {
+                            window.localStorage.setItem("cloud-esther:comunicacion:fondo", f.id);
+                          } catch {
+                            onToast("El fondo cambia, pero el navegador no permite guardar la preferencia.");
+                          }
+                        }}
+                        className={`group overflow-hidden rounded-xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                          fondoId === f.id ? "border-primary ring-2 ring-primary/20" : "border-border/70 hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="block h-12" style={{ background: f.fondo }} />
+                        <span className="block bg-white px-2 py-1.5 text-[11px] font-medium text-foreground">{f.nombre}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -38,6 +38,7 @@ import {
   Phone,
   Search,
   ShieldCheck,
+  MonitorSmartphone,
   Stethoscope,
   UserRound,
   Users,
@@ -84,6 +85,9 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
+import { ControlPortalPaciente } from "@/components/cloud-esther/portales/ControlPortalPaciente";
+import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
+import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
@@ -185,6 +189,8 @@ type Seccion =
   | "liquidaciones"
   | "rrhh"
   | "avisos"
+  | "portal"
+  | "coberturas"
   | "administracion";
 
 const ROL_LABEL: Record<TeamRole, string> = {
@@ -224,6 +230,8 @@ const DESCRIPCION_ADMIN: Partial<Record<Seccion, string>> = {
   finanzas: "Ingresos, egresos, proveedores y flujo de caja.",
   liquidaciones: "Liquidaciones y comisiones de los profesionales.",
   rrhh: "Personal, asistencia, licencias y sueldos.",
+  portal: "Qué ve cada paciente en su portal y qué se le envía (con tu aprobación).",
+  coberturas: "Obras sociales, prepagas y seguros, el nomenclador y la planilla mensual.",
   perfil: "Tus datos, país e idioma de trabajo.",
 };
 
@@ -296,6 +304,8 @@ function edad(fecha: string) {
     e--;
   return `${e} años`;
 }
+/** Rol del equipo → rol de la clínica (para «quién puede enviar al portal») */
+const rolPortal = (r: TeamRole) => (r === "administrador" ? "admin" : r);
 const nombreDe = (m: TeamMember) => `${m.firstName} ${m.lastName}`.trim();
 const tiene = (m: TeamMember, permiso: string) =>
   m.role === "administrador" || !!m.permissions.find((p) => p.key === permiso)?.enabled;
@@ -432,6 +442,7 @@ const SECCIONES_CLINICA_REAL = new Set<Seccion>([
   "accesos",
   "interna",
   "actividad",
+  "portal",
 ]);
 
 /* Secciones de la Administración que dependen de un módulo del plan: se muestran solo si el
@@ -449,6 +460,8 @@ const SECCION_MODULO: Partial<Record<Seccion, string>> = {
   ia: "ia",
   // El paciente firma las autorizaciones desde SU portal: va con el Portal del paciente (Enterprise)
   autorizaciones: "portal-paciente",
+  portal: "portal-paciente",
+  coberturas: "facturacion",
 };
 
 const SIN_ENCABEZADO = new Set<Seccion>([
@@ -730,6 +743,7 @@ function AppEquipo({
   const { notificaciones } = useNotificaciones();
   const { autorizaciones } = storeAutorizaciones.usar();
   const { conversaciones } = storeComunicacion.usar();
+  const { config: configPortal } = storePortal.usar();
   const permisos = usePermisosPortal(miembro);
   const puede = permisos.puede;
   const administrativo = miembro.role === "secretaria" || miembro.role === "administrador";
@@ -952,6 +966,13 @@ function AppEquipo({
               // El chat del equipo (estilo Teams): en la clínica real y en el demo (con el equipo de ejemplo)
               ...item("interna", "Comunicación interna", MessagesSquare, true, chatPend),
               ...item("tareas", "Tareas", ClipboardList, puede("tareas")),
+              // Portal del paciente: lo controla el Administrador (y quien él autorice a enviar)
+              ...item(
+                "portal",
+                "Portal del paciente",
+                MonitorSmartphone,
+                miembro.role === "administrador" || (configPortal.publican ?? []).includes(rolPortal(miembro.role)),
+              ),
               ...item("documentos", "Documentos y plantillas", FileText, puede("documentos")),
             ],
           },
@@ -987,6 +1008,7 @@ function AppEquipo({
                 puede("finanzas") || puede("proveedores"),
               ),
               ...item("liquidaciones", "Liquidaciones y comisiones", Coins, puede("liquidaciones")),
+              ...item("coberturas", "Coberturas y nomenclador", ShieldCheck, puede("facturacion") || miembro.role === "administrador"),
               ...item("rrhh", "RRHH y sueldos", Briefcase, puede("rrhh") || puede("sueldos")),
             ],
           },
@@ -1250,6 +1272,18 @@ function AppEquipo({
         {actual === "auditoria" && (
           <AuditoriaPortal clinicId={clinicId} miembros={miembros} onToast={onToast} />
         )}
+        {actual === "portal" && (
+          <ControlPortalPaciente
+            usuario={yoNombre}
+            puedeConfigurar={miembro.role === "administrador" && !vista}
+            puedeEnviar={
+              !vista &&
+              (miembro.role === "administrador" || (configPortal.publican ?? []).includes(rolPortal(miembro.role)))
+            }
+            onToast={onToast}
+          />
+        )}
+        {actual === "coberturas" && <CoberturasNomenclador onToast={onToast} />}
         {actual === "facturacion" && <Facturacion />}
         {actual === "finanzas" && <Finanzas />}
         {actual === "liquidaciones" && (

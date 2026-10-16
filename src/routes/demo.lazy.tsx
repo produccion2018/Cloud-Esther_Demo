@@ -1,4 +1,5 @@
 import { capitalizarNombre } from "@/lib/utils";
+import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
 import {
   GABINETES,
@@ -436,6 +437,7 @@ function NuevoPacienteForm({
   const [telefono, setTelefono] = useState("");
   const [sucursal, setSucursal] = useState(SUCURSALES[0]);
   const [obraSocial, setObraSocial] = useState(OBRAS_SOCIALES[0]);
+  const obrasCatalogo = useNombresCobertura(OBRAS_SOCIALES);
   const [afiliado, setAfiliado] = useState("");
   const [direccion, setDireccion] = useState("");
   const [nota, setNota] = useState("");
@@ -549,7 +551,7 @@ function NuevoPacienteForm({
       <h3 className="text-sm font-semibold">Obra social / cobertura</h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Obra social">
-          <SelectField value={obraSocial} onChange={setObraSocial} options={OBRAS_SOCIALES} />
+          <SelectField value={obraSocial} onChange={setObraSocial} options={obrasCatalogo} />
         </Field>
         <Field label="Número de afiliado">
           <input value={afiliado} onChange={(e) => setAfiliado(e.target.value)} className={INPUT} placeholder="OS-45892177" />

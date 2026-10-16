@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  Activity,
   Camera,
   ClipboardList,
   FileText,
@@ -25,6 +26,7 @@ import {
   type ToothState,
 } from "@/lib/odontogram/fdi";
 import { cargarHistorial } from "@/lib/odontogram/historial";
+import { PeriodonciaPieza } from "@/components/cloud-esther/pacientes/Periodontograma";
 import { storeRayosX, TIPOS_RX } from "@/lib/cloud-esther/rayos-x";
 import { leerImagen } from "@/components/cloud-esther/esther-ai/imagenes";
 import {
@@ -48,11 +50,12 @@ type EstadoTratamiento = Tratamiento["estado"];
 
 export type HerramientaPaciente = "rayosx" | "sonrisa";
 
-type Pestana = "resumen" | "tratamientos" | "notas" | "imagenes" | "estudios" | "historial";
+type Pestana = "resumen" | "tratamientos" | "periodoncia" | "notas" | "imagenes" | "estudios" | "historial";
 
 const PESTANAS: { id: Pestana; label: string; icon: typeof Stethoscope }[] = [
   { id: "resumen", label: "Estado", icon: Stethoscope },
   { id: "tratamientos", label: "Tratamientos", icon: ClipboardList },
+  { id: "periodoncia", label: "Periodoncia", icon: Activity },
   { id: "notas", label: "Notas", icon: FileText },
   { id: "imagenes", label: "Imágenes", icon: Camera },
   { id: "estudios", label: "Rayos X", icon: ScanSearch },
@@ -243,6 +246,7 @@ function FichaDePieza({
   const contar: Record<Pestana, number> = {
     resumen: diagnosticos.length,
     tratamientos: tratamientos.length,
+    periodoncia: 0,
     notas: notas.length + notasVoz.length,
     imagenes: fotos.length,
     estudios: estudios.length + hallazgosRX.length,
@@ -332,6 +336,15 @@ function FichaDePieza({
             tratamientos={tratamientos}
             onSimularSonrisa={() => onIrHerramienta("sonrisa")}
             tieneIA={tieneIA}
+          />
+        )}
+        {pestana === "periodoncia" && (
+          <PeriodonciaPieza
+            fdi={fdi}
+            evaluaciones={registros.periodontograma}
+            cambiar={(fn) => cambiarRegistro(pacienteId, "periodontograma", fn)}
+            profesional={profesional}
+            onToast={onToast}
           />
         )}
         {pestana === "notas" && (

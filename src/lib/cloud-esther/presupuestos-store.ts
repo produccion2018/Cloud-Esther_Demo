@@ -66,6 +66,33 @@ export type EstadoPresupuestosConfig = {
   plantillas: Plantilla[];
   planes: PlanFinanciacion[];
   config: ConfigPresupuestos;
+  /** Coberturas (obras sociales, prepagas, mutualistas, seguros…) con las que trabaja la clínica */
+  coberturas?: Cobertura[];
+  /** Nomenclador: código de cada práctica y lo que reconoce cada cobertura */
+  nomenclador?: PracticaNomenclador[];
+};
+
+export type TipoCobertura = "Obra social" | "Prepaga" | "Mutualista" | "Seguro" | "Pública" | "Otra";
+export type Cobertura = {
+  id: string;
+  nombre: string;
+  tipo: TipoCobertura;
+  /** Código ISO del país (AR, UY, CL…) */
+  pais: string;
+  /** Código o número de prestador de la entidad (opcional) */
+  codigo: string;
+  activa: boolean;
+  requiereAutorizacion: boolean;
+  notas: string;
+};
+export type ValorCobertura = { cubre: number; coseguro: number; autorizacion: boolean };
+export type PracticaNomenclador = {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  /** Arancel de la clínica con el que se relaciona (para cobrar y liquidar) */
+  arancelId: string;
+  valores: Record<string, ValorCobertura>;
 };
 
 const a = (

@@ -88,13 +88,39 @@ export type ConfigPortal = {
   mensajes: boolean;
   horasMinimasCancelar: number;
   bienvenida: string;
+  /** Qué secciones ve el paciente (las que faltan se consideran visibles) */
+  secciones?: Partial<Record<SeccionPortalPaciente, boolean>>;
+  /** «automatico»: lo que carga la clínica aparece solo; «aprobacion»: hay que enviarlo al portal */
+  envio?: "automatico" | "aprobacion";
+  /** Roles que, además del Administrador, pueden enviar cosas al portal */
+  publican?: string[];
 };
+
+/** Secciones del portal que el Administrador puede mostrar u ocultar */
+export type SeccionPortalPaciente =
+  | "turnos"
+  | "tratamientos"
+  | "documentos"
+  | "historial"
+  | "autorizaciones"
+  | "documentacion"
+  | "cuenta"
+  | "pagos"
+  | "mensajes";
+
+/** Lo que se envía al portal con aprobación: «pacienteId:tipo:id» → quién y cuándo */
+export type TipoPublicable = "receta" | "estudio" | "presupuesto" | "documento";
+export type Publicacion = { por: string; fecha: string };
+export const clavePublicacion = (pacienteId: number, tipo: TipoPublicable, id: number | string) =>
+  `${pacienteId}:${tipo}:${id}`;
 
 type EstadoPortal = {
   config: ConfigPortal;
   accesos: Record<number, AccesoPortal>;
   eventos: EventoPortal[];
   docs: Record<number, DocSolicitada[]>;
+  /** Envíos al portal aprobados (modo «con aprobación») */
+  publicados?: Record<string, Publicacion>;
 };
 
 function hace(horas: number) {
@@ -174,7 +200,26 @@ export const storePortal = crearStorePorEmpresa<EstadoPortal>(() => ({
         : d,
     ),
   },
-}), { persistir: "portal" });
+}), {
+  persistir: "portal",
+  // Clínica real: arranca vacía y CON APROBACIÓN (nada le llega al paciente hasta que el
+  // Administrador, o quien él autorice, lo envía al portal)
+  vacio: () => ({
+    config: {
+      turnosOnline: true,
+      pagosOnline: true,
+      presupuestosOnline: true,
+      mensajes: true,
+      horasMinimasCancelar: 24,
+      bienvenida: "",
+      envio: "aprobacion",
+    },
+    accesos: {},
+    eventos: [],
+    docs: {},
+    publicados: {},
+  }),
+});
 
 export function setPortal<K extends keyof EstadoPortal>(
   clave: K,

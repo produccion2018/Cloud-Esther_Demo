@@ -347,6 +347,7 @@ export function EspacioAdministrativo({
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] xl:items-start">
+            <div className="space-y-5">
             <Bloque
               titulo="Turnos por confirmar"
               icono={CalendarCheck2}
@@ -419,6 +420,8 @@ export function EspacioAdministrativo({
                 </ul>
               )}
             </Bloque>
+              <SemanaAgenda turnos={turnos} />
+            </div>
 
             <div className="space-y-5">
               <Bloque
@@ -632,6 +635,59 @@ export function EspacioAdministrativo({
   );
 }
 
+/** Los próximos 7 días de la agenda: barra por día con la parte confirmada resaltada. */
+function SemanaAgenda({ turnos }: { turnos: Turno[] }) {
+  const dias = Array.from({ length: 7 }, (_, i) => hoyISO(i));
+  const datos = dias.map((d) => {
+    const del = turnos.filter((t) => t.fecha === d && t.estado !== "Cancelada");
+    return {
+      d,
+      total: del.length,
+      confirmados: del.filter((t) => t.estado === "Confirmada" || t.estado === "Atendida").length,
+    };
+  });
+  const max = Math.max(4, ...datos.map((x) => x.total));
+  const total = datos.reduce((a, x) => a + x.total, 0);
+  return (
+    <Bloque titulo="La semana en la agenda" icono={CalendarClock} detalle={`${total} turnos en los próximos 7 días`}>
+      <div className="flex h-40 items-end gap-2 sm:gap-3">
+        {datos.map((x, i) => {
+          const fecha = new Date(`${x.d}T12:00:00`);
+          return (
+            <div key={x.d} className="group flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+              <span className="text-[11px] font-bold tabular-nums text-foreground/80">{x.total || ""}</span>
+              <div className="relative w-full max-w-[44px] flex-1">
+                <div className="absolute inset-x-0 bottom-0 top-0 rounded-xl bg-muted/60" />
+                <div
+                  className="ce-grafico-barra absolute inset-x-0 bottom-0 overflow-hidden rounded-xl bg-gradient-to-t from-primary/35 to-fuchsia-400/35"
+                  style={{ height: `${(x.total / max) * 100}%`, animationDelay: `${i * 60}ms` }}
+                >
+                  <div
+                    className="absolute inset-x-0 bottom-0 rounded-xl bg-gradient-to-t from-primary to-fuchsia-500 shadow-[0_0_14px_rgba(168,85,247,0.55)]"
+                    style={{ height: `${x.total ? (x.confirmados / x.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+              <span className={`text-[10.5px] font-semibold uppercase ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>
+                {i === 0 ? "Hoy" : fecha.toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "")}
+              </span>
+              <span className="-mt-1 text-[10px] tabular-nums text-muted-foreground">{fecha.getDate()}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" /> Confirmados
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-primary/30" /> Por confirmar
+        </span>
+      </div>
+    </Bloque>
+  );
+}
+
 function Bloque({
   titulo,
   detalle,
@@ -646,33 +702,43 @@ function Bloque({
   acciones?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[26px] border border-primary/10 bg-card p-4 shadow-[0_16px_40px_-30px_rgba(124,58,237,0.65)] sm:p-5">
-      <div
+    <section className="ce-portal-entrar relative overflow-hidden rounded-[26px] border border-transparent p-4 shadow-[0_22px_50px_-36px_rgba(76,29,149,0.65)] [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(140deg,rgba(124,58,237,0.32),rgba(217,70,239,0.14)_45%,rgba(124,58,237,0.06))_border-box] sm:p-5">
+      <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400 opacity-80"
+        className="pointer-events-none absolute -right-20 -top-24 size-56 rounded-full bg-gradient-to-br from-primary/10 to-fuchsia-400/10 blur-3xl"
       />
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-10 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
-            <Icono className="size-[18px]" />
+      <div className="relative mb-4 flex flex-wrap items-center justify-between gap-2 pb-3.5">
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_12px_24px_-12px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.35)]">
+            <Icono className="size-[19px]" />
           </span>
           <div>
-            <h2 className="font-display text-[15px] font-bold tracking-tight">{titulo}</h2>
+            <h2 className="font-display text-base font-bold tracking-[-0.01em]">{titulo}</h2>
             {detalle && <p className="text-xs text-muted-foreground">{detalle}</p>}
           </div>
         </div>
         {acciones}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/25 via-fuchsia-400/15 to-transparent"
+        />
       </div>
-      {children}
+      <div className="relative">{children}</div>
     </section>
   );
 }
 
 function Vacio({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-2xl border border-dashed border-primary/20 px-3 py-6 text-center text-sm text-muted-foreground">
-      {children}
-    </p>
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-primary/20 bg-gradient-to-br from-primary/[0.03] to-fuchsia-500/[0.03] px-3 py-7 text-center">
+      <span className="relative">
+        <span aria-hidden className="absolute -inset-2 rounded-full bg-primary/15 blur-lg" />
+        <span className="relative grid size-11 place-items-center rounded-full bg-gradient-to-br from-primary/15 to-fuchsia-500/10 text-primary ring-1 ring-primary/15">
+          <Check className="size-5" />
+        </span>
+      </span>
+      <p className="text-sm font-medium text-muted-foreground">{children}</p>
+    </div>
   );
 }
 
@@ -705,22 +771,43 @@ function Cobros({
   const [medio, setMedio] = useState(MEDIOS[0] ?? "Efectivo");
   const elegido = pacientes.find((p) => p.id === pacienteId);
 
+  const total = saldos.reduce((a, x) => a + x.saldo, 0);
+  const mayor = saldos[0]?.saldo ?? 0;
   return (
+    <div className="space-y-5">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <KpiPortal titulo="Total por cobrar" valor={pesos(total)} detalle="saldos de cuentas corrientes" icon={Wallet} tono="rosa" />
+      <KpiPortal titulo="Pacientes con saldo" valor={String(saldos.length)} detalle={`de ${pacientes.length} pacientes`} icon={UserPlus} tono="ambar" progreso={pacientes.length ? (saldos.length / pacientes.length) * 100 : 0} />
+      <KpiPortal titulo="Mayor saldo" valor={pesos(mayor)} detalle={saldos[0] ? nombreCompleto(saldos[0].p) : "—"} icon={ReceiptText} />
+    </div>
     <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
       <Bloque titulo="Saldos a cobrar" icono={Wallet} detalle="Cuentas corrientes de los pacientes">
         {saldos.length === 0 ? (
           <Vacio>No hay saldos pendientes.</Vacio>
         ) : (
-          <ul className="divide-y divide-border/60">
+          <ul className="space-y-2">
             {saldos.map(({ p, saldo }) => (
-              <li key={p.id} className="flex items-center gap-2 py-2.5">
+              <li
+                key={p.id}
+                className={`flex flex-wrap items-center gap-3 rounded-2xl border p-3 transition hover:shadow-[0_14px_30px_-24px_rgba(76,29,149,0.7)] ${pacienteId === p.id ? "border-primary/40 bg-primary/[0.05]" : "border-primary/10 bg-muted/25 hover:bg-card"}`}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 text-xs font-bold text-white shadow-md">
+                  {p.nombre[0]}
+                  {p.apellido[0]}
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{nombreCompleto(p)}</span>
                   <span className="block text-xs text-muted-foreground">
                     {p.obraSocial || "Particular"}
                   </span>
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted">
+                    <span
+                      className="ce-portal-crecer block h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400"
+                      style={{ width: `${Math.max(6, (saldo / (mayor || 1)) * 100)}%` }}
+                    />
+                  </span>
                 </span>
-                <span className="text-sm font-bold tabular-nums text-destructive">
+                <span className="font-display text-base font-bold tabular-nums text-rose-600">
                   {pesos(saldo)}
                 </span>
                 <button
@@ -780,18 +867,26 @@ function Cobros({
               className={`${INPUT} mt-1`}
             />
           </label>
-          <label className="block text-xs font-semibold">
-            Medio de pago
-            <select
-              value={medio}
-              onChange={(e) => setMedio(e.target.value)}
-              className={`${INPUT} mt-1`}
-            >
+          <fieldset>
+            <legend className="text-xs font-semibold">Medio de pago</legend>
+            <div className="mt-1 grid grid-cols-2 gap-2">
               {MEDIOS.map((m) => (
-                <option key={m}>{m}</option>
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMedio(m)}
+                  aria-pressed={medio === m}
+                  className={`min-h-10 rounded-xl px-2 text-xs font-semibold transition ${
+                    medio === m
+                      ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
+                      : "border border-primary/12 bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m}
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </fieldset>
           <button
             type="submit"
             disabled={vista || !elegido || !monto}
@@ -804,6 +899,7 @@ function Cobros({
           )}
         </form>
       </Bloque>
+    </div>
     </div>
   );
 }
@@ -944,14 +1040,18 @@ function Documentos({
                     x.accion();
                     onToast("Planilla descargada");
                   }}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-primary/12 bg-card px-3 text-left transition hover:border-primary/30"
+                  className="group flex min-h-16 w-full items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-emerald-500/[0.04] to-transparent px-3 text-left transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/40 hover:shadow-[0_16px_32px_-24px_rgba(16,185,129,0.7)]"
                 >
-                  <FileSpreadsheet className="size-5 shrink-0 text-emerald-600" />
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.8)]">
+                    <FileSpreadsheet className="size-5" />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold">{x.titulo}</span>
                     <span className="block text-xs text-muted-foreground">{x.detalle}</span>
                   </span>
-                  <Download className="size-4 text-muted-foreground" />
+                  <span className="grid size-9 place-items-center rounded-xl bg-muted text-muted-foreground transition group-hover:bg-emerald-500 group-hover:text-white">
+                    <Download className="size-4" />
+                  </span>
                 </button>
               </li>
             ))}
@@ -978,31 +1078,32 @@ function Documentos({
             ))}
           </select>
         </label>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => documento("constancia")}
-            className="btn-ce-outline !min-h-11 justify-center"
-          >
-            Constancia
-          </button>
-          {verImportes && (
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
+          {(
+            [
+              { id: "constancia", t: "Constancia", d: "de asistencia", c: "from-sky-500 to-indigo-500" },
+              ...(verImportes ? [{ id: "recibo", t: "Recibo", d: "del último pago", c: "from-emerald-500 to-teal-500" }] : []),
+              { id: "presupuesto", t: "Presupuesto", d: "vigente del paciente", c: "from-primary to-fuchsia-500" },
+            ] as const
+          ).map((x) => (
             <button
+              key={x.id}
               type="button"
-              onClick={() => documento("recibo")}
-              className="btn-ce-outline !min-h-11 justify-center"
+              onClick={() => documento(x.id)}
+              disabled={!p}
+              className="group relative flex flex-col items-start gap-2 overflow-hidden rounded-2xl border border-primary/10 bg-card p-3 text-left transition duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_16px_32px_-24px_rgba(76,29,149,0.7)] disabled:opacity-55 disabled:hover:translate-y-0"
             >
-              Recibo
+              <span className={`grid size-10 place-items-center rounded-xl bg-gradient-to-br ${x.c} text-white shadow-md`}>
+                <FileText className="size-[18px]" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold">{x.t}</span>
+                <span className="block text-[11px] text-muted-foreground">{x.d} · Word</span>
+              </span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => documento("presupuesto")}
-            className="btn-ce-outline !min-h-11 justify-center"
-          >
-            Presupuesto
-          </button>
+          ))}
         </div>
+        {!p && <p className="mt-2 text-[11px] font-semibold text-primary">Elegí un paciente para generar el documento.</p>}
         <p className="mt-3 text-[11px] text-muted-foreground">
           Los archivos de cada paciente (estudios, consentimientos, imágenes) están en su ficha. La
           integración directa con Microsoft 365 o Google Workspace queda para el backend.

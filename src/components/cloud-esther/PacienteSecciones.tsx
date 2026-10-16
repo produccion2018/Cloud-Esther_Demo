@@ -20,6 +20,7 @@ import {
   History,
   Stethoscope,
   FolderOpen,
+  FileSignature,
   FileText,
   ReceiptText,
   CalendarDays,
@@ -64,6 +65,20 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
+import {
+  PeriodontogramaSec,
+  type EvaluacionPerio,
+} from "@/components/cloud-esther/pacientes/Periodontograma";
+import {
+  FirmarConsentimiento,
+  VerConsentimiento,
+  type FirmaConsentimiento,
+} from "@/components/cloud-esther/pacientes/ConsentimientoDigital";
+import {
+  FichasEspecialidadSec,
+  type FichaEspecialidad,
+} from "@/components/cloud-esther/pacientes/FichasEspecialidad";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -270,6 +285,8 @@ type DocumentoPaciente = {
   archivoTamano: number;
   url: string;
   notas: string;
+  /** Consentimiento firmado en pantalla: copia legal inmutable (texto, firma, huella) */
+  firma?: FirmaConsentimiento;
 };
 
 type EstudioPaciente = {
@@ -553,6 +570,10 @@ export type Registros = {
   profesionales: ProfesionalPaciente[];
   laboratorio: TrabajoLaboratorio[];
   auditoria: AuditoriaPaciente[];
+  /** Periodontograma: evaluaciones con sondaje por sitio (opcional: fichas viejas no lo traen) */
+  periodontograma?: EvaluacionPerio[];
+  /** Fichas clínicas por especialidad (Ortodoncia, Periodoncia, Endodoncia…) */
+  fichasEspecialidad?: FichaEspecialidad[];
 };
 
 export type Cambiar = <K extends keyof Registros>(
@@ -570,7 +591,9 @@ export type SeccionRegistros =
   | "turnos"
   | "cuenta"
   | "profesionales"
-  | "laboratorio";
+  | "laboratorio"
+  | "periodontograma"
+  | "especialidades";
 
 /* Datos opcionales del contexto (paciente / clínica) para la receta digital y el resumen de estudios.
    TODO backend: completarlos desde la ficha del paciente y la configuración de la clínica. */
@@ -3983,8 +4006,11 @@ function DocumentoForm({
   );
 }
 
-function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
+function DocumentosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
+  const [firmar, setFirmar] = useState(false);
+  const [viendo, setViendo] = useState<DocumentoPaciente | null>(null);
+  const paciente = contexto?.paciente ?? "Paciente";
 
   return (
     <div className="space-y-3">
@@ -3995,6 +4021,61 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
         etiquetaBoton="Subir documento"
         onAgregar={() => setAbierto(true)}
       />
+      {/* Consentimiento digital: el paciente firma en la tablet o la PC */}
+      <div className="relative flex flex-wrap items-center gap-3 overflow-hidden rounded-2xl bg-[linear-gradient(118deg,#4c1d95,#7c3aed_45%,#c026d3)] p-4 text-white shadow-[0_18px_40px_-26px_rgba(91,33,182,0.9)]">
+        <div aria-hidden className="pointer-events-none absolute -right-8 -top-12 size-36 rounded-full bg-fuchsia-300/30 blur-2xl" />
+        <span className="relative grid size-11 place-items-center rounded-2xl border border-white/30 bg-white/15">
+          <FileSignature className="size-5" />
+        </span>
+        <div className="relative min-w-0 flex-1">
+          <p className="font-display text-sm font-bold">Consentimiento con firma en pantalla</p>
+          <p className="text-xs text-white/85">El paciente lo lee y firma con el dedo. Queda guardada la copia legal con huella de verificación.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setFirmar(true)}
+          className="relative inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-bold text-primary shadow-lg transition hover:-translate-y-0.5"
+        >
+          <FileSignature className="size-4" /> Firmar consentimiento
+        </button>
+      </div>
+      {firmar && (
+        <FirmarConsentimiento
+          paciente={paciente}
+          clinica={contexto?.clinica}
+          onCerrar={() => setFirmar(false)}
+          onFirmado={(titulo, firma) => {
+            cambiar("documentos", (prev) => [
+              ...prev,
+              {
+                id: Date.now(),
+                tipo: "Consentimiento informado",
+                categoria: "Consentimiento",
+                estado: "Firmado",
+                titulo,
+                fecha: firma.fechaHora.slice(0, 10),
+                archivoNombre: "",
+                archivoTamano: 0,
+                url: "",
+                notas: `Firmado en pantalla por ${firma.firmante}`,
+                firma,
+              },
+            ]);
+            setFirmar(false);
+            onToast("Consentimiento firmado y guardado");
+          }}
+        />
+      )}
+      {viendo?.firma && (
+        <VerConsentimiento
+          titulo={viendo.titulo}
+          firma={viendo.firma}
+          paciente={paciente}
+          clinica={contexto?.clinica}
+          onCerrar={() => setViendo(null)}
+          onToast={onToast}
+        />
+      )}
       {datos.documentos.length === 0 ? (
         <EstadoVacio
           icon={FolderOpen}
@@ -4027,6 +4108,9 @@ function DocumentosSec({ datos, cambiar, onToast }: PropsSeccion) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Badge tono="primary">{d.estado}</Badge>
+                {d.firma && (
+                  <BotonMini icon={FileSignature} label="Ver firmado" onClick={() => setViendo(d)} />
+                )}
                 {d.url && (
                   <BotonMini
                     icon={ExternalLink}
@@ -4485,7 +4569,7 @@ function RecetaDocumento({
 }
 
 /* HTML de la receta para imprimir / guardar como PDF. Usa la misma tipografía de la app. */
-function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
+function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "") {
   const fuente = getComputedStyle(document.body).fontFamily;
   const filas = r.medicamentos
     .map(
@@ -4507,7 +4591,7 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
 <meta charset="utf-8" />
 <title>Receta ${escapar(r.numero)}</title>
 <style>
-  @page { size: A4; margin: 16mm; }
+  @page { size: A5; margin: 10mm; }
   * { box-sizing: border-box; }
   body { font-family: ${fuente}; color: #171717; font-size: 13px; margin: 0; position: relative; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #6d28d9; padding-bottom: 10px; }
@@ -4531,6 +4615,7 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
 </head>
 <body>
   ${r.estado === "Anulada" ? '<div class="anulada">ANULADA</div>' : ""}
+  ${membrete}
   <div class="top">
     <div>
       <h1>${escapar(contexto?.clinica || "Receta digital")}</h1>
@@ -4568,8 +4653,9 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
 
 /* TODO backend: reemplazar por GET /pacientes/:id/recetas/:recetaId/pdf (PDF firmado digitalmente).
    Mientras tanto se genera y descarga un PDF en el navegador. */
-function imprimirReceta(r: RecetaPaciente, contexto?: ContextoPaciente) {
-  void descargarPDF(htmlReceta(r, contexto), `receta-${r.numero}`);
+function imprimirReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "") {
+  // Formato A5 (media hoja), con el membrete de la clínica (logo y datos si tiene marca propia)
+  void descargarPDF(htmlReceta(r, contexto, membrete), `receta-${r.numero}`, "a5");
 }
 
 function RecetaVisor({
@@ -4679,8 +4765,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
     onToast(`${r.numero}: ${estado.toLowerCase()}`);
   };
 
+  const marca = useMarca();
   const descargar = (r: RecetaPaciente) => {
-    imprimirReceta(r, contexto);
+    imprimirReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
     onToast(`${r.numero}: descargando la receta en PDF`);
   };
 
@@ -9376,6 +9463,8 @@ export function SeccionPaciente({
         {seccionActiva === "cuenta" && <CuentaSec {...props} />}
         {seccionActiva === "profesionales" && <ProfesionalesSec {...props} />}
         {seccionActiva === "laboratorio" && <LaboratorioSec {...props} />}
+        {seccionActiva === "periodontograma" && <PeriodontogramaSec {...props} />}
+        {seccionActiva === "especialidades" && <FichasEspecialidadSec {...props} />}
       </div>
     </div>
   );

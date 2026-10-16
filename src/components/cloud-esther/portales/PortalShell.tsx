@@ -19,6 +19,7 @@ import type { ModoLateral, PreferenciasPortal } from "./preferencias";
 import { VERSION_APP } from "@/lib/version";
 import { vieneDeAccesoPrueba } from "@/lib/acceso-prueba";
 import { CambiarVista, type VistaDueno } from "@/components/clinica/cambiar-vista";
+import { useMarca } from "@/lib/cloud-esther/marca";
 
 /* Ubicación: src/components/cloud-esther/portales/PortalShell.tsx
    Marco común de los portales del Plan 4 (paciente, profesional y administrativo), con el ADN
@@ -88,6 +89,9 @@ export function PortalShell({
   children: ReactNode;
 }) {
   const [deAccesoPrueba, setDeAccesoPrueba] = useState(false);
+  // Marca propia (Plus y Enterprise): logo y nombre de la clínica en lugar de Cloud Esther
+  const m = useMarca();
+  const conMarca = m.activa && (portal !== "Portal del paciente" || m.marca.enPortal);
   useEffect(() => setDeAccesoPrueba(vieneDeAccesoPrueba()), []);
   const [hoja, setHoja] = useState(false);
   const [menuVista, setMenuVista] = useState(false);
@@ -138,10 +142,16 @@ export function PortalShell({
                       modoCompacto ? "justify-center px-0 py-2.5" : "px-2.5 py-2"
                     } ${
                       on
-                        ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)]"
+                        ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_14px_28px_-14px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.28)] ring-1 ring-white/15"
                         : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
                   >
+                    {on && !modoCompacto && (
+                      <span
+                        aria-hidden
+                        className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-primary to-fuchsia-500 shadow-[0_0_12px_rgba(217,70,239,0.9)]"
+                      />
+                    )}
                     <span
                       className={`grid size-8 shrink-0 place-items-center rounded-lg transition ${
                         on
@@ -188,12 +198,16 @@ export function PortalShell({
               aria-hidden
               className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 opacity-40 blur-md"
             />
-            <BrandMark className="relative size-9" />
+            {conMarca ? (
+              <img src={m.marca.logo} alt={clinica} className="relative size-9 rounded-xl bg-white object-contain p-1 shadow-sm" />
+            ) : (
+              <BrandMark className="relative size-9" />
+            )}
           </span>
           {!modoCompacto && (
-            <span className="leading-tight">
-              <span className="block font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
-                Cloud Esther
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate font-display text-[15px] font-semibold tracking-tight text-sidebar-foreground">
+                {conMarca ? m.nombre || clinica : "Cloud Esther"}
               </span>
               <span className="block text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
                 {portal}
@@ -202,7 +216,10 @@ export function PortalShell({
           )}
         </div>
         {!modoCompacto && (
-          <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]">
+          <div
+            className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]"
+            style={conMarca ? { background: `linear-gradient(135deg, ${m.marca.color}, ${m.marca.color}bb)` } : undefined}
+          >
             <span
               aria-hidden
               className="pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-white/15 blur-xl"
@@ -455,68 +472,131 @@ export function HeroPortal({
   children?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_60px_-30px_rgba(124,58,237,0.75)] sm:p-7">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10 blur-2xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-24 left-1/3 size-72 rounded-full bg-fuchsia-300/20 blur-3xl"
-      />
-      <p className="relative text-xs font-semibold uppercase tracking-[0.18em] text-white/75">
-        {saludo}
-      </p>
-      <h1 className="relative mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-        {titulo}
-      </h1>
-      {detalle && <p className="relative mt-1.5 max-w-2xl text-sm text-white/85">{detalle}</p>}
-      {children && <div className="relative mt-4">{children}</div>}
+    <section className="ce-portal-entrar relative overflow-hidden rounded-[30px] bg-gradient-to-br from-white/50 via-fuchsia-300/40 to-violet-400/40 p-px shadow-[0_34px_80px_-42px_rgba(91,33,182,0.95)]">
+      <div className="relative overflow-hidden rounded-[29px] bg-[linear-gradient(118deg,#3b0764_0%,#5b21b6_24%,#7c3aed_48%,#a21caf_78%,#db2777_100%)] p-5 text-white sm:p-7">
+        <div
+          aria-hidden
+          className="ce-portal-orbe pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-fuchsia-300/35 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="ce-portal-orbe pointer-events-none absolute -bottom-32 left-1/4 size-80 rounded-full bg-indigo-400/30 blur-3xl [animation-delay:-4s]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.2)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(100deg,transparent_40%,black_85%)]"
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="ce-portal-brillo absolute inset-y-0 -left-1/3 w-1/4 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        </div>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
+        />
+        <p className="relative inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-white/75">
+          <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.95)]" />
+          {saludo}
+        </p>
+        <h1 className="relative mt-1.5 font-display text-[28px] font-bold leading-tight tracking-[-0.02em] drop-shadow-[0_2px_12px_rgba(40,0,80,0.35)] sm:text-[34px]">
+          {titulo}
+        </h1>
+        {detalle && <p className="relative mt-1.5 max-w-2xl text-sm leading-relaxed text-white/85">{detalle}</p>}
+        {children && <div className="relative mt-5">{children}</div>}
+      </div>
     </section>
   );
 }
 
-/** Encabezado con degradé para cada sección (versión compacta del héroe). */
+/** Fecha de hoy para los encabezados («Jueves 15 de octubre»). */
+function fechaHoyLarga() {
+  const t = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Encabezado premium de cada sección: degradé profundo con orbes, trama de puntos, brillo que
+    cruza, ícono en vidrio con halo, ruta (área › sección), fecha de hoy y acciones opcionales. */
 export function EncabezadoSeccion({
   area,
   titulo,
   detalle,
   icon: Icon,
+  acciones,
 }: {
   area: string;
   titulo: string;
   detalle?: string | undefined;
   icon?: LucideIcon | undefined;
+  /** Botones o datos a la derecha (ej.: «Exportar»). */
+  acciones?: ReactNode;
 }) {
   return (
-    <section className="relative mb-5 overflow-hidden rounded-[26px] bg-gradient-to-r from-primary via-violet-600 to-fuchsia-600 px-5 py-4 text-white shadow-[0_20px_50px_-30px_rgba(124,58,237,0.8)] sm:px-6 sm:py-5">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10 blur-2xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-20 right-1/3 size-56 rounded-full bg-fuchsia-300/20 blur-3xl"
-      />
-      <div className="relative flex items-center gap-3.5">
-        {Icon && (
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/25 bg-white/15 shadow-inner backdrop-blur-md">
-            <Icon className="size-[22px]" />
-          </span>
-        )}
-        <div className="min-w-0">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-white/75">
-            {area}
-          </p>
-          <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
-            {titulo}
-          </h1>
-          {detalle && <p className="mt-0.5 text-sm text-white/85">{detalle}</p>}
+    <section className="ce-portal-entrar relative mb-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-white/50 via-fuchsia-300/40 to-violet-400/40 p-px shadow-[0_32px_70px_-42px_rgba(91,33,182,0.95)]">
+      <div className="relative overflow-hidden rounded-[27px] bg-[linear-gradient(118deg,#4c1d95_0%,#6d28d9_28%,#7c3aed_48%,#a21caf_78%,#db2777_100%)] px-5 py-5 text-white sm:px-7 sm:py-6">
+        <div
+          aria-hidden
+          className="ce-portal-orbe pointer-events-none absolute -right-14 -top-20 size-64 rounded-full bg-fuchsia-300/35 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="ce-portal-orbe pointer-events-none absolute -bottom-28 left-[22%] size-72 rounded-full bg-indigo-400/30 blur-3xl [animation-delay:-4s]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.22)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(100deg,transparent_35%,black_80%)]"
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="ce-portal-brillo absolute inset-y-0 -left-1/3 w-1/4 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        </div>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
+        />
+        <div className="relative flex flex-wrap items-center gap-4">
+          {Icon && (
+            <span className="relative shrink-0">
+              <span aria-hidden className="absolute -inset-2 rounded-[22px] bg-white/25 blur-lg" />
+              <span className="relative grid size-14 place-items-center rounded-[20px] border border-white/35 bg-gradient-to-br from-white/35 to-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_14px_30px_-14px_rgba(30,0,60,0.8)] backdrop-blur-md">
+                <Icon className="size-6 drop-shadow-[0_2px_6px_rgba(40,0,80,0.45)]" />
+              </span>
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.2em] text-white/70">
+              <span>Administración</span>
+              {area && area !== "Administración" && (
+                <>
+                  <span aria-hidden className="text-white/40">›</span>
+                  <span className="text-white/90">{area}</span>
+                </>
+              )}
+            </p>
+            <h1 className="mt-0.5 truncate font-display text-[26px] font-bold leading-tight tracking-[-0.02em] drop-shadow-[0_2px_10px_rgba(40,0,80,0.35)] sm:text-[30px]">
+              {titulo}
+            </h1>
+            {detalle && <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/85">{detalle}</p>}
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <span className="hidden items-center gap-2 rounded-full border border-white/25 bg-white/12 px-3.5 py-1.5 text-xs font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] backdrop-blur-md md:inline-flex">
+              <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.95)]" />
+              {fechaHoyLarga()}
+            </span>
+            {acciones}
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
+const TONOS_KPI = {
+  violeta: { grad: "from-primary to-fuchsia-500", sombra: "rgba(124,58,237,0.55)", tinte: "from-violet-500/[0.07]" },
+  verde: { grad: "from-emerald-500 to-teal-500", sombra: "rgba(16,185,129,0.5)", tinte: "from-emerald-500/[0.07]" },
+  ambar: { grad: "from-amber-500 to-orange-500", sombra: "rgba(245,158,11,0.5)", tinte: "from-amber-500/[0.08]" },
+  rosa: { grad: "from-rose-500 to-pink-500", sombra: "rgba(244,63,94,0.5)", tinte: "from-rose-500/[0.07]" },
+  azul: { grad: "from-sky-500 to-indigo-500", sombra: "rgba(14,165,233,0.5)", tinte: "from-sky-500/[0.07]" },
+} as const;
+
+export type TonoPortal = keyof typeof TONOS_KPI;
 
 export function KpiPortal({
   titulo,
@@ -525,49 +605,59 @@ export function KpiPortal({
   icon: Icon,
   tono = "violeta",
   onClick,
+  progreso,
 }: {
   titulo: string;
   valor: string;
   detalle?: string;
   icon: LucideIcon;
-  tono?: "violeta" | "verde" | "ambar" | "rosa" | "azul";
+  tono?: TonoPortal;
   onClick?: (() => void) | undefined;
+  /** 0 a 100: barra fina de avance debajo de la cifra. */
+  progreso?: number | undefined;
 }) {
-  const tonos = {
-    violeta: "from-primary to-fuchsia-500",
-    verde: "from-emerald-500 to-teal-500",
-    ambar: "from-amber-500 to-orange-500",
-    rosa: "from-rose-500 to-pink-500",
-    azul: "from-sky-500 to-indigo-500",
-  }[tono];
+  const t = TONOS_KPI[tono];
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       {...(onClick ? { type: "button" as const, onClick } : {})}
-      className="group relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 text-left shadow-[0_12px_32px_-24px_rgba(124,58,237,0.6)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(124,58,237,0.7)]"
+      className={`ce-portal-entrar group relative flex flex-col overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br ${t.tinte} via-card to-card p-4 text-left shadow-[0_18px_40px_-30px_rgba(76,29,149,0.6),inset_0_1px_0_rgba(255,255,255,0.7)] transition duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_50px_-28px_rgba(76,29,149,0.7)] dark:shadow-none`}
     >
       <span
         aria-hidden
-        className={`pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gradient-to-br ${tonos} opacity-[0.12] blur-2xl transition group-hover:opacity-20`}
+        className={`pointer-events-none absolute -right-12 -top-14 size-36 rounded-full bg-gradient-to-br ${t.grad} opacity-[0.14] blur-2xl transition duration-500 group-hover:scale-125 group-hover:opacity-25`}
       />
       <span
         aria-hidden
-        className={`pointer-events-none absolute inset-x-4 bottom-0 h-[3px] rounded-full bg-gradient-to-r ${tonos} opacity-70`}
+        className="pointer-events-none absolute -right-6 -top-6 size-24 rounded-full border border-primary/10"
       />
       <div className="relative flex items-start justify-between gap-2">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
           {titulo}
         </p>
         <span
-          className={`grid size-9 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${tonos} text-white shadow-md`}
+          className={`grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${t.grad} text-white ring-4 ring-white/60 transition duration-300 group-hover:rotate-[-6deg] group-hover:scale-110 dark:ring-white/5`}
+          style={{ boxShadow: `0 10px 22px -10px ${t.sombra}` }}
         >
-          <Icon className="size-4" />
+          <Icon className="size-[18px]" />
         </span>
       </div>
-      <p className="relative mt-1 truncate font-display text-2xl font-bold tabular-nums tracking-tight">
+      <p className="relative mt-1.5 truncate font-display text-[28px] font-bold leading-none tabular-nums tracking-[-0.02em]">
         {valor}
       </p>
-      {detalle && <p className="relative truncate text-xs text-muted-foreground">{detalle}</p>}
+      {progreso !== undefined && (
+        <span className="relative mt-3 block h-1.5 overflow-hidden rounded-full bg-muted">
+          <span
+            className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${t.grad}`}
+            style={{ width: `${Math.max(0, Math.min(100, progreso))}%` }}
+          />
+        </span>
+      )}
+      {detalle && <p className="relative mt-2 truncate text-xs text-muted-foreground">{detalle}</p>}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-5 bottom-0 h-[3px] rounded-t-full bg-gradient-to-r ${t.grad} opacity-60 transition group-hover:inset-x-0 group-hover:opacity-90`}
+      />
     </Tag>
   );
 }
@@ -589,25 +679,23 @@ export function TarjetaPortal({
 }) {
   return (
     <section
-      className={`relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_12px_32px_-26px_rgba(124,58,237,0.55)] sm:p-5 ${className}`}
+      className={`ce-portal-entrar relative overflow-hidden rounded-[26px] border border-transparent p-4 shadow-[0_22px_50px_-36px_rgba(76,29,149,0.65)] [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(140deg,rgba(124,58,237,0.32),rgba(217,70,239,0.14)_45%,rgba(124,58,237,0.06))_border-box] sm:p-5 ${className}`}
     >
-      {titulo && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400 opacity-70"
-        />
-      )}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-20 -top-24 size-56 rounded-full bg-gradient-to-br from-primary/10 to-fuchsia-400/10 blur-3xl"
+      />
       {(titulo || acciones) && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="relative mb-4 flex flex-wrap items-center justify-between gap-2 pb-3.5">
+          <div className="flex min-w-0 items-center gap-3">
             {Icon && (
-              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
-                <Icon className="size-[18px]" />
+              <span className="relative grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_12px_24px_-12px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.35)]">
+                <Icon className="size-[19px]" />
               </span>
             )}
             <div className="min-w-0">
               {titulo && (
-                <h2 className="truncate font-display text-[15px] font-bold tracking-tight">
+                <h2 className="truncate font-display text-base font-bold tracking-[-0.01em]">
                   {titulo}
                 </h2>
               )}
@@ -615,9 +703,13 @@ export function TarjetaPortal({
             </div>
           </div>
           {acciones}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/25 via-fuchsia-400/15 to-transparent"
+          />
         </div>
       )}
-      {children}
+      <div className="relative">{children}</div>
     </section>
   );
 }
@@ -632,35 +724,142 @@ export function PestanasPortal<T extends string>({
   onCambiar: (v: T) => void;
 }) {
   return (
-    <div
-      className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
-      role="tablist"
-    >
-      {opciones.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          role="tab"
-          aria-selected={valor === o.id}
-          onClick={() => onCambiar(o.id)}
-          className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition ${
-            valor === o.id
-              ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_20px_-12px_rgba(124,58,237,0.9)]"
-              : "border border-primary/12 bg-card text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {o.label}
-          {o.cantidad !== undefined && (
-            <span
-              className={`rounded-full px-1.5 text-[10px] ${
-                valor === o.id ? "bg-white/25" : "bg-primary/10 text-primary"
+    <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
+      <div
+        className="inline-flex min-w-max gap-1 rounded-2xl border border-primary/10 bg-card/80 p-1 shadow-[inset_0_1px_3px_rgba(76,29,149,0.08),0_10px_26px_-22px_rgba(76,29,149,0.6)] backdrop-blur-md"
+        role="tablist"
+      >
+        {opciones.map((o) => {
+          const on = valor === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => onCambiar(o.id)}
+              className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-semibold transition-all duration-300 ${
+                on
+                  ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                  : "text-muted-foreground hover:bg-primary/[0.06] hover:text-foreground"
               }`}
             >
-              {o.cantidad}
-            </span>
-          )}
-        </button>
-      ))}
+              {o.label}
+              {o.cantidad !== undefined && (
+                <span
+                  className={`grid min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                    on ? "bg-white/25" : "bg-primary/10 text-primary"
+                  }`}
+                >
+                  {o.cantidad}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
+  );
+}
+
+/** Estado vacío premium: ícono en un orbe con halo, título, texto y acción opcional. */
+export function VacioPortal({
+  icon: Icon,
+  titulo,
+  texto,
+  accion,
+  compacto = false,
+}: {
+  icon: LucideIcon;
+  titulo: string;
+  texto?: string;
+  accion?: ReactNode;
+  compacto?: boolean;
+}) {
+  return (
+    <div className={`flex flex-col items-center text-center ${compacto ? "py-5" : "py-9"}`}>
+      <span className="relative">
+        <span aria-hidden className="ce-esther-halo absolute -inset-3 rounded-full bg-gradient-to-br from-primary/25 to-fuchsia-400/25 blur-xl" />
+        <span
+          aria-hidden
+          className="absolute -inset-2 rounded-full border border-dashed border-primary/25"
+        />
+        <span
+          className={`relative grid place-items-center rounded-full bg-gradient-to-br from-primary/15 via-fuchsia-500/10 to-transparent text-primary ring-1 ring-primary/15 ${compacto ? "size-12" : "size-16"}`}
+        >
+          <Icon className={compacto ? "size-5" : "size-7"} />
+        </span>
+      </span>
+      <p className={`font-display font-bold tracking-tight ${compacto ? "mt-3 text-sm" : "mt-4 text-base"}`}>
+        {titulo}
+      </p>
+      {texto && <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">{texto}</p>}
+      {accion && <div className="mt-4">{accion}</div>}
+    </div>
+  );
+}
+
+const AVATAR_TONOS = [
+  "from-violet-500 to-fuchsia-500",
+  "from-sky-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-amber-500 to-orange-500",
+  "from-rose-500 to-pink-500",
+  "from-indigo-500 to-violet-600",
+];
+
+/** Avatar con iniciales y degradé estable según el nombre (siempre el mismo color por persona). */
+export function AvatarPortal({
+  nombre,
+  tam = "md",
+  className = "",
+}: {
+  nombre: string;
+  tam?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  const ini = `${partes[0]?.[0] ?? ""}${partes[1]?.[0] ?? ""}`.toUpperCase() || "?";
+  let h = 0;
+  for (const c of nombre) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const tono = AVATAR_TONOS[h % AVATAR_TONOS.length];
+  const caja = { sm: "size-8 text-[11px] rounded-xl", md: "size-11 text-sm rounded-2xl", lg: "size-14 text-base rounded-[20px]" }[tam];
+  return (
+    <span
+      aria-hidden
+      className={`grid shrink-0 place-items-center bg-gradient-to-br ${tono} font-bold text-white shadow-[0_10px_20px_-12px_rgba(76,29,149,0.9),inset_0_1px_0_rgba(255,255,255,0.35)] ${caja} ${className}`}
+    >
+      {ini}
+    </span>
+  );
+}
+
+/** Selector de fecha / mes con etiqueta en píldora (filtros de período de las secciones). */
+export function FiltroPeriodo({
+  label,
+  tipo = "date",
+  valor,
+  onCambiar,
+  icon: Icon,
+}: {
+  label: string;
+  tipo?: "date" | "month";
+  valor: string;
+  onCambiar: (v: string) => void;
+  icon: LucideIcon;
+}) {
+  return (
+    <label className="inline-flex items-center gap-2 rounded-2xl border border-primary/12 bg-card/90 py-1 pl-1 pr-2 shadow-[0_10px_26px_-22px_rgba(76,29,149,0.6)] backdrop-blur">
+      <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white">
+        <Icon className="size-4" />
+      </span>
+      <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+      <input
+        type={tipo}
+        value={valor}
+        onChange={(e) => e.target.value && onCambiar(e.target.value)}
+        className="h-9 rounded-lg bg-transparent px-1.5 text-sm font-semibold tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    </label>
   );
 }

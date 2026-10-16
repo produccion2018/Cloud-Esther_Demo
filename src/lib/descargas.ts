@@ -39,7 +39,11 @@ export function nombreArchivo(titulo: string, extension: string) {
 const ANCHO_A4_PX = 794; // 210 mm a 96 ppp
 
 /** Convierte un documento HTML completo (con sus estilos) en un PDF A4 y lo descarga. */
-export async function descargarPDF(html: string, titulo: string): Promise<boolean> {
+const ANCHO_A5_PX = 559; // 148 mm a 96 ppp
+
+/** Convierte un documento HTML completo en PDF (A4 o A5, ej. recetas) y lo descarga. */
+export async function descargarPDF(html: string, titulo: string, formato: "a4" | "a5" = "a4"): Promise<boolean> {
+  const anchoPx = formato === "a5" ? ANCHO_A5_PX : ANCHO_A4_PX;
   if (typeof document === "undefined") return false;
   // Sin scripts: los documentos traían «window.print()» al cargar.
   const limpio = html.replace(/<script[\s\S]*?<\/script>/gi, "");
@@ -50,7 +54,7 @@ export async function descargarPDF(html: string, titulo: string): Promise<boolea
     position: "fixed",
     left: "-10000px",
     top: "0",
-    width: `${ANCHO_A4_PX}px`,
+    width: `${anchoPx}px`,
     height: "200px",
     border: "0",
     opacity: "0",
@@ -65,7 +69,7 @@ export async function descargarPDF(html: string, titulo: string): Promise<boolea
     doc.close();
     // Fondo blanco y márgenes de hoja aunque el documento no los traiga.
     const base = doc.createElement("style");
-    base.textContent = `html,body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:28px 32px;box-sizing:border-box;width:${ANCHO_A4_PX}px}`;
+    base.textContent = `html,body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:${formato === "a5" ? "20px 22px" : "28px 32px"};box-sizing:border-box;width:${anchoPx}px}`;
     doc.head?.appendChild(base);
     await esperarCarga(doc);
 
@@ -78,15 +82,15 @@ export async function descargarPDF(html: string, titulo: string): Promise<boolea
       scale: 2,
       backgroundColor: "#ffffff",
       useCORS: true,
-      width: ANCHO_A4_PX,
-      windowWidth: ANCHO_A4_PX,
+      width: anchoPx,
+      windowWidth: anchoPx,
       height: cuerpo.scrollHeight,
       windowHeight: cuerpo.scrollHeight,
     });
 
-    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const anchoMm = 210;
-    const altoMm = 297;
+    const pdf = new jsPDF({ unit: "mm", format: formato, orientation: "portrait" });
+    const anchoMm = formato === "a5" ? 148 : 210;
+    const altoMm = formato === "a5" ? 210 : 297;
     const pxPorPagina = Math.floor((canvas.width * altoMm) / anchoMm);
     let desde = 0;
     let pagina = 0;

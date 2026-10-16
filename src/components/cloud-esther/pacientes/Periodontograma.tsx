@@ -1,0 +1,585 @@
+import { useMemo, useState } from "react";
+import { Activity, ArrowDownRight, ArrowUpRight, Copy, Droplets, Lock, Minus, Plus, Sparkles } from "lucide-react";
+
+import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
+import { useCloudEsther } from "@/lib/cloud-esther/data";
+
+/* Ubicación: src/components/cloud-esther/pacientes/Periodontograma.tsx
+   PERIODONTOGRAMA (desde el plan Pro): registro gráfico por pieza y por sitio (distal, medio y
+   mesial) de cada cara (vestibular y palatina/lingual):
+   - PS: profundidad de sondaje (mm).
+   - MG: margen gingival respecto del límite amelocementario (mm; NEGATIVO si hay recesión).
+   - NIC: nivel de inserción clínica = PS − MG (se calcula solo).
+   - Sangrado y placa por sitio, movilidad (0–3) y furca (0–3) por pieza, pieza ausente o implante.
+   Cada evaluación queda guardada con fecha y profesional: se comparan índices entre evaluaciones.
+   Se dibuja en SVG: línea roja del margen y línea azul del fondo del surco (el área entre las dos
+   es la bolsa). Es dato de SALUD: la Secretaría no lo ve (lo oculta el servidor). */
+
+type Sitio = { ps: number | null; mg: number | null; sangrado: boolean; placa: boolean };
+type Cara = [Sitio, Sitio, Sitio];
+type Pieza = { ausente: boolean; implante: boolean; movilidad: number; furca: number; v: Cara; p: Cara };
+export type EvaluacionPerio = {
+  id: number;
+  fecha: string;
+  profesional: string;
+  piezas: Record<string, Pieza>;
+  notas: string;
+};
+
+const SUP = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+const INF = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+const MOLARES = new Set([18, 17, 16, 26, 27, 28, 36, 37, 38, 46, 47, 48]);
+
+const sitioVacio = (): Sitio => ({ ps: null, mg: null, sangrado: false, placa: false });
+const piezaVacia = (): Pieza => ({
+  ausente: false,
+  implante: false,
+  movilidad: 0,
+  furca: 0,
+  v: [sitioVacio(), sitioVacio(), sitioVacio()],
+  p: [sitioVacio(), sitioVacio(), sitioVacio()],
+});
+const hoyISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const fechaCorta = (iso: string) => iso.split("-").reverse().join("/");
+
+/** Índices de una evaluación (sobre las piezas presentes) */
+function indices(ev: EvaluacionPerio | undefined) {
+  let sitios = 0;
+  let conPs = 0;
+  let sumaPs = 0;
+  let sangran = 0;
+  let placa = 0;
+  let ps4 = 0;
+  let ps6 = 0;
+  let presentes = 0;
+  for (const n of [...SUP, ...INF]) {
+    const p = ev?.piezas[n];
+    if (p?.ausente) continue;
+    presentes++;
+    for (const s of [...(p?.v ?? []), ...(p?.p ?? [])]) {
+      sitios++;
+      if (s.sangrado) sangran++;
+      if (s.placa) placa++;
+      if (s.ps != null) {
+        conPs++;
+        sumaPs += s.ps;
+        if (s.ps >= 4) ps4++;
+        if (s.ps >= 6) ps6++;
+      }
+    }
+  }
+  const pct = (x: number) => (sitios ? Math.round((x / sitios) * 100) : 0);
+  return {
+    presentes,
+    sangrado: pct(sangran),
+    placa: pct(placa),
+    psMedia: conPs ? Math.round((sumaPs / conPs) * 10) / 10 : 0,
+    ps4,
+    ps6,
+    cargados: conPs,
+  };
+}
+
+export function PeriodontogramaSec({
+  datos,
+  cambiar,
+  onToast,
+  contexto,
+}: {
+  datos: Registros;
+  cambiar: Cambiar;
+  onToast: (m: string) => void;
+  contexto?: ContextoPaciente | undefined;
+}) {
+  const { plan } = useCloudEsther();
+  const evaluaciones = useMemo(
+    () => [...(datos.periodontograma ?? [])].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
+    [datos.periodontograma],
+  );
+  const [actualId, setActualId] = useState<number | null>(evaluaciones[0]?.id ?? null);
+  const [cara, setCara] = useState<"v" | "p">("v");
+  const actual = evaluaciones.find((e) => e.id === actualId) ?? evaluaciones[0];
+  const anterior = actual ? evaluaciones[evaluaciones.indexOf(actual) + 1] : undefined;
+
+  if (plan === "inicial")
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.05] to-fuchsia-500/[0.05] px-6 py-12 text-center">
+        <span className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
+          <Lock className="size-6" />
+        </span>
+        <p className="font-display text-lg font-bold">Periodontograma: desde el plan Pro</p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          Sondaje por sitio, sangrado, placa, NIC y comparación entre evaluaciones. Se activa al pasar a Pro, Plus o Enterprise.
+        </p>
+      </div>
+    );
+
+  const guardar = (ev: EvaluacionPerio) =>
+    cambiar("periodontograma", (prev) => (prev ?? []).map((x) => (x.id === ev.id ? ev : x)));
+
+  const nueva = (copiar: boolean) => {
+    const base: EvaluacionPerio = {
+      id: Date.now(),
+      fecha: hoyISO(),
+      profesional: "",
+      notas: "",
+      piezas: copiar && actual ? (JSON.parse(JSON.stringify(actual.piezas)) as Record<string, Pieza>) : {},
+    };
+    if (copiar)
+      // Se copian ausencias, implantes y movilidad; las mediciones se vuelven a tomar
+      for (const k of Object.keys(base.piezas)) {
+        const p = base.piezas[k]!;
+        p.v = [sitioVacio(), sitioVacio(), sitioVacio()];
+        p.p = [sitioVacio(), sitioVacio(), sitioVacio()];
+      }
+    cambiar("periodontograma", (prev) => [...(prev ?? []), base]);
+    setActualId(base.id);
+    onToast(copiar ? "Nueva evaluación (con las piezas ausentes e implantes de la anterior)" : "Nueva evaluación creada");
+  };
+
+  if (!actual)
+    return (
+      <div className="space-y-4">
+        <Cabecera contexto={contexto} />
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.04] px-6 py-12 text-center">
+          <span className="relative">
+            <span aria-hidden className="absolute -inset-3 rounded-full bg-primary/20 blur-xl" />
+            <span className="relative grid size-16 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
+              <Activity className="size-7" />
+            </span>
+          </span>
+          <div>
+            <p className="font-display text-lg font-bold">Todavía no hay periodontogramas</p>
+            <p className="mt-1 max-w-md text-sm text-muted-foreground">
+              Registrá la profundidad de sondaje, el margen gingival, el sangrado y la placa de cada sitio. El NIC se calcula solo.
+            </p>
+          </div>
+          <button type="button" onClick={() => nueva(false)} className="btn-ce !min-h-11">
+            <Plus className="size-4" /> Primera evaluación
+          </button>
+        </div>
+      </div>
+    );
+
+  const ind = indices(actual);
+  const indAnt = anterior ? indices(anterior) : null;
+  const pieza = (n: number) => actual.piezas[n] ?? piezaVacia();
+  const cambiarPieza = (n: number, fn: (p: Pieza) => Pieza) =>
+    guardar({ ...actual, piezas: { ...actual.piezas, [n]: fn(JSON.parse(JSON.stringify(pieza(n))) as Pieza) } });
+
+  return (
+    <div className="space-y-4">
+      <Cabecera contexto={contexto} />
+
+      {/* Evaluaciones */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+          {evaluaciones.map((e, i) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => setActualId(e.id)}
+              className={`shrink-0 rounded-2xl px-3.5 py-2 text-left text-xs transition ${
+                e.id === actual.id
+                  ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]"
+                  : "border border-primary/12 bg-card hover:border-primary/30"
+              }`}
+            >
+              <span className="block font-bold">{fechaCorta(e.fecha)}</span>
+              <span className={e.id === actual.id ? "text-white/80" : "text-muted-foreground"}>
+                {i === 0 ? "Última" : `Evaluación ${evaluaciones.length - i}`}
+              </span>
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={() => nueva(true)} className="btn-ce-outline !min-h-10">
+          <Copy className="size-4" /> Nueva (copiar piezas)
+        </button>
+        <button type="button" onClick={() => nueva(false)} className="btn-ce !min-h-10">
+          <Plus className="size-4" /> Nueva evaluación
+        </button>
+      </div>
+
+      {/* Índices + comparación con la anterior */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        {(
+          [
+            ["Piezas presentes", ind.presentes, indAnt?.presentes, "", false],
+            ["Sangrado (BOP)", ind.sangrado, indAnt?.sangrado, "%", true],
+            ["Placa", ind.placa, indAnt?.placa, "%", true],
+            ["PS media", ind.psMedia, indAnt?.psMedia, " mm", true],
+            ["Sitios ≥ 4 mm", ind.ps4, indAnt?.ps4, "", true],
+            ["Sitios ≥ 6 mm", ind.ps6, indAnt?.ps6, "", true],
+          ] as const
+        ).map(([t, v, a, u, menosEsMejor]) => {
+          const d = a == null ? null : Math.round((v - a) * 10) / 10;
+          const mejora = d != null && d !== 0 && (menosEsMejor ? d < 0 : d > 0);
+          return (
+            <div key={t} className="relative overflow-hidden rounded-2xl border border-primary/10 bg-card p-3 shadow-[0_12px_28px_-24px_rgba(76,29,149,0.7)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{t}</p>
+              <p className="mt-1 font-display text-xl font-bold tabular-nums">
+                {v}
+                <span className="text-xs font-semibold text-muted-foreground">{u}</span>
+              </p>
+              {d != null && (
+                <p className={`mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold ${d === 0 ? "text-muted-foreground" : mejora ? "text-emerald-600" : "text-rose-600"}`}>
+                  {d === 0 ? <Minus className="size-3" /> : d > 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
+                  {d > 0 ? "+" : ""}
+                  {d}
+                  {u} vs. anterior
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Datos de la evaluación */}
+      <div className="grid gap-2 sm:grid-cols-[160px_1fr_1fr]">
+        <label className="text-[11px] font-semibold text-muted-foreground">
+          Fecha
+          <input
+            type="date"
+            value={actual.fecha}
+            onChange={(e) => e.target.value && guardar({ ...actual, fecha: e.target.value })}
+            className="mt-1 h-10 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm text-foreground"
+          />
+        </label>
+        <label className="text-[11px] font-semibold text-muted-foreground">
+          Profesional
+          <input
+            value={actual.profesional}
+            onChange={(e) => guardar({ ...actual, profesional: e.target.value.slice(0, 80) })}
+            placeholder="Quién realizó el sondaje"
+            className="mt-1 h-10 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm text-foreground"
+          />
+        </label>
+        <label className="text-[11px] font-semibold text-muted-foreground">
+          Notas
+          <input
+            value={actual.notas}
+            onChange={(e) => guardar({ ...actual, notas: e.target.value.slice(0, 300) })}
+            placeholder="Diagnóstico, plan o indicaciones"
+            className="mt-1 h-10 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm text-foreground"
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex gap-1 rounded-2xl border border-primary/10 bg-card p-1" role="tablist">
+          {(
+            [
+              ["v", "Vestibular"],
+              ["p", "Palatino / Lingual"],
+            ] as const
+          ).map(([id, l]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={cara === id}
+              onClick={() => setCara(id)}
+              className={`min-h-9 rounded-xl px-3.5 text-[13px] font-semibold transition ${cara === id ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <p className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-4 bg-rose-500" /> Margen (MG)</span>
+          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-4 bg-sky-500" /> Fondo del surco</span>
+          <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-full bg-rose-500" /> Sangrado</span>
+          <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-full bg-amber-400" /> Placa</span>
+        </p>
+      </div>
+
+      {(
+        [
+          ["Maxilar superior", SUP],
+          ["Maxilar inferior", INF],
+        ] as const
+      ).map(([titulo, arco]) => (
+        <Arco
+          key={titulo}
+          titulo={titulo}
+          arco={arco}
+          cara={cara}
+          pieza={pieza}
+          cambiarPieza={cambiarPieza}
+        />
+      ))}
+      <p className="flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
+        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
+        Sitios de cada cara: distal · medio · mesial. MG negativo = recesión. NIC = PS − MG. Tocá el número de la pieza para marcarla ausente o como implante.
+      </p>
+    </div>
+  );
+}
+
+function Cabecera({ contexto }: { contexto?: ContextoPaciente | undefined }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-[linear-gradient(118deg,#4c1d95,#7c3aed_45%,#c026d3)] px-5 py-4 text-white shadow-[0_24px_50px_-30px_rgba(91,33,182,0.9)]">
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-44 rounded-full bg-fuchsia-300/30 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(100deg,transparent_45%,black)]" />
+      <div className="relative flex items-center gap-3">
+        <span className="grid size-11 place-items-center rounded-2xl border border-white/30 bg-white/15">
+          <Activity className="size-5" />
+        </span>
+        <div>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-white/70">Periodoncia</p>
+          <p className="font-display text-lg font-bold">Periodontograma{contexto?.paciente ? ` · ${contexto.paciente}` : ""}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ANCHO = 52; // ancho de cada pieza en el gráfico
+const ESCALA = 6; // px por mm
+
+function Arco({
+  titulo,
+  arco,
+  cara,
+  pieza,
+  cambiarPieza,
+}: {
+  titulo: string;
+  arco: readonly number[];
+  cara: "v" | "p";
+  pieza: (n: number) => Pieza;
+  cambiarPieza: (n: number, fn: (p: Pieza) => Pieza) => void;
+}) {
+  const inferior = arco[0]! > 30;
+  const altoG = 120;
+  const base = inferior ? 40 : altoG - 40; // línea del límite amelocementario
+  const dir = inferior ? 1 : -1; // hacia dónde crece la raíz en el dibujo
+  // Puntos del gráfico: margen (MG) y fondo del surco (MG − PS)
+  const puntos = arco.flatMap((n, i) =>
+    pieza(n)[cara].map((s, j) => {
+      const x = i * ANCHO + 10 + j * ((ANCHO - 20) / 2);
+      const mg = s.mg ?? 0;
+      const fondo = mg - (s.ps ?? 0);
+      return { x, ym: base - dir * mg * ESCALA, yf: base - dir * fondo * ESCALA, ausente: pieza(n).ausente };
+    }),
+  );
+  const linea = (k: "ym" | "yf") =>
+    puntos.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p[k].toFixed(1)}`).join(" ");
+  const fila = "grid items-center gap-0" as const;
+  const cols = { gridTemplateColumns: `92px repeat(${arco.length}, ${ANCHO}px)` };
+  const num = (v: number | null) => (v == null ? "" : String(v));
+  const leer = (t: string): number | null => {
+    if (t.trim() === "" || t === "-") return null;
+    const n = Math.round(Number(t));
+    return Number.isFinite(n) ? Math.max(-15, Math.min(15, n)) : null;
+  };
+  const etiqueta = "pr-2 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground";
+  const celda = "mx-auto h-7 w-[15px] rounded-md border border-primary/12 bg-card p-0 text-center text-[11px] font-semibold tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/25";
+
+  const filaSitios = (label: string, campo: "ps" | "mg") => (
+    <div className={fila} style={cols}>
+      <span className={etiqueta}>{label}</span>
+      {arco.map((n) => {
+        const p = pieza(n);
+        return (
+          <span key={n} className={`flex justify-center gap-[2px] ${p.ausente ? "opacity-25" : ""}`}>
+            {p[cara].map((s, j) => (
+              <input
+                key={j}
+                inputMode="numeric"
+                disabled={p.ausente}
+                aria-label={`${label} pieza ${n} sitio ${["distal", "medio", "mesial"][j]}`}
+                value={num(s[campo])}
+                onChange={(e) =>
+                  cambiarPieza(n, (x) => {
+                    x[cara][j]![campo] = leer(e.target.value);
+                    return x;
+                  })
+                }
+                className={`${celda} ${campo === "ps" && (s.ps ?? 0) >= 6 ? "!border-rose-400 !bg-rose-50 text-rose-700" : campo === "ps" && (s.ps ?? 0) >= 4 ? "!border-amber-300 !bg-amber-50 text-amber-700" : ""}`}
+              />
+            ))}
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  const filaPuntos = (label: string, campo: "sangrado" | "placa") => (
+    <div className={fila} style={cols}>
+      <span className={etiqueta}>{label}</span>
+      {arco.map((n) => {
+        const p = pieza(n);
+        return (
+          <span key={n} className={`flex justify-center gap-[3px] ${p.ausente ? "opacity-25" : ""}`}>
+            {p[cara].map((s, j) => (
+              <button
+                key={j}
+                type="button"
+                disabled={p.ausente}
+                aria-pressed={s[campo]}
+                aria-label={`${label} pieza ${n} sitio ${j + 1}`}
+                onClick={() =>
+                  cambiarPieza(n, (x) => {
+                    x[cara][j]![campo] = !x[cara][j]![campo];
+                    return x;
+                  })
+                }
+                className={`size-3.5 rounded-full border transition ${
+                  s[campo]
+                    ? campo === "sangrado"
+                      ? "border-rose-500 bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.7)]"
+                      : "border-amber-400 bg-amber-400"
+                    : "border-primary/25 bg-card hover:border-primary"
+                }`}
+              />
+            ))}
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  const filaNumero = (label: string, campo: "movilidad" | "furca") => (
+    <div className={fila} style={cols}>
+      <span className={etiqueta}>{label}</span>
+      {arco.map((n) => {
+        const p = pieza(n);
+        const aplica = campo === "movilidad" || MOLARES.has(n);
+        return (
+          <span key={n} className="flex justify-center">
+            {aplica && !p.ausente ? (
+              <button
+                type="button"
+                onClick={() => cambiarPieza(n, (x) => ({ ...x, [campo]: (x[campo] + 1) % 4 }))}
+                aria-label={`${label} pieza ${n}: ${p[campo]}`}
+                className={`h-6 min-w-8 rounded-lg text-[11px] font-bold tabular-nums transition ${p[campo] ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white" : "bg-muted text-muted-foreground hover:bg-primary/10"}`}
+              >
+                {p[campo]}
+              </button>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/40">—</span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-primary/12 bg-card shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)]">
+      <div className="flex items-center justify-between border-b border-primary/10 px-4 py-2.5">
+        <p className="font-display text-sm font-bold">{titulo}</p>
+        <p className="text-[11px] text-muted-foreground">{cara === "v" ? "Cara vestibular" : inferior ? "Cara lingual" : "Cara palatina"}</p>
+      </div>
+      <div className="overflow-x-auto p-3">
+        <div className="space-y-1.5" style={{ width: 92 + arco.length * ANCHO }}>
+          {/* Números de pieza (tocar: presente → ausente → implante) */}
+          <div className={fila} style={cols}>
+            <span className={etiqueta}>Pieza</span>
+            {arco.map((n) => {
+              const p = pieza(n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  title="Tocá para marcar ausente o implante"
+                  onClick={() =>
+                    cambiarPieza(n, (x) =>
+                      !x.ausente && !x.implante
+                        ? { ...x, ausente: true }
+                        : x.ausente
+                          ? { ...x, ausente: false, implante: true }
+                          : { ...x, implante: false },
+                    )
+                  }
+                  className={`mx-auto grid h-7 w-11 place-items-center rounded-lg text-xs font-bold tabular-nums transition ${
+                    p.ausente
+                      ? "bg-muted text-muted-foreground line-through"
+                      : p.implante
+                        ? "bg-gradient-to-r from-sky-500 to-indigo-500 text-white"
+                        : "bg-primary/10 text-primary hover:bg-primary/20"
+                  }`}
+                >
+                  {p.implante ? `${n}·I` : n}
+                </button>
+              );
+            })}
+          </div>
+          {filaNumero("Movilidad", "movilidad")}
+          {filaNumero("Furca", "furca")}
+          {filaPuntos("Sangrado", "sangrado")}
+          {filaPuntos("Placa", "placa")}
+          {filaSitios("MG", "mg")}
+          {filaSitios("PS", "ps")}
+          {/* NIC calculado */}
+          <div className={fila} style={cols}>
+            <span className={etiqueta}>NIC</span>
+            {arco.map((n) => {
+              const p = pieza(n);
+              return (
+                <span key={n} className={`flex justify-center gap-[2px] ${p.ausente ? "opacity-25" : ""}`}>
+                  {p[cara].map((s, j) => {
+                    const nic = s.ps == null ? null : s.ps - (s.mg ?? 0);
+                    return (
+                      <span
+                        key={j}
+                        className={`grid h-6 w-[15px] place-items-center rounded text-[10.5px] font-bold tabular-nums ${nic == null ? "text-muted-foreground/40" : nic >= 5 ? "bg-rose-100 text-rose-700" : nic >= 3 ? "bg-amber-100 text-amber-700" : "text-foreground/70"}`}
+                      >
+                        {nic ?? "·"}
+                      </span>
+                    );
+                  })}
+                </span>
+              );
+            })}
+          </div>
+          {/* Gráfico */}
+          <div className={fila} style={cols}>
+            <span className={etiqueta}>
+              <Droplets className="ml-auto size-3.5 text-primary" />
+            </span>
+            <svg
+              width={arco.length * ANCHO}
+              height={altoG}
+              className="rounded-2xl bg-gradient-to-b from-primary/[0.03] to-transparent"
+              style={{ gridColumn: "2 / -1" }}
+              role="img"
+              aria-label={`Gráfico de ${titulo}`}
+            >
+              {/* Guías cada 2 mm */}
+              {Array.from({ length: 9 }, (_, k) => k - 4).map((k) => (
+                <line key={k} x1={0} x2={arco.length * ANCHO} y1={base - dir * k * 2 * ESCALA} y2={base - dir * k * 2 * ESCALA} stroke="currentColor" className={k === 0 ? "text-foreground/30" : "text-border"} strokeDasharray={k === 0 ? "" : "2 4"} />
+              ))}
+              {/* Silueta de cada pieza */}
+              {arco.map((n, i) => {
+                const p = pieza(n);
+                const x = i * ANCHO;
+                const corona = inferior ? `M${x + 10},${base} Q${x + ANCHO / 2},${base - 30} ${x + ANCHO - 10},${base}` : `M${x + 10},${base} Q${x + ANCHO / 2},${base + 30} ${x + ANCHO - 10},${base}`;
+                const raiz = inferior
+                  ? `M${x + 12},${base} L${x + ANCHO / 2 - 3},${base + 70} L${x + ANCHO / 2 + 3},${base + 70} L${x + ANCHO - 12},${base}`
+                  : `M${x + 12},${base} L${x + ANCHO / 2 - 3},${base - 70} L${x + ANCHO / 2 + 3},${base - 70} L${x + ANCHO - 12},${base}`;
+                return (
+                  <g key={n} opacity={p.ausente ? 0.15 : 1}>
+                    <path d={raiz} fill={p.implante ? "rgba(99,102,241,0.18)" : "rgba(124,58,237,0.06)"} stroke="rgba(124,58,237,0.25)" />
+                    <path d={corona} fill="rgba(124,58,237,0.08)" stroke="rgba(124,58,237,0.3)" />
+                  </g>
+                );
+              })}
+              {/* Bolsa: área entre margen y fondo */}
+              <path
+                d={`${linea("ym")} ${[...puntos].reverse().map((p) => `L${p.x.toFixed(1)},${p.yf.toFixed(1)}`).join(" ")} Z`}
+                fill="rgba(14,165,233,0.16)"
+              />
+              <path d={linea("ym")} fill="none" stroke="#f43f5e" strokeWidth={2} strokeLinejoin="round" />
+              <path d={linea("yf")} fill="none" stroke="#0ea5e9" strokeWidth={2} strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

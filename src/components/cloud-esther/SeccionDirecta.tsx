@@ -174,6 +174,20 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
   const { pacientes, activoId, setActivoId } = usePacientes();
   const registros = useRegistrosPacientes();
   const [busqueda, setBusqueda] = useState("");
+  // Sub-pestañas: Historia ↔ Fichas por especialidad; Odontograma 2D ↔ Periodontograma
+  const SUBS: Partial<Record<SeccionDirectaId, { id: SeccionDirectaId; label: string }[]>> = {
+    historia: [
+      { id: "historia", label: "Historia clínica" },
+      { id: "especialidades", label: "Fichas por especialidad" },
+    ],
+    odontograma: [
+      { id: "odontograma", label: "Odontograma 2D" },
+      { id: "periodontograma", label: "Periodontograma" },
+    ],
+  };
+  const subs = SUBS[seccion];
+  const [sub, setSub] = useState<SeccionDirectaId>(seccion);
+  const vistaSeccion: SeccionDirectaId = subs?.some((x) => x.id === sub) ? sub : seccion;
 
   const activo = pacientes.find((p) => p.id === activoId) ?? null;
 
@@ -564,8 +578,28 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
               </div>
 
               {/* Sección */}
+              {subs && (
+                <div className="mt-4 inline-flex gap-1 rounded-2xl border border-primary/10 bg-card/90 p-1 shadow-[inset_0_1px_3px_rgba(76,29,149,0.08),0_10px_26px_-22px_rgba(76,29,149,0.6)]" role="tablist">
+                  {subs.map((x) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={vistaSeccion === x.id}
+                      onClick={() => setSub(x.id)}
+                      className={`min-h-9 rounded-xl px-3.5 text-[13px] font-semibold transition ${
+                        vistaSeccion === x.id
+                          ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.95)]"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {x.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="mt-4 rounded-3xl border border-primary/10 bg-card p-3 shadow-[0_12px_32px_-26px_rgba(124,58,237,0.55)] sm:p-5">
-                {seccion === "odontograma" || seccion === "odontograma-3d" ? (
+                {vistaSeccion === "odontograma" || vistaSeccion === "odontograma-3d" ? (
                   <OdontogramaGate
                     key={`${activo.id}-${seccion}`}
                     vista={seccion === "odontograma" ? "2d" : "3d"}
@@ -575,8 +609,8 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                   />
                 ) : (
                   <SeccionPaciente
-                    key={`${activo.id}-${seccion}`}
-                    seccion={seccion}
+                    key={`${activo.id}-${vistaSeccion}`}
+                    seccion={vistaSeccion as SeccionRegistros}
                     datos={registros.de(activo.id)}
                     cambiar={(clave, fn) => registros.cambiar(activo.id, clave, fn)}
                     onToast={show}

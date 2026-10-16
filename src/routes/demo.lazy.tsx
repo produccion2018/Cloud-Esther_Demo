@@ -1,4 +1,5 @@
 import { capitalizarNombre } from "@/lib/utils";
+import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
 import {
   GABINETES,
   ODONTOLOGOS,
@@ -1450,6 +1451,8 @@ function DashboardInner() {
           clinica={clinica?.nombre}
         />
         <SearchBar value={query} onChange={setQuery} inputRef={searchRef} />
+        {/* Configuración guiada: checklist de primeros pasos (solo el Administrador) */}
+        {(!real || real.rol === "admin") && <PrimerosPasos />}
         {q && (
           <p className="mt-2 px-2 text-xs text-muted-foreground">
             {turnosFiltrados.length} turno(s) y {actividadFiltrada.length} movimiento(s) coinciden con «{query}»

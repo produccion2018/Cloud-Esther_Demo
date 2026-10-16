@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
+  Upload,
   Clock3,
   Bell,
   UserPlus,
@@ -52,6 +53,7 @@ import type {
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
 import { contarPacientesActivos, usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -1210,6 +1212,8 @@ function PacientesInner() {
     (t) => t.fecha >= hoyAgenda && t.fecha <= en7Dias && t.estado !== "Cancelada",
   );
   const { message, show } = useToast();
+  const real = useClinicaReal();
+  const [importando, setImportando] = useState(false);
 
   const registros =
     useRegistrosPacientes();
@@ -1508,6 +1512,13 @@ function PacientesInner() {
             <Download className="size-4" />
             Exportar
           </button>
+          {/* Importar desde Excel / CSV: solo el Administrador */}
+          {(!real || real.rol === "admin") && (
+            <button onClick={() => setImportando(true)} className={BTN_SECUNDARIO}>
+              <Upload className="size-4" />
+              Importar
+            </button>
+          )}
 
           <button
             onClick={() =>
@@ -1873,6 +1884,7 @@ function PacientesInner() {
 
       {/* Toast */}
 
+      {importando && <ImportarPacientes onCerrar={() => setImportando(false)} onToast={show} />}
       {message && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-background shadow-xl">
           {message}

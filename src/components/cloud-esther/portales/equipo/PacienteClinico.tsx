@@ -19,7 +19,15 @@ import { PestanasPortal, TarjetaPortal } from "../PortalShell";
    Cada pestaña se muestra solo si el propietario le dio ese permiso. */
 
 export type PestanaClinica =
-  "ficha" | "historia" | "tratamientos" | "estudios" | "recetas" | "documentos" | "odontograma";
+  | "ficha"
+  | "historia"
+  | "especialidades"
+  | "periodontograma"
+  | "tratamientos"
+  | "estudios"
+  | "recetas"
+  | "documentos"
+  | "odontograma";
 
 const PESTANAS: {
   id: PestanaClinica;
@@ -29,6 +37,8 @@ const PESTANAS: {
 }[] = [
   { id: "ficha", label: "Ficha", permiso: "pacientes" },
   { id: "historia", label: "Historia clínica", permiso: "historia", seccion: "historia" },
+  { id: "especialidades", label: "Fichas por especialidad", permiso: "historia", seccion: "especialidades" },
+  { id: "periodontograma", label: "Periodontograma", permiso: "historia", seccion: "periodontograma" },
   { id: "odontograma", label: "Odontograma 3D", permiso: "odontograma" },
   { id: "tratamientos", label: "Tratamientos", permiso: "tratamientos", seccion: "tratamientos" },
   { id: "estudios", label: "Estudios", permiso: "estudios", seccion: "estudios" },

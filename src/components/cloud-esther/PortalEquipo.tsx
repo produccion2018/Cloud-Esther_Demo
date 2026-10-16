@@ -83,6 +83,7 @@ import {
   storeEquipoPortal,
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
@@ -449,6 +450,17 @@ const SECCION_MODULO: Partial<Record<Seccion, string>> = {
   // El paciente firma las autorizaciones desde SU portal: va con el Portal del paciente (Enterprise)
   autorizaciones: "portal-paciente",
 };
+
+const SIN_ENCABEZADO = new Set<Seccion>([
+  "escritorio",
+  "hoy",
+  "ia",
+  "equipo",
+  "presupuestos",
+  "facturacion",
+  "finanzas",
+  "rrhh",
+]);
 
 function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {
   // «Documentos de la clínica» viene desde el plan Pro (así figura en los planes)
@@ -1076,7 +1088,9 @@ function AppEquipo({
           ) : null
         }
       >
-        {actual !== "escritorio" && actual !== "hoy" && actual !== "ia" && actual !== "equipo" && (
+        {/* Los módulos completos (Presupuestos, Facturación, Finanzas, RRHH, Equipo) ya traen su
+            propio encabezado premium: no se repite el de la sección */}
+        {!SIN_ENCABEZADO.has(actual) && (
           <EncabezadoSeccion
             area={
               grupoActual?.titulo ??
@@ -1088,6 +1102,7 @@ function AppEquipo({
           />
         )}
         {actual === "hoy" && <Hoy ctx={ctx} avisos={autPend} />}
+        {actual === "escritorio" && miembro.role === "administrador" && !vista && <PrimerosPasos />}
         {actual === "escritorio" && (
           <EspacioAdministrativo
             yo={miembro}
@@ -1232,10 +1247,14 @@ function AppEquipo({
             <ActividadEquipo slug={clinicaReal?.slug ?? SLUG_DEMO} />
           </div>
         )}
-        {actual === "auditoria" && <AuditoriaPortal clinicId={clinicId} miembros={miembros} />}
+        {actual === "auditoria" && (
+          <AuditoriaPortal clinicId={clinicId} miembros={miembros} onToast={onToast} />
+        )}
         {actual === "facturacion" && <Facturacion />}
         {actual === "finanzas" && <Finanzas />}
-        {actual === "liquidaciones" && <LiquidacionesPortal miembros={miembros} turnos={turnos} />}
+        {actual === "liquidaciones" && (
+          <LiquidacionesPortal miembros={miembros} turnos={turnos} yo={miembro} onToast={onToast} />
+        )}
         {actual === "rrhh" && <RRHH />}
         {actual === "ia" && <IAPortal yo={miembro} plan={plan} />}
         {actual === "perfil" && (

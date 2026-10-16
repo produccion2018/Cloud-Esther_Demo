@@ -52,6 +52,7 @@ import {
 } from "@/lib/cloud-esther/settings-store";
 
 import { ToggleSwitch } from "./ToggleSwitch";
+import { MarcaClinicaCard } from "./configuracion/MarcaClinica";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
@@ -101,6 +102,7 @@ const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
   auditLogEnabled: "Registrar accesos a módulos",
   auditRetentionDays: "Conservación de registros de auditoría",
   datosClinica: "Datos de la clínica",
+  marca: "Marca de la clínica (logo y color)",
 };
 
 type Props = {
@@ -284,11 +286,19 @@ export function ConfiguracionModule({ onToast }: Props) {
           {tab === "directorio" && <DirectorioTab />}
 
           {tab === "apariencia" && (
-            <AparienciaTab
-              settings={settings}
-              actualizar={actualizar}
-              nivel={nivelModulo("configuracion", plan)}
-            />
+            <>
+              <AparienciaTab
+                settings={settings}
+                actualizar={actualizar}
+                nivel={nivelModulo("configuracion", plan)}
+              />
+              <MarcaClinicaCard
+                settings={settings}
+                actualizar={actualizar}
+                habilitada={planLevel(plan) >= 3}
+                onToast={onToast}
+              />
+            </>
           )}
 
           {tab === "notificaciones" && (

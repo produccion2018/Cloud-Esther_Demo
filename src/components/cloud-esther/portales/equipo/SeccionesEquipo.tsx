@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { EstherAI } from "@/components/cloud-esther/esther-ai/EstherAI";
+import { GraficoBarras, GraficoEvolucion } from "@/components/cloud-esther/graficos-premium";
 import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
@@ -31,7 +32,7 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 import { PAISES_SOPORTADOS, bandera } from "@/lib/paises";
-import { KpiPortal, PestanasPortal, TarjetaPortal } from "../PortalShell";
+import { KpiPortal, PestanasPortal, TarjetaPortal, VacioPortal } from "../PortalShell";
 
 /* Ubicación: src/components/cloud-esther/portales/equipo/SeccionesEquipo.tsx
    Secciones compartidas por el Portal profesional y el Portal administrativo: Jornada (fichaje,
@@ -98,79 +99,149 @@ export function JornadaPortal({
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_60px_-30px_rgba(124,58,237,0.75)] sm:p-6">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10 blur-2xl"
-        />
-        <p className="relative text-xs font-semibold uppercase tracking-[0.18em] text-white/75">
-          Jornada de hoy
-        </p>
-        <p className="relative mt-1 font-display text-3xl font-bold tabular-nums">
-          {duracion(trabajados)}
-        </p>
-        <p className="relative text-sm text-white/85">
-          {abierto
-            ? `En curso desde las ${abierto.entrada}`
-            : deHoy.length
-              ? "Jornada cerrada"
-              : "Todavía no iniciaste la jornada"}
-        </p>
-        <button
-          type="button"
-          onClick={fichar}
-          className="relative mt-4 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-bold text-primary shadow-lg transition hover:-translate-y-0.5"
-        >
-          {abierto ? <LogOut className="size-4" /> : <LogIn className="size-4" />}
-          {abierto ? "Cerrar jornada" : "Iniciar jornada"}
-        </button>
-      </section>
+  // Meta de la jornada: 8 h (el anillo se completa al llegar)
+  const META = 8 * 60;
+  const avance = Math.min(1, trabajados / META);
+  const R = 74;
+  const C = 2 * Math.PI * R;
+  const totalDe = (d: string) =>
+    mios
+      .filter((f) => f.fecha === d)
+      .reduce(
+        (a, f) => a + Math.max(0, minutos(f.salida ?? (d === hoy ? horaActual() : f.entrada)) - minutos(f.entrada)),
+        0,
+      );
+  const maxDia = Math.max(META, ...semana.map(totalDe));
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiPortal titulo="Turnos de hoy" valor={String(turnosHoy.length)} icon={CalendarCheck2} />
-        <KpiPortal titulo="Atendidos" valor={String(atendidos)} icon={Stethoscope} tono="verde" />
-        <KpiPortal titulo="Ausentes" valor={String(ausentes)} icon={UserRound} tono="rosa" />
-        <KpiPortal
-          titulo="Fichajes hoy"
-          valor={String(deHoy.length)}
-          detalle={deHoy.map((f) => `${f.entrada}–${f.salida ?? "…"}`).join(" · ") || "—"}
-          icon={Clock3}
-          tono="ambar"
-        />
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <section className="ce-portal-entrar relative overflow-hidden rounded-[28px] bg-[linear-gradient(130deg,#3b0764_0%,#5b21b6_30%,#7c3aed_55%,#c026d3_100%)] p-5 text-white shadow-[0_30px_70px_-36px_rgba(91,33,182,0.95)] sm:p-7">
+          <div aria-hidden className="ce-portal-orbe pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-fuchsia-300/30 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(100deg,transparent_45%,black)]" />
+          <div className="relative flex flex-col items-center gap-6 sm:flex-row">
+            <div className="relative size-44 shrink-0">
+              <div aria-hidden className={`absolute inset-3 rounded-full bg-white/10 blur-xl ${abierto ? "ce-esther-halo" : ""}`} />
+              <svg viewBox="0 0 180 180" className="relative size-full -rotate-90" role="img" aria-label={`Trabajado ${duracion(trabajados)} de 8 h`}>
+                <defs>
+                  <linearGradient id="ce-jornada-anillo" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#f0abfc" />
+                  </linearGradient>
+                </defs>
+                <circle cx="90" cy="90" r={R} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="12" />
+                <circle cx="90" cy="90" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="2 6" transform="scale(0.86) translate(14.6 14.6)" />
+                <circle
+                  cx="90"
+                  cy="90"
+                  r={R}
+                  fill="none"
+                  stroke="url(#ce-jornada-anillo)"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={`${Math.max(0.001, avance * C)} ${C}`}
+                  className="ce-grafico-trazo drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+                />
+              </svg>
+              <div className="absolute inset-0 grid place-items-center text-center">
+                <div>
+                  <p className="font-display text-[34px] font-bold leading-none tabular-nums">
+                    {Math.floor(trabajados / 60)}
+                    <span className="text-lg text-white/70">h</span> {String(trabajados % 60).padStart(2, "0")}
+                    <span className="text-lg text-white/70">m</span>
+                  </p>
+                  <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/70">
+                    {Math.round(avance * 100)}% de 8 h
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-white/70">Jornada de hoy</p>
+              <p className="mt-1 font-display text-2xl font-bold tracking-tight">
+                {abierto ? "Estás trabajando" : deHoy.length ? "Jornada cerrada" : "Lista para empezar"}
+              </p>
+              <p className="mt-1 text-sm text-white/85">
+                {abierto
+                  ? `En curso desde las ${abierto.entrada}. Cerrala al terminar y queda registrada.`
+                  : deHoy.length
+                    ? `Hoy registraste ${deHoy.length} ${deHoy.length === 1 ? "tramo" : "tramos"}.`
+                    : "Iniciá tu jornada: el resumen queda en tu historial y en RRHH."}
+              </p>
+              {abierto && (
+                <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/12 px-3 py-1 text-xs font-semibold backdrop-blur">
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-300 opacity-70" />
+                    <span className="relative inline-flex size-2 rounded-full bg-emerald-300" />
+                  </span>
+                  En curso
+                </span>
+              )}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={fichar}
+                  className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 text-sm font-bold text-primary shadow-[0_14px_30px_-12px_rgba(30,0,60,0.6)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-14px_rgba(30,0,60,0.7)]"
+                >
+                  {abierto ? <LogOut className="size-4" /> : <LogIn className="size-4" />}
+                  {abierto ? "Cerrar jornada" : "Iniciar jornada"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-3">
+          <KpiPortal titulo="Turnos de hoy" valor={String(turnosHoy.length)} detalle="sin cancelados" icon={CalendarCheck2} />
+          <KpiPortal
+            titulo="Atendidos"
+            valor={String(atendidos)}
+            detalle={`${turnosHoy.length - atendidos - ausentes} por atender`}
+            icon={Stethoscope}
+            tono="verde"
+            progreso={turnosHoy.length ? (atendidos / turnosHoy.length) * 100 : 0}
+          />
+          <KpiPortal titulo="Ausentes" valor={String(ausentes)} detalle="no se presentaron" icon={UserRound} tono="rosa" />
+          <KpiPortal
+            titulo="Fichajes hoy"
+            valor={String(deHoy.length)}
+            detalle={deHoy.map((f) => `${f.entrada}–${f.salida ?? "…"}`).join(" · ") || "—"}
+            icon={Clock3}
+            tono="ambar"
+          />
+        </div>
       </div>
 
-      <TarjetaPortal titulo="Resumen de jornada" detalle="Últimos días con fichaje" icon={Clock3}>
+      <TarjetaPortal titulo="Resumen de jornada" detalle="Horas trabajadas en los últimos días" icon={Clock3}>
         {semana.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Todavía no hay fichajes.</p>
+          <VacioPortal
+            icon={Clock3}
+            titulo="Todavía no hay fichajes"
+            texto="Cuando inicies y cierres tu jornada, acá ves las horas de cada día con su barra."
+          />
         ) : (
-          <ul className="divide-y divide-border/60">
+          <ul className="space-y-2.5">
             {semana.map((d) => {
               const del = mios.filter((f) => f.fecha === d);
-              const total = del.reduce(
-                (a, f) =>
-                  a +
-                  Math.max(
-                    0,
-                    minutos(f.salida ?? (d === hoy ? horaActual() : f.entrada)) -
-                      minutos(f.entrada),
-                  ),
-                0,
-              );
+              const total = totalDe(d);
               return (
-                <li key={d} className="flex items-center gap-3 py-2.5">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold first-letter:uppercase">
-                      {new Date(`${d}T12:00:00`).toLocaleDateString("es-AR", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "short",
-                      })}
+                <li key={d} className="grid grid-cols-[110px_1fr_auto] items-center gap-3 sm:grid-cols-[160px_1fr_auto]">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold first-letter:uppercase">
+                      {d === hoy
+                        ? "Hoy"
+                        : new Date(`${d}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "short" })}
                     </span>
-                    <span className="block text-xs text-muted-foreground">
+                    <span className="block truncate text-[11px] text-muted-foreground">
                       {del.map((f) => `${f.entrada}–${f.salida ?? "en curso"}`).join(" · ")}
                     </span>
+                  </span>
+                  <span className="relative h-3 overflow-hidden rounded-full bg-muted">
+                    <span
+                      className="ce-portal-crecer absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 shadow-[0_0_12px_rgba(168,85,247,0.6)]"
+                      style={{ width: `${Math.max(2, (total / maxDia) * 100)}%` }}
+                    />
+                    <span aria-hidden className="absolute inset-y-0 border-l border-dashed border-foreground/25" style={{ left: `${(META / maxDia) * 100}%` }} />
                   </span>
                   <span className="text-sm font-bold tabular-nums">{duracion(total)}</span>
                 </li>
@@ -564,23 +635,38 @@ function AvisosPacientes({ vista, onToast }: { vista: boolean; onToast: (m: stri
 
 /* ───────────── Reportes ───────────── */
 
+const COLOR_ESTADO: Record<string, string> = {
+  Atendida: "from-emerald-500 to-teal-400",
+  Confirmada: "from-primary to-fuchsia-500",
+  Pendiente: "from-amber-500 to-orange-400",
+  Ausente: "from-rose-500 to-pink-400",
+  Cancelada: "from-slate-400 to-slate-300",
+};
+
+/** Barras horizontales premium: color por estado, valor y % del total, entrada animada. */
 function Barras({ datos }: { datos: { label: string; valor: number }[] }) {
   const max = Math.max(1, ...datos.map((d) => d.valor));
+  const total = datos.reduce((a, d) => a + d.valor, 0);
   return (
-    <ul className="space-y-2">
-      {datos.map((d) => (
-        <li
-          key={d.label}
-          className="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-xs sm:grid-cols-[150px_1fr_48px]"
-        >
-          <span className="truncate font-medium">{d.label}</span>
-          <span className="h-2.5 overflow-hidden rounded-full bg-primary/10">
+    <ul className="space-y-3">
+      {datos.map((d, i) => (
+        <li key={d.label} className="grid grid-cols-[100px_1fr_auto] items-center gap-3 text-xs sm:grid-cols-[130px_1fr_auto]">
+          <span className="flex min-w-0 items-center gap-2 font-semibold">
+            <span className={`size-2.5 shrink-0 rounded-full bg-gradient-to-br ${COLOR_ESTADO[d.label] ?? "from-primary to-fuchsia-500"}`} />
+            <span className="truncate">{d.label}</span>
+          </span>
+          <span className="relative h-3 overflow-hidden rounded-full bg-muted">
             <span
-              className="block h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500"
-              style={{ width: `${(d.valor / max) * 100}%` }}
+              className={`ce-portal-crecer absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${COLOR_ESTADO[d.label] ?? "from-primary to-fuchsia-500"}`}
+              style={{ width: `${d.valor ? Math.max(4, (d.valor / max) * 100) : 0}%`, animationDelay: `${i * 70}ms` }}
             />
           </span>
-          <span className="text-right font-bold tabular-nums">{d.valor}</span>
+          <span className="flex items-baseline gap-1.5 text-right">
+            <b className="font-display text-sm tabular-nums">{d.valor}</b>
+            <span className="w-9 text-[10.5px] tabular-nums text-muted-foreground">
+              {total ? Math.round((d.valor / total) * 100) : 0}%
+            </span>
+          </span>
         </li>
       ))}
     </ul>
@@ -627,7 +713,7 @@ export function ReportesPortal({
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiPortal titulo="Turnos del mes" valor={String(delMes.length)} icon={CalendarCheck2} />
         <KpiPortal
@@ -672,11 +758,13 @@ export function ReportesPortal({
           <Barras datos={porEstado} />
         </TarjetaPortal>
         <TarjetaPortal titulo="Evolución de atenciones" detalle="Últimos 6 meses" icon={BarChart3}>
-          <Barras
+          <GraficoEvolucion
             datos={meses.map((m) => ({
-              label: nombreMes(m),
+              etiqueta: nombreMes(m),
               valor: turnos.filter((t) => t.fecha.startsWith(m) && t.estado === "Atendida").length,
             }))}
+            formato={(v) => (Number.isInteger(v) ? String(v) : "")}
+            nombreSerie="Atenciones"
           />
         </TarjetaPortal>
         {modo === "profesional" ? (
@@ -694,12 +782,14 @@ export function ReportesPortal({
           </TarjetaPortal>
         ) : (
           <>
-            <TarjetaPortal titulo="Cobros por mes" icon={BarChart3}>
-              <Barras
+            <TarjetaPortal titulo="Cobros por mes" detalle="Importe cobrado, últimos 6 meses" icon={BarChart3}>
+              <GraficoBarras
                 datos={meses.map((m) => ({
-                  label: nombreMes(m),
-                  valor: cobros.filter((c) => c.fecha.startsWith(m)).length,
+                  nombre: nombreMes(m),
+                  valor: cobros.filter((c) => c.fecha.startsWith(m)).reduce((a, c) => a + c.monto, 0),
                 }))}
+                formato={(v) => (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${Math.round(v)}`)}
+                detalle="cobrado en el mes"
               />
             </TarjetaPortal>
             <TarjetaPortal
@@ -707,25 +797,21 @@ export function ReportesPortal({
               detalle="Últimas acciones en el portal"
               icon={Users}
             >
-              <ul className="space-y-1.5 text-xs">
-                {eventos.slice(0, 10).map((e) => (
-                  <li key={e.id} className="flex gap-2">
-                    <span className="shrink-0 tabular-nums text-muted-foreground">
-                      {new Date(e.fecha).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <span className="font-semibold">{e.accion}</span>
-                    <span className="truncate text-muted-foreground">{e.detalle}</span>
-                  </li>
-                ))}
-                {eventos.length === 0 && (
-                  <li className="text-muted-foreground">Sin actividad registrada.</li>
-                )}
-              </ul>
+              {eventos.length === 0 ? (
+                <VacioPortal compacto icon={Users} titulo="Sin actividad todavía" texto="Las acciones del equipo en el portal aparecen acá." />
+              ) : (
+                <ol className="relative space-y-2 border-l-2 border-dashed border-primary/15 pl-4 text-xs">
+                  {eventos.slice(0, 8).map((e) => (
+                    <li key={e.id} className="relative">
+                      <span aria-hidden className="absolute -left-[22px] top-1 size-2.5 rounded-full bg-gradient-to-br from-primary to-fuchsia-500 ring-4 ring-card" />
+                      <span className="font-semibold">{e.accion}</span>
+                      <span className="block truncate text-muted-foreground">
+                        {new Date(e.fecha).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · {e.detalle}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </TarjetaPortal>
           </>
         )}

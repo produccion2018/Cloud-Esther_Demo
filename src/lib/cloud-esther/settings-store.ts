@@ -74,7 +74,20 @@ export interface ClinicSettings {
   /** Días que se conservan los registros de auditoría. */
   auditRetentionDays: number;
   datosClinica: DatosClinica;
+  /** Marca propia (white label, Plus y Enterprise): logo y color de la clínica */
+  marca?: MarcaClinica;
 }
+
+/** Marca propia de la clínica. El logo viaja como imagen chica (máx. 256 px);
+    TODO Cloudinary: subir el logo al almacenamiento de imágenes y guardar solo la dirección. */
+export interface MarcaClinica {
+  logo: string;
+  color: string;
+  enPortal: boolean;
+  enDocumentos: boolean;
+}
+
+export const MARCA_VACIA: MarcaClinica = { logo: "", color: "#7c3aed", enPortal: true, enDocumentos: true };
 
 export const DEFAULT_SETTINGS: ClinicSettings = {
   darkModePage: false,

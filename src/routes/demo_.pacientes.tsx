@@ -53,6 +53,7 @@ import type {
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
@@ -508,16 +509,18 @@ function PacienteForm({
     inicial?.nota ?? "",
   );
 
+  // Las coberturas del catálogo de la clínica (Facturación → Coberturas y nomenclador)
+  const catalogoObras = useNombresCobertura(OBRAS_SOCIALES);
   const opcionesObraSocial =
     inicial &&
-    !OBRAS_SOCIALES.includes(
+    !catalogoObras.includes(
       inicial.obraSocial,
     )
       ? [
-          ...OBRAS_SOCIALES,
+          ...catalogoObras,
           inicial.obraSocial,
         ]
-      : OBRAS_SOCIALES;
+      : catalogoObras;
 
   const elegirFoto = (
     e: ChangeEvent<HTMLInputElement>,

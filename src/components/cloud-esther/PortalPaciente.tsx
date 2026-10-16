@@ -61,6 +61,9 @@ import {
   setPortal,
   storePortal,
   type DocSolicitada,
+  clavePublicacion,
+  type SeccionPortalPaciente,
+  type TipoPublicable,
 } from "@/lib/cloud-esther/portal-store";
 import { capitalizarNombre } from "@/lib/utils";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
@@ -578,7 +581,7 @@ function PortalInner({
   const { pacientes, activoId } = usePacientes();
   const { de, cambiar } = useRegistrosPacientes();
   const { turnos: todosTurnos } = storeAgenda.usar();
-  const { config } = storePortal.usar();
+  const { config, publicados = {} } = storePortal.usar();
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("inicio");
   const [pacienteId, setPacienteId] = useState<number | null>(pacienteInicial);
@@ -618,10 +621,24 @@ function PortalInner({
   }
 
   const nombre = `${paciente.nombre} ${paciente.apellido}`;
+  // Modo «con aprobación»: el paciente ve solo lo que la clínica ya le envió al portal
+  const propios = de(paciente.id);
+  const enviado = (tipo: TipoPublicable, id: number) =>
+    config.envio !== "aprobacion" || !!publicados[clavePublicacion(paciente.id, tipo, id)];
+  const registrosVisibles =
+    config.envio === "aprobacion"
+      ? {
+          ...propios,
+          recetas: propios.recetas.filter((x) => enviado("receta", x.id)),
+          estudios: propios.estudios.filter((x) => enviado("estudio", x.id)),
+          presupuestos: propios.presupuestos.filter((x) => enviado("presupuesto", x.id)),
+          documentos: propios.documentos.filter((x) => enviado("documento", x.id)),
+        }
+      : propios;
   const ctx: Ctx = {
     paciente,
     nombre,
-    registros: de(paciente.id),
+    registros: registrosVisibles,
     cambiar: (clave, fn) => cambiar(paciente.id, clave, fn),
     turnos: todosTurnos.filter((t) => t.paciente === nombre),
     clinica,
@@ -711,7 +728,11 @@ function PortalInner({
   ];
 
   const visibles = SECCIONES.filter(
-    (s) => (s.id !== "pagos" || config.pagosOnline) && (s.id !== "mensajes" || config.mensajes),
+    (s) =>
+      (s.id !== "pagos" || config.pagosOnline) &&
+      (s.id !== "mensajes" || config.mensajes) &&
+      // El Administrador decide qué secciones ve el paciente (Control del portal)
+      config.secciones?.[s.id as SeccionPortalPaciente] !== false,
   );
   const pendientesAut = misAut.filter(
     (a) => a.estado === "Pendiente" && a.origen !== "Paciente",

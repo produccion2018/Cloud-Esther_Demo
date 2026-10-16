@@ -32,6 +32,7 @@ import {
   useTodosLosRegistros,
   type Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
+import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { setTareasStore, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { useAuditoria } from "@/lib/cloud-esther/auditoria-store";
@@ -547,6 +548,7 @@ function AltaPaciente({
     sucursal: "Clínica Centro",
   });
   const [error, setError] = useState("");
+  const obrasCatalogo = useNombresCobertura(OBRAS);
   const campo = (k: keyof typeof f, label: string, type = "text") => (
     <label className="text-xs font-semibold">
       {label}
@@ -603,7 +605,7 @@ function AltaPaciente({
             onChange={(e) => setF((x) => ({ ...x, obraSocial: e.target.value }))}
             className={`${INPUT} mt-1`}
           >
-            {OBRAS.map((o) => (
+            {obrasCatalogo.map((o) => (
               <option key={o}>{o}</option>
             ))}
           </select>

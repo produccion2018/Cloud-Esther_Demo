@@ -184,6 +184,11 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
       { id: "odontograma", label: "Odontograma 2D" },
       { id: "periodontograma", label: "Periodontograma" },
     ],
+    // Plus y Enterprise (3D): el mismo periodontograma, sin quitar nada del 2D de Start y Pro
+    "odontograma-3d": [
+      { id: "odontograma-3d", label: "Odontograma 3D" },
+      { id: "periodontograma", label: "Periodontograma" },
+    ],
   };
   const subs = SUBS[seccion];
   const [sub, setSub] = useState<SeccionDirectaId>(seccion);

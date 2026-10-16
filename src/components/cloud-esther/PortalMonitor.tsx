@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { ControlPortalPaciente } from "@/components/cloud-esther/portales/ControlPortalPaciente";
 import type { ReactNode } from "react";
 import {
   Activity,
@@ -852,6 +855,25 @@ function RevisionDocs({ onToast }: { onToast: (m: string) => void }) {
 /* ───────────── Configuración ───────────── */
 
 function ConfiguracionPortal({ onToast }: { onToast: (m: string) => void }) {
+  // Control del Administrador: qué ve el paciente, cómo le llega y quién puede enviarlo
+  const real = useClinicaReal();
+  const { usuario } = useSesion();
+  const { config: cfg } = storePortal.usar();
+  const esAdmin = !real || real.rol === "admin";
+  return (
+    <div className="space-y-5">
+      <ControlPortalPaciente
+        usuario={usuario?.nombre ?? "Administración"}
+        puedeConfigurar={esAdmin}
+        puedeEnviar={esAdmin || (!!real && (cfg.publican ?? []).includes(real.rol))}
+        onToast={onToast}
+      />
+      <ConfiguracionBasicaPortal onToast={onToast} />
+    </div>
+  );
+}
+
+function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }) {
   const { config } = storePortal.usar();
   const set = (cambio: Partial<ConfigPortal>) =>
     setPortal("config", (prev) => ({ ...prev, ...cambio }));

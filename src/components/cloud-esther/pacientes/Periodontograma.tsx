@@ -583,3 +583,171 @@ function Arco({
     </section>
   );
 }
+
+/* ───────────── Periodoncia de UNA pieza (Odontograma 3D, Plus y Enterprise) ─────────────
+   La misma información del periodontograma, pero desde la ficha de la pieza elegida en el 3D:
+   se edita la última evaluación (si no hay, se crea una con fecha de hoy). Lo que se carga acá
+   aparece en el periodontograma completo y viceversa. */
+export function PeriodonciaPieza({
+  fdi,
+  evaluaciones,
+  cambiar,
+  profesional,
+  onToast,
+}: {
+  fdi: number;
+  evaluaciones: EvaluacionPerio[] | undefined;
+  cambiar: (fn: (prev: EvaluacionPerio[] | undefined) => EvaluacionPerio[]) => void;
+  profesional: string;
+  onToast: (m: string) => void;
+}) {
+  const lista = [...(evaluaciones ?? [])].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+  const ultima = lista[0];
+  const anterior = lista[1];
+  const pieza: Pieza = ultima?.piezas[fdi] ?? piezaVacia();
+  const previa = anterior?.piezas[fdi];
+  const molar = MOLARES.has(fdi);
+  const inferior = fdi > 30;
+
+  const editar = (fn: (p: Pieza) => Pieza) => {
+    const copia = JSON.parse(JSON.stringify(pieza)) as Pieza;
+    const nueva = fn(copia);
+    if (!ultima) {
+      const ev: EvaluacionPerio = { id: Date.now(), fecha: hoyISO(), profesional, notas: "", piezas: { [fdi]: nueva } };
+      cambiar((prev) => [...(prev ?? []), ev]);
+      onToast("Periodontograma iniciado con fecha de hoy");
+      return;
+    }
+    cambiar((prev) => (prev ?? []).map((e) => (e.id === ultima.id ? { ...e, piezas: { ...e.piezas, [fdi]: nueva } } : e)));
+  };
+  const leer = (t: string): number | null => {
+    if (t.trim() === "" || t === "-") return null;
+    const n = Math.round(Number(t));
+    return Number.isFinite(n) ? Math.max(-15, Math.min(15, n)) : null;
+  };
+  const peor = Math.max(0, ...[...pieza.v, ...pieza.p].map((s) => s.ps ?? 0));
+  const peorAntes = previa ? Math.max(0, ...[...previa.v, ...previa.p].map((s) => s.ps ?? 0)) : null;
+  const sangra = [...pieza.v, ...pieza.p].filter((s) => s.sangrado).length;
+
+  const cara = (k: "v" | "p", titulo: string) => (
+    <div className="rounded-2xl border border-primary/10 bg-card p-3">
+      <p className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{titulo}</p>
+      <div className="grid grid-cols-[52px_repeat(3,1fr)] items-center gap-1.5 text-center text-[11px]">
+        <span />
+        {["Distal", "Medio", "Mesial"].map((s) => (
+          <span key={s} className="font-semibold text-muted-foreground">{s}</span>
+        ))}
+        {(["mg", "ps"] as const).map((campo) => (
+          <div key={campo} className="contents">
+            <span className="text-left font-bold">{campo === "ps" ? "PS" : "MG"}</span>
+            {pieza[k].map((s, j) => (
+              <input
+                key={j}
+                inputMode="numeric"
+                disabled={pieza.ausente}
+                aria-label={`${campo.toUpperCase()} ${titulo} sitio ${j + 1}`}
+                value={s[campo] == null ? "" : String(s[campo])}
+                onChange={(e) =>
+                  editar((x) => {
+                    x[k][j]![campo] = leer(e.target.value);
+                    return x;
+                  })
+                }
+                className={`h-9 w-full rounded-lg border bg-background text-center text-sm font-bold tabular-nums outline-none focus:ring-2 focus:ring-primary/30 ${
+                  campo === "ps" && (s.ps ?? 0) >= 6 ? "border-rose-400 bg-rose-50 text-rose-700" : campo === "ps" && (s.ps ?? 0) >= 4 ? "border-amber-300 bg-amber-50 text-amber-700" : "border-primary/15"
+                }`}
+              />
+            ))}
+          </div>
+        ))}
+        <span className="text-left font-bold">NIC</span>
+        {pieza[k].map((s, j) => {
+          const nic = s.ps == null ? null : s.ps - (s.mg ?? 0);
+          return (
+            <span key={j} className={`rounded-md py-1 font-bold tabular-nums ${nic == null ? "text-muted-foreground/40" : nic >= 5 ? "bg-rose-100 text-rose-700" : nic >= 3 ? "bg-amber-100 text-amber-700" : ""}`}>
+              {nic ?? "·"}
+            </span>
+          );
+        })}
+        {(["sangrado", "placa"] as const).map((campo) => (
+          <div key={campo} className="contents">
+            <span className="text-left font-bold">{campo === "sangrado" ? "Sangra" : "Placa"}</span>
+            {pieza[k].map((s, j) => (
+              <button
+                key={j}
+                type="button"
+                disabled={pieza.ausente}
+                aria-pressed={s[campo]}
+                aria-label={`${campo} ${titulo} sitio ${j + 1}`}
+                onClick={() =>
+                  editar((x) => {
+                    x[k][j]![campo] = !x[k][j]![campo];
+                    return x;
+                  })
+                }
+                className={`mx-auto size-5 rounded-full border-2 transition ${
+                  s[campo] ? (campo === "sangrado" ? "border-rose-500 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]" : "border-amber-400 bg-amber-400") : "border-primary/25 hover:border-primary"
+                }`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="relative overflow-hidden rounded-2xl bg-[linear-gradient(118deg,#4c1d95,#7c3aed_50%,#c026d3)] p-3.5 text-white shadow-[0_16px_32px_-20px_rgba(91,33,182,0.9)]">
+        <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-fuchsia-300/30 blur-2xl" />
+        <p className="relative text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/70">Periodoncia · pieza {fdi}</p>
+        <div className="relative mt-1 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="font-display text-xl font-bold tabular-nums">{peor || "—"}<span className="text-xs text-white/70"> mm</span></p>
+            <p className="text-[10px] text-white/75">Peor sondaje</p>
+          </div>
+          <div>
+            <p className="font-display text-xl font-bold tabular-nums">{sangra}/6</p>
+            <p className="text-[10px] text-white/75">Sitios que sangran</p>
+          </div>
+          <div>
+            <p className="font-display text-xl font-bold tabular-nums">
+              {peorAntes == null ? "—" : `${peor - peorAntes > 0 ? "+" : ""}${peor - peorAntes}`}
+            </p>
+            <p className="text-[10px] text-white/75">vs. evaluación anterior</p>
+          </div>
+        </div>
+        <p className="relative mt-1.5 text-[10.5px] text-white/70">
+          {ultima ? `Evaluación del ${fechaCorta(ultima.fecha)}` : "Todavía sin periodontograma: al cargar un dato se crea con fecha de hoy."}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
+          Movilidad
+          <select value={pieza.movilidad} onChange={(e) => editar((x) => ({ ...x, movilidad: Number(e.target.value) }))} className="bg-transparent outline-none">
+            {[0, 1, 2, 3].map((n) => <option key={n}>{n}</option>)}
+          </select>
+        </label>
+        {molar && (
+          <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
+            Furca
+            <select value={pieza.furca} onChange={(e) => editar((x) => ({ ...x, furca: Number(e.target.value) }))} className="bg-transparent outline-none">
+              {[0, 1, 2, 3].map((n) => <option key={n}>{n}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
+          <input type="checkbox" checked={pieza.implante} onChange={(e) => editar((x) => ({ ...x, implante: e.target.checked }))} className="accent-[#7c3aed]" />
+          Implante
+        </label>
+        <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
+          <input type="checkbox" checked={pieza.ausente} onChange={(e) => editar((x) => ({ ...x, ausente: e.target.checked }))} className="accent-[#7c3aed]" />
+          Ausente
+        </label>
+      </div>
+      {cara("v", "Vestibular")}
+      {cara("p", inferior ? "Lingual" : "Palatino")}
+      <p className="text-[10.5px] text-muted-foreground">MG negativo = recesión · NIC = PS − MG. El periodontograma completo está en la pestaña «Periodontograma».</p>
+    </div>
+  );
+}

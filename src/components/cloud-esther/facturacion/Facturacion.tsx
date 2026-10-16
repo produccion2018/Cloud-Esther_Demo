@@ -71,6 +71,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
+import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { normalizarBusqueda } from "@/lib/utils";
 import {
@@ -2293,14 +2294,45 @@ function CierreForm({
 /* ───────────── Obras sociales ───────────── */
 
 function ObrasSociales({ ctx }: { ctx: Ctx }) {
+  // Coberturas y nomenclador (catálogo de la clínica) o las liquidaciones mensuales
+  const [vista, setVista] = useState<"liquidaciones" | "catalogo">("liquidaciones");
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex gap-1 rounded-2xl border border-primary/10 bg-card p-1 shadow-sm" role="tablist">
+        {(
+          [
+            ["liquidaciones", "Liquidaciones"],
+            ["catalogo", "Coberturas y nomenclador"],
+          ] as const
+        ).map(([id, l]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={vista === id}
+            onClick={() => setVista(id)}
+            className={`min-h-9 rounded-xl px-3.5 text-[13px] font-semibold transition ${vista === id ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {vista === "catalogo" ? <CoberturasNomenclador onToast={ctx.onToast} /> : <LiquidacionesObras ctx={ctx} />}
+    </div>
+  );
+}
+
+function LiquidacionesObras({ ctx }: { ctx: Ctx }) {
   const { liquidaciones } = storeFacturacion.usar();
   const { pacientes } = usePacientes();
+  const { coberturas = [] } = storePresupuestos.usar();
   const [abierta, setAbierta] = useState<string | null>(null);
   const [nueva, setNueva] = useState(false);
   const obras = [
-    ...new Set(
-      pacientes.map((p) => p.obraSocial).filter((o) => o && !/particular|no aplica/i.test(o)),
-    ),
+    ...new Set([
+      ...coberturas.filter((c) => c.activa).map((c) => c.nombre),
+      ...pacientes.map((p) => p.obraSocial).filter((o) => o && !/particular|no aplica/i.test(o)),
+    ]),
   ].sort();
   const total = (l: LiquidacionOS) =>
     l.prestaciones.filter((p) => !p.debitado).reduce((a, p) => a + p.importe, 0);

@@ -42,6 +42,7 @@ import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
+import { AyudaEsther } from "@/components/cloud-esther/esther-ai/AyudaEsther";
 import { vieneDeAccesoPrueba, volverSiEsPrueba } from "@/lib/acceso-prueba";
 import { BotonInstalarApp } from "@/components/cloud-esther/InstalarApp";
 
@@ -1220,6 +1221,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             moduloId={modulo?.id ?? "dashboard"}
             modulo={modulo?.label ?? "el inicio"}
           />
+        )}
+      {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
+          Donde ya está Esther IA (Plus y Enterprise en el demo) no se duplica el botón. */}
+      {planListo &&
+        (!iaDisponible || !!real) &&
+        !bloqueado &&
+        !pathname.startsWith("/demo/ia") &&
+        !pathname.startsWith("/demo/rrhh") && (
+          <AyudaEsther moduloId={modulo?.id ?? "dashboard"} modulo={modulo?.label ?? "el inicio"} />
         )}
     </div>
   );

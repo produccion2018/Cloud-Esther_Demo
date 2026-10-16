@@ -66,6 +66,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
+import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import {
   PeriodontogramaSec,
   type EvaluacionPerio,
@@ -8050,7 +8051,9 @@ function ProfesionalesSec({ datos, cambiar, onToast }: PropsSeccion) {
 function CampoLaboratorio({ valor, onChange }: { valor: string; onChange: (v: string) => void }) {
   const todos = useTodosLosRegistros();
   const usados = Object.values(todos).flatMap((r) => (r?.laboratorio ?? []).map((t) => t.proveedor?.trim() ?? ""));
-  const opciones = [...new Set([...usados.filter(Boolean), ...LABORATORIOS_PROVEEDORES])].slice(0, 8);
+  // Primero los laboratorios del directorio de la clínica (Laboratorio → Todos los laboratorios)
+  const directorio = storeLaboratorios.usar().laboratorios.map((l) => l.nombre);
+  const opciones = [...new Set([...directorio, ...usados.filter(Boolean), ...LABORATORIOS_PROVEEDORES])].slice(0, 8);
   return (
     <div className="space-y-2">
       <input

@@ -89,6 +89,7 @@ import { ControlPortalPaciente } from "@/components/cloud-esther/portales/Contro
 import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
 import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
+import { AyudaEsther } from "@/components/cloud-esther/esther-ai/AyudaEsther";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 import { estherPoses } from "@/components/cloud-esther/esther-ai/esther-states";
 import {
@@ -1301,6 +1302,10 @@ function AppEquipo({
       {real && <AvisosChatGlobal onVer={() => ir("interna")} silencio={actual === "interna"} />}
       {disponibles.includes("ia") && actual !== "ia" && (
         <EstherFlotante moduloId={actual} modulo={etiqueta || "el portal"} />
+      )}
+      {/* Ayuda de Esther para todos los planes (donde no está Esther IA) */}
+      {!disponibles.includes("ia") && (
+        <AyudaEsther moduloId={actual === "escritorio" ? "dashboard" : actual} modulo={etiqueta || "el portal"} />
       )}
 
       {nuevaCita && (

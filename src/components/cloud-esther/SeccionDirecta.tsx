@@ -22,6 +22,7 @@ import {
 } from "@/components/cloud-esther/PacienteSecciones";
 import type { Registros, SeccionRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
+import { PanelLaboratorios } from "@/components/cloud-esther/laboratorio/PanelLaboratorios";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 
@@ -192,6 +193,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
   };
   const subs = SUBS[seccion];
   const [sub, setSub] = useState<SeccionDirectaId>(seccion);
+  const [panelLab, setPanelLab] = useState(false);
   const vistaSeccion: SeccionDirectaId = subs?.some((x) => x.id === sub) ? sub : seccion;
 
   const activo = pacientes.find((p) => p.id === activoId) ?? null;
@@ -279,7 +281,35 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
           className="relative mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6 lg:px-8"
           style={{ fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif' }}
         >
-          {!activo ? (
+          {/* Laboratorio: por paciente o el panel de todos los laboratorios (órdenes, cuenta corriente, reportes) */}
+          {seccion === "laboratorio" && (
+            <div className="mb-4 inline-flex gap-1 rounded-2xl border border-primary/10 bg-card/90 p-1 shadow-[inset_0_1px_3px_rgba(76,29,149,0.08),0_10px_26px_-22px_rgba(76,29,149,0.6)]" role="tablist">
+              {(
+                [
+                  [false, "Por paciente"],
+                  [true, "Todos los laboratorios"],
+                ] as const
+              ).map(([v, l]) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={panelLab === v}
+                  onClick={() => setPanelLab(v)}
+                  className={`min-h-9 rounded-xl px-3.5 text-[13px] font-semibold transition ${
+                    panelLab === v
+                      ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.95)]"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          {seccion === "laboratorio" && panelLab ? (
+            <PanelLaboratorios onToast={show} />
+          ) : !activo ? (
             /* Acceso a Historia clínica: solo se mejora esta pantalla; la lógica queda intacta. */
             <>
               <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)]">

@@ -61,7 +61,7 @@ import { bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
 const CARD =
-  "rounded-2xl border border-border/70 bg-card/95 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_14px_rgba(16,24,40,0.04)] backdrop-blur-sm";
+  "rounded-2xl border border-primary/12 bg-gradient-to-br from-card to-primary/[0.03] shadow-[0_14px_34px_-26px_rgba(124,58,237,0.5)] backdrop-blur-sm transition-shadow duration-200 hover:shadow-[0_22px_44px_-26px_rgba(124,58,237,0.6)]";
 
 const INNER_CARD = "rounded-xl border border-border/60 bg-background/70";
 
@@ -666,7 +666,7 @@ function DirectorioTab() {
               className={`${CARD} group block p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/30`}
             >
               <div className="flex items-center gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
                   <Icon className="size-4" />
                 </span>
 
@@ -933,7 +933,7 @@ function IntegracionesTab() {
           return (
             <div key={c.id} className={`${CARD} p-5`}>
               <div className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
                   <Icon className="size-5" />
                 </span>
 
@@ -987,7 +987,7 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
         <Icon className="size-4.5" />
       </span>
 
@@ -1016,7 +1016,7 @@ function FilaSwitch({
   return (
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Icon className="size-4" />
         </span>
 
@@ -1050,7 +1050,7 @@ function FilaVisual({
       className="flex w-full items-center justify-between gap-4 py-4 text-left"
     >
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Icon className="size-4" />
         </span>
 
@@ -1110,7 +1110,7 @@ function StatCard({
   return (
     <div className={`${INNER_CARD} p-4`}>
       <div className="flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+        <span className="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Icon className="size-4" />
         </span>
 
@@ -1133,7 +1133,7 @@ function ActividadRow({
 }) {
   return (
     <div className="flex items-center gap-3 py-4">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
         <Icon className="size-4" />
       </span>
 
@@ -1157,7 +1157,7 @@ function PreferenceBox({
 }) {
   return (
     <div className={`${INNER_CARD} flex items-center gap-3 p-3.5`}>
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
         <Icon className="size-4" />
       </span>
 
@@ -1184,7 +1184,7 @@ function InfoBanner({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-primary/10 bg-primary/[0.045] p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Icon className="size-4" />
         </span>
 
@@ -1260,7 +1260,7 @@ function PreviewSidebar({
   return (
     <div className={`${CARD} p-4`}>
       <div className="flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+        <span className="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Palette className="size-4" />
         </span>
 

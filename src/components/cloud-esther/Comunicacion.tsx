@@ -1394,12 +1394,13 @@ function Chat({
           </div>
           <button
             type="button"
-            className={BTN_ICONO}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-gradient-to-r from-primary/10 to-fuchsia-500/10 px-3 py-1.5 text-[12px] font-semibold text-primary transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:from-primary/15 hover:to-fuchsia-500/15"
             aria-label="Cambiar el fondo del chat"
             title="Cambiar el fondo del chat"
             onClick={() => setEligiendoFondo(true)}
           >
             <Palette className="size-3.5" />
+            Fondo
           </button>
           <button
             className={`${BTN_ICONO} ${conv.fijada ? "!border-primary/30 !bg-primary/10 !text-primary" : ""}`}

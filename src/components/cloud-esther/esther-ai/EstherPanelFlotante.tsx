@@ -72,7 +72,7 @@ export default function EstherPanelFlotante({
   return (
     <div
       role="dialog"
-      aria-label="Esther IA"
+      aria-label="Esther Infinity"
       className="esther-ai fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-24 lg:right-5 flex h-[min(600px,calc(100vh-8rem))] w-[min(400px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-[0_30px_70px_-30px_rgba(76,29,149,0.6)]"
     >
       <div
@@ -83,7 +83,7 @@ export default function EstherPanelFlotante({
           <EstherCharacter state={esther.state} pose={esther.pose} compact alto={88} />
         </div>
         <div className="min-w-0 flex-1 pb-3">
-          <p className="text-sm font-bold">Esther IA</p>
+          <p className="text-sm font-bold">Esther Infinity</p>
           <p className="truncate text-[11px] font-semibold text-primary">{esther.label}</p>
           <p className="truncate text-[11px] text-muted-foreground">{esther.message}</p>
         </div>
@@ -101,8 +101,8 @@ export default function EstherPanelFlotante({
           </button>
           <Link
             to={"/demo/ia" as never}
-            aria-label="Abrir Esther IA completa"
-            title="Abrir Esther IA completa"
+            aria-label="Abrir Esther Infinity completa"
+            title="Abrir Esther Infinity completa"
             className="grid size-8 place-items-center rounded-full bg-card/80 text-muted-foreground transition hover:text-primary"
           >
             <Maximize2 className="size-3.5" />

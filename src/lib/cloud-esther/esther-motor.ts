@@ -1,5 +1,5 @@
 /* Ubicación: src/lib/cloud-esther/esther-motor.ts
-   Motor de Cloud Esther IA: entiende preguntas en lenguaje natural, verifica plan, rol y sede,
+   Motor de Cloud Esther Infinity: entiende preguntas en lenguaje natural, verifica plan, rol y sede,
    lee los datos reales de cada módulo de la empresa activa y arma la respuesta (texto +
    indicadores, tablas, gráficos o informes). Nunca inventa datos: si no hay información, lo dice.
    TODO backend: reemplazar la interpretación por el modelo de lenguaje con herramientas

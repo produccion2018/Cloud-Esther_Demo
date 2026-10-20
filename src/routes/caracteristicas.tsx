@@ -766,7 +766,7 @@ function Caracteristicas() {
       </section>
 
       {/* =========================================================
-          ESTHER IA
+          ESTHER INFINITY
       ========================================================= */}
       <section className="mx-auto max-w-7xl px-5 pb-24 lg:px-8">
         <Reveal>
@@ -837,13 +837,13 @@ function Caracteristicas() {
                       ease: "linear",
                     }}
                   >
-                    Esther IA
+                    Esther Infinity
                   </motion.span>
                   , el asistente inteligente de tu clínica
                 </h2>
 
                 <p className="mt-4 leading-relaxed text-muted-foreground">
-                  Esther IA resume historias clínicas, sugiere horarios
+                  Esther Infinity resume historias clínicas, sugiere horarios
                   óptimos para la agenda, detecta pacientes inactivos y te
                   muestra qué está pasando con el rendimiento de la clínica en
                   lenguaje simple.

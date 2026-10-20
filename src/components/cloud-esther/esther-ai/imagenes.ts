@@ -1,4 +1,4 @@
-/* Utilidades de imagen para Cloud Esther IA (en el navegador, sin subir nada a servidores).
+/* Utilidades de imagen para Cloud Esther Infinity (en el navegador, sin subir nada a servidores).
    TODO backend: enviar la imagen al servicio de visión (modelo de detección odontológico y
    modelo generativo para la simulación) y guardar el archivo en el almacenamiento del tenant. */
 

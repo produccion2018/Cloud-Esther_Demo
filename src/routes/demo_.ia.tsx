@@ -6,7 +6,7 @@ import { CloudEstherProvider } from "@/lib/cloud-esther/data"
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/ia")({
   head: () => ({
-    meta: [{ title: "Esther AI | Cloud Esther" }],
+    meta: [{ title: "Esther Infinity | Cloud Esther" }],
   }),
   component: EstherAIPage,
 })

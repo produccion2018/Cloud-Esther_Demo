@@ -288,7 +288,7 @@ const MODULOS = [
   "Odontograma 2D",
   "Facturación",
   "Presupuestos",
-  "Esther IA",
+  "Esther Infinity",
   "Marketing y captación",
 ];
 

@@ -125,7 +125,7 @@ export const plans: Plan[] = [
       "Inventario",
       "Recursos Humanos",
       "Permisos y accesos",
-      "Esther IA",
+      "Esther Infinity",
       "Analítica avanzada",
       "Auditoría",
       "Integraciones avanzadas",
@@ -155,7 +155,7 @@ export const plans: Plan[] = [
       "Marketing y captación avanzada",
       "Recursos Humanos avanzado",
       "Automatizaciones y workflows con n8n",
-      "Esther IA avanzada",
+      "Esther Infinity avanzada",
       "Analítica avanzada",
       "Auditoría completa",
       "Integraciones personalizadas",
@@ -289,7 +289,7 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Esther IA",
+    feature: "Esther Infinity",
     values: ["—", "—", "✓", "Avanzada"],
   },
 
@@ -379,7 +379,7 @@ export type AdditionalModule = {
 export const additionalModules: AdditionalModule[] = [
   {
     id: "esther-ia",
-    name: "Esther IA",
+    name: "Esther Infinity",
     description:
       "Asistente inteligente para resúmenes clínicos, análisis de información y apoyo en la gestión de la clínica.",
   },
@@ -525,6 +525,6 @@ export const faqs = [
   },
   {
     q: "¿Cloud Esther tiene inteligencia artificial?",
-    a: "Sí. Esther IA forma parte de los planes superiores y está orientada al apoyo de la gestión, análisis y procesos clínicos definidos por la plataforma.",
+    a: "Sí. Esther Infinity forma parte de los planes superiores y está orientada al apoyo de la gestión, análisis y procesos clínicos definidos por la plataforma.",
   },
 ];

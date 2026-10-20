@@ -41,7 +41,7 @@ import {
 } from "@/lib/cloud-esther/rayos-x";
 
 /* Ubicación: src/components/cloud-esther/odontograma3d/RayosXIA.tsx
-   Análisis de rayos X (pestaña del Odontograma 3D y herramienta de Esther IA): detección
+   Análisis de rayos X (pestaña del Odontograma 3D y herramienta de Esther Infinity): detección
    asistida, marcado manual por colores, informe profesional y para el paciente, y pase de los
    hallazgos confirmados al odontograma 3D. Siempre requiere confirmación del profesional. */
 

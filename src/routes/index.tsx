@@ -164,7 +164,7 @@ const faqs = [
   },
   {
     q: "¿Cloud Esther tiene inteligencia artificial?",
-    a: "Esther IA te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
+    a: "Esther Infinity te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
   },
 ];
 

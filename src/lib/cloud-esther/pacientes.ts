@@ -110,7 +110,7 @@ const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: PACIENTES_EJEMPLO
   },
 });
 
-/** Lectura sin hooks (Esther IA). */
+/** Lectura sin hooks (Esther Infinity). */
 export function leerPacientes(): Paciente[] {
   return store.leer().pacientes;
 }

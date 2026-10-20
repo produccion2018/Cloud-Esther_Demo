@@ -1,7 +1,7 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/cloud-esther/ia-store.ts
-   Datos de Cloud Esther IA por empresa: auditoría de consultas, análisis de imágenes,
+   Datos de Cloud Esther Infinity por empresa: auditoría de consultas, análisis de imágenes,
    simulaciones de sonrisa y conversaciones del Contact Center.
    TODO backend: /ia/* con auditoría inmutable. */
 

@@ -4,7 +4,7 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
    Automatizaciones con n8n (Enterprise). Separación de responsabilidades:
    - Cloud Esther emite EVENTOS (presupuesto creado, turno próximo, factura vencida…).
    - n8n detecta el evento y ejecuta el WORKFLOW (esperas, condiciones, canales externos).
-   - Los pasos "Esther IA" le piden a Cloud Esther IA que analice, redacte o clasifique.
+   - Los pasos "Esther Infinity" le piden a Cloud Esther Infinity que analice, redacte o clasifique.
    - n8n ejecuta la ACCIÓN y el resultado vuelve a Cloud Esther (auditoría).
    Todo por empresa (tenant) y sede. TODO backend: webhooks firmados por tenant y API de n8n. */
 
@@ -98,14 +98,14 @@ export const PASOS: Record<
   TipoPaso,
   {
     nombre: string;
-    quien: "Esther IA" | "n8n" | "Cloud Esther";
+    quien: "Esther Infinity" | "n8n" | "Cloud Esther";
     detalle: string;
     defecto: ConfigPaso;
   }
 > = {
   ia: {
-    nombre: "Esther IA",
-    quien: "Esther IA",
+    nombre: "Esther Infinity",
+    quien: "Esther Infinity",
     detalle: "Analiza, redacta o clasifica con el contexto permitido",
     defecto: { tarea: "Redactar mensaje" },
   },
@@ -120,7 +120,7 @@ export const PASOS: Record<
     nombre: "Enviar WhatsApp",
     quien: "n8n",
     detalle: "WhatsApp Business",
-    defecto: { mensaje: "Mensaje redactado por Esther IA" },
+    defecto: { mensaje: "Mensaje redactado por Esther Infinity" },
   },
   email: {
     nombre: "Enviar correo",
@@ -164,7 +164,7 @@ export const REGLAS = [
   "Sin respuesta del paciente",
   "Monto mayor a $ 300.000",
   "Paciente con WhatsApp",
-  "Prioridad alta según Esther IA",
+  "Prioridad alta según Esther Infinity",
 ] as const;
 export const ACCIONES = [
   "Registrar seguimiento",
@@ -306,7 +306,7 @@ export const PLANTILLAS: {
     id: "contact-center",
     nombre: "Contact Center por WhatsApp",
     descripcion:
-      "Mensaje entrante → Esther IA lo interpreta → agenda o deriva → n8n confirma por WhatsApp.",
+      "Mensaje entrante → Esther Infinity lo interpreta → agenda o deriva → n8n confirma por WhatsApp.",
     evento: "mensaje_contact_center",
     pasos: () => [
       p("ia", { tarea: "Clasificar respuesta" }),

@@ -10,6 +10,7 @@ import {
   MicOff,
   ShieldCheck,
   Sparkles,
+  Sun,
   Volume2,
   VolumeX,
   Workflow,
@@ -37,6 +38,7 @@ import { EstherQuickActions as EstherQuickActionsBlock } from "./EstherQuickActi
 import { estherStates, type EstherState } from "./esther-states";
 import { useEstherAI, vozDisponible } from "./useEstherAI";
 import { useMicrofono } from "./microfono";
+import { primerNombreDe, saludoHora, useClima } from "@/lib/cloud-esther/saludo-clima";
 import "./esther-ai.css";
 
 export type EstherAIProps = {
@@ -109,10 +111,12 @@ export function EstherAI({
   const conN8n = useConN8n();
   const n8n = storeN8n.usar();
   const nombreUsuario = context?.usuario ?? usuario?.nombre ?? "Andrés Becerra";
-  const primerNombre = nombreUsuario.split(" ")[0] ?? "";
+  const primerNombre = primerNombreDe(nombreUsuario);
+  // Clima real (API gratuita, por la ubicación del navegador; si no hay permiso/internet, no se muestra)
+  const clima = useClima();
   const esther = useEstherAI({
     context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId, n8n: conN8n },
-    saludo: `Hola${primerNombre ? ` ${primerNombre}` : ""}, soy Esther. Puedo consultar pacientes, agenda, historia clínica, odontograma, presupuestos, facturación y más, siempre con los datos de esta clínica. ¿En qué te ayudo?`,
+    saludo: `${saludoHora()}${primerNombre ? `, ${primerNombre}` : ""}. Soy Esther Infinity, tu asistente. Puedo consultar pacientes, agenda, historia clínica, odontograma, presupuestos, facturación y más, siempre con los datos de esta clínica. ¿En qué te ayudo?`,
   });
   const microfono = useMicrofono({
     onTexto: (t) => void esther.send(t),
@@ -171,7 +175,7 @@ export function EstherAI({
   return (
     <section
       className="esther-ai relative min-h-full overflow-clip bg-[#faf9ff]"
-      aria-label="Cloud Esther IA"
+      aria-label="Cloud Esther Infinity"
     >
       <div
         aria-hidden
@@ -202,9 +206,15 @@ export function EstherAI({
                       n8n {n8n.conectado ? "conectado" : "en modo prueba"}
                     </span>
                   )}
+                  {clima && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-700" title="Clima actual (API gratuita, por tu ubicación)">
+                      <Sun className="size-3.5" />
+                      {clima.ciudad ? `${clima.ciudad} · ` : ""}{clima.tempC}°
+                    </span>
+                  )}
                 </div>
                 <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">
-                  Esther IA
+                  Esther Infinity
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                   Preguntale por escrito o por voz. Esther consulta los módulos de tu plan, analiza
@@ -535,7 +545,7 @@ export function EstherAI({
       {herramienta &&
         createPortal(
           <Modal
-            modulo="Cloud Esther IA"
+            modulo="Cloud Esther Infinity"
             titulo={
               herramienta === "imagen"
                 ? "Rayos X con IA"

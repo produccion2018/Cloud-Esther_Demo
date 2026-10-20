@@ -426,10 +426,10 @@ export function Kpi({
   return (
     <div className="card-grad flex flex-col p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-primary/75">
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
           {label}
         </p>
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
+        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.6)]">
           <Icon className="size-4" />
         </span>
       </div>

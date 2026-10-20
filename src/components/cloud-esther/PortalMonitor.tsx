@@ -34,6 +34,7 @@ import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import {
   docsDe,
   nuevoCodigo,
+  puedePublicarPortal,
   setPortal,
   storePortal,
   type ConfigPortal,
@@ -63,6 +64,7 @@ const ICONO_EVENTO: Record<TipoEventoPortal, LucideIcon> = {
   "Documento subido": FileCheck2,
   Mensaje: MessageCircle,
   "Datos actualizados": UserCheck,
+  "Contraseña cambiada": KeyRound,
 };
 
 const TONO_EVENTO: Partial<Record<TipoEventoPortal, string>> = {
@@ -333,7 +335,7 @@ function PortalMonitor() {
 
 /* ───────────── Accesos ───────────── */
 
-function Accesos({ onToast }: { onToast: (m: string) => void }) {
+export function Accesos({ onToast }: { onToast: (m: string) => void }) {
   const { pacientes } = usePacientes();
   const { accesos } = storePortal.usar();
   const [busqueda, setBusqueda] = useState("");
@@ -500,10 +502,14 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
                             setPortal("accesos", (prev) => {
                               const actual = prev[p.id];
                               return actual
-                                ? { ...prev, [p.id]: { ...actual, codigo: nuevoCodigo() } }
+                                ? { ...prev, [p.id]: { ...actual, codigo: nuevoCodigo(), clave: undefined } }
                                 : prev;
                             });
-                            onToast(`Nuevo código enviado a ${p.email}`);
+                            onToast(
+                              a?.clave
+                                ? `Nuevo código enviado a ${p.email}. Su contraseña se blanqueó: entra con el código y crea otra.`
+                                : `Nuevo código enviado a ${p.email}`,
+                            );
                           }}
                         >
                           <RefreshCcw className="size-3.5" />
@@ -565,7 +571,7 @@ function Accesos({ onToast }: { onToast: (m: string) => void }) {
 
 /* ───────────── Actividad ───────────── */
 
-function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
+export function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
   const { pacientes } = usePacientes();
   const { eventos } = storePortal.usar();
   const [tipo, setTipo] = useState<"" | TipoEventoPortal>("");
@@ -865,7 +871,7 @@ function ConfiguracionPortal({ onToast }: { onToast: (m: string) => void }) {
       <ControlPortalPaciente
         usuario={usuario?.nombre ?? "Administración"}
         puedeConfigurar={esAdmin}
-        puedeEnviar={esAdmin || (!!real && (cfg.publican ?? []).includes(real.rol))}
+        puedeEnviar={esAdmin || (!!real && puedePublicarPortal(cfg, real.rol, real.sesion.usuario.email))}
         onToast={onToast}
       />
       <ConfiguracionBasicaPortal onToast={onToast} />

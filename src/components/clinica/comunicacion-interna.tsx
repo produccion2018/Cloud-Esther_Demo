@@ -805,7 +805,7 @@ function Conversacion({
 
       {/* Escribir */}
       {puedoEscribir ? (
-        <div className="border-t border-border/60 bg-card/70 p-3 backdrop-blur sm:px-5">
+        <div data-ce-composer className="border-t border-border/60 bg-card/70 p-3 backdrop-blur sm:px-5">
           {(archivo || comoComunicado) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {comoComunicado && (
@@ -868,7 +868,7 @@ function Conversacion({
 
 /* ───────────── Un mensaje ───────────── */
 /* Elegir el fondo del chat: fondos listos o una foto propia; para todos los chats o solo este. */
-function ElegirFondo({
+export function ElegirFondo({
   abierto,
   onCerrar,
   fondo,

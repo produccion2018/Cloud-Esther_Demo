@@ -18,6 +18,7 @@ import {
   Lock,
   Mail,
   Megaphone,
+  Palette,
   MessageCircle,
   MessagesSquare,
   Paperclip,
@@ -68,7 +69,8 @@ import { normalizarBusqueda } from "@/lib/utils";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { abrirRecordatorioWhatsApp, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
-import { ComunicacionInterna } from "@/components/clinica/comunicacion-interna";
+import { ComunicacionInterna, ElegirFondo } from "@/components/clinica/comunicacion-interna";
+import { useFondoChat } from "@/lib/clinica/fondo-chat";
 import { useAvisosChat } from "@/lib/clinica/chat";
 
 /* Ubicación: src/components/cloud-esther/Comunicacion.tsx
@@ -202,7 +204,7 @@ function segmentosSMS(texto: string) {
 /* ───────────── Estilos ───────────── */
 
 const INPUT =
-  "h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
+  "h-10 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
 const TEXTAREA =
   "w-full resize-y rounded-xl border border-primary/12 bg-white px-3 py-2 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
 const BTN_PRIMARIO =
@@ -268,7 +270,7 @@ function Pill({ children, clase }: { children: ReactNode; clase: string }) {
 function Field({ label, children, ayuda }: { label: string; children: ReactNode; ayuda?: string }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <span className="mb-1.5 block text-[12.5px] font-semibold text-foreground/80">
         {label}
       </span>
       {children}
@@ -320,7 +322,7 @@ function Interruptor({
       aria-checked={activo}
       aria-label={etiqueta}
       onClick={() => onChange(!activo)}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${activo ? "bg-primary" : "bg-muted-foreground/30"}`}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${activo ? "bg-gradient-to-r from-primary to-fuchsia-500 shadow-[0_4px_12px_-4px_rgba(124,58,237,0.7)]" : "bg-muted-foreground/30"}`}
     >
       <span
         className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${activo ? "left-[18px]" : "left-0.5"}`}
@@ -342,17 +344,18 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-[radial-gradient(circle_at_50%_30%,rgba(76,29,149,0.35),rgba(15,10,30,0.6))] p-4 backdrop-blur-sm"
       onMouseDown={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl ${ancho}`}
+        className={`relative max-h-[92vh] w-full overflow-y-auto rounded-[26px] border border-primary/15 bg-card p-5 shadow-[0_40px_80px_-30px_rgba(76,29,149,0.55)] sm:p-6 ${ancho}`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-primary" />
+        <div className="mb-4 flex items-start justify-between gap-4 border-b border-primary/10 pb-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               Comunicación
@@ -477,17 +480,18 @@ function EncabezadoSeccion({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15">
+    <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.06] p-4 shadow-[0_14px_32px_-24px_rgba(124,58,237,0.55)] dark:from-card dark:via-card">
+      <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-36 rounded-full bg-fuchsia-400/10 blur-2xl" />
+      <div className="relative flex items-center gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.8)]">
           <Icon className="size-5" />
         </span>
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{titulo}</h2>
+          <h2 className="text-lg font-bold tracking-tight">{titulo}</h2>
           <p className="text-sm text-muted-foreground">{descripcion}</p>
         </div>
       </div>
-      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+      {children && <div className="relative flex flex-wrap items-center gap-2">{children}</div>}
     </div>
   );
 }
@@ -496,8 +500,13 @@ function Vacio({ icon: Icon, titulo, texto }: { icon: LucideIcon; titulo: string
   return (
     <div className="card-grad grid min-h-40 place-items-center p-6 text-center">
       <div>
-        <Icon className="mx-auto size-8 text-primary/60" />
-        <p className="mt-2 text-sm font-semibold">{titulo}</p>
+        <span className="relative mx-auto grid size-16 place-items-center">
+          <span aria-hidden className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-fuchsia-400/20 blur-md" />
+          <span className="relative grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary/15 to-fuchsia-500/10 text-primary ring-1 ring-primary/20">
+            <Icon className="size-7" />
+          </span>
+        </span>
+        <p className="mt-3 text-sm font-bold">{titulo}</p>
         <p className="text-sm text-muted-foreground">{texto}</p>
       </div>
     </div>
@@ -523,7 +532,7 @@ function Filtros<T extends string>({
           aria-pressed={valor === o.id}
           className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
             valor === o.id
-              ? "bg-primary text-primary-foreground"
+              ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]"
               : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
           }`}
         >
@@ -800,7 +809,7 @@ function ComunicacionInner() {
                       aria-pressed={seccionVisible === s.id}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                         seccionVisible === s.id
-                          ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
+                          ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]"
                           : "text-muted-foreground hover:bg-card hover:text-foreground"
                       }`}
                     >
@@ -1224,6 +1233,9 @@ function Chat({
   const [verEtiquetas, setVerEtiquetas] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
+  // Fondo del chat: lo elige cada persona, solo en su navegador y separado por clínica
+  const fondo = useFondoChat(`pacientes:${ctx.usuario}`, `conv:${conv.id}`);
+  const [eligiendoFondo, setEligiendoFondo] = useState(false);
 
   useEffect(() => {
     if (borrador) limpiarBorrador();
@@ -1381,6 +1393,15 @@ function Chat({
             )}
           </div>
           <button
+            type="button"
+            className={BTN_ICONO}
+            aria-label="Cambiar el fondo del chat"
+            title="Cambiar el fondo del chat"
+            onClick={() => setEligiendoFondo(true)}
+          >
+            <Palette className="size-3.5" />
+          </button>
+          <button
             className={`${BTN_ICONO} ${conv.fijada ? "!border-primary/30 !bg-primary/10 !text-primary" : ""}`}
             aria-label={conv.fijada ? "Desfijar" : "Fijar arriba"}
             title={conv.fijada ? "Desfijar" : "Fijar arriba"}
@@ -1412,8 +1433,13 @@ function Chat({
         </div>
       </div>
 
-      {/* Mensajes */}
-      <div className="flex-1 space-y-2 overflow-y-auto bg-[radial-gradient(rgba(124,58,237,0.06)_1px,transparent_1px)] bg-[length:18px_18px] px-4 py-3">
+      <ElegirFondo abierto={eligiendoFondo} onCerrar={() => setEligiendoFondo(false)} fondo={fondo} nombreChat={conv.paciente} />
+
+      {/* Mensajes (con el fondo que eligió esta persona) */}
+      <div
+        style={fondo.estilo}
+        className={`flex-1 space-y-2 overflow-y-auto px-4 py-3 text-foreground transition-[background] duration-500 ${fondo.oscuro ? "dark" : ""}`}
+      >
         {conv.mensajes.length === 0 && (
           <p className="py-10 text-center text-xs text-muted-foreground">
             Escribí el primer mensaje o elegí una plantilla.
@@ -1439,7 +1465,7 @@ function Chat({
       </div>
 
       {/* Redactar */}
-      <div className="border-t border-primary/10 p-3">
+      <div data-ce-composer className="border-t border-primary/10 p-3">
         {verPlantillas && (
           <div className="mb-2 max-h-40 overflow-y-auto rounded-xl border border-primary/10 bg-white p-1.5">
             {plantillasCanal.map((p) => (
@@ -1578,7 +1604,7 @@ function BurbujaMensaje({ msg, canal }: { msg: Mensaje; canal: Canal }) {
         className={`max-w-[78%] whitespace-pre-line rounded-2xl px-3 py-2 text-sm shadow-sm ${
           propio
             ? `rounded-br-md bg-gradient-to-br text-white ${CANAL_ESTILO[canal].burbuja}`
-            : "rounded-bl-md border border-primary/10 bg-white"
+            : "rounded-bl-md border border-primary/10 bg-white text-slate-800"
         }`}
       >
         {msg.autor && propio && (
@@ -1921,24 +1947,26 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
             {[
-              { l: "Sin enviar", v: sinEnviar.length, c: "text-amber-600", i: Clock3 },
-              { l: "Enviados", v: enviados, c: "text-sky-600", i: Send },
-              { l: "Confirmados", v: confirmados, c: "text-emerald-600", i: CalendarCheck2 },
+              { l: "Sin enviar", v: sinEnviar.length, c: "text-amber-600", g: "from-amber-400 to-orange-500", i: Clock3 },
+              { l: "Enviados", v: enviados, c: "text-sky-600", g: "from-sky-400 to-blue-600", i: Send },
+              { l: "Confirmados", v: confirmados, c: "text-emerald-600", g: "from-emerald-400 to-teal-600", i: CalendarCheck2 },
               {
                 l: "Para reprogramar",
                 v: reprogramar,
                 c: reprogramar ? "text-destructive" : "text-foreground",
+                g: "from-rose-400 to-pink-600",
                 i: RefreshCcw,
               },
             ].map((s) => (
-              <div key={s.l} className="card-grad flex items-start justify-between p-3.5">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <div key={s.l} className="card-grad group relative flex items-start justify-between overflow-hidden p-3.5 transition-transform duration-200 hover:-translate-y-0.5">
+                <span aria-hidden className={`pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-gradient-to-br ${s.g} opacity-[0.08] transition-transform duration-300 group-hover:scale-125`} />
+                <div className="relative">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                     {s.l}
                   </p>
-                  <p className={`mt-1 text-xl font-bold ${s.c}`}>{s.v}</p>
+                  <p className={`mt-1 text-2xl font-bold leading-none tracking-tight ${s.c}`}>{s.v}</p>
                 </div>
-                <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+                <span className={`relative grid size-9 place-items-center rounded-xl bg-gradient-to-br ${s.g} text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)]`}>
                   <s.i className="size-4" />
                 </span>
               </div>
@@ -1954,8 +1982,13 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
           ) : (
             Object.entries(porDia).map(([dia, ts]) => (
               <div key={dia} className="card-grad overflow-hidden">
-                <p className="flex items-center justify-between border-b border-primary/10 bg-primary/[0.04] px-4 py-2 text-xs font-bold">
-                  <span>{etiquetaDia(dia)}</span>
+                <p className="flex items-center justify-between border-b border-primary/10 bg-gradient-to-r from-primary/[0.08] via-fuchsia-500/[0.04] to-transparent px-4 py-2.5 text-xs font-bold">
+                  <span className="flex items-center gap-2">
+                    <span className="grid size-6 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white">
+                      <CalendarClock className="size-3.5" />
+                    </span>
+                    {etiquetaDia(dia)}
+                  </span>
                   <span className="font-medium text-muted-foreground">
                     {ts.length} {ts.length === 1 ? "turno" : "turnos"}
                   </span>
@@ -1974,8 +2007,8 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
                             ? "bg-destructive/10 text-destructive"
                             : "bg-amber-100 text-amber-700";
                     return (
-                      <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-                        <span className="w-12 shrink-0 text-sm font-bold text-primary">
+                      <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.03]">
+                        <span className="grid h-10 w-14 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/[0.05] text-sm font-bold tabular-nums text-primary">
                           {t.hora}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -2059,11 +2092,30 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
             </p>
           </div>
         ) : (
-        <div className="card-grad h-fit space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="size-4 text-primary" /> Envío automático
+        <div className="card-grad h-fit overflow-hidden xl:sticky xl:top-4">
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#4c1d95] via-primary to-fuchsia-600 p-4 text-white">
+            <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-xl" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-12 left-6 size-28 rounded-full bg-fuchsia-300/20 blur-2xl" />
+            <div className="relative flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2.5 text-sm font-bold">
+                <span className="grid size-9 place-items-center rounded-xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
+                  <Sparkles className="size-4" />
+                </span>
+                Envío automático
+              </p>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${cfg.activo ? "bg-emerald-400/25 text-emerald-50 ring-1 ring-emerald-200/40" : "bg-white/15 text-white/80"}`}>
+                {cfg.activo ? "Activo" : "Pausado"}
+              </span>
+            </div>
+            <p className="relative mt-2.5 text-[12px] leading-5 text-white/85">
+              {cfg.activo
+                ? `Cada turno recibe un aviso ${cfg.anticipacion} h antes por ${cfg.canal}.`
+                : "Pausado: los recordatorios se envían solo a mano."}
             </p>
+          </div>
+          <div className="space-y-3 p-4">
+          <label className="flex items-center justify-between gap-2 rounded-2xl border border-primary/12 bg-primary/[0.03] px-3 py-2.5 text-[12.5px] font-semibold">
+            <span>Enviar recordatorios solos</span>
             <Interruptor
               activo={cfg.activo}
               onChange={(v) => {
@@ -2074,12 +2126,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
               }}
               etiqueta="Recordatorios automáticos"
             />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {cfg.activo
-              ? `Cada turno recibe un aviso ${cfg.anticipacion} h antes por ${cfg.canal}.`
-              : "Pausado: los recordatorios se envían solo a mano."}
-          </p>
+          </label>
           <Field label="Anticipación">
             <Select
               value={String(cfg.anticipacion) as "24" | "48" | "72"}
@@ -2110,7 +2157,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
                 .map((p) => ({ value: String(p.id), label: p.nombre }))}
             />
           </Field>
-          <label className="flex items-center justify-between gap-2 text-xs">
+          <label className="flex items-center justify-between gap-2 rounded-2xl border border-primary/12 bg-primary/[0.03] px-3 py-2.5 text-[12.5px] font-semibold">
             <span>Segundo aviso 2 h antes</span>
             <Interruptor
               activo={cfg.segundoAviso}
@@ -2119,11 +2166,11 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
             />
           </label>
           {plantilla && (
-            <div className="rounded-xl border border-primary/10 bg-white p-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                Vista previa
+            <div className="overflow-hidden rounded-2xl border border-primary/12 bg-[radial-gradient(rgba(124,58,237,0.07)_1px,transparent_1px)] bg-[length:14px_14px] p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                <Smartphone className="size-3" /> Así lo recibe el paciente
               </p>
-              <p className="whitespace-pre-line text-xs">
+              <p className="ml-auto w-fit max-w-[92%] whitespace-pre-line rounded-2xl rounded-br-md bg-gradient-to-br from-primary to-fuchsia-500 px-3 py-2 text-xs leading-5 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.8)]">
                 {rellenar(plantilla.texto, {
                   paciente: "Lucía",
                   fecha: formatearFecha(sumarDias(hoy, 1)),
@@ -2135,6 +2182,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
               </p>
             </div>
           )}
+          </div>
         </div>
         )}
       </div>
@@ -2203,7 +2251,7 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
           <select
             value={canal}
             onChange={(e) => setCanal(e.target.value as "" | Canal)}
-            className="h-8 rounded-full border border-border bg-background px-3 text-xs outline-none"
+            className="h-9 rounded-full border border-primary/15 bg-white px-3 text-xs font-medium outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
             aria-label="Canal"
           >
             <option value="">Todos los canales</option>
@@ -2215,7 +2263,7 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar plantilla"
-            className="h-8 w-44 rounded-full border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            className="h-9 w-48 rounded-full border border-primary/15 bg-white px-3.5 text-xs outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
           />
         </div>
       </div>
@@ -2231,19 +2279,28 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
           {lista.map((p) => (
             <li
               key={p.id}
-              className="card-grad flex flex-col p-4 transition-all hover:-translate-y-0.5"
+              className="card-grad group relative flex flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_44px_-28px_rgba(124,58,237,0.7)]"
             >
+              <span aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${CANAL_ESTILO[p.canal].burbuja}`} />
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{p.nombre}</p>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span className={`grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${CANAL_ESTILO[p.canal].burbuja}`}>
+                    {(() => {
+                      const I = CANAL_ESTILO[p.canal].icon;
+                      return <I className="size-[18px]" />;
+                    })()}
+                  </span>
+                  <div className="min-w-0">
+                  <p className="text-sm font-bold">{p.nombre}</p>
                   <p className="mt-1 flex flex-wrap gap-1">
                     <ChipCanal canal={p.canal} compacto />
                     <Pill clase="bg-muted !py-0 !text-[10px] text-muted-foreground">
                       {p.categoria}
                     </Pill>
                   </p>
+                  </div>
                 </div>
-                <span className="shrink-0 text-right">
+                <span className="shrink-0 rounded-xl border border-primary/12 bg-primary/[0.04] px-2.5 py-1 text-right">
                   <span className="block text-sm font-bold text-primary">
                     {p.usos.toLocaleString("es-AR")}
                   </span>
@@ -2255,7 +2312,7 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
                   Asunto: <TextoConVariables texto={p.asunto} />
                 </p>
               )}
-              <p className="mt-2 flex-1 rounded-xl bg-white/80 p-2.5 text-xs leading-5">
+              <p className="mt-3 flex-1 rounded-2xl rounded-tl-md border border-primary/10 bg-gradient-to-br from-white to-primary/[0.04] p-3 text-xs leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                 <TextoConVariables texto={p.texto} />
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-primary/10 pt-2.5">
@@ -2501,8 +2558,8 @@ function CampanasBloqueadas() {
   return (
     <div className="card-grad grid min-h-64 place-items-center p-8 text-center">
       <div className="max-w-md">
-        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
-          <Lock className="size-5" />
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_12px_26px_-12px_rgba(124,58,237,0.9)]">
+          <Lock className="size-6" />
         </span>
         <p className="mt-3 text-base font-semibold">Campañas masivas</p>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -2612,23 +2669,25 @@ function Campanas({ ctx }: { ctx: Ctx }) {
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {[
-          { l: "Campañas enviadas", v: String(enviadas.length), i: Megaphone },
-          { l: "Mensajes enviados", v: totalEnviados.toLocaleString("es-AR"), i: Send },
+          { l: "Campañas enviadas", v: String(enviadas.length), g: "from-primary to-fuchsia-500", i: Megaphone },
+          { l: "Mensajes enviados", v: totalEnviados.toLocaleString("es-AR"), g: "from-sky-400 to-blue-600", i: Send },
           {
             l: "Tasa de lectura",
             v: `${totalEnviados ? Math.round((totalLeidos / totalEnviados) * 100) : 0}%`,
+            g: "from-violet-400 to-indigo-600",
             i: CheckCheck,
           },
-          { l: "Turnos generados", v: String(totalTurnos), i: CalendarCheck2 },
+          { l: "Turnos generados", v: String(totalTurnos), g: "from-emerald-400 to-teal-600", i: CalendarCheck2 },
         ].map((s) => (
-          <div key={s.l} className="card-grad flex items-start justify-between p-3.5">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <div key={s.l} className="card-grad group relative flex items-start justify-between overflow-hidden p-3.5 transition-transform duration-200 hover:-translate-y-0.5">
+            <span aria-hidden className={`pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-gradient-to-br ${s.g} opacity-[0.08] transition-transform duration-300 group-hover:scale-125`} />
+            <div className="relative">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 {s.l}
               </p>
-              <p className="mt-1 text-xl font-bold">{s.v}</p>
+              <p className="mt-1 text-2xl font-bold leading-none tracking-tight">{s.v}</p>
             </div>
-            <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className={`relative grid size-9 place-items-center rounded-xl bg-gradient-to-br ${s.g} text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)]`}>
               <s.i className="size-4" />
             </span>
           </div>
@@ -2667,13 +2726,14 @@ function Campanas({ ctx }: { ctx: Ctx }) {
               { l: "Sacaron turno", v: c.turnos, color: "from-emerald-400 to-emerald-500" },
             ];
             return (
-              <li key={c.id} className="card-grad flex flex-col p-4">
+              <li key={c.id} className="card-grad group relative flex flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_44px_-28px_rgba(124,58,237,0.7)]">
+                <span aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${c.estado === "Enviada" ? "from-emerald-400 to-teal-500" : c.estado === "Programada" ? "from-sky-400 to-blue-600" : "from-primary/40 to-fuchsia-400/40"}`} />
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 to-primary/[0.03] text-primary ring-1 ring-primary/15">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.8)]">
                     <Megaphone className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{c.nombre}</p>
+                    <p className="text-sm font-bold">{c.nombre}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-1">
                       <ChipCanal canal={c.canal} compacto />
                       <Pill
@@ -2689,7 +2749,7 @@ function Campanas({ ctx }: { ctx: Ctx }) {
                     </p>
                   </div>
                 </div>
-                <p className="mt-2 line-clamp-2 rounded-xl bg-white/80 px-2.5 py-1.5 text-xs text-muted-foreground">
+                <p className="mt-3 line-clamp-2 rounded-2xl rounded-tl-md border border-primary/10 bg-gradient-to-br from-white to-primary/[0.04] px-3 py-2 text-xs leading-5 text-muted-foreground">
                   <TextoConVariables texto={c.texto} />
                 </p>
                 {c.estado === "Enviada" ? (
@@ -2704,9 +2764,9 @@ function Campanas({ ctx }: { ctx: Ctx }) {
                               {b.v} · {pct}%
                             </span>
                           </p>
-                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary/10">
+                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-primary/10">
                             <div
-                              className={`h-full rounded-full bg-gradient-to-r ${b.color}`}
+                              className={`ce-portal-crecer h-full rounded-full bg-gradient-to-r ${b.color}`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -3096,7 +3156,7 @@ function Historial({ ctx }: { ctx: Ctx }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar paciente o mensaje"
-            className={`${INPUT} h-8 pl-8`}
+            className={`${INPUT} !h-9 !rounded-full pl-8`}
           />
         </div>
         {(
@@ -3130,7 +3190,7 @@ function Historial({ ctx }: { ctx: Ctx }) {
             aria-label={etiqueta}
             value={valor}
             onChange={(e) => (set as (v: string) => void)(e.target.value)}
-            className="h-8 rounded-full border border-border bg-background px-3 text-xs outline-none"
+            className="h-9 rounded-full border border-primary/15 bg-white px-3 text-xs font-medium outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
           >
             {opciones.map(([v, l]) => (
               <option key={v} value={v}>
@@ -3279,7 +3339,8 @@ function Canales({ ctx }: { ctx: Ctx }) {
           const c = config.canales[canal];
           const Icon = CANAL_ESTILO[canal].icon;
           return (
-            <div key={canal} className="card-grad flex flex-col p-4">
+            <div key={canal} className="card-grad relative flex flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5">
+              <span aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${CANAL_ESTILO[canal].burbuja}`} />
               <div className="flex items-start gap-3">
                 <span
                   className={`grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-md ${CANAL_ESTILO[canal].burbuja}`}
@@ -3338,13 +3399,13 @@ function Canales({ ctx }: { ctx: Ctx }) {
                 </Field>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-white/80 p-2.5">
+                <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-white to-primary/[0.04] p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Este mes
                   </p>
                   <p className="text-base font-bold">{c.enviadosMes.toLocaleString("es-AR")}</p>
                 </div>
-                <div className="rounded-xl bg-white/80 p-2.5">
+                <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-white to-primary/[0.04] p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Costo estimado
                   </p>

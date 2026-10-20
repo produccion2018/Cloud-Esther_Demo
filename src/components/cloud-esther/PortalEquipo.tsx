@@ -85,9 +85,9 @@ import {
 } from "@/lib/cloud-esther/portal-equipo-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
-import { ControlPortalPaciente } from "@/components/cloud-esther/portales/ControlPortalPaciente";
+import { PortalPacienteAdmin } from "@/components/cloud-esther/portales/PortalPacienteAdmin";
 import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
-import { storePortal } from "@/lib/cloud-esther/portal-store";
+import { puedePublicarPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { EspacioAdministrativo } from "@/components/cloud-esther/portal-equipo/EspacioAdministrativo";
 import { AyudaEsther } from "@/components/cloud-esther/esther-ai/AyudaEsther";
 import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
@@ -972,7 +972,7 @@ function AppEquipo({
                 "portal",
                 "Portal del paciente",
                 MonitorSmartphone,
-                miembro.role === "administrador" || (configPortal.publican ?? []).includes(rolPortal(miembro.role)),
+                miembro.role === "administrador" || puedePublicarPortal(configPortal, rolPortal(miembro.role), miembro.email),
               ),
               ...item("documentos", "Documentos y plantillas", FileText, puede("documentos")),
             ],
@@ -1274,12 +1274,12 @@ function AppEquipo({
           <AuditoriaPortal clinicId={clinicId} miembros={miembros} onToast={onToast} />
         )}
         {actual === "portal" && (
-          <ControlPortalPaciente
+          <PortalPacienteAdmin
             usuario={yoNombre}
             puedeConfigurar={miembro.role === "administrador" && !vista}
             puedeEnviar={
               !vista &&
-              (miembro.role === "administrador" || (configPortal.publican ?? []).includes(rolPortal(miembro.role)))
+              (miembro.role === "administrador" || puedePublicarPortal(configPortal, rolPortal(miembro.role), miembro.email))
             }
             onToast={onToast}
           />

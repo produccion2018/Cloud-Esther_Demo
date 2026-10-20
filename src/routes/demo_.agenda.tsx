@@ -814,14 +814,17 @@ function EsperaForm({
 
 function TareaForm({
   pacientes,
+  equipo = [],
   onSubmit,
   onCancel,
 }: {
   pacientes: string[];
+  equipo?: string[];
   onSubmit: (t: NuevaTarea) => void;
   onCancel: () => void;
 }) {
   const [categoria, setCategoria] = useState(CATEGORIAS_TAREA[0]);
+  const [responsable, setResponsable] = useState("");
   const [paciente, setPaciente] = useState("");
   const [texto, setTexto] = useState("");
   const [fecha, setFecha] = useState("");
@@ -834,6 +837,7 @@ function TareaForm({
       paciente: paciente.trim(),
       texto: texto.trim(),
       fecha,
+      ...(responsable ? { responsable } : {}),
     });
   };
 
@@ -881,6 +885,12 @@ function TareaForm({
           ))}
         </datalist>
       </Field>
+
+      {equipo.length > 0 && (
+        <Field label="Responsable (opcional)">
+          <SelectField value={responsable} onChange={setResponsable} options={equipo} placeholder="Sin responsable" />
+        </Field>
+      )}
 
       <FormActions submitLabel="Guardar recordatorio" onCancel={onCancel} />
     </form>
@@ -2102,7 +2112,7 @@ function AgendaInner() {
   const tareasOrdenadas = [...tareas].sort(
     (a, b) =>
       Number(a.hecha) - Number(b.hecha) ||
-      (a.fecha || "9999-99-99").localeCompare(b.fecha || "9999-99-99"),
+      (a.vence || a.fecha || "9999-99-99").localeCompare(b.vence || b.fecha || "9999-99-99"),
   );
 
   const tareasPendientes = tareas.filter((t) => !t.hecha).length;
@@ -2735,7 +2745,9 @@ function AgendaInner() {
                   ) : (
                     <ul className="space-y-2.5">
                       {tareasOrdenadas.map((t) => {
-                        const vencida = !t.hecha && !!t.fecha && t.fecha < hoy;
+                        // Fecha límite: la que puso Administración (vence) o la del recordatorio
+                        const limite = t.vence || t.fecha;
+                        const vencida = !t.hecha && !!limite && limite < hoy;
 
                         const cat = CATEGORIA_META[t.categoria] ?? CATEGORIA_DEFAULT;
 
@@ -2792,21 +2804,27 @@ function AgendaInner() {
                                   </span>
                                 )}
 
-                                {t.fecha && (
+                                {t.responsable && (
+                                  <span className="rounded-full border border-primary/15 bg-primary/[0.06] px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                                    {t.responsable}
+                                  </span>
+                                )}
+
+                                {limite && (
                                   <span
                                     className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold tabular-nums ${
                                       vencida
                                         ? "bg-destructive/10 text-destructive"
-                                        : t.fecha === hoy && !t.hecha
+                                        : limite === hoy && !t.hecha
                                           ? "bg-primary/10 text-primary"
                                           : "bg-muted text-muted-foreground"
                                     }`}
                                   >
                                     {vencida
-                                      ? `Vencido · ${formatearFecha(t.fecha)}`
-                                      : t.fecha === hoy
+                                      ? `Vencido · ${formatearFecha(limite)}`
+                                      : limite === hoy
                                         ? "Hoy"
-                                        : formatearFecha(t.fecha)}
+                                        : formatearFecha(limite)}
                                   </span>
                                 )}
                               </div>
@@ -2972,6 +2990,9 @@ function AgendaInner() {
           >
             <TareaForm
               pacientes={nombresPacientes}
+              equipo={miembros
+                .filter((m) => m.status !== "inactivo")
+                .map((m) => `${m.firstName} ${m.lastName}`.trim())}
               onSubmit={agregarTarea}
               onCancel={cerrarModal}
             />

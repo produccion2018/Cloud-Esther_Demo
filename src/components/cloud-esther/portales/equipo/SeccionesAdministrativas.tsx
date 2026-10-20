@@ -663,17 +663,29 @@ export function TareasAdministrativas({
   const [responsable, setResponsable] = useState(nombreDe(yo));
   const [vence, setVence] = useState("");
   const hoy = hoyISO();
+  // Personas a las que se puede asignar: el equipo activo + yo (sin repetir)
+  const asignables = Array.from(
+    new Set([nombreDe(yo), ...miembros.filter((m) => m.status === "activo").map((m) => nombreDe(m))]),
+  );
+  const reasignar = (id: number, quien: string, textoTarea: string) => {
+    if (vista) return;
+    setTareasStore((prev) => prev.map((x) => (x.id === id ? { ...x, responsable: quien } : x)));
+    registrarEventoEquipo(yo.id, "Reasignó una tarea", `${textoTarea} → ${quien || "sin responsable"}`);
+    onToast(quien ? `Tarea asignada a ${quien}` : "La tarea quedó sin responsable");
+  };
+  // Fecha límite: la de Administración (vence) o la del recordatorio cargado en la Agenda
+  const limiteDe = (t: (typeof tareas)[number]) => t.vence || t.fecha || "";
   const cumple = (t: (typeof tareas)[number], f: typeof filtro) =>
     f === "pendientes"
       ? !t.hecha
       : f === "vencidas"
-        ? !t.hecha && !!t.vence && t.vence < hoy
+        ? !t.hecha && !!limiteDe(t) && limiteDe(t) < hoy
         : f === "mias"
           ? !t.hecha && t.responsable === nombreDe(yo)
           : t.hecha;
   const visibles = tareas
     .filter((t) => cumple(t, filtro))
-    .sort((a, b) => (a.vence ?? "9999").localeCompare(b.vence ?? "9999"));
+    .sort((a, b) => (limiteDe(a) || "9999").localeCompare(limiteDe(b) || "9999"));
   const contar = (f: typeof filtro) => tareas.filter((t) => cumple(t, f)).length;
   const hechas = contar("hechas");
 
@@ -706,14 +718,14 @@ export function TareasAdministrativas({
                   texto: texto.trim(),
                   categoria: "Administración",
                   paciente: "",
-                  fecha: hoy,
+                  fecha: vence,
                   hecha: false,
                   responsable,
                   ...(vence ? { vence } : {}),
                 },
                 ...prev,
               ]);
-              registrarEventoEquipo(yo.id, "Creó una tarea", `${texto.trim()} → ${responsable}`);
+              registrarEventoEquipo(yo.id, "Creó una tarea", `${texto.trim()} → ${responsable || "sin responsable"}`);
               setTexto("");
               setVence("");
               onToast("Tarea creada");
@@ -721,11 +733,12 @@ export function TareasAdministrativas({
           >
             <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="¿Qué hay que hacer?" className={INPUT} />
             <select value={responsable} onChange={(e) => setResponsable(e.target.value)} className={INPUT} aria-label="Responsable">
-              {miembros
-                .filter((m) => m.status === "activo")
-                .map((m) => (
-                  <option key={m.id}>{nombreDe(m)}</option>
-                ))}
+              {asignables.map((n) => (
+                <option key={n} value={n}>
+                  {n === nombreDe(yo) ? `${n} (yo)` : n}
+                </option>
+              ))}
+              <option value="">Sin responsable</option>
             </select>
             <input type="date" value={vence} onChange={(e) => setVence(e.target.value)} className={INPUT} aria-label="Vence" />
             <button type="submit" disabled={!texto.trim()} className="btn-ce !min-h-11 justify-center disabled:opacity-50">
@@ -754,8 +767,9 @@ export function TareasAdministrativas({
         ) : (
           <ul className="space-y-2">
             {visibles.map((t) => {
-              const vencida = !t.hecha && !!t.vence && t.vence < hoy;
-              const venceHoy = !t.hecha && t.vence === hoy;
+              const limite = limiteDe(t);
+              const vencida = !t.hecha && !!limite && limite < hoy;
+              const venceHoy = !t.hecha && limite === hoy;
               return (
                 <li
                   key={t.id}
@@ -767,9 +781,11 @@ export function TareasAdministrativas({
                     type="button"
                     aria-label={t.hecha ? "Marcar pendiente" : "Marcar hecha"}
                     disabled={vista}
-                    onClick={() =>
-                      setTareasStore((prev) => prev.map((x) => (x.id === t.id ? { ...x, hecha: !x.hecha } : x)))
-                    }
+                    onClick={() => {
+                      setTareasStore((prev) => prev.map((x) => (x.id === t.id ? { ...x, hecha: !x.hecha } : x)));
+                      registrarEventoEquipo(yo.id, t.hecha ? "Reabrió una tarea" : "Completó una tarea", t.texto);
+                      onToast(t.hecha ? "La tarea volvió a pendientes" : "¡Tarea completada!");
+                    }}
                     className={`grid size-9 shrink-0 place-items-center rounded-xl border-2 transition ${
                       t.hecha
                         ? "border-transparent bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-[0_8px_18px_-8px_rgba(16,185,129,0.8)]"
@@ -781,25 +797,45 @@ export function TareasAdministrativas({
                   <span className="min-w-0 flex-1">
                     <span className={`block text-sm ${t.hecha ? "text-muted-foreground line-through" : "font-semibold"}`}>{t.texto}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                      {t.responsable ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <AvatarPortal nombre={t.responsable} tam="sm" className="!size-5 !rounded-md !text-[8px]" />
-                          {t.responsable}
-                        </span>
+                      {t.responsable && <AvatarPortal nombre={t.responsable} tam="sm" className="!size-5 !rounded-md !text-[8px]" />}
+                      {puedeCrear && !vista && !t.hecha ? (
+                        // Reasignar en el momento (o dejarla sin responsable)
+                        <select
+                          value={t.responsable ?? ""}
+                          onChange={(e) => reasignar(t.id, e.target.value, t.texto)}
+                          aria-label={`Responsable de «${t.texto}»`}
+                          className="h-7 max-w-[11rem] cursor-pointer rounded-full border border-primary/15 bg-card px-2 text-[11px] font-semibold text-foreground/80 outline-none transition hover:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                        >
+                          <option value="">Sin responsable</option>
+                          {Array.from(new Set([...(t.responsable ? [t.responsable] : []), ...asignables])).map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
-                        "Sin responsable"
+                        <span>{t.responsable || "Sin responsable"}</span>
+                      )}
+                      {!t.responsable && !t.hecha && !vista && (
+                        <button
+                          type="button"
+                          onClick={() => reasignar(t.id, nombreDe(yo), t.texto)}
+                          className="rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-2.5 py-0.5 text-[10.5px] font-bold text-white shadow-[0_6px_14px_-8px_rgba(124,58,237,0.9)]"
+                        >
+                          Me la quedo
+                        </button>
                       )}
                       {t.paciente && <span>· {t.paciente}</span>}
                     </span>
                   </span>
-                  {t.vence && (
+                  {limite && (
                     <span
                       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
                         vencida ? "bg-rose-500 text-white" : venceHoy ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"
                       }`}
                     >
                       <CalendarClock className="size-3" />
-                      {vencida ? "Vencida" : venceHoy ? "Hoy" : fechaCorta(t.vence)}
+                      {vencida ? "Vencida" : venceHoy ? "Hoy" : fechaCorta(limite)}
                     </span>
                   )}
                   {puedeEliminar && (
@@ -807,7 +843,12 @@ export function TareasAdministrativas({
                       type="button"
                       aria-label="Eliminar"
                       disabled={vista}
-                      onClick={() => setTareasStore((prev) => prev.filter((x) => x.id !== t.id))}
+                      onClick={() => {
+                        if (!window.confirm(`¿Eliminar la tarea «${t.texto}»?`)) return;
+                        setTareasStore((prev) => prev.filter((x) => x.id !== t.id));
+                        registrarEventoEquipo(yo.id, "Eliminó una tarea", t.texto);
+                        onToast("Tarea eliminada");
+                      }}
                       className="grid size-9 place-items-center rounded-xl text-muted-foreground opacity-60 transition hover:bg-rose-50 hover:text-destructive group-hover:opacity-100"
                     >
                       <Trash2 className="size-4" />

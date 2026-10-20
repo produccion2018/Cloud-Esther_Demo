@@ -13,7 +13,9 @@ import {
   CreditCard,
   Download,
   Eye,
+  EyeOff,
   FileText,
+  Lock,
   Home,
   Landmark,
   LogOut,
@@ -62,6 +64,9 @@ import {
   storePortal,
   type DocSolicitada,
   clavePublicacion,
+  credencialPortalValida,
+  nuevaClavePortal,
+  problemaClavePortal,
   type SeccionPortalPaciente,
   type TipoPublicable,
 } from "@/lib/cloud-esther/portal-store";
@@ -412,6 +417,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
   const { accesos } = storePortal.usar();
   const [usuario, setUsuario] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState("");
   const [aviso, setAviso] = useState("");
   const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
@@ -437,7 +443,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
     setAviso(`Te enviamos el código a ${oculto}. (Código de práctica: ${a.codigo})`);
   };
 
-  const ingresar = (e: FormEvent) => {
+  const ingresar = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     const p = buscar();
@@ -445,8 +451,13 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
     const a = accesos[p.id];
     if (!a || a.estado === "Revocado")
       return setError("Tu acceso al portal no está habilitado. Comunicate con la clínica.");
-    if (codigo.trim() !== a.codigo)
-      return setError("El código no es correcto. Revisá el correo o pedí uno nuevo.");
+    // Vale el código de la clínica o la contraseña que creó el paciente
+    if (!(await credencialPortalValida(a, codigo)))
+      return setError(
+        a.clave
+          ? "El código o la contraseña no son correctos. Si la olvidaste, pedí un código nuevo."
+          : "El código no es correcto. Revisá el correo o pedí uno nuevo.",
+      );
     setPortal("accesos", (prev) => ({
       ...prev,
       [p.id]: {
@@ -508,14 +519,25 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
                 placeholder="Ej: 95193944"
               />
             </Field>
-            <Field label="Código de acceso">
-              <input
-                inputMode="numeric"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className={`${INPUT} tracking-[0.4em]`}
-                placeholder="••••••"
-              />
+            <Field label="Código de acceso o contraseña">
+              <span className="relative block">
+                <input
+                  type={verClave ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.slice(0, 64))}
+                  className={`${INPUT} pr-10`}
+                  placeholder="Código de 6 números o tu contraseña"
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerClave((v) => !v)}
+                  aria-label={verClave ? "Ocultar" : "Mostrar"}
+                  className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:text-primary"
+                >
+                  {verClave ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </span>
             </Field>
             <button
               type="button"
@@ -538,8 +560,8 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
             </button>
           </form>
           <p className="mt-6 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ShieldCheck className="size-3.5 text-emerald-600" /> Sin contraseñas: cada ingreso usa
-            un código de tu clínica.
+            <ShieldCheck className="size-3.5 text-emerald-600" /> Entrás con el código de tu clínica o
+            con la contraseña que creaste en «Mis datos».
           </p>
           <p className="mt-8 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
             Para practicar: DNI <b>95193944</b> (Mauro Pinto) y el código que muestra “Recibir el
@@ -566,6 +588,8 @@ type Ctx = {
   clinica: string;
   onToast: (m: string) => void;
   ir: (s: Seccion) => void;
+  /** La clínica mirando el portal como el paciente (no se puede cambiar la contraseña) */
+  vista: boolean;
 };
 
 function PortalInner({
@@ -643,6 +667,7 @@ function PortalInner({
     turnos: todosTurnos.filter((t) => t.paciente === nombre),
     clinica,
     onToast,
+    vista: modo === "vista",
     ir: (s) => {
       setSeccion(s);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2697,6 +2722,106 @@ function Perfil({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       </div>
+      <SeguridadPaciente ctx={ctx} />
     </div>
+  );
+}
+
+/* Seguridad: el paciente crea o cambia su contraseña del portal.
+   Se guarda solo la huella (SHA-256 con sal), nunca el texto. Si la olvida, la clínica le
+   manda un código nuevo y la contraseña se blanquea. */
+function SeguridadPaciente({ ctx }: { ctx: Ctx }) {
+  const { accesos } = storePortal.usar();
+  const a = accesos[ctx.paciente.id];
+  const [actual, setActual] = useState("");
+  const [nueva, setNueva] = useState("");
+  const [repetir, setRepetir] = useState("");
+  const [ver, setVer] = useState(false);
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const problema = nueva ? problemaClavePortal(nueva) : "";
+  const fuerza = !nueva ? 0 : Math.min(4, (nueva.length >= 8 ? 1 : 0) + (/[a-z]/.test(nueva) && /[A-Z]/.test(nueva) ? 1 : 0) + (/\d/.test(nueva) ? 1 : 0) + (/[^a-zA-Z0-9]/.test(nueva) ? 1 : 0));
+  if (!a) return null;
+
+  const guardar = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (ctx.vista) return setError("Vista de la clínica: solo el paciente puede cambiar su contraseña.");
+    if (!(await credencialPortalValida(a, actual)))
+      return setError(a.clave ? "Tu contraseña actual (o el código) no es correcta." : "El código actual no es correcto.");
+    const p = problemaClavePortal(nueva);
+    if (p) return setError(p);
+    if (nueva !== repetir) return setError("Las contraseñas no coinciden.");
+    setGuardando(true);
+    try {
+      const clave = await nuevaClavePortal(nueva);
+      setPortal("accesos", (prev) => (prev[ctx.paciente.id] ? { ...prev, [ctx.paciente.id]: { ...prev[ctx.paciente.id]!, clave } } : prev));
+      registrarEventoPortal(ctx.paciente.id, "Contraseña cambiada", a.clave ? "Cambió su contraseña" : "Creó su contraseña");
+      setActual("");
+      setNueva("");
+      setRepetir("");
+      ctx.onToast(a.clave ? "Contraseña cambiada" : "¡Listo! Ya podés entrar con tu contraseña");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const campo = (label: string, valor: string, set: (v: string) => void, auto: string) => (
+    <Field label={label}>
+      <input
+        type={ver ? "text" : "password"}
+        autoComplete={auto}
+        value={valor}
+        onChange={(e) => set(e.target.value.slice(0, 64))}
+        disabled={ctx.vista}
+        className={INPUT}
+      />
+    </Field>
+  );
+
+  return (
+    <form onSubmit={guardar} className="card-grad overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 border-b border-primary/10 bg-gradient-to-r from-primary/[0.07] via-fuchsia-500/[0.04] to-transparent p-5">
+        <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.85)]">
+          <Lock className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-semibold">{a.clave ? "Cambiar mi contraseña" : "Crear mi contraseña"}</p>
+          <p className="text-xs text-muted-foreground">
+            {a.clave
+              ? `Última vez: ${formatearFecha(a.clave.fecha.slice(0, 10))}. También podés seguir entrando con un código de la clínica.`
+              : "Así no necesitás pedir un código cada vez que entrás."}
+          </p>
+        </div>
+        <button type="button" onClick={() => setVer((v) => !v)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+          {ver ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />} {ver ? "Ocultar" : "Mostrar"}
+        </button>
+      </div>
+      <div className="grid gap-3 p-5 sm:grid-cols-3">
+        {campo(a.clave ? "Contraseña actual (o código)" : "Código de acceso actual", actual, setActual, "current-password")}
+        {campo("Nueva contraseña", nueva, setNueva, "new-password")}
+        {campo("Repetir la nueva", repetir, setRepetir, "new-password")}
+        <div className="sm:col-span-3">
+          <div className="flex gap-1" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={`h-1.5 flex-1 rounded-full transition-colors ${i < fuerza ? (fuerza <= 1 ? "bg-rose-400" : fuerza === 2 ? "bg-amber-400" : "bg-gradient-to-r from-emerald-400 to-teal-500") : "bg-primary/10"}`}
+              />
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            {problema || "Mínimo 8 caracteres, con letras y números. No la compartas con nadie: la clínica nunca te la va a pedir."}
+          </p>
+        </div>
+        {error && <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive sm:col-span-3">{error}</p>}
+        <div className="flex justify-end sm:col-span-3">
+          <button type="submit" disabled={ctx.vista || guardando || !actual || !nueva || !repetir} className={BTN_PRIMARIO}>
+            <KeyRound className="size-4" />
+            {a.clave ? "Cambiar contraseña" : "Crear contraseña"}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }

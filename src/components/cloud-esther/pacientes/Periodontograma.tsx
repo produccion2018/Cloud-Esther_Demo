@@ -1,8 +1,51 @@
-import { useMemo, useState } from "react";
-import { Activity, ArrowDownRight, ArrowUpRight, Copy, Droplets, Lock, Minus, Plus, Sparkles } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Activity, ArrowDownRight, ArrowUpRight, Copy, Lock, Minus, Plus, Sparkles } from "lucide-react";
 
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
+
+// La boca 3D realista se descarga solo en el cliente, cuando se muestra (igual que el odontograma):
+// así three.js no entra al paquete del servidor (SSR).
+const BocaRealista = lazy(() =>
+  import("@/components/odontograma-realista/BocaRealista").then((m) => ({ default: m.BocaRealista })),
+);
+
+// Cordales (terceros molares): no están en el modelo 3D, se editan con botones aparte.
+const SIN_3D = [18, 28, 38, 48] as const;
+
+/** Color de una pieza según su peor sondaje / estado periodontal, para pintarla en la boca 3D. */
+function colorPerio(p: Pieza | undefined): string {
+  if (!p) return "#ffffff";
+  if (p.ausente) return "#cbd5e1"; // gris: ausente
+  if (p.implante) return "#38bdf8"; // celeste: implante
+  const peor = Math.max(0, ...[...p.v, ...p.p].map((s) => s.ps ?? 0));
+  const sangra = [...p.v, ...p.p].some((s) => s.sangrado);
+  if (peor >= 6) return "#ef4444"; // rojo: bolsa severa
+  if (peor >= 4) return "#f59e0b"; // ámbar: bolsa moderada
+  if (peor > 0 || sangra) return "#34d399"; // verde: con datos / leve
+  return "#ffffff"; // sin datos
+}
+
+/** Leyenda de colores del periodontograma 3D. */
+function LeyendaPerio() {
+  const items: [string, string][] = [
+    ["#34d399", "Sano / leve"],
+    ["#f59e0b", "≥ 4 mm"],
+    ["#ef4444", "≥ 6 mm"],
+    ["#38bdf8", "Implante"],
+    ["#cbd5e1", "Ausente"],
+  ];
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-foreground/80">
+      {items.map(([c, l]) => (
+        <span key={l} className="inline-flex items-center gap-1.5">
+          <span className="size-3 rounded-full ring-1 ring-black/10" style={{ background: c }} />
+          {l}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 /* Ubicación: src/components/cloud-esther/pacientes/Periodontograma.tsx
    PERIODONTOGRAMA (desde el plan Pro): registro gráfico por pieza y por sitio (distal, medio y
@@ -100,7 +143,7 @@ export function PeriodontogramaSec({
     [datos.periodontograma],
   );
   const [actualId, setActualId] = useState<number | null>(evaluaciones[0]?.id ?? null);
-  const [cara, setCara] = useState<"v" | "p">("v");
+  const [seleccion, setSeleccion] = useState<number | null>(null);
   const actual = evaluaciones.find((e) => e.id === actualId) ?? evaluaciones[0];
   const anterior = actual ? evaluaciones[evaluaciones.indexOf(actual) + 1] : undefined;
 
@@ -167,8 +210,16 @@ export function PeriodontogramaSec({
   const ind = indices(actual);
   const indAnt = anterior ? indices(anterior) : null;
   const pieza = (n: number) => actual.piezas[n] ?? piezaVacia();
-  const cambiarPieza = (n: number, fn: (p: Pieza) => Pieza) =>
-    guardar({ ...actual, piezas: { ...actual.piezas, [n]: fn(JSON.parse(JSON.stringify(pieza(n))) as Pieza) } });
+  // Color de cada pieza de la boca 3D según su estado periodontal (las cordales van aparte).
+  const estadosPerio = useMemo(() => {
+    const out: Record<number, string> = {};
+    for (const n of [...SUP, ...INF]) {
+      if ((SIN_3D as readonly number[]).includes(n)) continue;
+      const c = colorPerio(actual.piezas[n]);
+      if (c !== "#ffffff") out[n] = c;
+    }
+    return out;
+  }, [actual]);
 
   return (
     <div className="space-y-4">
@@ -268,52 +319,73 @@ export function PeriodontogramaSec({
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex gap-1 rounded-2xl border border-primary/10 bg-card p-1" role="tablist">
-          {(
-            [
-              ["v", "Vestibular"],
-              ["p", "Palatino / Lingual"],
-            ] as const
-          ).map(([id, l]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={cara === id}
-              onClick={() => setCara(id)}
-              className={`min-h-9 rounded-xl px-3.5 text-[13px] font-semibold transition ${cara === id ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {l}
-            </button>
-          ))}
+      {/* Boca 3D realista (misma del odontograma) + edición periodontal de la pieza elegida */}
+      <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Suspense
+          fallback={
+            <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
+              Cargando el modelo 3D…
+            </div>
+          }
+        >
+          <BocaRealista
+            key={`perio-${actual.id}`}
+            pacienteNombre={contexto?.paciente}
+            estados={estadosPerio}
+            selected={seleccion}
+            onSeleccion={setSeleccion}
+            mostrarInfo={false}
+            leyenda={<LeyendaPerio />}
+          />
+        </Suspense>
+
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-primary/10 bg-card p-2.5">
+            <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              Cordales (sin vista 3D)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {SIN_3D.map((n) => {
+                const activa = seleccion === n;
+                const c = colorPerio(actual.piezas[n]);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setSeleccion(n)}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-bold tabular-nums transition ${
+                      activa
+                        ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white"
+                        : "border border-primary/15 bg-card hover:border-primary/35"
+                    }`}
+                  >
+                    <span className="size-2.5 rounded-full ring-1 ring-black/10" style={{ background: c }} />
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {seleccion != null ? (
+            <PeriodonciaPieza
+              fdi={seleccion}
+              evaluaciones={datos.periodontograma}
+              cambiar={(fn) => cambiar("periodontograma", fn)}
+              profesional={actual.profesional}
+              onToast={onToast}
+            />
+          ) : (
+            <div className="grid min-h-[220px] place-items-center rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-4 text-center text-sm text-muted-foreground">
+              Tocá una pieza en la boca 3D (o una cordal de arriba) para cargar su sondaje, margen, sangrado, placa, movilidad y furca.
+            </div>
+          )}
         </div>
-        <p className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-4 bg-rose-500" /> Margen (MG)</span>
-          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-4 bg-sky-500" /> Fondo del surco</span>
-          <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-full bg-rose-500" /> Sangrado</span>
-          <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-full bg-amber-400" /> Placa</span>
-        </p>
       </div>
 
-      {(
-        [
-          ["Maxilar superior", SUP],
-          ["Maxilar inferior", INF],
-        ] as const
-      ).map(([titulo, arco]) => (
-        <Arco
-          key={titulo}
-          titulo={titulo}
-          arco={arco}
-          cara={cara}
-          pieza={pieza}
-          cambiarPieza={cambiarPieza}
-        />
-      ))}
       <p className="flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
-        Sitios de cada cara: distal · medio · mesial. MG negativo = recesión. NIC = PS − MG. Tocá el número de la pieza para marcarla ausente o como implante.
+        La boca 3D pinta cada pieza según su estado periodontal. Elegí una pieza para cargar sus sitios (distal · medio · mesial por cara), sangrado, placa, movilidad y furca. NIC = PS − MG; MG negativo = recesión.
       </p>
     </div>
   );
@@ -334,253 +406,6 @@ function Cabecera({ contexto }: { contexto?: ContextoPaciente | undefined }) {
         </div>
       </div>
     </div>
-  );
-}
-
-const ANCHO = 52; // ancho de cada pieza en el gráfico
-const ESCALA = 6; // px por mm
-
-function Arco({
-  titulo,
-  arco,
-  cara,
-  pieza,
-  cambiarPieza,
-}: {
-  titulo: string;
-  arco: readonly number[];
-  cara: "v" | "p";
-  pieza: (n: number) => Pieza;
-  cambiarPieza: (n: number, fn: (p: Pieza) => Pieza) => void;
-}) {
-  const inferior = arco[0]! > 30;
-  const altoG = 120;
-  const base = inferior ? 40 : altoG - 40; // línea del límite amelocementario
-  const dir = inferior ? 1 : -1; // hacia dónde crece la raíz en el dibujo
-  // Puntos del gráfico: margen (MG) y fondo del surco (MG − PS)
-  const puntos = arco.flatMap((n, i) =>
-    pieza(n)[cara].map((s, j) => {
-      const x = i * ANCHO + 10 + j * ((ANCHO - 20) / 2);
-      const mg = s.mg ?? 0;
-      const fondo = mg - (s.ps ?? 0);
-      return { x, ym: base - dir * mg * ESCALA, yf: base - dir * fondo * ESCALA, ausente: pieza(n).ausente };
-    }),
-  );
-  const linea = (k: "ym" | "yf") =>
-    puntos.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p[k].toFixed(1)}`).join(" ");
-  const fila = "grid items-center gap-0" as const;
-  const cols = { gridTemplateColumns: `92px repeat(${arco.length}, ${ANCHO}px)` };
-  const num = (v: number | null) => (v == null ? "" : String(v));
-  const leer = (t: string): number | null => {
-    if (t.trim() === "" || t === "-") return null;
-    const n = Math.round(Number(t));
-    return Number.isFinite(n) ? Math.max(-15, Math.min(15, n)) : null;
-  };
-  const etiqueta = "pr-2 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground";
-  const celda = "mx-auto h-7 w-[15px] rounded-md border border-primary/12 bg-card p-0 text-center text-[11px] font-semibold tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/25";
-
-  const filaSitios = (label: string, campo: "ps" | "mg") => (
-    <div className={fila} style={cols}>
-      <span className={etiqueta}>{label}</span>
-      {arco.map((n) => {
-        const p = pieza(n);
-        return (
-          <span key={n} className={`flex justify-center gap-[2px] ${p.ausente ? "opacity-25" : ""}`}>
-            {p[cara].map((s, j) => (
-              <input
-                key={j}
-                inputMode="numeric"
-                disabled={p.ausente}
-                aria-label={`${label} pieza ${n} sitio ${["distal", "medio", "mesial"][j]}`}
-                value={num(s[campo])}
-                onChange={(e) =>
-                  cambiarPieza(n, (x) => {
-                    x[cara][j]![campo] = leer(e.target.value);
-                    return x;
-                  })
-                }
-                className={`${celda} ${campo === "ps" && (s.ps ?? 0) >= 6 ? "!border-rose-400 !bg-rose-50 text-rose-700" : campo === "ps" && (s.ps ?? 0) >= 4 ? "!border-amber-300 !bg-amber-50 text-amber-700" : ""}`}
-              />
-            ))}
-          </span>
-        );
-      })}
-    </div>
-  );
-
-  const filaPuntos = (label: string, campo: "sangrado" | "placa") => (
-    <div className={fila} style={cols}>
-      <span className={etiqueta}>{label}</span>
-      {arco.map((n) => {
-        const p = pieza(n);
-        return (
-          <span key={n} className={`flex justify-center gap-[3px] ${p.ausente ? "opacity-25" : ""}`}>
-            {p[cara].map((s, j) => (
-              <button
-                key={j}
-                type="button"
-                disabled={p.ausente}
-                aria-pressed={s[campo]}
-                aria-label={`${label} pieza ${n} sitio ${j + 1}`}
-                onClick={() =>
-                  cambiarPieza(n, (x) => {
-                    x[cara][j]![campo] = !x[cara][j]![campo];
-                    return x;
-                  })
-                }
-                className={`size-3.5 rounded-full border transition ${
-                  s[campo]
-                    ? campo === "sangrado"
-                      ? "border-rose-500 bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.7)]"
-                      : "border-amber-400 bg-amber-400"
-                    : "border-primary/25 bg-card hover:border-primary"
-                }`}
-              />
-            ))}
-          </span>
-        );
-      })}
-    </div>
-  );
-
-  const filaNumero = (label: string, campo: "movilidad" | "furca") => (
-    <div className={fila} style={cols}>
-      <span className={etiqueta}>{label}</span>
-      {arco.map((n) => {
-        const p = pieza(n);
-        const aplica = campo === "movilidad" || MOLARES.has(n);
-        return (
-          <span key={n} className="flex justify-center">
-            {aplica && !p.ausente ? (
-              <button
-                type="button"
-                onClick={() => cambiarPieza(n, (x) => ({ ...x, [campo]: (x[campo] + 1) % 4 }))}
-                aria-label={`${label} pieza ${n}: ${p[campo]}`}
-                className={`h-6 min-w-8 rounded-lg text-[11px] font-bold tabular-nums transition ${p[campo] ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white" : "bg-muted text-muted-foreground hover:bg-primary/10"}`}
-              >
-                {p[campo]}
-              </button>
-            ) : (
-              <span className="text-[10px] text-muted-foreground/40">—</span>
-            )}
-          </span>
-        );
-      })}
-    </div>
-  );
-
-  return (
-    <section className="overflow-hidden rounded-3xl border border-primary/12 bg-card shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)]">
-      <div className="flex items-center justify-between border-b border-primary/10 px-4 py-2.5">
-        <p className="font-display text-sm font-bold">{titulo}</p>
-        <p className="text-[11px] text-muted-foreground">{cara === "v" ? "Cara vestibular" : inferior ? "Cara lingual" : "Cara palatina"}</p>
-      </div>
-      <div className="overflow-x-auto p-3">
-        <div className="space-y-1.5" style={{ width: 92 + arco.length * ANCHO }}>
-          {/* Números de pieza (tocar: presente → ausente → implante) */}
-          <div className={fila} style={cols}>
-            <span className={etiqueta}>Pieza</span>
-            {arco.map((n) => {
-              const p = pieza(n);
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  title="Tocá para marcar ausente o implante"
-                  onClick={() =>
-                    cambiarPieza(n, (x) =>
-                      !x.ausente && !x.implante
-                        ? { ...x, ausente: true }
-                        : x.ausente
-                          ? { ...x, ausente: false, implante: true }
-                          : { ...x, implante: false },
-                    )
-                  }
-                  className={`mx-auto grid h-7 w-11 place-items-center rounded-lg text-xs font-bold tabular-nums transition ${
-                    p.ausente
-                      ? "bg-muted text-muted-foreground line-through"
-                      : p.implante
-                        ? "bg-gradient-to-r from-sky-500 to-indigo-500 text-white"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
-                  }`}
-                >
-                  {p.implante ? `${n}·I` : n}
-                </button>
-              );
-            })}
-          </div>
-          {filaNumero("Movilidad", "movilidad")}
-          {filaNumero("Furca", "furca")}
-          {filaPuntos("Sangrado", "sangrado")}
-          {filaPuntos("Placa", "placa")}
-          {filaSitios("MG", "mg")}
-          {filaSitios("PS", "ps")}
-          {/* NIC calculado */}
-          <div className={fila} style={cols}>
-            <span className={etiqueta}>NIC</span>
-            {arco.map((n) => {
-              const p = pieza(n);
-              return (
-                <span key={n} className={`flex justify-center gap-[2px] ${p.ausente ? "opacity-25" : ""}`}>
-                  {p[cara].map((s, j) => {
-                    const nic = s.ps == null ? null : s.ps - (s.mg ?? 0);
-                    return (
-                      <span
-                        key={j}
-                        className={`grid h-6 w-[15px] place-items-center rounded text-[10.5px] font-bold tabular-nums ${nic == null ? "text-muted-foreground/40" : nic >= 5 ? "bg-rose-100 text-rose-700" : nic >= 3 ? "bg-amber-100 text-amber-700" : "text-foreground/70"}`}
-                      >
-                        {nic ?? "·"}
-                      </span>
-                    );
-                  })}
-                </span>
-              );
-            })}
-          </div>
-          {/* Gráfico */}
-          <div className={fila} style={cols}>
-            <span className={etiqueta}>
-              <Droplets className="ml-auto size-3.5 text-primary" />
-            </span>
-            <svg
-              width={arco.length * ANCHO}
-              height={altoG}
-              className="rounded-2xl bg-gradient-to-b from-primary/[0.03] to-transparent"
-              style={{ gridColumn: "2 / -1" }}
-              role="img"
-              aria-label={`Gráfico de ${titulo}`}
-            >
-              {/* Guías cada 2 mm */}
-              {Array.from({ length: 9 }, (_, k) => k - 4).map((k) => (
-                <line key={k} x1={0} x2={arco.length * ANCHO} y1={base - dir * k * 2 * ESCALA} y2={base - dir * k * 2 * ESCALA} stroke="currentColor" className={k === 0 ? "text-foreground/30" : "text-border"} strokeDasharray={k === 0 ? "" : "2 4"} />
-              ))}
-              {/* Silueta de cada pieza */}
-              {arco.map((n, i) => {
-                const p = pieza(n);
-                const x = i * ANCHO;
-                const corona = inferior ? `M${x + 10},${base} Q${x + ANCHO / 2},${base - 30} ${x + ANCHO - 10},${base}` : `M${x + 10},${base} Q${x + ANCHO / 2},${base + 30} ${x + ANCHO - 10},${base}`;
-                const raiz = inferior
-                  ? `M${x + 12},${base} L${x + ANCHO / 2 - 3},${base + 70} L${x + ANCHO / 2 + 3},${base + 70} L${x + ANCHO - 12},${base}`
-                  : `M${x + 12},${base} L${x + ANCHO / 2 - 3},${base - 70} L${x + ANCHO / 2 + 3},${base - 70} L${x + ANCHO - 12},${base}`;
-                return (
-                  <g key={n} opacity={p.ausente ? 0.15 : 1}>
-                    <path d={raiz} fill={p.implante ? "rgba(99,102,241,0.18)" : "rgba(124,58,237,0.06)"} stroke="rgba(124,58,237,0.25)" />
-                    <path d={corona} fill="rgba(124,58,237,0.08)" stroke="rgba(124,58,237,0.3)" />
-                  </g>
-                );
-              })}
-              {/* Bolsa: área entre margen y fondo */}
-              <path
-                d={`${linea("ym")} ${[...puntos].reverse().map((p) => `L${p.x.toFixed(1)},${p.yf.toFixed(1)}`).join(" ")} Z`}
-                fill="rgba(14,165,233,0.16)"
-              />
-              <path d={linea("ym")} fill="none" stroke="#f43f5e" strokeWidth={2} strokeLinejoin="round" />
-              <path d={linea("yf")} fill="none" stroke="#0ea5e9" strokeWidth={2} strokeLinejoin="round" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 

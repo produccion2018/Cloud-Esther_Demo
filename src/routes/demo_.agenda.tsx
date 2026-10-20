@@ -1315,17 +1315,22 @@ function DiaTimeline({
       <div className="mb-4 grid grid-cols-3 gap-2">
         {(
           [
-            ["Turnos", activos, "en el día"],
-            ["Libres", libres.length, "para agendar"],
-            ["Ocupación", `${ocupacion}%`, "de la jornada"],
+            ["Turnos", activos, "en el día", CalendarDays, "from-primary to-fuchsia-500", "text-primary"],
+            ["Libres", libres.length, "para agendar", Clock, "from-emerald-400 to-teal-600", "text-emerald-600"],
+            ["Ocupación", `${ocupacion}%`, "de la jornada", CalendarCheck, "from-amber-400 to-orange-500", "text-amber-600"],
           ] as const
-        ).map(([l, v, s]) => (
+        ).map(([l, v, s, I, grad, val]) => (
           <div
             key={l}
-            className="rounded-2xl border border-primary/12 bg-gradient-to-br from-white to-primary/[0.05] px-3 py-2.5 dark:from-card"
+            className="group relative overflow-hidden rounded-2xl border border-primary/12 bg-gradient-to-br from-white to-primary/[0.04] px-3 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-22px_rgba(124,58,237,0.7)] dark:from-card"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">{l}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{v}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-muted-foreground">{l}</p>
+              <span className={`grid size-6 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white shadow-[0_6px_12px_-6px_rgba(0,0,0,0.4)] ${grad}`}>
+                <I className="size-3" />
+              </span>
+            </div>
+            <p className={`mt-0.5 text-xl font-bold tabular-nums ${val}`}>{v}</p>
             <p className="text-[10.5px] text-muted-foreground">{s}</p>
           </div>
         ))}

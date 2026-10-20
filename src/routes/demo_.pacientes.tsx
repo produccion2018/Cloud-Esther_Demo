@@ -1004,6 +1004,7 @@ const STAT_TONES: Record<
     icon: "text-primary",
     circle: "bg-primary/[0.075]",
     trend: "text-primary",
+    grad: "from-primary to-fuchsia-500",
   },
   emerald: {
     label: "text-emerald-600/85",
@@ -1011,6 +1012,7 @@ const STAT_TONES: Record<
     icon: "text-emerald-600",
     circle: "bg-emerald-400/[0.075]",
     trend: "text-emerald-600",
+    grad: "from-emerald-400 to-teal-600",
   },
   violet: {
     label: "text-violet-600/80",
@@ -1018,6 +1020,7 @@ const STAT_TONES: Record<
     icon: "text-violet-600",
     circle: "bg-violet-400/[0.075]",
     trend: "text-emerald-600",
+    grad: "from-violet-400 to-indigo-600",
   },
   danger: {
     label: "text-violet-600/80",
@@ -1025,6 +1028,7 @@ const STAT_TONES: Record<
     icon: "text-slate-500",
     circle: "bg-violet-400/[0.075]",
     trend: "text-red-500",
+    grad: "from-rose-400 to-pink-600",
   },
 };
 
@@ -1070,9 +1074,9 @@ function StatCard({
         </div>
 
         <div
-          className={`relative grid size-9 shrink-0 place-items-center rounded-full ${t.circle} ${t.icon}`}
+          className={`relative grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${t.grad}`}
         >
-          <Icon className="size-4" strokeWidth={1.7} />
+          <Icon className="size-4" strokeWidth={1.8} />
         </div>
       </div>
     </div>

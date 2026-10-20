@@ -67,7 +67,7 @@ import {
 
 /* Ubicación: src/components/cloud-esther/automatizaciones/Automatizaciones.tsx
    Automatizaciones con n8n (plan Enterprise). Cloud Esther emite eventos, n8n orquesta el
-   flujo, Esther IA analiza y redacta, y el resultado vuelve a Cloud Esther. n8n no reemplaza
+   flujo, Esther Infinity analiza y redacta, y el resultado vuelve a Cloud Esther. n8n no reemplaza
    a la IA: la usa como un paso más. Todo queda separado por empresa y registrado. */
 
 function M(props: Parameters<typeof ModalBase>[0]) {
@@ -89,7 +89,7 @@ const ICONO: Record<TipoPaso, LucideIcon> = {
 };
 /** Color por responsable: la IA con el degradé de marca, n8n y Cloud Esther con tonos suaves. */
 const QUIEN: Record<string, { nodo: string; pill: string }> = {
-  "Esther IA": {
+  "Esther Infinity": {
     nodo: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
     pill: "bg-primary/10 text-primary",
   },
@@ -176,7 +176,7 @@ export function Automatizaciones() {
       l: "Acciones realizadas",
       v: String(acciones.length),
       s1: `${acciones.filter((p) => p.tipo === "ia").length}`,
-      s2: "con Esther IA",
+      s2: "con Esther Infinity",
       i: Zap,
     },
     {
@@ -265,7 +265,7 @@ export function Automatizaciones() {
                   Automatizaciones
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                  Cloud Esther emite el evento, n8n ejecuta el flujo y Esther IA analiza o redacta
+                  Cloud Esther emite el evento, n8n ejecuta el flujo y Esther Infinity analiza o redacta
                   en cada paso. El resultado vuelve a la ficha del paciente, la Agenda o
                   Notificaciones.
                 </p>
@@ -525,7 +525,7 @@ function Flujos({
           <ul className="mt-2 space-y-2">
             {(
               [
-                ["Esther IA", Sparkles, "Analiza, prioriza y redacta"],
+                ["Esther Infinity", Sparkles, "Analiza, prioriza y redacta"],
                 ["n8n", Workflow, "Esperas, condiciones y canales externos"],
                 ["Cloud Esther", RefreshCw, "Tareas, avisos y registros internos"],
               ] as const
@@ -740,7 +740,7 @@ function ConfigPaso({ paso, onChange }: { paso: Paso; onChange: (p: Paso) => voi
     case "ia":
       return (
         <Sel
-          etiqueta="Tarea de Esther IA"
+          etiqueta="Tarea de Esther Infinity"
           value={c.tarea ?? TAREAS_IA[0]}
           onChange={(v) => set("tarea", v)}
           opciones={TAREAS_IA}
@@ -852,7 +852,7 @@ function Editor({
     const mensaje = f.pasos.findIndex((p) => p.tipo === "whatsapp" || p.tipo === "email");
     const ia = f.pasos.findIndex((p) => p.tipo === "ia" && p.config.tarea === "Redactar mensaje");
     if (mensaje >= 0 && (ia < 0 || ia > mensaje))
-      return setError("Antes de enviar un mensaje agregá un paso de Esther IA que lo redacte.");
+      return setError("Antes de enviar un mensaje agregá un paso de Esther Infinity que lo redacte.");
     onGuardar({ ...f, nombre: f.nombre.trim() });
   };
 
@@ -1159,7 +1159,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
       c: "bg-rose-100 text-rose-600",
     },
     {
-      t: "Esther IA",
+      t: "Esther Infinity",
       d: "Analiza, prioriza o redacta con el contexto permitido",
       i: Bot,
       c: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
@@ -1221,7 +1221,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
         </Field>
         <p className="text-[11px] leading-5 text-muted-foreground">
           Cada empresa tiene su propio webhook firmado: n8n nunca recibe datos de otra clínica. Las
-          llamadas a Esther IA usan el token de la empresa y respetan plan, rol y sede.
+          llamadas a Esther Infinity usan el token de la empresa y respetan plan, rol y sede.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
@@ -1290,7 +1290,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
           </ol>
           <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
             n8n no reemplaza a la IA: se encarga de los tiempos, las condiciones y los canales
-            externos. Esther IA decide qué decir y a quién priorizar.
+            externos. Esther Infinity decide qué decir y a quién priorizar.
           </p>
         </div>
       </div>

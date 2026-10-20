@@ -30,7 +30,7 @@ import { storeRayosX, TIPOS_RX } from "@/lib/cloud-esther/rayos-x";
 import { TEETH_BY_FDI, TOOTH_STATE_META, type ToothState } from "@/lib/odontogram/fdi";
 
 /* Ubicación: src/components/cloud-esther/odontograma3d/EstherOdontograma.tsx
-   Esther IA dentro del Odontograma 3D. Las 8 funciones trabajan con el contexto de la pieza
+   Esther Infinity dentro del Odontograma 3D. Las 8 funciones trabajan con el contexto de la pieza
    seleccionada y del paciente, siempre con los datos de esta clínica.
    Motor: el motor local de Cloud Esther (reglas sobre los registros del paciente). No se envía
    información a servicios externos. TODO backend: modelo de lenguaje clínico conectado. */
@@ -329,7 +329,7 @@ export function EstherOdontograma({
               <Sparkles className="size-5" />
             </span>
             <div>
-              <p className="text-sm font-bold">Esther IA en el odontograma</p>
+              <p className="text-sm font-bold">Esther Infinity en el odontograma</p>
               <p className="text-xs text-muted-foreground">
                 Contexto:{" "}
                 {nombrePieza ? (

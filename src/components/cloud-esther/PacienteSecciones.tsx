@@ -1267,7 +1267,7 @@ const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REG
   persistir: "registros",
 });
 
-/** Lectura y escritura sin hooks (la usan Esther IA y las automatizaciones). */
+/** Lectura y escritura sin hooks (la usan Esther Infinity y las automatizaciones). */
 export function leerRegistros(): Record<number, Registros> {
   return storeRegistros.leer();
 }

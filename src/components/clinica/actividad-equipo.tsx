@@ -61,7 +61,7 @@ const MODULO: Record<string, string> = {
   finanzas: "Finanzas",
   analitica: "Analítica",
   integraciones: "Integraciones",
-  ia: "Esther IA",
+  ia: "Esther Infinity",
   configuracion: "Configuración",
   portal: "Portal",
   "portal-equipo": "Portal del equipo",

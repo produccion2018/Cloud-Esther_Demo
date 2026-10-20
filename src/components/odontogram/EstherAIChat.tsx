@@ -47,7 +47,7 @@ export function EstherAIChat({ onToast }: Props) {
     if (!texto.trim()) return;
 
     onToast(
-      "Esther AI todavía no está conectada — esto es una vista previa",
+      "Esther Infinity todavía no está conectada — esto es una vista previa",
     );
 
     setMensaje("");
@@ -55,7 +55,7 @@ export function EstherAIChat({ onToast }: Props) {
 
   const usarMicrofono = () => {
     onToast(
-      "La entrada por voz de Esther AI estará disponible cuando conectemos el reconocimiento de voz.",
+      "La entrada por voz de Esther Infinity estará disponible cuando conectemos el reconocimiento de voz.",
     );
   };
 
@@ -68,7 +68,7 @@ export function EstherAIChat({ onToast }: Props) {
 
         <div>
           <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            Esther AI
+            Esther Infinity
 
             <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
               Beta
@@ -124,7 +124,7 @@ export function EstherAIChat({ onToast }: Props) {
           <button
             type="button"
             onClick={usarMicrofono}
-            title="Hablar con Esther AI"
+            title="Hablar con Esther Infinity"
             className="mr-1 grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           >
             <Mic className="size-4" />

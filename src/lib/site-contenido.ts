@@ -19,7 +19,7 @@ export type PanelCaracteristicas = {
 };
 
 export const PANEL_CARACTERISTICAS_PRUEBA: PanelCaracteristicas = {
-  titulo: "Resumen de Esther IA",
+  titulo: "Resumen de Esther Infinity",
   clinica: "Clínica de ejemplo",
   actualizado: "",
   ejemplo: true,

@@ -146,7 +146,7 @@ export function SimuladorSonrisa({
   pacienteFijo,
   compacto = false,
 }: {
-  /** Paciente ya elegido (pestaña dentro del Odontograma 3D o ventana de Esther IA). */
+  /** Paciente ya elegido (pestaña dentro del Odontograma 3D o ventana de Esther Infinity). */
   pacienteFijo?: number | undefined;
   compacto?: boolean;
 } = {}) {

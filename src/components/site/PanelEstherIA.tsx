@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { usePanelCaracteristicas, type TipoHallazgo } from "@/lib/site-contenido";
 
-/* Vista del panel de Esther IA en la sección de características. Los datos vienen de
+/* Vista del panel de Esther Infinity en la sección de características. Los datos vienen de
    site-contenido (datos de prueba hoy; el panel administrativo los podrá actualizar). */
 
 const ICONO: Record<TipoHallazgo, LucideIcon> = {
@@ -122,7 +122,7 @@ export function PanelEstherIA() {
         </ul>
       </div>
       <p className="border-t border-border/70 bg-lavender/30 px-5 py-2.5 text-[11px] text-muted-foreground">
-        Esther IA trabaja solo con los datos de tu clínica y asiste al profesional: no reemplaza su
+        Esther Infinity trabaja solo con los datos de tu clínica y asiste al profesional: no reemplaza su
         criterio.
       </p>
     </motion.div>

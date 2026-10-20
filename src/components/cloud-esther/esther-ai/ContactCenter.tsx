@@ -18,7 +18,7 @@ import {
   type EstadoDialogo,
 } from "@/lib/cloud-esther/contact-center";
 
-/* Contact Center con IA dentro de Cloud Esther IA: bandeja de conversaciones (WhatsApp,
+/* Contact Center con IA dentro de Cloud Esther Infinity: bandeja de conversaciones (WhatsApp,
    webchat, correo), simulador para escribir como paciente y la opción de tomar la conversación.
    Todo lo que Esther agenda o cambia impacta en la Agenda real de la empresa. */
 

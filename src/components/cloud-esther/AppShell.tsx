@@ -1231,7 +1231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         )}
       {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
-          Donde ya está Esther IA (Plus y Enterprise en el demo) no se duplica el botón. */}
+          Donde ya está Esther Infinity (Plus y Enterprise en el demo) no se duplica el botón. */}
       {planListo &&
         (!iaDisponible || !!real) &&
         !bloqueado &&

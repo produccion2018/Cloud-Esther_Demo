@@ -938,7 +938,7 @@ function AppEquipo({
   const item = (id: Seccion, label: string, icon: LucideIcon, mostrar = true, badge?: number) =>
     mostrar ? [{ id, label, icon, ...(badge ? { badge } : {}) }] : [];
   const es3D = plan === "avanzada" || plan === "grupo";
-  // Esther IA asistencial: planes con IA (Plus y Enterprise), con el permiso del propietario.
+  // Esther Infinity asistencial: planes con IA (Plus y Enterprise), con el permiso del propietario.
   const conIA = plan === "avanzada" || plan === "grupo";
   const grupos: GrupoPortal[] = (
     administrativo
@@ -1048,7 +1048,7 @@ function AppEquipo({
               ),
               ...item("mensajes", "Mensajes", MessageCircle, puede("mensajes")),
               ...item("reportes", "Reportes", BarChart3, puede("reportes")),
-              ...item("ia", "Esther IA", Sparkles, puede("ia") && conIA),
+              ...item("ia", "Esther Infinity", Sparkles, puede("ia") && conIA),
             ],
           },
           { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
@@ -1303,7 +1303,7 @@ function AppEquipo({
       {disponibles.includes("ia") && actual !== "ia" && (
         <EstherFlotante moduloId={actual} modulo={etiqueta || "el portal"} />
       )}
-      {/* Ayuda de Esther para todos los planes (donde no está Esther IA) */}
+      {/* Ayuda de Esther para todos los planes (donde no está Esther Infinity) */}
       {!disponibles.includes("ia") && (
         <AyudaEsther moduloId={actual === "escritorio" ? "dashboard" : actual} modulo={etiqueta || "el portal"} />
       )}
@@ -1509,7 +1509,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
       { s: "odontograma", l: "Odontograma 3D", i: Box, g: "from-emerald-500 to-teal-500" },
       { s: "recetas", l: "Recetas", i: PillIcon, g: "from-amber-500 to-orange-500" },
       { s: "mensajes", l: "Mensajes", i: MessageCircle, g: "from-rose-500 to-pink-500" },
-      { s: "ia", l: "Esther IA", i: Sparkles, g: "from-violet-500 to-purple-600" },
+      { s: "ia", l: "Esther Infinity", i: Sparkles, g: "from-violet-500 to-purple-600" },
     ] as const
   ).filter((a) => ctx.puedeIr(a.s));
 
@@ -1730,7 +1730,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
               />
               <span className="relative min-w-0">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]">
-                  <Sparkles className="size-3" /> Esther IA
+                  <Sparkles className="size-3" /> Esther Infinity
                 </span>
                 <span className="mt-1.5 block font-display text-base font-bold leading-tight">
                   Tu asistente clínica

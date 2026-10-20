@@ -26,7 +26,7 @@ export function EstherBloques({
     if (!informe) return;
     imprimirHTML(
       informe.titulo,
-      `<h1>${esc(informe.titulo)}</h1><p style="color:#6b7280">Preparado por Cloud Esther IA · ${new Date().toLocaleString("es-AR")}</p>` +
+      `<h1>${esc(informe.titulo)}</h1><p style="color:#6b7280">Preparado por Cloud Esther Infinity · ${new Date().toLocaleString("es-AR")}</p>` +
         informe.secciones
           .map((s) => `<h2>${esc(s.titulo)}</h2><p>${esc(s.texto).replace(/\n/g, "<br>")}</p>`)
           .join("") +

@@ -1,6 +1,6 @@
 /* Ubicación: src/lib/cloud-esther/n8n-motor.ts
    Ejecuta un flujo de n8n con los datos reales de la empresa activa (modo prueba del demo).
-   Evento de Cloud Esther → n8n → Esther IA (analiza / redacta) → n8n → acción → registro.
+   Evento de Cloud Esther → n8n → Esther Infinity (analiza / redacta) → n8n → acción → registro.
    Los envíos externos (WhatsApp, correo, webhooks) se simulan; los efectos internos
    (seguimiento del presupuesto, tarea en la Agenda, aviso en Notificaciones) son reales.
    TODO backend: n8n llama a /ia/tareas con el token del tenant y devuelve el resultado por webhook. */
@@ -231,7 +231,7 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
   return lista.filter((d) => enSede(d.sede));
 }
 
-/* ───────────── Esther IA dentro del flujo ───────────── */
+/* ───────────── Esther Infinity dentro del flujo ───────────── */
 
 function redactar(flujo: Flujo, d: Disparo): string {
   const n = primerNombre(d.paciente);
@@ -387,7 +387,7 @@ export function ejecutarFlujo(
                       ...(pr.seguimientos ?? []),
                       {
                         fecha: new Date().toISOString(),
-                        texto: `Seguimiento automático (n8n + Esther IA): ${ctx.texto ? "mensaje enviado por WhatsApp" : "contacto registrado"}`,
+                        texto: `Seguimiento automático (n8n + Esther Infinity): ${ctx.texto ? "mensaje enviado por WhatsApp" : "contacto registrado"}`,
                         autor: "Automatización",
                       },
                     ],

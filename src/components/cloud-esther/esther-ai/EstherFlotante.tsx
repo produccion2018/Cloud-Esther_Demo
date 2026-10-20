@@ -70,7 +70,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
         </span>
         <span className={chat ? "hidden" : "relative hidden text-left leading-tight sm:block"}>
           <span className="block bg-gradient-to-r from-foreground to-primary bg-clip-text text-xs font-semibold tracking-[-0.005em] text-transparent">
-            Esther IA
+            Esther Infinity
           </span>
           <span className="block text-[10.5px] text-muted-foreground">
             {abierto ? "Cerrar" : "Preguntame algo"}

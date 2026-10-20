@@ -12,7 +12,7 @@ import { normalizarBusqueda } from "@/lib/utils";
    - «Preguntame cómo hacer algo»: responde dudas sobre el SISTEMA al instante (sin esperar a
      nadie) y te lleva a la pantalla justa.
    No lee ni muestra datos de pacientes: solo explica cómo usar Cloud Esther. La IA clínica que
-   trabaja con los datos (Esther IA) sigue siendo de Plus y Enterprise.
+   trabaja con los datos (Esther Infinity) sigue siendo de Plus y Enterprise.
    Misma tipografía del sistema (Plus Jakarta Sans para el texto y Sora para los títulos). */
 
 type Ayuda = { titulo: string; resumen: string; pasos: string[] };

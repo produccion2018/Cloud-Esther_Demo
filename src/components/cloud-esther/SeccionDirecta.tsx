@@ -329,28 +329,42 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     {descripcion}
                   </p>
                   <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                    {kpis.map((k) => (
-                      <div
-                        key={k.l}
-                        className="relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)]"
-                      >
-                        <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035]" />
-                        <div className="relative flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary/75">
-                              {k.l}
-                            </p>
-                            <p className="mt-2 text-[27px] font-bold leading-none tracking-tight text-primary tabular-nums">
-                              {k.v}
-                            </p>
-                            <p className="mt-2 text-[11px] text-muted-foreground">{k.s}</p>
+                    {kpis.map((k, idx) => {
+                      // Cada KPI con su color (como en Comunicación). La 4ª (alertas) va en rosa
+                      // solo si hay alguna; si es 0, queda en un tono neutro y calmo.
+                      const tonos = [
+                        { icon: "from-primary to-fuchsia-500", val: "text-primary", orb: "from-primary/20 to-fuchsia-400/10" },
+                        { icon: "from-sky-400 to-blue-600", val: "text-sky-600", orb: "from-sky-400/20 to-blue-500/10" },
+                        { icon: "from-emerald-400 to-teal-600", val: "text-emerald-600", orb: "from-emerald-400/20 to-teal-500/10" },
+                        { icon: "from-rose-400 to-pink-600", val: "text-rose-600", orb: "from-rose-400/20 to-pink-500/10" },
+                      ];
+                      const t =
+                        idx === 3 && k.v === 0
+                          ? { icon: "from-slate-300 to-slate-400", val: "text-foreground", orb: "from-primary/10 to-primary/[0.04]" }
+                          : tonos[idx] ?? tonos[0];
+                      return (
+                        <div
+                          key={k.l}
+                          className="group relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.04] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-26px_rgba(124,58,237,0.6)]"
+                        >
+                          <div className={`pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-gradient-to-br opacity-70 transition-transform duration-300 group-hover:scale-110 ${t.orb}`} />
+                          <div className="relative flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-muted-foreground">
+                                {k.l}
+                              </p>
+                              <p className={`mt-2 text-[27px] font-bold leading-none tracking-tight tabular-nums ${t.val}`}>
+                                {k.v}
+                              </p>
+                              <p className="mt-2 text-[11px] text-muted-foreground">{k.s}</p>
+                            </div>
+                            <span className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${t.icon}`}>
+                              <k.i className="size-4" />
+                            </span>
                           </div>
-                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/[0.08] text-primary">
-                            <k.i className="size-4" />
-                          </span>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </section>

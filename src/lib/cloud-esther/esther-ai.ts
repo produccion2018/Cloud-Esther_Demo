@@ -139,6 +139,16 @@ export const estherQuickActions: EstherQuickAction[] = [
 const TEMAS_RRHH =
   /rrhh|recursos humanos|emplead.*(falta|ausen|licencia)|legajo|vacacion|licencia|ausen.* equipo|falta hoy|fich|asistencia|llega(da)? tarde|sueldo|nomina|nómina|costo laboral|contrato|capacitaci|cumplea|pendientes de rrhh/i;
 
+/* Esther cierra sus respuestas ofreciéndose a seguir ayudando. Solo en respuestas reales:
+   no en saludos/ayuda, ni cuando el texto ya termina preguntando algo. */
+const CIERRE_ESTHER = "¿Necesitás algo más?";
+function conCierre(text: string, modulo: string, resultado?: string): string {
+  if (resultado !== "Respondida" || modulo === "ayuda") return text;
+  const limpio = text.trimEnd();
+  if (limpio.endsWith("?") || limpio.includes(CIERRE_ESTHER)) return text;
+  return `${limpio}\n\n${CIERRE_ESTHER}`;
+}
+
 export async function askEsther(
   message: string,
   context: EstherContext = {},
@@ -165,7 +175,7 @@ export async function askEsther(
     const pregunta = /pendientes de rrhh/i.test(message) ? "¿Qué tengo que resolver?" : message;
     auditarConsulta({ ...base, pregunta: message, modulo: "rrhh", resultado: "Respondida" });
     return {
-      text: responderRRHH(pregunta),
+      text: conCierre(responderRRHH(pregunta), "rrhh", "Respondida"),
       needsRealData: false,
       modulo: "rrhh",
       resultado: "Respondida",
@@ -188,7 +198,7 @@ export async function askEsther(
       { tipo: "acciones", items: [{ label: auto, to: "/demo/automatizaciones" }] },
     ];
   return {
-    text: r.texto,
+    text: conCierre(r.texto, r.modulo, r.resultado),
     needsRealData: false,
     modulo: r.modulo,
     resultado: r.resultado,

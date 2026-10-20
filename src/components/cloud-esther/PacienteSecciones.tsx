@@ -794,8 +794,36 @@ function presupuestosDeEjemplo(): Record<number, Registros> {
   };
 }
 
+/* Periodontograma de ejemplo (solo demo): el paciente 1 llega con una evaluación cargada para que
+   la boca 3D del periodontograma se vea con hallazgos. Las clínicas reales arrancan vacías. */
+const sitioPerio = (ps: number | null, mg = 0, sangrado = false, placa = false) => ({ ps, mg, sangrado, placa });
+const piezaPerio = (
+  v: [ReturnType<typeof sitioPerio>, ReturnType<typeof sitioPerio>, ReturnType<typeof sitioPerio>],
+  p: [ReturnType<typeof sitioPerio>, ReturnType<typeof sitioPerio>, ReturnType<typeof sitioPerio>],
+  extra: { movilidad?: number; furca?: number; ausente?: boolean; implante?: boolean } = {},
+) => ({ ausente: false, implante: false, movilidad: 0, furca: 0, v, p, ...extra });
+
+const PERIODONTOGRAMA_EJEMPLO: EvaluacionPerio[] = [
+  {
+    id: 1726660000000,
+    fecha: "2026-09-18",
+    profesional: "Dra. Mireya Becerra",
+    notas: "Periodontitis localizada leve-moderada (bolsa en 36). Refuerzo de higiene y control en 3 meses.",
+    piezas: {
+      "16": piezaPerio([sitioPerio(4, 0, false, true), sitioPerio(3), sitioPerio(3)], [sitioPerio(3), sitioPerio(3), sitioPerio(4, 0, true)]),
+      "11": piezaPerio([sitioPerio(3, -1), sitioPerio(2, -1), sitioPerio(2)], [sitioPerio(2), sitioPerio(2), sitioPerio(2)]),
+      "21": piezaPerio([sitioPerio(3, -1, false, true), sitioPerio(3), sitioPerio(2)], [sitioPerio(2), sitioPerio(2), sitioPerio(3)]),
+      "26": piezaPerio([sitioPerio(3), sitioPerio(2), sitioPerio(3)], [sitioPerio(3), sitioPerio(3), sitioPerio(3)]),
+      "36": piezaPerio([sitioPerio(6, -1, true, true), sitioPerio(4, 0, true), sitioPerio(3)], [sitioPerio(5, 0, true), sitioPerio(4), sitioPerio(3)], { movilidad: 1, furca: 1 }),
+      "46": piezaPerio([sitioPerio(3), sitioPerio(3), sitioPerio(4, 0, true)], [sitioPerio(3), sitioPerio(3), sitioPerio(3)]),
+      "41": piezaPerio([sitioPerio(3, -1), sitioPerio(2), sitioPerio(2)], [sitioPerio(2), sitioPerio(2), sitioPerio(2, 0, true)]),
+    },
+  },
+];
+
 const REGISTROS_INICIALES: Record<number, Registros> = {
   1: {
+    periodontograma: PERIODONTOGRAMA_EJEMPLO,
     antecedentes: {
       alergias: ["Penicilina"],
       enfermedades: ["Hipertensión"],

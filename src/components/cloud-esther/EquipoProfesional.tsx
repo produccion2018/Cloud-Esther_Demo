@@ -166,25 +166,36 @@ function IconTile({ icon: Icon }: { icon: IconType }) {
   )
 }
 
+const STAT_TONOS = [
+  { grad: "from-primary to-fuchsia-500", val: "text-primary" },
+  { grad: "from-emerald-400 to-teal-600", val: "text-emerald-600" },
+  { grad: "from-sky-400 to-blue-600", val: "text-sky-600" },
+  { grad: "from-amber-400 to-orange-500", val: "text-amber-600" },
+]
+
 function StatCard({
   label,
   value,
   hint,
   icon: Icon,
+  tono = 0,
 }: {
   label: string
   value: number
   hint: string
   icon: IconType
+  tono?: number
 }) {
+  const t = STAT_TONOS[tono % 4]
   return (
     <div className={STAT_CARD}>
-      <span className="pointer-events-none absolute -right-3 -top-3 size-16 rounded-full bg-primary/10 transition-colors duration-300 group-hover:bg-primary/15" />
-      <Icon className="absolute right-3 top-3 size-4 text-primary/70" />
-      <p className="relative pr-8 text-[11px] font-semibold uppercase leading-4 tracking-wider text-muted-foreground">
+      <span className={`pointer-events-none absolute right-3 top-3 grid size-9 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 ${t.grad}`}>
+        <Icon className="size-4" />
+      </span>
+      <p className="relative pr-12 text-[11px] font-semibold uppercase leading-4 tracking-wider text-muted-foreground">
         {label}
       </p>
-      <p className="relative mt-0.5 text-2xl font-bold leading-tight tabular-nums">
+      <p className={`relative mt-0.5 text-2xl font-bold leading-tight tabular-nums ${t.val}`}>
         {value}
       </p>
       <p className="relative mt-0.5 text-[11px] text-muted-foreground">
@@ -604,10 +615,10 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Profesionales" value={stats.profesionales} hint={`${stats.asistentes} asistentes · ${stats.administracion} administración`} icon={ToothIcon} />
-            <StatCard label="Trabajando hoy" value={stats.trabajanHoy} hint={stats.fueraHoy ? `${stats.fueraHoy} de licencia o ausente` : "Nadie ausente hoy"} icon={Clock} />
-            <StatCard label="Turnos de hoy" value={stats.turnosHoy} hint={`${stats.atendidosHoy} atendidos · ${stats.pendientesHoy} por atender`} icon={CalendarDays} />
-            <StatCard label="Invitaciones" value={stats.pendientes} hint={stats.pendientes ? "Pendientes de aceptar" : "Todas aceptadas"} icon={Mail} />
+            <StatCard label="Profesionales" value={stats.profesionales} hint={`${stats.asistentes} asistentes · ${stats.administracion} administración`} icon={ToothIcon} tono={0} />
+            <StatCard label="Trabajando hoy" value={stats.trabajanHoy} hint={stats.fueraHoy ? `${stats.fueraHoy} de licencia o ausente` : "Nadie ausente hoy"} icon={Clock} tono={1} />
+            <StatCard label="Turnos de hoy" value={stats.turnosHoy} hint={`${stats.atendidosHoy} atendidos · ${stats.pendientesHoy} por atender`} icon={CalendarDays} tono={2} />
+            <StatCard label="Invitaciones" value={stats.pendientes} hint={stats.pendientes ? "Pendientes de aceptar" : "Todas aceptadas"} icon={Mail} tono={3} />
           </div>
 
           <nav className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-primary/10 bg-primary/[0.025] p-1.5" aria-label="Vistas del equipo">

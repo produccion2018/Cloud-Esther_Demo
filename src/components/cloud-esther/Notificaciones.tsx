@@ -282,26 +282,30 @@ function Modal({
 }
 
 type TonoStat = "primary" | "rojo" | "ambar" | "verde";
-const TONOS: Record<TonoStat, { label: string; value: string; circle: string }> = {
+const TONOS: Record<TonoStat, { label: string; value: string; circle: string; grad: string }> = {
   primary: {
     label: "text-primary/75",
     value: "text-primary",
     circle: "bg-primary/[0.08] text-primary",
+    grad: "from-primary to-fuchsia-500",
   },
   rojo: {
     label: "text-destructive/80",
     value: "text-destructive",
     circle: "bg-destructive/10 text-destructive",
+    grad: "from-rose-400 to-pink-600",
   },
   ambar: {
     label: "text-amber-600/85",
     value: "text-amber-600",
     circle: "bg-amber-400/[0.12] text-amber-600",
+    grad: "from-amber-400 to-orange-500",
   },
   verde: {
     label: "text-emerald-600/85",
     value: "text-emerald-600",
     circle: "bg-emerald-400/[0.1] text-emerald-600",
+    grad: "from-emerald-400 to-teal-600",
   },
 };
 
@@ -327,7 +331,7 @@ function StatCard({
     <button
       type="button"
       onClick={onClick}
-      className="group relative min-h-[112px] overflow-hidden rounded-[22px] border border-primary/25 bg-gradient-to-br from-white via-white to-primary/[0.065] p-4 text-left shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45"
+      className="group relative min-h-[112px] overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.04] p-4 text-left shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-26px_rgba(124,58,237,0.6)]"
     >
       <div className="pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-primary/[0.035] ring-[13px] ring-primary/[0.035] transition-transform duration-300 group-hover:scale-110" />
       <div className="relative flex items-start justify-between gap-3">
@@ -345,8 +349,8 @@ function StatCard({
             <span className="text-muted-foreground">{detail}</span>
           </div>
         </div>
-        <div className={`grid size-9 shrink-0 place-items-center rounded-full ${t.circle}`}>
-          <Icon className="size-4" strokeWidth={1.7} />
+        <div className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${t.grad}`}>
+          <Icon className="size-4" strokeWidth={1.8} />
         </div>
       </div>
     </button>

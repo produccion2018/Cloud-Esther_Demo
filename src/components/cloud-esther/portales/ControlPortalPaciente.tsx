@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   CalendarDays,
   Check,
   CheckCheck,
+  Eye,
+  LogIn,
+  Smartphone,
   ClipboardList,
   CreditCard,
   EyeOff,
@@ -19,13 +22,18 @@ import {
   Upload,
   Undo2,
   UserCog,
+  Mail,
+  Plus,
+  UserCheck,
   Wallet,
+  X,
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import {
   clavePublicacion,
   setPortal,
@@ -102,6 +110,7 @@ export function ControlPortalPaciente({
   puedeConfigurar,
   puedeEnviar,
   onToast,
+  onVerAccesos,
 }: {
   /** Nombre de quien envía (queda registrado) */
   usuario: string;
@@ -110,11 +119,33 @@ export function ControlPortalPaciente({
   /** El Administrador o los roles que él autorizó */
   puedeEnviar: boolean;
   onToast: (m: string) => void;
+  /** Abre la pestaña de accesos (invitar / nuevo código) */
+  onVerAccesos?: () => void;
 }) {
-  const { config, publicados = {} } = storePortal.usar();
+  const { config, publicados = {}, accesos } = storePortal.usar();
+  const [verComo, setVerComo] = useState("");
   const { pacientes } = usePacientes();
   const registros = useTodosLosRegistros();
   const [verEnviados, setVerEnviados] = useState(false);
+  const { miembros } = useEquipo();
+  const [emailNuevo, setEmailNuevo] = useState("");
+  const personas = config.publicanPersonas ?? [];
+  // Integrantes del equipo con correo (para elegir por persona)
+  const equipo = miembros
+    .filter((m) => m.status !== "inactivo" && m.email && m.role !== "administrador")
+    .map((m) => ({ nombre: `${m.firstName} ${m.lastName}`.trim(), email: m.email.trim().toLowerCase() }));
+  const nombreDeEmail = (e: string) => equipo.find((x) => x.email === e)?.nombre;
+  const agregarPersona = (email: string) => {
+    const e = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return onToast("Escribí un correo válido");
+    if (personas.includes(e)) return onToast("Esa persona ya puede enviar");
+    set({ publicanPersonas: [...personas, e] });
+    onToast(`${nombreDeEmail(e) ?? e} ahora puede enviar al portal`);
+  };
+  const quitarPersona = (e: string) => {
+    set({ publicanPersonas: personas.filter((x) => x !== e) });
+    onToast(`${nombreDeEmail(e) ?? e} ya no puede enviar al portal`);
+  };
   const envio = config.envio ?? "automatico";
   const visible = (s: SeccionPortalPaciente) => config.secciones?.[s] !== false;
   const set = (c: Partial<ConfigPortal>) => setPortal("config", (prev) => ({ ...prev, ...c }));
@@ -182,6 +213,72 @@ export function ControlPortalPaciente({
                 : "Automático · lo que carga la clínica aparece solo en el portal"}
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Cómo le llega al paciente: el camino completo, paso a paso */}
+      <section className="rounded-3xl border border-primary/12 bg-card p-4 shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)] sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="min-w-0 flex-1 font-display text-base font-bold">Cómo le llega al paciente</p>
+          {onVerAccesos && (
+            <button type="button" onClick={onVerAccesos} className="btn-ce-outline !min-h-9">
+              <KeyRound className="size-4" /> Accesos de pacientes
+            </button>
+          )}
+        </div>
+        <ol className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+          {(
+            [
+              [Send, "1. Invitás al paciente", "Desde «Accesos» le llega un código por correo o WhatsApp."],
+              [LogIn, "2. Entra a su portal", "Con su DNI o correo y el código. Después puede crear su propia contraseña."],
+              [envio === "aprobacion" ? ShieldCheck : Zap, "3. Le llega lo suyo", envio === "aprobacion" ? "Solo lo que se envía desde «Para enviar al portal»." : "Lo que carga la clínica aparece solo."],
+              [Smartphone, "4. Lo ve y responde", "Descarga recetas y estudios, aprueba presupuestos, paga y escribe."],
+            ] as const
+          ).map(([I, t, d], i) => (
+            <li key={t} className="relative flex gap-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.05] via-transparent to-fuchsia-500/[0.04] p-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]">
+                <I className="size-[18px]" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-bold">{t}</span>
+                <span className="block text-[11.5px] leading-snug text-muted-foreground">{d}</span>
+              </span>
+              {i < 3 && <span aria-hidden className="absolute -right-2 top-1/2 hidden size-4 -translate-y-1/2 rotate-45 border-r-2 border-t-2 border-primary/25 xl:block" />}
+            </li>
+          ))}
+        </ol>
+        {/* Ver exactamente lo que ve un paciente (se abre su portal en modo vista, sin tocar nada) */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-3">
+          <Eye className="size-4 shrink-0 text-primary" />
+          <span className="text-[12.5px] font-semibold">Ver como el paciente</span>
+          <select
+            value={verComo}
+            onChange={(e) => setVerComo(e.target.value)}
+            aria-label="Paciente para ver su portal"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-primary/15 bg-card px-3 text-[12.5px] outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10 sm:max-w-xs"
+          >
+            <option value="">Elegí un paciente…</option>
+            {pacientes
+              .filter((p) => p.estado === "Activo")
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre} {p.apellido}
+                  {accesos[p.id] ? ` · ${accesos[p.id]!.estado}` : " · sin acceso"}
+                </option>
+              ))}
+          </select>
+          <a
+            href={verComo ? `/portal?vista=${verComo}` : undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!verComo}
+            onClick={(e) => {
+              if (!verComo) e.preventDefault();
+            }}
+            className={`btn-ce !min-h-10 ${verComo ? "" : "pointer-events-none opacity-50"}`}
+          >
+            <Eye className="size-4" /> Abrir su portal
+          </a>
         </div>
       </section>
 
@@ -278,6 +375,89 @@ export function ControlPortalPaciente({
                 );
               })}
             </ul>
+
+            {/* Por persona o por correo: para cuando la clínica confía en alguien en particular */}
+            <div className="mt-4 rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/[0.05] via-transparent to-fuchsia-500/[0.04] p-3">
+              <p className="flex items-center gap-2 text-[13px] font-bold">
+                <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white">
+                  <UserCheck className="size-3.5" />
+                </span>
+                Personas de confianza
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Pueden enviar aunque su rol esté apagado. Elegí a alguien del equipo o escribí su correo.
+              </p>
+              {personas.length > 0 && (
+                <ul className="mt-2.5 flex flex-wrap gap-1.5">
+                  {personas.map((e) => (
+                    <li key={e} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-card py-1 pl-1 pr-1.5 text-[11.5px] shadow-[0_6px_14px_-10px_rgba(124,58,237,0.7)]">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-[9px] font-bold uppercase text-white">
+                        {(nombreDeEmail(e) ?? e).slice(0, 2)}
+                      </span>
+                      <span className="min-w-0 truncate">
+                        <b className="font-semibold">{nombreDeEmail(e) ?? e}</b>
+                        {nombreDeEmail(e) && <span className="text-muted-foreground"> · {e}</span>}
+                      </span>
+                      {puedeConfigurar && (
+                        <button
+                          type="button"
+                          aria-label={`Quitar a ${nombreDeEmail(e) ?? e}`}
+                          onClick={() => quitarPersona(e)}
+                          className="grid size-5 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-rose-50 hover:text-destructive"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {puedeConfigurar && (
+                <div className="mt-2.5 space-y-2">
+                  {equipo.some((x) => !personas.includes(x.email)) && (
+                    <select
+                      value=""
+                      onChange={(ev) => ev.target.value && agregarPersona(ev.target.value)}
+                      aria-label="Elegir una persona del equipo"
+                      className="h-10 w-full rounded-xl border border-primary/15 bg-card px-3 text-[12.5px] font-medium outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+                    >
+                      <option value="">+ Elegir una persona del equipo…</option>
+                      {equipo
+                        .filter((x) => !personas.includes(x.email))
+                        .map((x) => (
+                          <option key={x.email} value={x.email}>
+                            {x.nombre} · {x.email}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(ev: FormEvent) => {
+                      ev.preventDefault();
+                      if (!emailNuevo.trim()) return;
+                      agregarPersona(emailNuevo);
+                      setEmailNuevo("");
+                    }}
+                  >
+                    <label className="relative min-w-0 flex-1">
+                      <Mail className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-primary/60" />
+                      <input
+                        type="email"
+                        value={emailNuevo}
+                        onChange={(ev) => setEmailNuevo(ev.target.value)}
+                        placeholder="o escribí un correo"
+                        aria-label="Correo de la persona"
+                        className="h-10 w-full rounded-xl border border-primary/15 bg-card pl-8 pr-3 text-[12.5px] outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+                      />
+                    </label>
+                    <button type="submit" disabled={!emailNuevo.trim()} className="btn-ce !min-h-10 disabled:opacity-50">
+                      <Plus className="size-4" /> Sumar
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
             <p className="mt-2 text-[11px] text-muted-foreground">Solo el Administrador cambia esta configuración.</p>
           </section>
         </div>

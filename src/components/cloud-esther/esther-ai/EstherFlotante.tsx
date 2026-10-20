@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { X } from "lucide-react";
 import { estherPoses } from "./esther-states";
+import { POS_FLOTANTE, POS_FLOTANTE_CHAT, useHayComposer } from "@/lib/cloud-esther/composer-visible";
 
 /* Ubicación: src/components/cloud-esther/esther-ai/EstherFlotante.tsx
    Esther a mano en todos los módulos (Plus y Enterprise): un botón flotante abre un chat
@@ -10,6 +11,8 @@ const Panel = lazy(() => import("./EstherPanelFlotante"));
 
 export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo: string }) {
   const [abierto, setAbierto] = useState(false);
+  // Con un chat en pantalla, Esther sube y se achica para no tapar «Enviar»
+  const chat = useHayComposer() && !abierto;
   return (
     <>
       {abierto && (
@@ -26,7 +29,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
         onClick={() => setAbierto((v) => !v)}
         aria-label={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
         title={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
-        className="group fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-5 lg:right-5 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 sm:pr-4 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_44px_-16px_rgba(124,58,237,0.85)]"
+        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-[60] lg:right-5 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 ${chat ? "" : "sm:pr-4"} shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_44px_-16px_rgba(124,58,237,0.85)]`}
       >
         {/* Brillo que cruza el botón cada tanto (sutil; se apaga con «menos movimiento») */}
         {!abierto && <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />}
@@ -65,7 +68,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
             </span>
           )}
         </span>
-        <span className="relative hidden text-left leading-tight sm:block">
+        <span className={chat ? "hidden" : "relative hidden text-left leading-tight sm:block"}>
           <span className="block bg-gradient-to-r from-foreground to-primary bg-clip-text text-xs font-semibold tracking-[-0.005em] text-transparent">
             Esther IA
           </span>

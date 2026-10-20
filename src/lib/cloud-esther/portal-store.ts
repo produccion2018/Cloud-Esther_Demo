@@ -16,7 +16,38 @@ export type AccesoPortal = {
   invitado: string; // ISO
   ultimoIngreso?: string; // ISO
   ingresos: number;
+  /** Contraseña propia que creó el paciente (solo huella SHA-256 con sal; nunca el texto).
+      Si la clínica le da un «Nuevo código», la contraseña se borra (blanqueo). */
+  clave?: { sal: string; huella: string; fecha: string };
 };
+
+/** Huella de la contraseña del paciente (SHA-256 de sal + contraseña). */
+export async function huellaClavePortal(sal: string, clave: string) {
+  const datos = new TextEncoder().encode(`${sal}:${clave}`);
+  const h = await crypto.subtle.digest("SHA-256", datos);
+  return Array.from(new Uint8Array(h), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Crea la huella de una contraseña nueva (con sal al azar). */
+export async function nuevaClavePortal(clave: string) {
+  const sal = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return { sal, huella: await huellaClavePortal(sal, clave), fecha: new Date().toISOString() };
+}
+
+/** ¿Lo que escribió el paciente es su código o su contraseña? */
+export async function credencialPortalValida(a: AccesoPortal, escrito: string) {
+  const t = escrito.trim();
+  if (!t) return false;
+  if (t === a.codigo) return true;
+  return !!a.clave && (await huellaClavePortal(a.clave.sal, escrito)) === a.clave.huella;
+}
+
+/** Reglas de una contraseña segura: 8+ caracteres, con letras y números. */
+export function problemaClavePortal(clave: string) {
+  if (clave.length < 8) return "Usá al menos 8 caracteres.";
+  if (!/[a-zA-Z]/.test(clave) || !/\d/.test(clave)) return "Combiná letras y números.";
+  return "";
+}
 
 export type TipoEventoPortal =
   | "Ingreso"
@@ -29,7 +60,8 @@ export type TipoEventoPortal =
   | "Pago online"
   | "Documento subido"
   | "Mensaje"
-  | "Datos actualizados";
+  | "Datos actualizados"
+  | "Contraseña cambiada";
 
 export type EventoPortal = {
   id: string;
@@ -94,7 +126,21 @@ export type ConfigPortal = {
   envio?: "automatico" | "aprobacion";
   /** Roles que, además del Administrador, pueden enviar cosas al portal */
   publican?: string[];
+  /** Personas de confianza (por correo, en minúsculas) que pueden enviar aunque su rol no pueda */
+  publicanPersonas?: string[];
 };
+
+/** ¿Esta persona puede enviar al portal? Administrador siempre; si no, por su rol o por su correo. */
+export function puedePublicarPortal(
+  config: Pick<ConfigPortal, "publican" | "publicanPersonas">,
+  rol: string,
+  email?: string | null,
+) {
+  if (rol === "admin" || rol === "administrador") return true;
+  if ((config.publican ?? []).includes(rol)) return true;
+  const e = (email ?? "").trim().toLowerCase();
+  return !!e && (config.publicanPersonas ?? []).includes(e);
+}
 
 /** Secciones del portal que el Administrador puede mostrar u ocultar */
 export type SeccionPortalPaciente =

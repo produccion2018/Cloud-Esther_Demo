@@ -1356,17 +1356,19 @@ function escapar(t: string) {
 
 /* ───────────── Estilos ───────────── */
 
+// Tarjetas de la ficha: borde con degradé, sombra violeta suave y elevación al pasar el mouse
 const ITEM =
-  "relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-white via-card to-primary/[0.035] p-3.5 shadow-[0_8px_24px_-18px_rgba(124,58,237,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.32)]";
+  "relative overflow-hidden rounded-[20px] border border-transparent p-3.5 shadow-[0_14px_32px_-24px_rgba(76,29,149,0.55)] transition-all duration-300 [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(140deg,rgba(124,58,237,0.30),rgba(217,70,239,0.12)_45%,rgba(124,58,237,0.05))_border-box] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-24px_rgba(76,29,149,0.6)]";
 
 const ESTUDIO_ITEM =
-  "card-grad overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_30px_-18px_rgba(124,58,237,0.30)]";
+  "relative overflow-hidden rounded-[22px] border border-transparent shadow-[0_16px_36px_-26px_rgba(76,29,149,0.6)] transition-all duration-300 [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(140deg,rgba(124,58,237,0.30),rgba(217,70,239,0.12)_45%,rgba(124,58,237,0.05))_border-box] hover:-translate-y-1 hover:shadow-[0_26px_50px_-26px_rgba(76,29,149,0.65)]";
 
+// Campos de los formularios: más altos, redondeados y con foco violeta suave
 const INPUT =
-  "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-11 w-full rounded-xl border border-primary/15 bg-card px-3.5 text-sm shadow-[inset_0_1px_2px_rgba(76,29,149,0.05)] outline-none transition placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary/50 focus:ring-4 focus:ring-primary/10";
 
 const TEXTAREA =
-  "min-h-16 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "min-h-20 w-full resize-y rounded-xl border border-primary/15 bg-card px-3.5 py-2.5 text-sm shadow-[inset_0_1px_2px_rgba(76,29,149,0.05)] outline-none transition placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary/50 focus:ring-4 focus:ring-primary/10";
 
 const BTN_PRIMARIO =
   "btn-ce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
@@ -1375,7 +1377,7 @@ const BTN_SECUNDARIO =
   "btn-ce-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2";
 
 const CIRCULO_ICONO =
-  "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-primary/8 to-primary/[0.03] text-primary ring-1 ring-primary/15 shadow-[0_5px_14px_-8px_rgba(124,58,237,0.32)]";
+  "grid shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/20 via-fuchsia-500/12 to-primary/[0.04] text-primary ring-1 ring-primary/20 shadow-[0_8px_18px_-10px_rgba(124,58,237,0.55),inset_0_1px_0_rgba(255,255,255,0.6)]";
 
 type Tono = "primary" | "verde" | "ambar" | "rojo" | "gris";
 
@@ -1437,7 +1439,7 @@ const TONO_LABORATORIO: Record<EstadoLaboratorio, Tono> = {
 
 function Badge({ tono = "gris", children }: { tono?: Tono; children: ReactNode }) {
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONOS[tono]}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ring-black/[0.04] ${TONOS[tono]}`}>
       {children}
     </span>
   );
@@ -1459,19 +1461,20 @@ function Encabezado({
   botonClassName?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
+    <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[22px] border border-primary/12 bg-gradient-to-r from-primary/[0.08] via-fuchsia-500/[0.04] to-transparent p-3.5 sm:p-4">
+      <span aria-hidden className="pointer-events-none absolute -left-10 -top-14 size-40 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative flex items-center gap-3">
         {Icon && (
-          <span className={`${CIRCULO_ICONO} size-10`}>
-            <Icon className="size-5" />
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_12px_24px_-12px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.35)]">
+            <Icon className="size-[22px]" />
           </span>
         )}
         <div>
-          <h4 className="text-lg font-semibold">{titulo}</h4>
-          <p className="text-sm text-muted-foreground">{descripcion}</p>
+          <h4 className="text-lg font-bold tracking-tight">{titulo}</h4>
+          <p className="text-[13px] text-muted-foreground">{descripcion}</p>
         </div>
       </div>
-      <button onClick={onAgregar} className={`${BTN_PRIMARIO} ${botonClassName ?? ""}`}>
+      <button onClick={onAgregar} className={`relative ${BTN_PRIMARIO} ${botonClassName ?? ""}`}>
         <Plus className="size-4" />
         {etiquetaBoton}
       </button>
@@ -1491,10 +1494,16 @@ function EstadoVacio({
   chips?: readonly string[];
 }) {
   return (
-    <div className="relative grid min-h-40 place-items-center overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-white via-card to-primary/[0.025] p-6 text-center shadow-[0_8px_22px_-18px_rgba(124,58,237,0.22)]">
+    <div className="relative grid min-h-44 place-items-center overflow-hidden rounded-[22px] border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.04] via-card to-fuchsia-500/[0.04] p-7 text-center">
       <div>
-        <Icon className="mx-auto size-8 text-primary/60" />
-        <p className="mt-2 text-sm font-semibold">{titulo}</p>
+        <span className="relative mx-auto grid size-16 place-items-center">
+          <span aria-hidden className="ce-esther-halo absolute -inset-2 rounded-full bg-gradient-to-br from-primary/25 to-fuchsia-400/25 blur-xl" />
+          <span aria-hidden className="absolute -inset-1.5 rounded-full border border-dashed border-primary/25" />
+          <span className="relative grid size-16 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-fuchsia-500/10 to-transparent text-primary ring-1 ring-primary/15">
+            <Icon className="size-7" />
+          </span>
+        </span>
+        <p className="mt-3 text-[15px] font-bold">{titulo}</p>
         <p className="text-sm text-muted-foreground">{texto}</p>
         {chips && (
           <div className="mt-3 flex flex-wrap justify-center gap-1.5">
@@ -1582,22 +1591,24 @@ function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.32),rgba(15,5,30,0.5))] p-4 backdrop-blur-sm"
       onMouseDown={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`max-h-[92vh] w-full ${ancho} overflow-y-auto rounded-2xl border border-primary/15 bg-card bg-gradient-to-b from-primary/[0.06] to-transparent p-5 shadow-2xl`}
+        className={`relative max-h-[92vh] w-full ${ancho} overflow-y-auto rounded-[26px] border border-primary/15 bg-card p-5 shadow-[0_40px_90px_-30px_rgba(76,29,149,0.75)] sm:p-6`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400" />
+        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full bg-gradient-to-br from-primary/12 to-fuchsia-400/12 blur-3xl" />
+        <div className="relative mb-4 flex items-start justify-between gap-4 border-b border-primary/10 pb-3">
+          <h2 className="text-lg font-bold tracking-tight">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted/60 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           >
             <X className="size-4" />
           </button>
@@ -1611,7 +1622,7 @@ function Modal({
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-semibold text-foreground/80">{label}</span>
       {children}
       {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
     </label>
@@ -6774,7 +6785,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${tab === id ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]" : "text-muted-foreground hover:bg-primary/[0.06]"}`}
             >
               {label}
             </button>
@@ -6793,13 +6804,15 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
             {lista.map((f) => (
               <div key={f.id} className={ITEM}>
-                <div className="aspect-square overflow-hidden rounded-xl border border-border bg-muted/30">
+                <div className="group/foto relative aspect-square overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_30%_20%,rgba(217,70,239,0.18),transparent_55%),linear-gradient(145deg,#1e1b4b,#3b0764)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
                   {f.url && esImagen(f.archivoNombre) ? (
-                    <img src={f.url} alt={f.tipo} className="h-full w-full object-cover" />
+                    <img src={f.url} alt={f.tipo} className="h-full w-full object-cover transition duration-500 group-hover/foto:scale-105" />
                   ) : (
-                    <div className="grid h-full place-items-center text-center text-muted-foreground">
-                      <Camera className="mx-auto size-7" />
-                      <span className="mt-1 text-[10px]">Sin vista previa</span>
+                    <div className="grid h-full place-items-center text-center text-white/80">
+                      <span className="mx-auto grid size-12 place-items-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur">
+                        <Camera className="size-6" />
+                      </span>
+                      <span className="mt-1.5 text-[10.5px] font-semibold">{f.tipo}</span>
                     </div>
                   )}
                 </div>
@@ -7051,7 +7064,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         )}
       </div>
 
-      <div className="card-grad p-1">
+      <div className="rounded-2xl border border-primary/10 bg-card/90 p-1 shadow-[inset_0_1px_3px_rgba(76,29,149,0.08),0_10px_26px_-22px_rgba(76,29,149,0.6)]">
         <div className={`grid grid-cols-2 gap-1 ${conDiagnostico ? "md:grid-cols-6" : ""}`}>
           {TABS.map((t) => {
             const activa = tabVisible === t.id;
@@ -7060,10 +7073,10 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`flex min-h-8 items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                className={`flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-2 py-1 text-[12px] font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
                   activa
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.95)]"
+                    : "text-muted-foreground hover:bg-primary/[0.06] hover:text-foreground"
                 }`}
               >
                 <t.icon className="size-3.5 shrink-0" />
@@ -7802,17 +7815,18 @@ function ResumenCuenta({
 }) {
   return (
     // Etiqueta e ícono arriba; el valor usa todo el ancho y nunca se parte (fecha · hora, $ 35.000).
-    <div className="card-grad @container flex min-h-[76px] min-w-0 flex-col gap-1.5 p-2.5 sm:min-h-[80px] sm:p-3.5">
-      <div className="flex items-start justify-between gap-1.5">
-        <p className="min-w-0 text-[9.5px] font-semibold uppercase leading-tight tracking-[0.02em] text-muted-foreground sm:text-[10px] sm:tracking-[0.08em]">
+    <div className="group @container relative flex min-h-[80px] min-w-0 flex-col gap-1.5 overflow-hidden rounded-[20px] border border-transparent p-2.5 shadow-[0_14px_32px_-24px_rgba(76,29,149,0.55)] transition duration-300 [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(140deg,rgba(124,58,237,0.30),rgba(217,70,239,0.12)_45%,rgba(124,58,237,0.05))_border-box] hover:-translate-y-0.5 sm:min-h-[88px] sm:p-3.5">
+      <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-gradient-to-br from-primary/15 to-fuchsia-400/15 blur-2xl transition group-hover:scale-125" />
+      <div className="relative flex items-start justify-between gap-1.5">
+        <p className="min-w-0 text-[9.5px] font-bold uppercase leading-tight tracking-[0.02em] text-muted-foreground sm:text-[10px] sm:tracking-[0.1em]">
           {etiqueta}
         </p>
-        <span className="hidden size-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary @[8.5rem]:grid sm:size-8 sm:rounded-xl">
+        <span className="hidden size-6 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.9)] @[8.5rem]:grid sm:size-9 sm:rounded-xl">
           <Icon className="size-3 sm:size-4" />
         </span>
       </div>
       <p
-        className={`mt-auto whitespace-nowrap font-bold leading-tight tracking-tight tabular-nums ${tono ?? "text-foreground"}`}
+        className={`relative mt-auto whitespace-nowrap font-bold leading-tight tracking-tight tabular-nums ${tono ?? "text-foreground"}`}
         style={{ fontSize: `clamp(11px, calc(100cqi / ${Math.max(1, valor.length * 0.62).toFixed(2)}), 18px)` }}
       >
         {valor}

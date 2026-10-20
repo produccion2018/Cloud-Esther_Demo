@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, ChevronRight, LifeBuoy, Search, Sparkles, X } from "lucide-react";
 
 import { AvatarEsther } from "./AvatarEsther";
+import { POS_FLOTANTE, POS_FLOTANTE_CHAT, useHayComposer } from "@/lib/cloud-esther/composer-visible";
 import { normalizarBusqueda } from "@/lib/utils";
 
 /* Ubicación: src/components/cloud-esther/esther-ai/AyudaEsther.tsx
@@ -180,6 +181,8 @@ function buscar(q: string): Pregunta[] {
 
 export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: string }) {
   const [abierto, setAbierto] = useState(false);
+  // Con un chat en pantalla, la ayuda sube y se achica para no tapar «Enviar»
+  const chat = useHayComposer() && !abierto;
   const [q, setQ] = useState("");
   const [elegida, setElegida] = useState<Pregunta | null>(null);
   const caja = useRef<HTMLInputElement>(null);
@@ -308,11 +311,11 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
         }}
         aria-label={abierto ? "Cerrar ayuda" : "Ayuda de Esther"}
         title={abierto ? "Cerrar ayuda" : "¿Necesitás ayuda?"}
-        className="group fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-[60] flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 sm:pr-4 lg:bottom-5 lg:right-5"
+        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-[60] flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 lg:right-5 ${chat ? "" : "sm:pr-4"}`}
       >
         {!abierto && <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />}
         <AvatarEsther tam="md" enLinea={!abierto} />
-        <span className="hidden text-left sm:block">
+        <span className={chat ? "hidden" : "hidden text-left sm:block"}>
           <span className="block text-[13px] font-bold leading-tight">¿Necesitás ayuda?</span>
           <span className="block text-[11px] text-muted-foreground">Preguntale a Esther</span>
         </span>

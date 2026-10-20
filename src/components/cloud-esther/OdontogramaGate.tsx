@@ -41,6 +41,7 @@ import { Cargando3D, Limite3D } from "@/components/odontogram/Carga3D";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
 import { EstherOdontograma } from "@/components/cloud-esther/odontograma3d/EstherOdontograma";
+import { BocaRealista } from "@/components/odontograma-realista/BocaRealista";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 /** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
@@ -205,6 +206,8 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
   const Odontogram3D = useMemo(() => cargarOdontograma3D(), [intento3D]);
   // «Ampliar Odontograma 3D»: solo agranda el área de trabajo (mismo modelo, mismo estado).
   const [ampliado, setAmpliado] = useState(false);
+  // Boca 3D realista (nueva): PASO 1, se puede ver andando sin tocar el 3D actual.
+  const [bocaRealista, setBocaRealista] = useState(false);
 
   useEffect(() => {
     setChart(cargarChart(clavePaciente, pacienteId));
@@ -295,6 +298,15 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
               </button>
               <button
                 type="button"
+                onClick={() => setBocaRealista((v) => !v)}
+                className={bocaRealista ? "btn-ce" : TAB_INACTIVO}
+                title="Vista previa de la boca 3D realista nueva"
+              >
+                <Box className="size-3.5" />
+                {bocaRealista ? "Ver odontograma clásico" : "Boca realista (nueva)"}
+              </button>
+              <button
+                type="button"
                 onClick={exportarInforme}
                 title={tieneInforme ? undefined : `Disponible en ${PLANS[PLAN_INFORME_3D].name}`}
                 className={tieneInforme ? TAB_INACTIVO : `${TAB_INACTIVO} opacity-60`}
@@ -339,6 +351,18 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
           chart={chart}
           profesional={usuario?.nombre ?? "Profesional"}
         />
+      ) : bocaRealista ? (
+        <div className="space-y-3">
+          <p className="rounded-2xl border border-primary/12 bg-primary/[0.04] px-4 py-2.5 text-[12px] text-muted-foreground">
+            <b className="text-foreground">Vista previa (paso 1):</b> esta es la nueva boca 3D realista andando.
+            Elegí vistas, abrí/cerrá la boca y tocá una pieza. En el próximo paso le conectamos los
+            estados clínicos, el periodontograma y Esther Infinity.
+          </p>
+          <BocaRealista
+            pacienteNombre={pacienteNombre}
+            onSeleccion={(id) => setFdiSeleccionado(id)}
+          />
+        </div>
       ) : (
         <div className="space-y-4">
           {/* Área de trabajo: modelo 3D + ficha de la pieza. Al ampliar, el mismo contenedor pasa

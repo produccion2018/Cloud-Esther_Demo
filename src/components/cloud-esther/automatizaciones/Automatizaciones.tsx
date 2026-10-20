@@ -11,6 +11,8 @@ import {
   GitBranch,
   History,
   LayoutTemplate,
+  ListChecks,
+  Lock,
   ListTodo,
   Mail,
   MessageCircle,
@@ -29,9 +31,11 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion, clinicaActualId } from "@/lib/cloud-esther/auth-store";
 import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
+import { AUTOMATIZACIONES_126, TOTAL_AUTOMATIZACIONES } from "@/lib/cloud-esther/automatizaciones-126";
+import { activarGrupo, alternarAuto, inicializarAutoActivas, storeAutoActivas } from "@/lib/cloud-esther/automatizaciones-activas-store";
 import {
   ACCIONES,
   EVENTOS,
@@ -74,7 +78,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
   return <ModalBase {...props} modulo="Automatizaciones" />;
 }
 
-type Seccion = "flujos" | "plantillas" | "ejecuciones" | "conexion";
+type Seccion = "catalogo" | "flujos" | "plantillas" | "ejecuciones" | "conexion";
 
 const ICONO: Record<TipoPaso, LucideIcon> = {
   ia: Sparkles,
@@ -138,7 +142,7 @@ export function Automatizaciones() {
   const { usuario: u } = useSesion();
   const est = storeN8n.usar();
   const [montado, setMontado] = useState(false);
-  const [seccion, setSeccion] = useState<Seccion>("flujos");
+  const [seccion, setSeccion] = useState<Seccion>("catalogo");
   const [sel, setSel] = useState<string | null>(null);
   const [editando, setEditando] = useState<Flujo | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -188,6 +192,7 @@ export function Automatizaciones() {
     },
   ];
   const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
+    { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
     { id: "flujos", label: "Flujos", icon: Workflow },
     { id: "plantillas", label: "Plantillas", icon: LayoutTemplate },
     {
@@ -196,7 +201,7 @@ export function Automatizaciones() {
       icon: History,
       badge: est.ejecuciones.filter((e) => e.estado === "Error").length,
     },
-    { id: "conexion", label: "Conexión n8n", icon: Plug },
+    { id: "conexion", label: "Conexión", icon: Plug },
   ];
 
   const guardar = (f: Flujo) => {
@@ -258,16 +263,16 @@ export function Automatizaciones() {
                     ) : (
                       <Clock3 className="size-3.5" />
                     )}
-                    n8n {est.conectado ? "conectado" : "en modo prueba"}
+                    {est.conectado ? "Automatizaciones activas" : "En modo prueba"}
                   </span>
                 </div>
                 <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">
                   Automatizaciones
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                  Cloud Esther emite el evento, n8n ejecuta el flujo y Esther Infinity analiza o redacta
-                  en cada paso. El resultado vuelve a la ficha del paciente, la Agenda o
-                  Notificaciones.
+                  Las 126 automatizaciones de Esther Infinity: cuando pasa algo en tu clínica, Esther
+                  Infinity actúa sola —avisa, recuerda, hace el seguimiento y prepara informes— y el
+                  resultado vuelve a la ficha del paciente, la Agenda o Notificaciones.
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -353,6 +358,8 @@ export function Automatizaciones() {
         <div className="mt-5">
           {!montado ? (
             <div className="card-grad h-[480px] animate-pulse" />
+          ) : seccion === "catalogo" ? (
+            <CatalogoAutomatizaciones plan={plan} onToast={onToast} />
           ) : seccion === "flujos" ? (
             <Flujos
               flujos={est.flujos}
@@ -421,6 +428,129 @@ function Nodo({ paso, ultimo }: { paso: Paso; ultimo: boolean }) {
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{resumenPaso(paso)}</p>
       </div>
     </li>
+  );
+}
+
+/* ───────────── Catálogo de las 126 automatizaciones ─────────────
+   Lo que el cliente ve: 126 automatizaciones agrupadas (A–G), sin jerga técnica.
+   - Plan 4 (grupo): vienen todas incluidas y activas.
+   - Plan 3 (avanzada): puede activarlas/desactivarlas (están en Esther Infinity completo).
+   - Plan 1 y 2: las ven pero no las activan (capacidad de Esther Infinity completo). */
+function CatalogoAutomatizaciones({
+  plan,
+  onToast,
+}: {
+  plan: PlanId;
+  onToast: (m: string) => void;
+}) {
+  const grupo4 = plan === "grupo";
+  const puedeActivar = plan === "grupo" || plan === "avanzada";
+  useEffect(() => {
+    if (grupo4) inicializarAutoActivas(true);
+  }, [grupo4]);
+  const { activas } = storeAutoActivas.usar();
+  const act = new Set(activas);
+  const totalActivas = activas.length;
+
+  return (
+    <div className="space-y-4">
+      <div className="card-grad flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.8)]">
+            <ListChecks className="size-5" />
+          </span>
+          <div>
+            <p className="font-display text-base font-bold">Las {TOTAL_AUTOMATIZACIONES} automatizaciones de Esther Infinity</p>
+            <p className="text-xs text-muted-foreground">
+              {grupo4
+                ? "Incluidas en tu plan: Esther Infinity las ejecuta sola cuando corresponde."
+                : puedeActivar
+                  ? "Incluidas en Esther Infinity completo. Activá las que quieras usar."
+                  : "Son parte de Esther Infinity completo (plan avanzado o grupo)."}
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full border border-primary/15 bg-primary/[0.05] px-3 py-1.5 text-[12px] font-bold text-primary">
+          {totalActivas} / {TOTAL_AUTOMATIZACIONES} activas
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {AUTOMATIZACIONES_126.map((g) => {
+          const nums = g.items.map((x) => x.n);
+          const activasGrupo = nums.filter((n) => act.has(n)).length;
+          const todas = activasGrupo === nums.length;
+          return (
+            <section key={g.id} className="card-grad overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-gradient-to-r from-primary/[0.07] via-fuchsia-500/[0.04] to-transparent px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-sm font-bold text-white shadow-[0_8px_16px_-8px_rgba(124,58,237,0.7)]">
+                    {g.letra}
+                  </span>
+                  <div>
+                    <p className="font-display text-[15px] font-bold leading-tight">{g.titulo}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {activasGrupo} de {nums.length} activas
+                    </p>
+                  </div>
+                </div>
+                {puedeActivar ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      activarGrupo(nums, !todas);
+                      onToast(todas ? `${g.titulo}: automatizaciones pausadas` : `${g.titulo}: automatizaciones activadas`);
+                    }}
+                    className="rounded-full border border-primary/20 bg-card px-3 py-1.5 text-[11px] font-bold text-primary transition hover:-translate-y-0.5 hover:border-primary/40"
+                  >
+                    {todas ? "Pausar todas" : "Activar todas"}
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-semibold text-muted-foreground">
+                    <Lock className="size-3" /> Plan avanzado
+                  </span>
+                )}
+              </div>
+              <ul className="divide-y divide-primary/[0.06]">
+                {g.items.map((it) => {
+                  const on = act.has(it.n);
+                  return (
+                    <li key={it.n} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-primary/[0.03]">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-primary/[0.06] text-[10px] font-bold text-primary/70 tabular-nums">
+                        {it.n}
+                      </span>
+                      <span className={`min-w-0 flex-1 text-[13px] ${on ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                        {it.nombre}
+                      </span>
+                      {puedeActivar ? (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          aria-label={`${on ? "Desactivar" : "Activar"} ${it.nombre}`}
+                          onClick={() => alternarAuto(it.n)}
+                          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-gradient-to-r from-primary to-fuchsia-500 shadow-[0_4px_12px_-4px_rgba(124,58,237,0.8)]" : "bg-muted-foreground/25"}`}
+                        >
+                          <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+                        </button>
+                      ) : (
+                        <Lock className="size-3.5 shrink-0 text-muted-foreground/60" />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="flex items-center gap-2 rounded-2xl border border-primary/10 bg-primary/[0.03] p-3 text-[11.5px] text-muted-foreground">
+        <ShieldCheck className="size-4 shrink-0 text-primary" />
+        Cuando una automatización necesita un canal externo todavía no conectado (por ejemplo WhatsApp),
+        se avisa claramente y se deja preparada; no se simula un envío como si fuera real.
+      </p>
+    </div>
   );
 }
 

@@ -26,6 +26,11 @@ const cargarOdontograma3D = () =>
   lazy(() =>
     import("@/components/odontogram/Odontogram3D").then((m) => ({ default: m.Odontogram3D })),
   );
+// La boca 3D realista se descarga solo en el cliente, cuando se muestra (igual que el 3D viejo):
+// así three.js no entra al paquete del servidor (SSR) y no frena la carga del resto.
+const BocaRealista = lazy(() =>
+  import("@/components/odontograma-realista/BocaRealista").then((m) => ({ default: m.BocaRealista })),
+);
 import {
   defaultChart,
   TEETH_BY_FDI,
@@ -41,8 +46,6 @@ import { Cargando3D, Limite3D } from "@/components/odontogram/Carga3D";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
 import { EstherOdontograma } from "@/components/cloud-esther/odontograma3d/EstherOdontograma";
-import { BocaRealista } from "@/components/odontograma-realista/BocaRealista";
-import { TOOTH_STATE_META } from "@/lib/odontogram/fdi";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 /** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
@@ -391,15 +394,23 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
                   : "grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_370px] @6xl:grid-cols-[minmax(0,1fr)_410px]"
               }
             >
-              <BocaRealista
-                key={clavePaciente}
-                pacienteNombre={pacienteNombre}
-                estados={estadosColor}
-                selected={fdiSeleccionado}
-                onSeleccion={setFdiSeleccionado}
-                mostrarInfo={false}
-                leyenda={<LeyendaEstados chart={chart} />}
-              />
+              <Suspense
+                fallback={
+                  <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
+                    Cargando el modelo 3D…
+                  </div>
+                }
+              >
+                <BocaRealista
+                  key={clavePaciente}
+                  pacienteNombre={pacienteNombre}
+                  estados={estadosColor}
+                  selected={fdiSeleccionado}
+                  onSeleccion={setFdiSeleccionado}
+                  mostrarInfo={false}
+                  leyenda={<LeyendaEstados chart={chart} />}
+                />
+              </Suspense>
               <div
                 className={
                   ampliado

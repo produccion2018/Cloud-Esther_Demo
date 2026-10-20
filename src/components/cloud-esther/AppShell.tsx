@@ -36,7 +36,8 @@ import { useAlmacenClinicoListo } from "@/lib/clinica/almacen-clinico";
 import { Toaster } from "@/components/ui/sonner";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
-import { agregarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { contratarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
@@ -950,21 +951,21 @@ function ModuloNoIncluido({
   // Se puede sumar como adicional (no los exclusivos de Enterprise). En una clínica real, solo el
   // Administrador, y antes se le avisa al panel de Cloud Esther para facturarlo.
   const comprable = !!modulo && comprableEn(modulo, plan) && (!real || real.rol === "admin");
-  const [agregando, setAgregando] = useState(false);
-  const agregar = async () => {
+  const [comprar, setComprar] = useState(false);
+  const confirmarCompra = async () => {
     if (!modulo) return;
+    // Clínica real: primero se avisa al panel de Cloud Esther (para facturarlo)
     if (real) {
-      setAgregando(true);
       try {
         await avisarModuloAdicional(real.slug, modulo.id, "agregar");
       } catch (e) {
         window.alert(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
         return;
-      } finally {
-        setAgregando(false);
       }
     }
-    agregarModuloExtra(modulo.id, usuario?.nombre ?? "Administración");
+    // Activa + registra (módulo, fecha, hora, usuario) + avisa a admin/socio/secretaría
+    contratarModuloExtra(modulo.id, modulo.label, usuario?.nombre ?? "Administración");
+    setComprar(false);
   };
   return (
     <div className="grid min-h-[70vh] place-items-center p-6">
@@ -982,8 +983,8 @@ function ModuloNoIncluido({
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {comprable && (
-            <button type="button" className="btn-ce" disabled={agregando} onClick={() => void agregar()}>
-              {agregando ? "Un momento…" : planContratado ? `Contratar ${label}` : `Agregar ${label} a mi plan`}
+            <button type="button" className="btn-ce" onClick={() => setComprar(true)}>
+              {planContratado ? `Contratar ${label}` : `Agregar ${label} a mi plan`}
             </button>
           )}
           {!planContratado && (
@@ -1000,6 +1001,13 @@ function ModuloNoIncluido({
           </Link>
         </div>
       </div>
+      <DialogoCompraModulo
+        abierto={comprar}
+        modulo={modulo ? { label: modulo.label, icon: modulo.icon } : null}
+        planContratado={planContratado}
+        onCerrar={() => setComprar(false)}
+        onConfirmar={confirmarCompra}
+      />
     </div>
   );
 }

@@ -25,10 +25,11 @@ import {
   type PlanId,
 } from "@/lib/cloud-esther/data";
 import {
-  agregarModuloExtra,
+  contratarModuloExtra,
   quitarModuloExtra,
   storeModulosExtra,
 } from "@/lib/cloud-esther/modulos-extra-store";
+import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { avisarModuloAdicional } from "@/lib/clinica/api";
@@ -753,6 +754,7 @@ function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
   // Clínica real: solo el Administrador suma módulos (y el panel recibe el aviso para facturarlo)
   const real = useClinicaReal();
   const [guardando, setGuardando] = useState<string | null>(null);
+  const [comprar, setComprar] = useState<(typeof MODULES)[number] | null>(null);
   const activos = storeModulosExtra.usar().activos;
   if (real && real.rol !== "admin") return null;
   const comprables = MODULES.filter((m) => comprableEn(m, plan) && !m.maxPlan);
@@ -795,11 +797,16 @@ function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
                 className={activo ? BTN_SECUNDARIO : BTN_PRIMARIO}
                 disabled={guardando === m.id}
                 onClick={async () => {
-                  // Clínica real: primero se avisa al panel de Cloud Esther (para facturarlo)
+                  // Agregar: pedimos confirmación en una tarjeta antes de contratar.
+                  if (!activo) {
+                    setComprar(m);
+                    return;
+                  }
+                  // Quitar: en la clínica real avisamos al panel de Cloud Esther primero.
                   if (real) {
                     setGuardando(m.id);
                     try {
-                      await avisarModuloAdicional(real.slug, m.id, activo ? "quitar" : "agregar");
+                      await avisarModuloAdicional(real.slug, m.id, "quitar");
                     } catch (e) {
                       onToast(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
                       return;
@@ -807,17 +814,8 @@ function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
                       setGuardando(null);
                     }
                   }
-                  if (activo) {
-                    quitarModuloExtra(m.id);
-                    onToast(real ? `${m.label} quitado: le avisamos a Cloud Esther` : `${m.label} quitado de tu plan`);
-                  } else {
-                    agregarModuloExtra(m.id, usuario?.nombre ?? "Administración");
-                    onToast(
-                      real
-                        ? `${m.label} agregado: se suma a tu próxima factura de Cloud Esther`
-                        : `${m.label} agregado a tu plan ${PLANS[plan].name}`,
-                    );
-                  }
+                  quitarModuloExtra(m.id);
+                  onToast(real ? `${m.label} quitado: le avisamos a Cloud Esther` : `${m.label} quitado de tu plan`);
                 }}
               >
                 {activo ? "Quitar" : "Agregar"}
@@ -826,6 +824,34 @@ function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }) {
           );
         })}
       </ul>
+
+      <DialogoCompraModulo
+        abierto={!!comprar}
+        modulo={comprar}
+        planContratado={planContratado}
+        onCerrar={() => setComprar(null)}
+        onConfirmar={async () => {
+          const m = comprar;
+          if (!m) return;
+          // Clínica real: primero se avisa al panel de Cloud Esther (para facturarlo)
+          if (real) {
+            try {
+              await avisarModuloAdicional(real.slug, m.id, "agregar");
+            } catch (e) {
+              onToast(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
+              return;
+            }
+          }
+          // Activa + registra (módulo, fecha, hora, usuario) + avisa a admin/socio/secretaría
+          contratarModuloExtra(m.id, m.label, usuario?.nombre ?? "Administración");
+          setComprar(null);
+          onToast(
+            real
+              ? `${m.label} contratado: se suma a tu próxima factura de Cloud Esther`
+              : `${m.label} contratado y activado en tu plan ${PLANS[plan].name}`,
+          );
+        }}
+      />
     </div>
   );
 }

@@ -13,8 +13,8 @@ const VIEWS: Record<ViewName, [number, number, number]> = {
   side: [115, 10, 60],
 };
 
-function Tooth({ t, selected, hovered, onSelect, onHover }: {
-  t: PlacedTooth; selected: boolean; hovered: boolean;
+function Tooth({ t, color, selected, hovered, onSelect, onHover }: {
+  t: PlacedTooth; color: string; selected: boolean; hovered: boolean;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const geo = useMemo(() => buildToothGeometry(t.type, t.jaw, t.id).geo, [t]);
@@ -38,6 +38,7 @@ function Tooth({ t, selected, hovered, onSelect, onHover }: {
       <meshPhysicalMaterial
         ref={mat}
         vertexColors
+        color={color}
         roughness={0.28}
         metalness={0}
         clearcoat={0.7}
@@ -54,8 +55,8 @@ function Tooth({ t, selected, hovered, onSelect, onHover }: {
   );
 }
 
-function Jaw({ jaw, offset, selected, hovered, onSelect, onHover }: {
-  jaw: "upper" | "lower"; offset: number; selected: number | null; hovered: number | null;
+function Jaw({ jaw, offset, estados, selected, hovered, onSelect, onHover }: {
+  jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; selected: number | null; hovered: number | null;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const arch = useMemo(() => buildArch(jaw), [jaw]);
@@ -74,7 +75,7 @@ function Jaw({ jaw, offset, selected, hovered, onSelect, onHover }: {
       <mesh geometry={gum} castShadow receiveShadow>{gumMat}</mesh>
       <mesh geometry={palate} receiveShadow>{gumMat}</mesh>
       {arch.teeth.map((t) => (
-        <Tooth key={t.id} t={t} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
+        <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
       ))}
     </group>
   );
@@ -95,8 +96,8 @@ function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
   return null;
 }
 
-export default function MouthScene({ view, nonce, open, selected, onSelect, showUpper, showLower }: {
-  view: ViewName; nonce: number; open: boolean; selected: number | null; onSelect: (id: number | null) => void;
+export default function MouthScene({ view, nonce, open, estados = {}, selected, onSelect, showUpper, showLower }: {
+  view: ViewName; nonce: number; open: boolean; estados?: Record<number, string>; selected: number | null; onSelect: (id: number | null) => void;
   showUpper: boolean; showLower: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -122,8 +123,8 @@ export default function MouthScene({ view, nonce, open, selected, onSelect, show
       </Environment>
 
       <group rotation={[0.08, 0, 0]}>
-        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />

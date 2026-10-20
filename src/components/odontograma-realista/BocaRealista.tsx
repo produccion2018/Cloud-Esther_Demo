@@ -29,11 +29,23 @@ function describirPieza(id: number) {
 
 export function BocaRealista({
   pacienteNombre,
+  estados = {},
+  selected: selectedProp,
   onSeleccion,
+  mostrarInfo = true,
+  leyenda,
 }: {
   pacienteNombre?: string;
-  /** Para el PASO 2: avisar qué pieza eligió el profesional (para abrir su ficha clínica). */
+  /** Color de cada pieza por su número FDI (estado clínico / periodontal). */
+  estados?: Record<number, string>;
+  /** Pieza elegida, controlada desde afuera (para sincronizar con la ficha clínica). */
+  selected?: number | null;
+  /** Avisa qué pieza eligió el profesional (para abrir su ficha clínica). */
   onSeleccion?: (id: number | null) => void;
+  /** Mostrar el cartelito con el nombre de la pieza (se oculta cuando afuera ya hay ficha). */
+  mostrarInfo?: boolean;
+  /** Referencia de colores (leyenda de estados), opcional. */
+  leyenda?: import("react").ReactNode;
 }) {
   const [montado, setMontado] = useState(false);
   const [view, setView] = useState<ViewName>("front");
@@ -41,11 +53,12 @@ export function BocaRealista({
   const [open, setOpen] = useState(true);
   const [upper, setUpper] = useState(true);
   const [lower, setLower] = useState(true);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selInterna, setSelInterna] = useState<number | null>(null);
+  const selected = selectedProp !== undefined ? selectedProp : selInterna;
   useEffect(() => setMontado(true), []);
   const info = selected ? describirPieza(selected) : null;
   const elegir = (id: number | null) => {
-    setSelected(id);
+    if (selectedProp === undefined) setSelInterna(id);
     onSeleccion?.(id);
   };
 
@@ -93,6 +106,7 @@ export function BocaRealista({
               view={view}
               nonce={nonce}
               open={open}
+              estados={estados}
               selected={selected}
               onSelect={elegir}
               showUpper={upper}
@@ -115,6 +129,12 @@ export function BocaRealista({
           </button>
         </div>
 
+        {leyenda && (
+          <div className="absolute left-4 bottom-4 max-w-[60%] rounded-2xl border border-primary/12 bg-card/90 p-2.5 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
+            {leyenda}
+          </div>
+        )}
+        {mostrarInfo && (
         <div className="absolute bottom-4 right-4 w-64 rounded-2xl border border-primary/12 bg-card/90 p-4 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
           {info ? (
             <>
@@ -128,6 +148,7 @@ export function BocaRealista({
             </p>
           )}
         </div>
+        )}
       </div>
     </div>
   );

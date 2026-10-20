@@ -42,6 +42,7 @@ import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
 import { EstherOdontograma } from "@/components/cloud-esther/odontograma3d/EstherOdontograma";
 import { BocaRealista } from "@/components/odontograma-realista/BocaRealista";
+import { TOOTH_STATE_META } from "@/lib/odontogram/fdi";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
 /** Se conserva por compatibilidad con las páginas que lo pasan: el módulo (2D o 3D) lo decide
@@ -206,8 +207,15 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
   const Odontogram3D = useMemo(() => cargarOdontograma3D(), [intento3D]);
   // «Ampliar Odontograma 3D»: solo agranda el área de trabajo (mismo modelo, mismo estado).
   const [ampliado, setAmpliado] = useState(false);
-  // Boca 3D realista (nueva): PASO 1, se puede ver andando sin tocar el 3D actual.
-  const [bocaRealista, setBocaRealista] = useState(false);
+  // Color de cada pieza según su estado clínico, para pintar la boca 3D realista.
+  const estadosColor = useMemo(() => {
+    const out: Record<number, string> = {};
+    for (const [fdi, st] of Object.entries(chart)) {
+      const col = TOOTH_STATE_META[st as keyof typeof TOOTH_STATE_META]?.color;
+      if (col) out[Number(fdi)] = col;
+    }
+    return out;
+  }, [chart]);
 
   useEffect(() => {
     setChart(cargarChart(clavePaciente, pacienteId));
@@ -298,15 +306,6 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
               </button>
               <button
                 type="button"
-                onClick={() => setBocaRealista((v) => !v)}
-                className={bocaRealista ? "btn-ce" : TAB_INACTIVO}
-                title="Vista previa de la boca 3D realista nueva"
-              >
-                <Box className="size-3.5" />
-                {bocaRealista ? "Ver odontograma clásico" : "Boca realista (nueva)"}
-              </button>
-              <button
-                type="button"
                 onClick={exportarInforme}
                 title={tieneInforme ? undefined : `Disponible en ${PLANS[PLAN_INFORME_3D].name}`}
                 className={tieneInforme ? TAB_INACTIVO : `${TAB_INACTIVO} opacity-60`}
@@ -351,18 +350,6 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
           chart={chart}
           profesional={usuario?.nombre ?? "Profesional"}
         />
-      ) : bocaRealista ? (
-        <div className="space-y-3">
-          <p className="rounded-2xl border border-primary/12 bg-primary/[0.04] px-4 py-2.5 text-[12px] text-muted-foreground">
-            <b className="text-foreground">Vista previa (paso 1):</b> esta es la nueva boca 3D realista andando.
-            Elegí vistas, abrí/cerrá la boca y tocá una pieza. En el próximo paso le conectamos los
-            estados clínicos, el periodontograma y Esther Infinity.
-          </p>
-          <BocaRealista
-            pacienteNombre={pacienteNombre}
-            onSeleccion={(id) => setFdiSeleccionado(id)}
-          />
-        </div>
       ) : (
         <div className="space-y-4">
           {/* Área de trabajo: modelo 3D + ficha de la pieza. Al ampliar, el mismo contenedor pasa
@@ -404,26 +391,15 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
                   : "grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_370px] @6xl:grid-cols-[minmax(0,1fr)_410px]"
               }
             >
-              <div
-                className={`rounded-[28px] bg-gradient-to-b from-primary/[0.08] via-primary/[0.025] to-transparent p-1 ${ampliado ? "min-h-[55vh]" : ""}`}
-              >
-                <div
-                  className={`overflow-hidden rounded-[24px] border border-border/70 shadow-[0_24px_48px_-32px_rgba(76,29,149,0.55)] ${ampliado ? "h-full" : "h-[72dvh] min-h-[460px] sm:h-[calc(100vh-240px)] sm:min-h-[600px]"}`}
-                >
-                  <Limite3D onReintentar={() => setIntento3D((n) => n + 1)}>
-                    <Suspense fallback={<Cargando3D />}>
-                      <Odontogram3D
-                        key={clavePaciente}
-                        value={chart}
-                        onChange={handleChange}
-                        onSelectTooth={setFdiSeleccionado}
-                        selectedFdi={fdiSeleccionado}
-                        estadosEnPanel={false}
-                      />
-                    </Suspense>
-                  </Limite3D>
-                </div>
-              </div>
+              <BocaRealista
+                key={clavePaciente}
+                pacienteNombre={pacienteNombre}
+                estados={estadosColor}
+                selected={fdiSeleccionado}
+                onSeleccion={setFdiSeleccionado}
+                mostrarInfo={false}
+                leyenda={<LeyendaEstados chart={chart} />}
+              />
               <div
                 className={
                   ampliado
@@ -487,6 +463,22 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Mini-leyenda de colores: solo los estados que aparecen en este odontograma. */
+function LeyendaEstados({ chart }: { chart: Record<number, ToothState> }) {
+  const presentes = Array.from(new Set(Object.values(chart))).filter((e) => e !== "sano");
+  if (presentes.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1">
+      {presentes.map((e) => (
+        <span key={e} className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold">
+          <span className="size-3 rounded-full ring-1 ring-black/10" style={{ background: TOOTH_STATE_META[e].color }} />
+          {TOOTH_STATE_META[e].label}
+        </span>
+      ))}
     </div>
   );
 }

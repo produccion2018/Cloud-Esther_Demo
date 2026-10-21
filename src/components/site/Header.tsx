@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ModulosPanel } from "@/components/site/ModulosPanel";
 
 const nav = [
   { label: "Inicio", to: "/" },
@@ -202,13 +203,48 @@ export function Header() {
               onHover={setHovered}
             />
 
-            {/* CARACTERÍSTICAS → link directo al panel */}
-            <NavLink
-              to="/caracteristicas"
-              label="Características"
-              hovered={hovered}
-              onHover={setHovered}
-            />
+            {/* CARACTERÍSTICAS → despliega el panel de módulos ahí mismo */}
+            <div className="relative">
+              <button
+                type="button"
+                aria-expanded={featuresOpen}
+                aria-haspopup="true"
+                onClick={() => {
+                  setFeaturesOpen((v) => !v);
+                  setHovered("features");
+                }}
+                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[15px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                  featuresOpen ? "text-foreground" : "text-foreground/70 hover:text-foreground"
+                }`}
+              >
+                {hovered === "features" && <HoverPill />}
+                <span className="relative z-10">Características</span>
+                <ChevronDown className={`relative z-10 size-3.5 transition-transform duration-300 ${featuresOpen ? "rotate-180 text-primary" : ""}`} />
+                <span
+                  className={`pointer-events-none absolute bottom-0.5 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 ${
+                    featuresOpen ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100"
+                  }`}
+                />
+              </button>
+
+              {featuresOpen && (
+                <div className="fixed inset-0 z-40" onClick={() => setFeaturesOpen(false)} aria-hidden />
+              )}
+              <AnimatePresence>
+                {featuresOpen && (
+                  <motion.div
+                    key="caract-panel"
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="fixed left-1/2 top-[78px] z-50 w-[min(920px,94vw)] -translate-x-1/2"
+                  >
+                    <ModulosPanel onLinkClick={() => setFeaturesOpen(false)} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* =================================================
                 PLANES + NOSOTROS
@@ -325,13 +361,32 @@ export function Header() {
                   Inicio
                 </Link>
 
-                <Link
-                  to="/caracteristicas"
-                  onClick={closeMenu}
-                  className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
+                <button
+                  type="button"
+                  aria-expanded={mobileFeaturesOpen}
+                  onClick={() => setMobileFeaturesOpen((v) => !v)}
+                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
+                    mobileFeaturesOpen ? "bg-lavender text-foreground" : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                  }`}
                 >
-                  Características
-                </Link>
+                  <span>Características</span>
+                  <ChevronDown className={`size-4 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {mobileFeaturesOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-1 py-2">
+                        <ModulosPanel onLinkClick={closeMenu} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {nav.slice(1).map((item) => (
                   <Link

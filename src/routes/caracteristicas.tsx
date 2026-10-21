@@ -368,9 +368,14 @@ const AREAS_OCLU = [
     items: [
       { icon: Users, n: "Pacientes", tag: "Una ficha por paciente, con toda su historia.", bullets: ["Datos, obra social y contacto", "Historia clínica y antecedentes", "Seguimiento y controles"] },
       { icon: CalendarDays, n: "Agenda", tag: "Los turnos de todos los profesionales en un calendario.", bullets: ["Vista diaria, semanal y por profesional", "Recordatorios automáticos", "Sin superposiciones"] },
+      { icon: CalendarCheck, n: "Autoagenda", tag: "El paciente reserva su turno online.", bullets: ["Horarios disponibles en tiempo real", "Confirmación automática", "Menos llamados a la clínica"] },
       { icon: Stethoscope, n: "Odontograma", tag: "El estado de cada pieza, en 2D y 3D.", bullets: ["Boca 3D realista", "Estados por pieza y cara", "Historial de evolución"] },
       { icon: Activity, n: "Periodontograma", tag: "Sondaje y salud de las encías.", bullets: ["PS, margen y NIC por sitio", "Sangrado y placa", "Comparación entre evaluaciones"] },
-      { icon: FileText, n: "Historia clínica", tag: "Evoluciones, estudios y documentos.", bullets: ["Evoluciones y notas", "Consentimientos y recetas", "Imágenes y radiografías"] },
+      { icon: FileText, n: "Historia clínica", tag: "Antecedentes, evoluciones y estudios.", bullets: ["Antecedentes y alertas", "Evoluciones por consulta", "Todo en un lugar"] },
+      { icon: ScrollText, n: "Evoluciones", tag: "El registro de cada consulta.", bullets: ["Notas clínicas", "Procedimientos realizados", "Próximos controles"] },
+      { icon: ClipboardList, n: "Consentimientos", tag: "Documentos firmados y guardados.", bullets: ["Plantillas por tratamiento", "Firma del paciente", "Siempre disponibles"] },
+      { icon: FileText, n: "Recetas digitales", tag: "Recetas listas en segundos.", bullets: ["Plantillas reutilizables", "Historial por paciente", "Envío al portal"] },
+      { icon: Microscope, n: "Imágenes y radiografías", tag: "Estudios y fotos del paciente.", bullets: ["Galería por paciente", "Comparación de estudios", "Anotaciones"] },
     ],
   },
   {
@@ -381,27 +386,31 @@ const AREAS_OCLU = [
       { icon: ReceiptText, n: "Facturación", tag: "Comprobantes e ingresos en un solo lugar.", bullets: ["Facturas y cobros", "Cuenta corriente por paciente", "Cierre de caja"] },
       { icon: Landmark, n: "Finanzas y caja", tag: "Ingresos, egresos y caja al día.", bullets: ["Movimientos diarios", "Saldos y pagos", "Reportes de caja"] },
       { icon: Package, n: "Inventario", tag: "Stock y materiales bajo control.", bullets: ["Entradas y salidas", "Alertas de stock bajo", "Por sucursal"] },
-      { icon: BarChart3, n: "Reportes y BI", tag: "Los numeros que impulsan la clinica.", bullets: ["Turnos, ingresos y rendimiento", "Pacientes inactivos", "Indicadores en vivo"] },
+      { icon: FlaskConical, n: "Laboratorio", tag: "Pedidos al laboratorio con seguimiento.", bullets: ["Estado de cada trabajo", "Fechas de entrega", "Por paciente"] },
+      { icon: BarChart3, n: "Reportes y BI", tag: "Los números que impulsan la clínica.", bullets: ["Turnos, ingresos y rendimiento", "Pacientes inactivos", "Indicadores en vivo"] },
     ],
   },
   {
     icon: Megaphone,
     titulo: "Comunicación con el paciente",
     items: [
-      { icon: Bell, n: "Recordatorios", tag: "Avisos por WhatsApp antes de cada turno.", bullets: ["Confirmacion automatica", "Menos ausencias", "Tambien por correo"] },
-      { icon: Megaphone, n: "Comunicación y campañas", tag: "Mensajes y campañas a tus pacientes.", bullets: ["Segmentacion permitida", "Programacion de envios", "Seguimiento de respuestas"] },
-      { icon: Globe, n: "Portal del paciente", tag: "Tus pacientes, sin llamar a la clínica.", bullets: ["Ven turnos y recetas", "Aprueban presupuestos", "Chatean con la clinica"] },
+      { icon: Bell, n: "Recordatorios", tag: "Avisos por WhatsApp antes de cada turno.", bullets: ["Confirmación automática", "Menos ausencias", "También por correo"] },
+      { icon: Megaphone, n: "Comunicación y campañas", tag: "Mensajes y campañas a tus pacientes.", bullets: ["Segmentación permitida", "Programación de envíos", "Seguimiento de respuestas"] },
+      { icon: Globe, n: "Portal del paciente", tag: "Tus pacientes, sin llamar a la clínica.", bullets: ["Ven turnos y recetas", "Aprueban presupuestos", "Chatean con la clínica"] },
       { icon: Network, n: "Automatizaciones", tag: "Procesos que se hacen solos.", bullets: ["Recordatorios y seguimientos", "Avisos internos", "Flujos por evento"] },
+      { icon: FileText, n: "Mensajería del equipo", tag: "El equipo se comunica adentro.", bullets: ["Mensajes internos", "Por paciente o general", "Sin apps externas"] },
     ],
   },
   {
     icon: Building2,
     titulo: "Plataforma",
     items: [
-      { icon: Bot, n: "Esther Infinity (IA)", tag: "La asistente de IA de tu clínica.", bullets: ["Resumenes clinicos", "Sugerencias de agenda", "Lectura del rendimiento"] },
-      { icon: Building2, n: "Multiempresa", tag: "Varias sedes desde un panel.", bullets: ["Datos aislados por clinica", "Una o varias sucursales", "Vista consolidada"] },
+      { icon: Bot, n: "Esther Infinity (IA)", tag: "La asistente de IA de tu clínica.", bullets: ["Resúmenes clínicos", "Sugerencias de agenda", "Lectura del rendimiento"] },
+      { icon: Building2, n: "Multiempresa", tag: "Varias sedes desde un panel.", bullets: ["Datos aislados por clínica", "Una o varias sucursales", "Vista consolidada"] },
       { icon: UserCog, n: "Roles y permisos", tag: "Cada uno ve lo que le toca.", bullets: ["Roles propios", "Permisos por persona", "Solo el admin los maneja"] },
-      { icon: ShieldCheck, n: "Seguridad y auditoría", tag: "Tus datos, protegidos.", bullets: ["Cifrado de datos clinicos", "Registro de accesos", "Aislamiento entre clinicas"] },
+      { icon: Users, n: "Equipo profesional", tag: "Tu equipo y sus agendas.", bullets: ["Altas y bajas", "Horarios y bloqueos", "Especialidades"] },
+      { icon: Network, n: "Integraciones", tag: "Se conecta con otras herramientas.", bullets: ["WhatsApp y correo", "Pagos online", "Más en camino"] },
+      { icon: ShieldCheck, n: "Seguridad y auditoría", tag: "Tus datos, protegidos.", bullets: ["Cifrado de datos clínicos", "Registro de accesos", "Aislamiento entre clínicas"] },
     ],
   },
 ];
@@ -409,148 +418,116 @@ const TOTAL_OCLU = AREAS_OCLU.reduce((a, x) => a + x.items.length, 0);
 
 function ModulosOclu() {
   const [area, setArea] = useState(0);
-  const [modIdx, setModIdx] = useState(0);
+  const [sel, setSel] = useState<number | null>(null);
   const actual = AREAS_OCLU[area];
-  const mod = actual.items[modIdx];
-  const ModIcon = mod.icon;
-  const elegirArea = (i: number) => {
-    setArea(i);
-    setModIdx(0);
-  };
+  const mod = sel != null ? actual.items[sel] : null;
+  const ModIcon = mod ? mod.icon : actual.icon;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_1fr] lg:gap-6">
-      {/* IZQUIERDA: áreas + módulos del área activa */}
-      <div className="rounded-[28px] border border-primary/15 bg-card p-4 shadow-[0_18px_50px_-30px_rgba(88,28,135,0.4)] sm:p-5">
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-primary/15 bg-card p-5 shadow-[0_20px_60px_-30px_rgba(88,28,135,0.4)] sm:p-7">
+      <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-60 rounded-full bg-primary/10 blur-[80px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-20 size-56 rounded-full bg-fuchsia-300/10 blur-[80px]" />
+
+      {/* VISTA PRINCIPAL (igual a la referencia, en colores Cloud Esther) */}
+      <div className="relative grid gap-5 sm:grid-cols-[1fr_auto]">
+        <div>
+          <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{actual.titulo}</h3>
+          <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3.5 sm:grid-cols-2">
+            {actual.items.map((it, i) => {
+              const It = it.icon;
+              return (
+                <button key={it.n} type="button" onClick={() => setSel(i)} className="group flex items-center gap-3 text-left">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/25 text-primary transition-all duration-300 group-hover:scale-105 group-hover:border-primary group-hover:bg-primary group-hover:text-white">
+                    <It className="size-4" />
+                  </span>
+                  <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary sm:text-[15px]">{it.n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pestañas verticales de las otras áreas */}
+        <div className="flex gap-2">
           {AREAS_OCLU.map((a, i) => {
-            const AIcon = a.icon;
-            const on = i === area;
+            if (i === area) return null;
             return (
               <button
                 key={a.titulo}
                 type="button"
-                onClick={() => elegirArea(i)}
-                aria-pressed={on}
-                className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
-                  on ? "border-primary/40 bg-gradient-to-r from-primary to-fuchsia-500 text-white" : "border-border/70 bg-card text-muted-foreground hover:border-primary/25 hover:text-foreground"
-                }`}
+                onClick={() => { setArea(i); setSel(null); }}
+                className="flex w-14 flex-col items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card py-4 transition-all duration-300 hover:border-primary/35 hover:bg-lavender/30 sm:w-[66px]"
               >
-                <AIcon className="size-3.5" />
-                {String(i + 1).padStart(2, "0")}
+                <span className="text-sm font-bold text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                <span className="[writing-mode:vertical-rl] rotate-180 text-[13px] font-semibold text-foreground/80">{a.titulo}</span>
+                <span className="grid size-7 place-items-center rounded-full border border-primary/25 text-xs font-bold text-primary">{a.items.length}</span>
               </button>
             );
           })}
         </div>
+      </div>
 
-        <div className="mt-3 space-y-1.5">
-          {actual.items.map((it, i) => {
-            const ItIcon = it.icon;
-            const on = i === modIdx;
-            return (
-              <button
-                key={it.n}
-                type="button"
-                onClick={() => setModIdx(i)}
-                aria-pressed={on}
-                className={`group flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all duration-300 ${
-                  on ? "border-primary/30 bg-lavender/60 shadow-[0_10px_26px_-16px_rgba(124,58,237,0.6)]" : "border-transparent bg-card hover:border-primary/15 hover:bg-lavender/30"
-                }`}
-              >
-                <span className={`grid size-9 shrink-0 place-items-center rounded-xl transition-colors ${on ? "bg-primary text-white" : "bg-lavender text-primary"}`}>
-                  <ItIcon className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{it.n}</span>
-                <ArrowRight className={`size-4 shrink-0 text-primary transition-all ${on ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-50"}`} />
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+      <div className="relative mt-6 flex items-center justify-between border-t border-border/60 pt-4">
+        <p className="text-sm text-muted-foreground">
           <span className="font-bold text-foreground">{TOTAL_OCLU} funcionalidades</span> en 4 áreas
         </p>
+        <Link to="/planes" className="inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:gap-2">
+          Ver todas <ArrowRight className="size-4" />
+        </Link>
       </div>
 
-      {/* DERECHA: preview del módulo elegido, con ilustración animada */}
-      <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-card via-card to-lavender/40 p-6 shadow-[0_20px_60px_-30px_rgba(88,28,135,0.4)] sm:p-8">
-        <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/10 blur-[80px]" />
-
-        <AnimatePresence mode="wait">
+      {/* AL TOCAR UN MÓDULO: se muestra ese módulo con animación */}
+      <AnimatePresence>
+        {mod && (
           <motion.div
-            key={`${area}-${modIdx}`}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="relative"
+            key={`${area}-${sel}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-30 flex flex-col overflow-y-auto rounded-[28px] bg-card/95 p-6 backdrop-blur-sm sm:p-8"
           >
-            {/* Ilustración animada del módulo */}
-            <div className="relative mx-auto grid h-36 w-full place-items-center">
-              {[0, 1, 2].map((r) => (
-                <motion.span
-                  key={r}
-                  aria-hidden
-                  className="absolute size-28 rounded-full border border-primary/20"
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.45, 0, 0.45] }}
-                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: r * 0.7 }}
-                />
-              ))}
-              <motion.span
-                aria-hidden
-                className="absolute size-40"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
-              >
-                {[0, 120, 240].map((d) => (
-                  <span key={d} className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/60 shadow-[0_0_10px_rgba(124,58,237,0.7)]" style={{ transform: `rotate(${d}deg) translateY(-80px)` }} />
-                ))}
-              </motion.span>
-              <motion.span
-                className="relative grid size-20 place-items-center rounded-3xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_18px_40px_-14px_rgba(124,58,237,0.8)]"
-                animate={{ scale: [1, 1.06, 1] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <ModIcon className="size-9" />
-              </motion.span>
-            </div>
+            <button type="button" onClick={() => setSel(null)} className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-lavender px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white">
+              <ArrowRight className="size-4 rotate-180" /> Volver a {actual.titulo}
+            </button>
 
-            <div className="mt-4 text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-lavender px-3 py-1 text-[11px] font-semibold text-lavender-foreground">
-                {actual.titulo}
-              </span>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+              <div className="relative grid h-36 w-full place-items-center">
+                {[0, 1, 2].map((r) => (
+                  <motion.span key={r} aria-hidden className="absolute size-28 rounded-full border border-primary/20" animate={{ scale: [1, 1.5, 1], opacity: [0.45, 0, 0.45] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: r * 0.7 }} />
+                ))}
+                <motion.span aria-hidden className="absolute size-40" animate={{ rotate: 360 }} transition={{ duration: 16, repeat: Infinity, ease: "linear" }}>
+                  {[0, 120, 240].map((d) => (
+                    <span key={d} className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/60 shadow-[0_0_10px_rgba(124,58,237,0.7)]" style={{ transform: `rotate(${d}deg) translateY(-80px)` }} />
+                  ))}
+                </motion.span>
+                <motion.span className="relative grid size-20 place-items-center rounded-3xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_18px_40px_-14px_rgba(124,58,237,0.8)]" animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}>
+                  <ModIcon className="size-9" />
+                </motion.span>
+              </div>
+
+              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-lavender px-3 py-1 text-[11px] font-semibold text-lavender-foreground">{actual.titulo}</span>
               <h3 className="mt-3 font-display text-2xl font-bold tracking-tight">{mod.n}</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{mod.tag}</p>
-            </div>
 
-            <ul className="mx-auto mt-6 grid max-w-md gap-2.5">
-              {mod.bullets.map((b, i) => (
-                <motion.li
-                  key={b}
-                  initial={{ opacity: 0, x: 14 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }}
-                  className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3"
-                >
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-white">
-                    <Check className="size-3.5" />
-                  </span>
-                  <span className="text-sm font-medium text-foreground/90">{b}</span>
-                </motion.li>
-              ))}
-            </ul>
+              <ul className="mx-auto mt-6 grid w-full max-w-md gap-2.5">
+                {mod.bullets.map((b, i) => (
+                  <motion.li key={b} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-left">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-white"><Check className="size-3.5" /></span>
+                    <span className="text-sm font-medium text-foreground/90">{b}</span>
+                  </motion.li>
+                ))}
+              </ul>
 
-            <div className="mt-7 flex justify-center">
-              <Button asChild variant="hero" size="lg">
-                <Link to="/registro">
-                  Probar {mod.n}
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
+              <div className="mt-7">
+                <Button asChild variant="hero" size="lg">
+                  <Link to="/registro">Probar {mod.n}<ArrowRight className="size-4" /></Link>
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
-        </AnimatePresence>
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

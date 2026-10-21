@@ -333,22 +333,22 @@ export function Header() {
               <Link to="/login">Iniciar sesión</Link>
             </Button>
 
-            {/* Píldora de acción (Contratar servicio + Probar demo) — color lavanda de la referencia */}
-            <div className="flex items-center gap-1 rounded-full bg-lavender/70 p-1">
+            {/* Píldora de acción (Contratar servicio + Probar demo) — colores exactos de la referencia */}
+            <div className="flex items-center gap-1 rounded-full bg-[#ece7f3] p-1">
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="h-9 rounded-full bg-card px-4 text-[15px] font-semibold text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-card"
+                className="h-9 rounded-full bg-white px-4 text-[15px] font-semibold text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white"
               >
                 <Link to="/demostracion">Contratar servicio</Link>
               </Button>
 
               <Button
                 asChild
-                variant="hero"
+                variant="ghost"
                 size="sm"
-                className="h-9 rounded-full px-5 text-[15px] font-semibold shadow-[0_8px_24px_rgba(124,58,237,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(124,58,237,0.32)]"
+                className="h-9 rounded-full bg-[linear-gradient(90deg,#b43ae6,#f138df)] px-5 text-[15px] font-semibold text-white shadow-[0_8px_24px_rgba(180,58,230,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 hover:text-white"
               >
                 <Link to="/registro">Probar demo</Link>
               </Button>

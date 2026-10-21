@@ -660,11 +660,11 @@ export function LaptopCta() {
 
   useEffect(() => {
     const calc = () => {
-      const frameW = Math.min(window.innerWidth - 24, 1152);
+      const frameW = Math.min(window.innerWidth - 24, 1280);
       const frameH = Math.max(600, window.innerHeight - 32);
-      const byW = (frameW - 56) / (BASE_W + 40);
-      const byH = (frameH - 260) / (LID_H + 70);
-      setScale(Math.max(0.35, Math.min(1.5, byW, byH)));
+      const byW = (frameW - 40) / (BASE_W + 40);
+      const byH = (frameH - 210) / (LID_H + 70);
+      setScale(Math.max(0.35, Math.min(1.7, byW, byH)));
     };
     calc();
     window.addEventListener("resize", calc);
@@ -675,7 +675,7 @@ export function LaptopCta() {
     <section ref={sectionRef} className="relative h-[190vh] px-3 pb-8 sm:px-5">
       <style>{css}</style>
 
-      <div className="lc-bg sticky top-4 mx-auto flex h-[calc(100vh-2rem)] min-h-[600px] max-w-6xl flex-col items-center justify-between overflow-hidden rounded-[2rem] px-5 py-6 text-center shadow-[0_25px_70px_rgba(59,21,120,0.35)]">
+      <div className="lc-bg sticky top-4 mx-auto flex h-[calc(100vh-2rem)] min-h-[600px] max-w-7xl flex-col items-center justify-between overflow-hidden rounded-[2rem] px-5 py-6 text-center shadow-[0_25px_70px_rgba(59,21,120,0.35)]">
         {/* Fondo decorativo */}
         <motion.div
           aria-hidden="true"

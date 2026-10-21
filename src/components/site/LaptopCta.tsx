@@ -672,7 +672,7 @@ export function LaptopCta() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative h-[190vh] px-3 pb-8 sm:px-5">
+    <section ref={sectionRef} className="relative h-[135vh] px-3 pb-8 sm:px-5">
       <style>{css}</style>
 
       <div className="lc-bg sticky top-4 mx-auto flex h-[calc(100vh-2rem)] min-h-[600px] max-w-7xl flex-col items-center justify-between overflow-hidden rounded-[2rem] px-5 py-6 text-center shadow-[0_25px_70px_rgba(59,21,120,0.35)]">

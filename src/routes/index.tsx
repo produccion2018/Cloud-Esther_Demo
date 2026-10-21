@@ -15,6 +15,8 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   HeartPulse,
   ReceiptText,
   Rocket,
@@ -486,7 +488,9 @@ function CountUp({
 /* =========================================================
    MÓDULO FLOTANTE
 ========================================================= */
-function FloatingModule({ module }: { module: (typeof modules)[number] }) {
+const ORBITA_SEG = 46; // segundos por vuelta de la órbita (lento y elegante)
+
+function FloatingModule({ module, spin = 1 }: { module: (typeof modules)[number]; spin?: number }) {
   const Icon = module.icon;
 
   const isLarge = module.size === "large";
@@ -498,6 +502,8 @@ function FloatingModule({ module }: { module: (typeof modules)[number] }) {
         opacity: 1,
         scale: 1,
         y: [0, -7, 0],
+        // Contra-rota para quedar derecha mientras el contenedor orbita.
+        rotate: spin * -360,
       }}
       transition={{
         opacity: { duration: 0.5, delay: 0.3 + module.delay * 0.3 },
@@ -507,6 +513,7 @@ function FloatingModule({ module }: { module: (typeof modules)[number] }) {
           repeat: Infinity,
           ease: "easeInOut",
         },
+        rotate: { duration: ORBITA_SEG, repeat: Infinity, ease: "linear" },
       }}
       className={`absolute ${module.position} z-20 ${
         isLarge ? "w-[132px] sm:w-[145px]" : "w-[116px] sm:w-[132px]"
@@ -630,6 +637,8 @@ function FaqItem({
 
 function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  // Sentido de giro de la órbita de módulos (+1 avanza, -1 retrocede).
+  const [giroDir, setGiroDir] = useState(1);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -1036,10 +1045,34 @@ function Home() {
                 </div>
               </motion.div>
 
-              {/* MÓDULOS */}
-              {modules.map((module) => (
-                <FloatingModule key={module.title} module={module} />
-              ))}
+              {/* MÓDULOS EN ÓRBITA (giran solos en bucle; las flechas cambian el sentido) */}
+              <motion.div
+                className="absolute inset-0 z-20"
+                animate={{ rotate: giroDir * 360 }}
+                transition={{ duration: ORBITA_SEG, repeat: Infinity, ease: "linear" }}
+              >
+                {modules.map((module) => (
+                  <FloatingModule key={module.title} module={module} spin={giroDir} />
+                ))}
+              </motion.div>
+
+              {/* Flechas: avanzar / retroceder la órbita */}
+              <button
+                type="button"
+                aria-label="Girar módulos a la izquierda"
+                onClick={() => setGiroDir(-1)}
+                className="absolute left-1 top-1/2 z-40 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.14)] backdrop-blur transition hover:-translate-y-1/2 hover:scale-105 hover:border-primary/35 sm:left-2"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Girar módulos a la derecha"
+                onClick={() => setGiroDir(1)}
+                className="absolute right-1 top-1/2 z-40 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.14)] backdrop-blur transition hover:-translate-y-1/2 hover:scale-105 hover:border-primary/35 sm:right-2"
+              >
+                <ChevronRight className="size-4" />
+              </button>
 
               {/* INDICADOR SUPERIOR */}
               <motion.div

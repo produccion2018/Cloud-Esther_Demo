@@ -330,6 +330,7 @@ export function PeriodontogramaSec({
         >
           <BocaRealista
             key={`perio-${actual.id}`}
+            titulo="Periodoncia"
             pacienteNombre={contexto?.paciente}
             estados={estadosPerio}
             selected={seleccion}

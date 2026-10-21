@@ -424,23 +424,29 @@ function ModulosOclu() {
   const ModIcon = mod ? mod.icon : actual.icon;
 
   return (
-    <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-primary/15 bg-card p-5 shadow-[0_20px_60px_-30px_rgba(88,28,135,0.4)] sm:p-7">
-      <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-60 rounded-full bg-primary/10 blur-[80px]" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-20 size-56 rounded-full bg-fuchsia-300/10 blur-[80px]" />
+    <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-card via-card to-lavender/40 p-5 shadow-[0_28px_70px_-32px_rgba(88,28,135,0.55)] sm:p-7">
+      <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-60 rounded-full bg-primary/15 blur-[80px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-20 size-56 rounded-full bg-fuchsia-300/15 blur-[80px]" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-fuchsia-400" />
 
       {/* VISTA PRINCIPAL (igual a la referencia, en colores Cloud Esther) */}
       <div className="relative grid gap-5 sm:grid-cols-[1fr_auto]">
         <div>
-          <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{actual.titulo}</h3>
-          <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3.5 sm:grid-cols-2">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_12px_28px_-10px_rgba(124,58,237,0.7)]">
+              {(() => { const AIcon = actual.icon; return <AIcon className="size-5" />; })()}
+            </span>
+            <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{actual.titulo}</h3>
+          </div>
+          <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             {actual.items.map((it, i) => {
               const It = it.icon;
               return (
-                <button key={it.n} type="button" onClick={() => setSel(i)} className="group flex items-center gap-3 text-left">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/25 text-primary transition-all duration-300 group-hover:scale-105 group-hover:border-primary group-hover:bg-primary group-hover:text-white">
+                <button key={it.n} type="button" onClick={() => setSel(i)} className="group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors duration-300 hover:bg-white/60">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-lavender text-primary shadow-[0_6px_16px_-8px_rgba(124,58,237,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-fuchsia-500 group-hover:text-white">
                     <It className="size-4" />
                   </span>
-                  <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary sm:text-[15px]">{it.n}</span>
+                  <span className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary sm:text-[15px]">{it.n}</span>
                 </button>
               );
             })}
@@ -456,11 +462,11 @@ function ModulosOclu() {
                 key={a.titulo}
                 type="button"
                 onClick={() => { setArea(i); setSel(null); }}
-                className="flex w-14 flex-col items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card py-4 transition-all duration-300 hover:border-primary/35 hover:bg-lavender/30 sm:w-[66px]"
+                className="flex w-14 flex-col items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-gradient-to-b from-card to-lavender/40 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_14px_30px_-16px_rgba(124,58,237,0.6)] sm:w-[66px]"
               >
-                <span className="text-sm font-bold text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-sm font-extrabold text-primary/70">{String(i + 1).padStart(2, "0")}</span>
                 <span className="[writing-mode:vertical-rl] rotate-180 text-[13px] font-semibold text-foreground/80">{a.titulo}</span>
-                <span className="grid size-7 place-items-center rounded-full border border-primary/25 text-xs font-bold text-primary">{a.items.length}</span>
+                <span className="grid size-7 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-xs font-bold text-white shadow-[0_6px_14px_-6px_rgba(124,58,237,0.7)]">{a.items.length}</span>
               </button>
             );
           })}

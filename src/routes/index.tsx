@@ -659,92 +659,46 @@ function ModuleCard({ module }: { module: (typeof modules)[number] }) {
   );
 }
 
-/* Carrusel lineal del hero: tarjetas en fila con una al centro, avanza solo en bucle infinito,
-   con flechas ← → y puntitos. Movimiento fluido (spring). Respeta reduced-motion. */
+/* Carrusel del hero con MOVIMIENTO CONSTANTE e infinito: las tarjetas se deslizan sin parar
+   (marquee). Las flechas cambian el sentido. Se frena al pasar el mouse. Respeta reduced-motion. */
 function CarruselModulos() {
-  const [active, setActive] = useState(0);
+  const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
   const reduce = useReducedMotion();
-  const n = modules.length;
-
-  useEffect(() => {
-    if (paused || reduce) return undefined;
-    const id = window.setTimeout(() => setActive((a) => (a + 1) % n), 2600);
-    return () => window.clearTimeout(id);
-  }, [active, paused, reduce, n]);
-
-  const ir = (d: number) => setActive((a) => (a + d + n) % n);
+  const dupe = [...modules, ...modules]; // duplicado para que el bucle no tenga corte
 
   const flecha =
-    "absolute top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-105 hover:border-primary/35";
+    "absolute top-1/2 z-30 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-105 hover:border-primary/35";
 
   return (
     <div
-      className="relative flex h-full w-full flex-col items-center justify-center"
+      className="relative w-full overflow-hidden py-6"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 size-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(124,58,237,0.16) 0%, transparent 68%)" }}
-      />
+      {/* Desvanecido a los costados para que entren y salgan suave */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16 bg-gradient-to-r from-[#f4effb] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16 bg-gradient-to-l from-[#f4effb] to-transparent" />
 
-      {/* Escenario */}
-      <div className="relative h-[280px] w-full [perspective:1200px]">
-        {modules.map((m, i) => {
-          let off = i - active;
-          if (off > n / 2) off -= n;
-          if (off < -n / 2) off += n;
-          const abs = Math.abs(off);
-          const visible = abs <= 2;
-          return (
-            <div
-              key={m.title}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-              style={{ zIndex: 20 - abs }}
-            >
-              <motion.div
-                animate={{
-                  x: off * 148,
-                  scale: 1 - abs * 0.14,
-                  opacity: visible ? 1 - abs * 0.34 : 0,
-                  rotateY: off * -16,
-                  filter: abs === 0 ? "blur(0px)" : "blur(1px)",
-                }}
-                transition={{ type: "spring", stiffness: 240, damping: 28 }}
-                style={{ pointerEvents: off === 0 ? "auto" : "none" }}
-              >
-                <ModuleCard module={m} />
-              </motion.div>
-            </div>
-          );
-        })}
-      </div>
+      <motion.div
+        className="flex w-max gap-5"
+        animate={reduce || paused ? { x: 0 } : { x: dir > 0 ? ["0%", "-50%"] : ["-50%", "0%"] }}
+        transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+      >
+        {dupe.map((m, i) => (
+          <ModuleCard key={`${m.title}-${i}`} module={m} />
+        ))}
+      </motion.div>
 
-      <button type="button" aria-label="Módulo anterior" onClick={() => ir(-1)} className={`${flecha} left-1 sm:left-3`}>
+      <button type="button" aria-label="Cambiar sentido (izquierda)" onClick={() => setDir(-1)} className={`${flecha} left-1 sm:left-2`}>
         <ChevronLeft className="size-5" />
       </button>
-      <button type="button" aria-label="Módulo siguiente" onClick={() => ir(1)} className={`${flecha} right-1 sm:right-3`}>
+      <button type="button" aria-label="Cambiar sentido (derecha)" onClick={() => setDir(1)} className={`${flecha} right-1 sm:right-2`}>
         <ChevronRight className="size-5" />
       </button>
 
-      <div className="mt-7 flex items-center gap-2">
-        {modules.map((m, i) => (
-          <button
-            key={m.title}
-            type="button"
-            aria-label={`Ver ${m.title}`}
-            onClick={() => setActive(i)}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              i === active ? "w-6 bg-primary" : "w-2 bg-primary/25 hover:bg-primary/50"
-            }`}
-          />
-        ))}
-      </div>
-
-      <p className="mt-4 text-xs font-medium text-muted-foreground">
-        Deslizá para explorar todos los módulos
+      <p className="relative mt-4 text-center text-xs font-medium text-muted-foreground">
+        Todos los módulos de Cloud Esther, en movimiento
       </p>
     </div>
   );

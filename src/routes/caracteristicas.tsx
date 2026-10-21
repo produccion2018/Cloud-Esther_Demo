@@ -824,7 +824,7 @@ function Caracteristicas() {
 
                 <h2 className="mt-5 text-3xl font-bold lg:text-4xl">
                   <motion.span
-                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-primary-glow),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent [-webkit-text-fill-color:transparent]"
+                    className="inline-block whitespace-nowrap pb-[0.14em] leading-[1.2] bg-[linear-gradient(90deg,var(--color-primary),var(--color-primary-glow),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent [-webkit-text-fill-color:transparent]"
                     animate={{
                       backgroundPosition: [
                         "0% center",

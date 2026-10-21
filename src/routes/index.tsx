@@ -635,6 +635,121 @@ function FaqItem({
   );
 }
 
+/* Tarjeta de módulo para el carrusel del hero. */
+function ModuleCard({ module }: { module: (typeof modules)[number] }) {
+  const Icon = module.icon;
+  return (
+    <div className="relative w-[190px] overflow-hidden rounded-[22px] border border-white/80 bg-white/95 p-5 shadow-[0_24px_60px_rgba(88,28,135,0.18)] sm:w-[210px]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)" }}
+      />
+      <div className="relative">
+        <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-purple-500/20 shadow-[0_6px_18px_rgba(124,58,237,0.12)]">
+          <Icon className="size-6 text-primary" />
+        </div>
+        <p className="mt-4 text-base font-bold text-foreground">{module.title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{module.subtitle}</p>
+        <span className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+          <span className="size-1.5 rounded-full bg-emerald-400" /> Activo
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* Carrusel lineal del hero: tarjetas en fila con una al centro, avanza solo en bucle infinito,
+   con flechas ← → y puntitos. Movimiento fluido (spring). Respeta reduced-motion. */
+function CarruselModulos() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reduce = useReducedMotion();
+  const n = modules.length;
+
+  useEffect(() => {
+    if (paused || reduce) return undefined;
+    const id = window.setTimeout(() => setActive((a) => (a + 1) % n), 2600);
+    return () => window.clearTimeout(id);
+  }, [active, paused, reduce, n]);
+
+  const ir = (d: number) => setActive((a) => (a + d + n) % n);
+
+  const flecha =
+    "absolute top-1/2 z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-105 hover:border-primary/35";
+
+  return (
+    <div
+      className="relative flex h-full w-full flex-col items-center justify-center"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 size-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(124,58,237,0.16) 0%, transparent 68%)" }}
+      />
+
+      {/* Escenario */}
+      <div className="relative h-[280px] w-full [perspective:1200px]">
+        {modules.map((m, i) => {
+          let off = i - active;
+          if (off > n / 2) off -= n;
+          if (off < -n / 2) off += n;
+          const abs = Math.abs(off);
+          const visible = abs <= 2;
+          return (
+            <div
+              key={m.title}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              style={{ zIndex: 20 - abs }}
+            >
+              <motion.div
+                animate={{
+                  x: off * 148,
+                  scale: 1 - abs * 0.14,
+                  opacity: visible ? 1 - abs * 0.34 : 0,
+                  rotateY: off * -16,
+                  filter: abs === 0 ? "blur(0px)" : "blur(1px)",
+                }}
+                transition={{ type: "spring", stiffness: 240, damping: 28 }}
+                style={{ pointerEvents: off === 0 ? "auto" : "none" }}
+              >
+                <ModuleCard module={m} />
+              </motion.div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button type="button" aria-label="Módulo anterior" onClick={() => ir(-1)} className={`${flecha} left-1 sm:left-3`}>
+        <ChevronLeft className="size-5" />
+      </button>
+      <button type="button" aria-label="Módulo siguiente" onClick={() => ir(1)} className={`${flecha} right-1 sm:right-3`}>
+        <ChevronRight className="size-5" />
+      </button>
+
+      <div className="mt-7 flex items-center gap-2">
+        {modules.map((m, i) => (
+          <button
+            key={m.title}
+            type="button"
+            aria-label={`Ver ${m.title}`}
+            onClick={() => setActive(i)}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              i === active ? "w-6 bg-primary" : "w-2 bg-primary/25 hover:bg-primary/50"
+            }`}
+          />
+        ))}
+      </div>
+
+      <p className="mt-4 text-xs font-medium text-muted-foreground">
+        Deslizá para explorar todos los módulos
+      </p>
+    </div>
+  );
+}
+
 function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   // Sentido de giro de la órbita de módulos (+1 avanza, -1 retrocede).
@@ -872,226 +987,8 @@ function Home() {
             {/* =====================================================
                 ECOSISTEMA 3D
             ===================================================== */}
-            <div className="relative mx-auto h-[520px] w-full max-w-[650px] lg:h-[650px] lg:max-w-[700px]">
-              {/* GLOW CENTRAL */}
-              <motion.div
-                animate={{
-                  scale: [0.92, 1.08, 0.92],
-                  opacity: [0.6, 1, 0.6],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="pointer-events-none absolute left-1/2 top-1/2 size-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:size-[470px]"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 68%)",
-                }}
-              />
-
-              {/* ÓRBITA EXTERIOR */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{
-                  duration: 32,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="absolute left-1/2 top-1/2 size-[430px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10 sm:size-[520px] lg:size-[570px]"
-              >
-                <span className="absolute left-[8%] top-[15%] size-2 rounded-full bg-primary shadow-[0_0_14px_rgba(124,58,237,0.7)]" />
-
-                <span className="absolute bottom-[12%] right-[13%] size-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_14px_rgba(217,70,239,0.65)]" />
-
-                {/* Satélites extra */}
-                <span className="absolute right-[3%] top-[42%] size-1.5 rounded-full bg-violet-400 shadow-[0_0_12px_rgba(139,92,246,0.7)]" />
-
-                <span className="absolute bottom-[3%] left-[38%] size-2 rounded-full bg-purple-300 shadow-[0_0_14px_rgba(192,132,252,0.8)]" />
-              </motion.div>
-
-              {/* ÓRBITA INTERIOR */}
-              <motion.div
-                animate={{ rotate: -360 }}
-                transition={{
-                  duration: 23,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/15 sm:size-[390px] lg:size-[430px]"
-              >
-                <span className="absolute left-1/2 top-[-3px] size-1.5 -translate-x-1/2 rounded-full bg-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.8)]" />
-
-                <span className="absolute bottom-[-3px] left-[30%] size-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.8)]" />
-              </motion.div>
-
-              {/* ÓRBITA PUNTEADA EXTRA (cerca del núcleo) */}
-              <motion.div
-                aria-hidden="true"
-                animate={{ rotate: 360 }}
-                transition={{
-                  duration: 40,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="pointer-events-none absolute left-1/2 top-1/2 size-[235px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/25 sm:size-[290px] lg:size-[310px]"
-              >
-                <span className="absolute left-[6%] top-[22%] size-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_12px_rgba(217,70,239,0.7)]" />
-              </motion.div>
-
-              {/* CONEXIONES (con pulsos de datos viajando) */}
-              <div className="pointer-events-none absolute left-1/2 top-1/2 h-[330px] w-[330px] -translate-x-1/2 -translate-y-1/2 sm:h-[430px] sm:w-[430px]">
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[22deg] overflow-hidden bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-40">
-                  <span className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                </div>
-
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -rotate-[35deg] overflow-hidden bg-gradient-to-r from-transparent via-purple-400/40 to-transparent opacity-35">
-                  <span
-                    className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-purple-500 to-transparent"
-                    style={{ animationDelay: "1.5s" }}
-                  />
-                </div>
-
-                <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[82deg] overflow-hidden bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-40">
-                  <span
-                    className="ce-line-pulse absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent"
-                    style={{ animationDelay: "3s" }}
-                  />
-                </div>
-              </div>
-
-              {/* NÚCLEO CENTRAL */}
-              <motion.div
-                animate={{
-                  y: [0, -5, 0],
-                }}
-                transition={{
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2"
-              >
-                {/* ONDAS DE PULSO DEL NÚCLEO */}
-                <span
-                  aria-hidden="true"
-                  className="ce-hero-ring pointer-events-none absolute inset-0 rounded-full border border-primary/40"
-                />
-                <span
-                  aria-hidden="true"
-                  className="ce-hero-ring pointer-events-none absolute inset-0 rounded-full border border-primary/40"
-                  style={{ animationDelay: "2.1s" }}
-                />
-
-                <motion.div
-                  animate={{
-                    rotate: [0, 360],
-                  }}
-                  transition={{
-                    duration: 25,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute -inset-7 rounded-full border border-primary/15"
-                />
-
-                <motion.div
-                  animate={{
-                    rotate: [360, 0],
-                  }}
-                  transition={{
-                    duration: 17,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute -inset-4 rounded-full border border-purple-400/20"
-                />
-
-                <div className="relative flex size-[125px] items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-white via-purple-50 to-purple-100 shadow-[0_22px_65px_rgba(124,58,237,0.26),inset_0_0_35px_rgba(124,58,237,0.08)] sm:size-[150px]">
-                  <div className="absolute inset-3 rounded-full border border-primary/10 bg-gradient-to-br from-primary/15 to-purple-500/10" />
-
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.05, 1],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="relative flex size-[76px] items-center justify-center rounded-full bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 shadow-[0_10px_35px_rgba(124,58,237,0.35)] sm:size-[90px]"
-                  >
-                    <motion.span
-                      animate={{ rotate: [-6, 6, -6] }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      className="inline-flex"
-                    >
-                      <ToothIcon className="size-9 text-white sm:size-11" />
-                    </motion.span>
-
-                    <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/25 via-transparent to-transparent" />
-                  </motion.div>
-                </div>
-
-                <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-center">
-                  <span className="font-display text-sm font-bold text-foreground">
-                    Cloud Esther
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* MÓDULOS EN ÓRBITA (giran solos en bucle; las flechas cambian el sentido) */}
-              <motion.div
-                className="absolute inset-0 z-20"
-                animate={{ rotate: giroDir * 360 }}
-                transition={{ duration: ORBITA_SEG, repeat: Infinity, ease: "linear" }}
-              >
-                {modules.map((module) => (
-                  <FloatingModule key={module.title} module={module} spin={giroDir} />
-                ))}
-              </motion.div>
-
-              {/* Flechas: avanzar / retroceder la órbita */}
-              <button
-                type="button"
-                aria-label="Girar módulos a la izquierda"
-                onClick={() => setGiroDir(-1)}
-                className="absolute left-1 top-1/2 z-40 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.14)] backdrop-blur transition hover:-translate-y-1/2 hover:scale-105 hover:border-primary/35 sm:left-2"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Girar módulos a la derecha"
-                onClick={() => setGiroDir(1)}
-                className="absolute right-1 top-1/2 z-40 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.14)] backdrop-blur transition hover:-translate-y-1/2 hover:scale-105 hover:border-primary/35 sm:right-2"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-
-              {/* INDICADOR SUPERIOR */}
-              <motion.div
-                animate={{
-                  y: [0, -6, 0],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute right-[2%] top-[2%] z-30 hidden rounded-full border border-white/80 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground shadow-[0_10px_30px_rgba(88,28,135,0.1)] sm:flex"
-              >
-                <span className="relative mr-1.5 inline-flex size-1.5 self-center">
-                  <span className="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
-                  <span className="relative inline-block size-1.5 rounded-full bg-emerald-400" />
-                </span>
-                Todo conectado
-              </motion.div>
+            <div className="relative mx-auto flex h-[440px] w-full max-w-[650px] items-center lg:h-[540px] lg:max-w-[700px]">
+              <CarruselModulos />
             </div>
           </div>
         </section>

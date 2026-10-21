@@ -202,104 +202,13 @@ export function Header() {
               onHover={setHovered}
             />
 
-            {/* =================================================
-                CARACTERÍSTICAS
-            ================================================= */}
-            <div
-              className="relative"
-              onMouseEnter={() => {
-                setFeaturesOpen(true);
-                setHovered("features");
-              }}
-              onMouseLeave={() => setFeaturesOpen(false)}
-            >
-              <button
-                type="button"
-                aria-expanded={featuresOpen}
-                aria-haspopup="true"
-                onClick={() => setFeaturesOpen((value) => !value)}
-                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[15px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                  featuresOpen
-                    ? "text-foreground"
-                    : "text-foreground/70 hover:text-foreground"
-                }`}
-              >
-                {hovered === "features" && <HoverPill />}
-
-                <span className="relative z-10">Características</span>
-
-                <ChevronDown
-                  className={`relative z-10 size-3.5 transition-transform duration-300 ${
-                    featuresOpen ? "rotate-180 text-primary" : ""
-                  }`}
-                />
-
-                <span
-                  className={`pointer-events-none absolute bottom-0.5 left-1/2 z-10 h-[2px] w-6 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.6)] transition-all duration-300 ${
-                    featuresOpen
-                      ? "scale-x-100 opacity-100"
-                      : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100"
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {featuresOpen && (
-                  <motion.div
-                    style={{ x: "-50%" }}
-                    initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.97 }}
-                    transition={{
-                      duration: 0.2,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    className="absolute left-1/2 top-full w-[310px] pt-3"
-                  >
-                    <div className="overflow-hidden rounded-2xl border border-primary/10 bg-background/95 p-2 shadow-[0_20px_55px_rgba(88,28,135,0.16)] backdrop-blur-2xl">
-                      <div className="px-3 pb-2 pt-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                          Todo lo que necesitás
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        {featureItems.map((item) => {
-                          const Icon = item.icon;
-
-                          return (
-                            <Link
-                              key={item.label}
-                              to="/caracteristicas"
-                              onClick={closeMenu}
-                              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 hover:bg-lavender focus-visible:bg-lavender focus-visible:outline-none"
-                            >
-                              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-[0_5px_16px_rgba(124,58,237,0.2)]">
-                                <Icon className="size-4" />
-                              </span>
-
-                              <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-foreground">
-                                  {item.label}
-                                </span>
-
-                                <span className="block truncate text-xs text-muted-foreground">
-                                  {item.description}
-                                </span>
-                              </span>
-
-                              <span className="ml-auto -translate-x-1 text-primary opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
-                                →
-                              </span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* CARACTERÍSTICAS → link directo al panel */}
+            <NavLink
+              to="/caracteristicas"
+              label="Características"
+              hovered={hovered}
+              onHover={setHovered}
+            />
 
             {/* =================================================
                 PLANES + NOSOTROS
@@ -416,53 +325,13 @@ export function Header() {
                   Inicio
                 </Link>
 
-                <button
-                  type="button"
-                  aria-expanded={mobileFeaturesOpen}
-                  onClick={() =>
-                    setMobileFeaturesOpen((value) => !value)
-                  }
-                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
-                    mobileFeaturesOpen
-                      ? "bg-lavender text-foreground"
-                      : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
-                  }`}
+                <Link
+                  to="/caracteristicas"
+                  onClick={closeMenu}
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                 >
-                  <span>Características</span>
-
-                  <ChevronDown
-                    className={`size-4 transition-transform duration-300 ${
-                      mobileFeaturesOpen ? "rotate-180 text-primary" : ""
-                    }`}
-                  />
-                </button>
-
-                <AnimatePresence>
-                  {mobileFeaturesOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden pl-3"
-                    >
-                      {featureItems.map((item) => {
-                        const Icon = item.icon;
-
-                        return (
-                          <Link
-                            key={item.label}
-                            to="/caracteristicas"
-                            onClick={closeMenu}
-                            className="group flex items-center gap-3 rounded-xl px-4 py-3 text-[14px] font-medium text-foreground/65 transition-all duration-200 hover:translate-x-1 hover:bg-lavender hover:text-foreground"
-                          >
-                            <Icon className="size-4 text-primary transition-transform duration-200 group-hover:scale-110" />
-                            {item.label}
-                          </Link>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  Características
+                </Link>
 
                 {nav.slice(1).map((item) => (
                   <Link

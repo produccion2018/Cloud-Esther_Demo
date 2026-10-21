@@ -346,6 +346,17 @@ const TITLE_CSS = `
   100% { box-shadow: 0 10px 30px rgba(124, 58, 237, 0.22), 0 0 0 18px rgba(124, 58, 237, 0); }
 }
 
+/* ---------- ÓRBITAS DEL CARRUSEL ---------- */
+.ce-orbit-spin {
+  animation: ce-orbit-spin 32s linear infinite;
+}
+.ce-orbit-spin-rev {
+  animation: ce-orbit-spin 46s linear infinite reverse;
+}
+@keyframes ce-orbit-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ---------- CTA FINAL ---------- */
 .ce-cta-bg {
   background-image: linear-gradient(115deg, #4c1d95 0%, #6d28d9 22%, #8b3fe8 42%, #b56bea 62%, #7c3aed 82%, #4c1d95 100%);
@@ -411,6 +422,8 @@ const TITLE_CSS = `
   .ce-card-shine,
   .ce-badge-shine,
   .ce-hero-btn-glow,
+  .ce-orbit-spin,
+  .ce-orbit-spin-rev,
   .ce-cta-bg,
   .ce-cta-beam,
   .ce-cta-ring,
@@ -635,70 +648,188 @@ function FaqItem({
   );
 }
 
-/* Tarjeta de módulo para el carrusel del hero. */
-function ModuleCard({ module }: { module: (typeof modules)[number] }) {
+/* Tarjeta de módulo para el carrusel del hero (compacta, con hover). */
+function ModuleCard({
+  module,
+  active,
+}: {
+  module: (typeof modules)[number];
+  active: boolean;
+}) {
   const Icon = module.icon;
   return (
-    <div className="relative w-[190px] overflow-hidden rounded-[22px] border border-white/80 bg-white/95 p-5 shadow-[0_24px_60px_rgba(88,28,135,0.18)] sm:w-[210px]">
+    <div
+      className={`group relative w-[138px] overflow-hidden rounded-[20px] border bg-white/95 p-4 backdrop-blur transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_26px_60px_rgba(124,58,237,0.32)] sm:w-[150px] ${
+        active
+          ? "border-primary/30 shadow-[0_28px_64px_rgba(124,58,237,0.28)]"
+          : "border-white/80 shadow-[0_16px_40px_rgba(88,28,135,0.14)]"
+      }`}
+    >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full"
+        className="pointer-events-none absolute -right-7 -top-7 size-20 rounded-full"
         style={{ background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)" }}
       />
+      <span className="absolute right-3 top-3 size-1.5 rounded-full bg-emerald-400" />
       <div className="relative">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-purple-500/20 shadow-[0_6px_18px_rgba(124,58,237,0.12)]">
-          <Icon className="size-6 text-primary" />
+        <div
+          className={`flex size-10 items-center justify-center rounded-xl transition-colors duration-300 ${
+            active
+              ? "bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_20px_rgba(124,58,237,0.35)]"
+              : "bg-gradient-to-br from-primary/15 to-purple-500/20 text-primary"
+          }`}
+        >
+          <Icon className="size-5" />
         </div>
-        <p className="mt-4 text-base font-bold text-foreground">{module.title}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{module.subtitle}</p>
-        <span className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-primary">
-          <span className="size-1.5 rounded-full bg-emerald-400" /> Activo
-        </span>
+        <p className="mt-3.5 text-sm font-bold text-foreground">{module.title}</p>
+        <p className="mt-0.5 text-[10px] leading-4 text-muted-foreground">{module.subtitle}</p>
+        <ArrowRight className="mt-3 size-3.5 text-primary transition-transform duration-300 group-hover:translate-x-1" />
       </div>
     </div>
   );
 }
 
-/* Carrusel del hero con MOVIMIENTO CONSTANTE e infinito: las tarjetas se deslizan sin parar
-   (marquee). Las flechas cambian el sentido. Se frena al pasar el mouse. Respeta reduced-motion. */
+/* Carrusel del hero: tarjetas en arco alrededor de un diente central con anillos orbitando.
+   Avanza solo en bucle infinito, con flechas ← →, puntitos y swipe. Respeta reduced-motion. */
 function CarruselModulos() {
-  const [dir, setDir] = useState(1);
+  const [active, setActive] = useState(1);
   const [paused, setPaused] = useState(false);
+  const [spacing, setSpacing] = useState(150);
   const reduce = useReducedMotion();
-  const dupe = [...modules, ...modules]; // duplicado para que el bucle no tenga corte
+  const n = modules.length;
+
+  useEffect(() => {
+    if (paused || reduce) return undefined;
+    const id = window.setTimeout(() => setActive((a) => (a + 1) % n), 2800);
+    return () => window.clearTimeout(id);
+  }, [active, paused, reduce, n]);
+
+  useEffect(() => {
+    const calc = () => setSpacing(window.innerWidth < 640 ? 96 : 150);
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+
+  const ir = (d: number) => setActive((a) => (a + d + n) % n);
 
   const flecha =
-    "absolute top-1/2 z-30 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-105 hover:border-primary/35";
+    "absolute top-[40%] z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-110 hover:border-primary/35";
 
   return (
     <div
-      className="relative w-full overflow-hidden py-6"
+      className="relative flex h-full w-full flex-col items-center justify-center"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Desvanecido a los costados para que entren y salgan suave */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16 bg-gradient-to-r from-[#f4effb] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16 bg-gradient-to-l from-[#f4effb] to-transparent" />
-
+      {/* Escenario */}
       <motion.div
-        className="flex w-max gap-5"
-        animate={reduce || paused ? { x: 0 } : { x: dir > 0 ? ["0%", "-50%"] : ["-50%", "0%"] }}
-        transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+        className="relative h-[340px] w-full [perspective:1200px] sm:h-[380px]"
+        style={{ touchAction: "pan-y" }}
+        onPanEnd={(_, info) => {
+          if (info.offset.x < -40) ir(1);
+          else if (info.offset.x > 40) ir(-1);
+        }}
       >
-        {dupe.map((m, i) => (
-          <ModuleCard key={`${m.title}-${i}`} module={m} />
-        ))}
+        {/* Anillos + puntos orbitando */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-[58%] size-[400px] -translate-x-1/2 -translate-y-1/2 sm:size-[520px]"
+        >
+          <div className="absolute inset-0 rounded-full border border-primary/15" />
+          <div className="absolute inset-[14%] rounded-full border border-primary/12" />
+          <div className="absolute inset-[28%] rounded-full border border-primary/10" />
+
+          <div className="ce-orbit-spin absolute inset-0">
+            <span className="absolute left-1/2 top-0 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.8)]" />
+            <span className="absolute bottom-[14%] right-[6%] size-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_10px_rgba(232,121,249,0.8)]" />
+          </div>
+          <div className="ce-orbit-spin-rev absolute inset-[14%]">
+            <span className="absolute left-0 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_12px_rgba(124,58,237,0.8)]" />
+            <span className="absolute bottom-0 left-[58%] size-1.5 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.8)]" />
+          </div>
+        </div>
+
+        {/* Halo con diente central */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-[66%] size-[130px] -translate-x-1/2 -translate-y-1/2 sm:size-[150px]"
+        >
+          <span className="ce-hero-ring absolute inset-0 rounded-full border border-primary/40" />
+          <span
+            className="ce-hero-ring absolute inset-0 rounded-full border border-primary/40"
+            style={{ animationDelay: "2.1s" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+            className="relative grid size-full place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#c4b5fd,#7c3aed_70%)] shadow-[0_30px_70px_rgba(124,58,237,0.45)]"
+          >
+            <div className="grid size-[62%] place-items-center rounded-full bg-white text-primary shadow-[inset_0_-6px_14px_rgba(124,58,237,0.15)]">
+              <ToothIcon className="size-[52%]" />
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Tarjetas en arco */}
+        {modules.map((m, i) => {
+          let off = i - active;
+          if (off > n / 2) off -= n;
+          if (off < -n / 2) off += n;
+          const abs = Math.abs(off);
+          const isActive = off === 0;
+          const visible = abs <= 2;
+          return (
+            <div
+              key={m.title}
+              className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2"
+              style={{ zIndex: 20 - abs }}
+            >
+              <motion.div
+                initial={false}
+                animate={{
+                  x: off * spacing,
+                  y: isActive ? -22 : abs * abs * 9,
+                  scale: isActive ? 1.14 : 1 - abs * 0.09,
+                  opacity: visible ? (abs === 2 ? 0.6 : 1) : 0,
+                  rotateY: off * -14,
+                  filter: abs >= 2 ? "blur(1.5px)" : "blur(0px)",
+                }}
+                transition={{ type: "spring", stiffness: 190, damping: 26 }}
+                onClick={() => setActive(i)}
+                className={visible ? "cursor-pointer" : ""}
+                style={{ pointerEvents: visible ? "auto" : "none" }}
+              >
+                <ModuleCard module={m} active={isActive} />
+              </motion.div>
+            </div>
+          );
+        })}
+
+        <button type="button" aria-label="Módulo anterior" onClick={() => ir(-1)} className={`${flecha} left-0 sm:left-2`}>
+          <ChevronLeft className="size-5" />
+        </button>
+        <button type="button" aria-label="Módulo siguiente" onClick={() => ir(1)} className={`${flecha} right-0 sm:right-2`}>
+          <ChevronRight className="size-5" />
+        </button>
       </motion.div>
 
-      <button type="button" aria-label="Cambiar sentido (izquierda)" onClick={() => setDir(-1)} className={`${flecha} left-1 sm:left-2`}>
-        <ChevronLeft className="size-5" />
-      </button>
-      <button type="button" aria-label="Cambiar sentido (derecha)" onClick={() => setDir(1)} className={`${flecha} right-1 sm:right-2`}>
-        <ChevronRight className="size-5" />
-      </button>
+      <div className="mt-3 flex items-center gap-2">
+        {modules.map((m, i) => (
+          <button
+            key={m.title}
+            type="button"
+            aria-label={`Ver ${m.title}`}
+            onClick={() => setActive(i)}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              i === active ? "w-6 bg-fuchsia-500" : "w-2 bg-primary/25 hover:bg-primary/50"
+            }`}
+          />
+        ))}
+      </div>
 
-      <p className="relative mt-4 text-center text-xs font-medium text-muted-foreground">
-        Todos los módulos de Cloud Esther, en movimiento
+      <p className="mt-3 text-xs font-medium text-muted-foreground">
+        Deslizá para explorar todos los módulos
       </p>
     </div>
   );

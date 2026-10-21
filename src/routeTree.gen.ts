@@ -15,12 +15,12 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CaracteristicasRouteImport } from './routes/caracteristicas'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemostracionRouteImport } from './routes/demostracion'
-import { Route as PagarRouteImport } from './routes/pagar'
 import { Route as DuenoRouteImport } from './routes/dueno'
 import { Route as EquipoRouteImport } from './routes/equipo'
 import { Route as FormularioRouteImport } from './routes/formulario'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
+import { Route as PagarRouteImport } from './routes/pagar'
 import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as PreguntasFrecuentesRouteImport } from './routes/preguntas-frecuentes'
@@ -29,7 +29,6 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccesosRouteImport } from './routes/admin.accesos'
 import { Route as AdminActividadRouteImport } from './routes/admin.actividad'
 import { Route as AdminAtencionRouteImport } from './routes/admin.atencion'
-import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
 import { Route as AdminAuditoriaRouteImport } from './routes/admin.auditoria'
 import { Route as AdminClinicasRouteImport } from './routes/admin.clinicas'
 import { Route as AdminCuentaRouteImport } from './routes/admin.cuenta'
@@ -37,6 +36,7 @@ import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminGastosRouteImport } from './routes/admin.gastos'
 import { Route as AdminIaRouteImport } from './routes/admin.ia'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
 import { Route as AdminNominaRouteImport } from './routes/admin.nomina'
 import { Route as AdminNotificacionesRouteImport } from './routes/admin.notificaciones'
 import { Route as AdminPagosRouteImport } from './routes/admin.pagos'
@@ -48,15 +48,13 @@ import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
 import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer'
 import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
 import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
 import { Route as DemoAgendaRouteImport } from './routes/demo_.agenda'
-import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
-import { Route as DemoComunicacionInternaRouteImport } from './routes/demo_.comunicacion-interna'
-import { Route as DemoMiCuentaRouteImport } from './routes/demo_.mi-cuenta'
-import { Route as CSlugRouteImport } from './routes/c.$slug'
-import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoAutomatizacionesRouteImport } from './routes/demo_.automatizaciones'
 import { Route as DemoBiRouteImport } from './routes/demo_.bi'
+import { Route as DemoComunicacionInternaRouteImport } from './routes/demo_.comunicacion-interna'
 import { Route as DemoComunicacionesRouteImport } from './routes/demo_.comunicaciones'
 import { Route as DemoConfiguracionRouteImport } from './routes/demo_.configuracion'
 import { Route as DemoEquipoProfesionalRouteImport } from './routes/demo_.equipo-profesional'
@@ -69,6 +67,7 @@ import { Route as DemoIntegracionesRouteImport } from './routes/demo_.integracio
 import { Route as DemoInventarioRouteImport } from './routes/demo_.inventario'
 import { Route as DemoLaboratorioRouteImport } from './routes/demo_.laboratorio'
 import { Route as DemoMarketingRouteImport } from './routes/demo_.marketing'
+import { Route as DemoMiCuentaRouteImport } from './routes/demo_.mi-cuenta'
 import { Route as DemoMultiempresaRouteImport } from './routes/demo_.multiempresa'
 import { Route as DemoNotificacionesRouteImport } from './routes/demo_.notificaciones'
 import { Route as DemoOdontogramaRouteImport } from './routes/demo_.odontograma'
@@ -79,6 +78,7 @@ import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuesto
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
 import { Route as DemoEquipoProfesionalEspecialidadesRouteImport } from './routes/demo_.equipo-profesional_.especialidades'
 import { Route as DemoEquipoProfesionalPermisosAccesosRouteImport } from './routes/demo_.equipo-profesional_.permisos-accesos'
@@ -113,11 +113,6 @@ const DemostracionRoute = DemostracionRouteImport.update({
   path: '/demostracion',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PagarRoute = PagarRouteImport.update({
-  id: '/pagar',
-  path: '/pagar',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DuenoRoute = DuenoRouteImport.update({
   id: '/dueno',
   path: '/dueno',
@@ -141,6 +136,11 @@ const LoginRoute = LoginRouteImport.update({
 const NosotrosRoute = NosotrosRouteImport.update({
   id: '/nosotros',
   path: '/nosotros',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagarRoute = PagarRouteImport.update({
+  id: '/pagar',
+  path: '/pagar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlanesRoute = PlanesRouteImport.update({
@@ -183,11 +183,6 @@ const AdminAtencionRoute = AdminAtencionRouteImport.update({
   path: '/atencion',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminMarketingRoute = AdminMarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminAuditoriaRoute = AdminAuditoriaRouteImport.update({
   id: '/auditoria',
   path: '/auditoria',
@@ -221,6 +216,11 @@ const AdminIaRoute = AdminIaRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMarketingRoute = AdminMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminNominaRoute = AdminNominaRouteImport.update({
@@ -278,6 +278,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoAccesosRoute = DemoAccesosRouteImport.update({
+  id: '/demo_/accesos',
+  path: '/demo/accesos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoAdminRoute = DemoAdminRouteImport.update({
   id: '/demo_/admin',
   path: '/demo/admin',
@@ -288,31 +298,6 @@ const DemoAgendaRoute = DemoAgendaRouteImport.update({
   path: '/demo/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoAccesosRoute = DemoAccesosRouteImport.update({
-  id: '/demo_/accesos',
-  path: '/demo/accesos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoComunicacionInternaRoute = DemoComunicacionInternaRouteImport.update({
-  id: '/demo_/comunicacion-interna',
-  path: '/demo/comunicacion-interna',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoMiCuentaRoute = DemoMiCuentaRouteImport.update({
-  id: '/demo_/mi-cuenta',
-  path: '/demo/mi-cuenta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CSlugRoute = CSlugRouteImport.update({
-  id: '/c/$slug',
-  path: '/c/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CSlugClaveRoute = CSlugClaveRouteImport.update({
-  id: '/c/$slug_/clave',
-  path: '/c/$slug/clave',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoAutomatizacionesRoute = DemoAutomatizacionesRouteImport.update({
   id: '/demo_/automatizaciones',
   path: '/demo/automatizaciones',
@@ -321,6 +306,11 @@ const DemoAutomatizacionesRoute = DemoAutomatizacionesRouteImport.update({
 const DemoBiRoute = DemoBiRouteImport.update({
   id: '/demo_/bi',
   path: '/demo/bi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoComunicacionInternaRoute = DemoComunicacionInternaRouteImport.update({
+  id: '/demo_/comunicacion-interna',
+  path: '/demo/comunicacion-interna',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoComunicacionesRoute = DemoComunicacionesRouteImport.update({
@@ -383,6 +373,11 @@ const DemoMarketingRoute = DemoMarketingRouteImport.update({
   path: '/demo/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoMiCuentaRoute = DemoMiCuentaRouteImport.update({
+  id: '/demo_/mi-cuenta',
+  path: '/demo/mi-cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoMultiempresaRoute = DemoMultiempresaRouteImport.update({
   id: '/demo_/multiempresa',
   path: '/demo/multiempresa',
@@ -433,6 +428,11 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CSlugClaveRoute = CSlugClaveRouteImport.update({
+  id: '/c/$slug_/clave',
+  path: '/c/$slug/clave',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoEquipoProfesionalAgendasHorariosRoute =
   DemoEquipoProfesionalAgendasHorariosRouteImport.update({
     id: '/demo_/equipo-profesional_/agendas-horarios',
@@ -459,12 +459,12 @@ export interface FileRoutesByFullPath {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
-  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/pagar': typeof PagarRoute
   '/planes': typeof PlanesRoute
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
@@ -472,7 +472,6 @@ export interface FileRoutesByFullPath {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
-  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -480,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/admin/gastos': typeof AdminGastosRoute
   '/admin/ia': typeof AdminIaRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
@@ -490,15 +490,13 @@ export interface FileRoutesByFullPath {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/c/$slug': typeof CSlugRoute
+  '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
-  '/demo/accesos': typeof DemoAccesosRoute
-  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
-  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
-  '/c/$slug': typeof CSlugRoute
-  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
+  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
@@ -511,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/demo/multiempresa': typeof DemoMultiempresaRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
@@ -523,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
   '/demo/equipo-profesional/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
@@ -533,12 +533,12 @@ export interface FileRoutesByTo {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
-  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/pagar': typeof PagarRoute
   '/planes': typeof PlanesRoute
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
@@ -546,7 +546,6 @@ export interface FileRoutesByTo {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
-  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -554,6 +553,7 @@ export interface FileRoutesByTo {
   '/admin/gastos': typeof AdminGastosRoute
   '/admin/ia': typeof AdminIaRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
@@ -564,15 +564,13 @@ export interface FileRoutesByTo {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/c/$slug': typeof CSlugRoute
+  '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
   '/demo/agenda': typeof DemoAgendaRoute
-  '/demo/accesos': typeof DemoAccesosRoute
-  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
-  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
-  '/c/$slug': typeof CSlugRoute
-  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo/bi': typeof DemoBiRoute
+  '/demo/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo/comunicaciones': typeof DemoComunicacionesRoute
   '/demo/configuracion': typeof DemoConfiguracionRoute
   '/demo/equipo-profesional': typeof DemoEquipoProfesionalRoute
@@ -585,6 +583,7 @@ export interface FileRoutesByTo {
   '/demo/inventario': typeof DemoInventarioRoute
   '/demo/laboratorio': typeof DemoLaboratorioRoute
   '/demo/marketing': typeof DemoMarketingRoute
+  '/demo/mi-cuenta': typeof DemoMiCuentaRoute
   '/demo/multiempresa': typeof DemoMultiempresaRoute
   '/demo/notificaciones': typeof DemoNotificacionesRoute
   '/demo/odontograma': typeof DemoOdontogramaRoute
@@ -597,6 +596,7 @@ export interface FileRoutesByTo {
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
+  '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
   '/demo/equipo-profesional/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
@@ -609,12 +609,12 @@ export interface FileRoutesById {
   '/caracteristicas': typeof CaracteristicasRoute
   '/demo': typeof DemoRoute
   '/demostracion': typeof DemostracionRoute
-  '/pagar': typeof PagarRoute
   '/dueno': typeof DuenoRoute
   '/equipo': typeof EquipoRoute
   '/formulario': typeof FormularioRoute
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/pagar': typeof PagarRoute
   '/planes': typeof PlanesRoute
   '/portal': typeof PortalRoute
   '/preguntas-frecuentes': typeof PreguntasFrecuentesRoute
@@ -622,7 +622,6 @@ export interface FileRoutesById {
   '/admin/accesos': typeof AdminAccesosRoute
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
-  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
@@ -630,6 +629,7 @@ export interface FileRoutesById {
   '/admin/gastos': typeof AdminGastosRoute
   '/admin/ia': typeof AdminIaRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/nomina': typeof AdminNominaRoute
   '/admin/notificaciones': typeof AdminNotificacionesRoute
   '/admin/pagos': typeof AdminPagosRoute
@@ -640,15 +640,13 @@ export interface FileRoutesById {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/c/$slug': typeof CSlugRoute
+  '/demo_/accesos': typeof DemoAccesosRoute
   '/demo_/admin': typeof DemoAdminRoute
   '/demo_/agenda': typeof DemoAgendaRoute
-  '/demo_/accesos': typeof DemoAccesosRoute
-  '/demo_/comunicacion-interna': typeof DemoComunicacionInternaRoute
-  '/demo_/mi-cuenta': typeof DemoMiCuentaRoute
-  '/c/$slug': typeof CSlugRoute
-  '/c/$slug_/clave': typeof CSlugClaveRoute
   '/demo_/automatizaciones': typeof DemoAutomatizacionesRoute
   '/demo_/bi': typeof DemoBiRoute
+  '/demo_/comunicacion-interna': typeof DemoComunicacionInternaRoute
   '/demo_/comunicaciones': typeof DemoComunicacionesRoute
   '/demo_/configuracion': typeof DemoConfiguracionRoute
   '/demo_/equipo-profesional': typeof DemoEquipoProfesionalRoute
@@ -661,6 +659,7 @@ export interface FileRoutesById {
   '/demo_/inventario': typeof DemoInventarioRoute
   '/demo_/laboratorio': typeof DemoLaboratorioRoute
   '/demo_/marketing': typeof DemoMarketingRoute
+  '/demo_/mi-cuenta': typeof DemoMiCuentaRoute
   '/demo_/multiempresa': typeof DemoMultiempresaRoute
   '/demo_/notificaciones': typeof DemoNotificacionesRoute
   '/demo_/odontograma': typeof DemoOdontogramaRoute
@@ -673,6 +672,7 @@ export interface FileRoutesById {
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/c/$slug_/clave': typeof CSlugClaveRoute
   '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo_/equipo-profesional_/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
   '/demo_/equipo-profesional_/permisos-accesos': typeof DemoEquipoProfesionalPermisosAccesosRoute
@@ -686,12 +686,12 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
-    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
     | '/login'
     | '/nosotros'
+    | '/pagar'
     | '/planes'
     | '/portal'
     | '/preguntas-frecuentes'
@@ -699,7 +699,6 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
-    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -707,6 +706,7 @@ export interface FileRouteTypes {
     | '/admin/gastos'
     | '/admin/ia'
     | '/admin/login'
+    | '/admin/marketing'
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
@@ -717,15 +717,13 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/c/$slug'
+    | '/demo/accesos'
     | '/demo/admin'
     | '/demo/agenda'
-    | '/demo/accesos'
-    | '/demo/comunicacion-interna'
-    | '/demo/mi-cuenta'
-    | '/c/$slug'
-    | '/c/$slug/clave'
     | '/demo/automatizaciones'
     | '/demo/bi'
+    | '/demo/comunicacion-interna'
     | '/demo/comunicaciones'
     | '/demo/configuracion'
     | '/demo/equipo-profesional'
@@ -738,6 +736,7 @@ export interface FileRouteTypes {
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
+    | '/demo/mi-cuenta'
     | '/demo/multiempresa'
     | '/demo/notificaciones'
     | '/demo/odontograma'
@@ -750,6 +749,7 @@ export interface FileRouteTypes {
     | '/demo/tratamientos'
     | '/admin/'
     | '/app/'
+    | '/c/$slug/clave'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
     | '/demo/equipo-profesional/permisos-accesos'
@@ -760,12 +760,12 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
-    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
     | '/login'
     | '/nosotros'
+    | '/pagar'
     | '/planes'
     | '/portal'
     | '/preguntas-frecuentes'
@@ -773,7 +773,6 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
-    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -781,6 +780,7 @@ export interface FileRouteTypes {
     | '/admin/gastos'
     | '/admin/ia'
     | '/admin/login'
+    | '/admin/marketing'
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
@@ -791,15 +791,13 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/c/$slug'
+    | '/demo/accesos'
     | '/demo/admin'
     | '/demo/agenda'
-    | '/demo/accesos'
-    | '/demo/comunicacion-interna'
-    | '/demo/mi-cuenta'
-    | '/c/$slug'
-    | '/c/$slug/clave'
     | '/demo/automatizaciones'
     | '/demo/bi'
+    | '/demo/comunicacion-interna'
     | '/demo/comunicaciones'
     | '/demo/configuracion'
     | '/demo/equipo-profesional'
@@ -812,6 +810,7 @@ export interface FileRouteTypes {
     | '/demo/inventario'
     | '/demo/laboratorio'
     | '/demo/marketing'
+    | '/demo/mi-cuenta'
     | '/demo/multiempresa'
     | '/demo/notificaciones'
     | '/demo/odontograma'
@@ -824,6 +823,7 @@ export interface FileRouteTypes {
     | '/demo/tratamientos'
     | '/admin'
     | '/app'
+    | '/c/$slug/clave'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
     | '/demo/equipo-profesional/permisos-accesos'
@@ -835,12 +835,12 @@ export interface FileRouteTypes {
     | '/caracteristicas'
     | '/demo'
     | '/demostracion'
-    | '/pagar'
     | '/dueno'
     | '/equipo'
     | '/formulario'
     | '/login'
     | '/nosotros'
+    | '/pagar'
     | '/planes'
     | '/portal'
     | '/preguntas-frecuentes'
@@ -848,7 +848,6 @@ export interface FileRouteTypes {
     | '/admin/accesos'
     | '/admin/actividad'
     | '/admin/atencion'
-    | '/admin/marketing'
     | '/admin/auditoria'
     | '/admin/clinicas'
     | '/admin/cuenta'
@@ -856,6 +855,7 @@ export interface FileRouteTypes {
     | '/admin/gastos'
     | '/admin/ia'
     | '/admin/login'
+    | '/admin/marketing'
     | '/admin/nomina'
     | '/admin/notificaciones'
     | '/admin/pagos'
@@ -866,15 +866,13 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/c/$slug'
+    | '/demo_/accesos'
     | '/demo_/admin'
     | '/demo_/agenda'
-    | '/demo_/accesos'
-    | '/demo_/comunicacion-interna'
-    | '/demo_/mi-cuenta'
-    | '/c/$slug'
-    | '/c/$slug_/clave'
     | '/demo_/automatizaciones'
     | '/demo_/bi'
+    | '/demo_/comunicacion-interna'
     | '/demo_/comunicaciones'
     | '/demo_/configuracion'
     | '/demo_/equipo-profesional'
@@ -887,6 +885,7 @@ export interface FileRouteTypes {
     | '/demo_/inventario'
     | '/demo_/laboratorio'
     | '/demo_/marketing'
+    | '/demo_/mi-cuenta'
     | '/demo_/multiempresa'
     | '/demo_/notificaciones'
     | '/demo_/odontograma'
@@ -899,6 +898,7 @@ export interface FileRouteTypes {
     | '/demo_/tratamientos'
     | '/admin/'
     | '/app/'
+    | '/c/$slug_/clave'
     | '/demo_/equipo-profesional_/agendas-horarios'
     | '/demo_/equipo-profesional_/especialidades'
     | '/demo_/equipo-profesional_/permisos-accesos'
@@ -911,25 +911,23 @@ export interface RootRouteChildren {
   CaracteristicasRoute: typeof CaracteristicasRoute
   DemoRoute: typeof DemoRoute
   DemostracionRoute: typeof DemostracionRoute
-  PagarRoute: typeof PagarRoute
   DuenoRoute: typeof DuenoRoute
   EquipoRoute: typeof EquipoRoute
   FormularioRoute: typeof FormularioRoute
   LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
+  PagarRoute: typeof PagarRoute
   PlanesRoute: typeof PlanesRoute
   PortalRoute: typeof PortalRoute
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
+  CSlugRoute: typeof CSlugRoute
+  DemoAccesosRoute: typeof DemoAccesosRoute
   DemoAdminRoute: typeof DemoAdminRoute
   DemoAgendaRoute: typeof DemoAgendaRoute
-  DemoAccesosRoute: typeof DemoAccesosRoute
-  DemoComunicacionInternaRoute: typeof DemoComunicacionInternaRoute
-  DemoMiCuentaRoute: typeof DemoMiCuentaRoute
-  CSlugRoute: typeof CSlugRoute
-  CSlugClaveRoute: typeof CSlugClaveRoute
   DemoAutomatizacionesRoute: typeof DemoAutomatizacionesRoute
   DemoBiRoute: typeof DemoBiRoute
+  DemoComunicacionInternaRoute: typeof DemoComunicacionInternaRoute
   DemoComunicacionesRoute: typeof DemoComunicacionesRoute
   DemoConfiguracionRoute: typeof DemoConfiguracionRoute
   DemoEquipoProfesionalRoute: typeof DemoEquipoProfesionalRoute
@@ -942,6 +940,7 @@ export interface RootRouteChildren {
   DemoInventarioRoute: typeof DemoInventarioRoute
   DemoLaboratorioRoute: typeof DemoLaboratorioRoute
   DemoMarketingRoute: typeof DemoMarketingRoute
+  DemoMiCuentaRoute: typeof DemoMiCuentaRoute
   DemoMultiempresaRoute: typeof DemoMultiempresaRoute
   DemoNotificacionesRoute: typeof DemoNotificacionesRoute
   DemoOdontogramaRoute: typeof DemoOdontogramaRoute
@@ -953,6 +952,7 @@ export interface RootRouteChildren {
   DemoRrhhRoute: typeof DemoRrhhRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   AppIndexRoute: typeof AppIndexRoute
+  CSlugClaveRoute: typeof CSlugClaveRoute
   DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
   DemoEquipoProfesionalEspecialidadesRoute: typeof DemoEquipoProfesionalEspecialidadesRoute
   DemoEquipoProfesionalPermisosAccesosRoute: typeof DemoEquipoProfesionalPermisosAccesosRoute
@@ -1002,13 +1002,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemostracionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pagar': {
-      id: '/pagar'
-      path: '/pagar'
-      fullPath: '/pagar'
-      preLoaderRoute: typeof PagarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dueno': {
       id: '/dueno'
       path: '/dueno'
@@ -1042,6 +1035,13 @@ declare module '@tanstack/react-router' {
       path: '/nosotros'
       fullPath: '/nosotros'
       preLoaderRoute: typeof NosotrosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagar': {
+      id: '/pagar'
+      path: '/pagar'
+      fullPath: '/pagar'
+      preLoaderRoute: typeof PagarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planes': {
@@ -1100,13 +1100,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAtencionRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/marketing': {
-      id: '/admin/marketing'
-      path: '/marketing'
-      fullPath: '/admin/marketing'
-      preLoaderRoute: typeof AdminMarketingRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/auditoria': {
       id: '/admin/auditoria'
       path: '/auditoria'
@@ -1154,6 +1147,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/marketing': {
+      id: '/admin/marketing'
+      path: '/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AdminMarketingRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/nomina': {
@@ -1233,6 +1233,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/accesos': {
+      id: '/demo_/accesos'
+      path: '/demo/accesos'
+      fullPath: '/demo/accesos'
+      preLoaderRoute: typeof DemoAccesosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/admin': {
       id: '/demo_/admin'
       path: '/demo/admin'
@@ -1247,41 +1261,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo_/accesos': {
-      id: '/demo_/accesos'
-      path: '/demo/accesos'
-      fullPath: '/demo/accesos'
-      preLoaderRoute: typeof DemoAccesosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo_/comunicacion-interna': {
-      id: '/demo_/comunicacion-interna'
-      path: '/demo/comunicacion-interna'
-      fullPath: '/demo/comunicacion-interna'
-      preLoaderRoute: typeof DemoComunicacionInternaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo_/mi-cuenta': {
-      id: '/demo_/mi-cuenta'
-      path: '/demo/mi-cuenta'
-      fullPath: '/demo/mi-cuenta'
-      preLoaderRoute: typeof DemoMiCuentaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/c/$slug': {
-      id: '/c/$slug'
-      path: '/c/$slug'
-      fullPath: '/c/$slug'
-      preLoaderRoute: typeof CSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/c/$slug_/clave': {
-      id: '/c/$slug_/clave'
-      path: '/c/$slug/clave'
-      fullPath: '/c/$slug/clave'
-      preLoaderRoute: typeof CSlugClaveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/demo_/automatizaciones': {
       id: '/demo_/automatizaciones'
       path: '/demo/automatizaciones'
@@ -1294,6 +1273,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/bi'
       fullPath: '/demo/bi'
       preLoaderRoute: typeof DemoBiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo_/comunicacion-interna': {
+      id: '/demo_/comunicacion-interna'
+      path: '/demo/comunicacion-interna'
+      fullPath: '/demo/comunicacion-interna'
+      preLoaderRoute: typeof DemoComunicacionInternaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo_/comunicaciones': {
@@ -1380,6 +1366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/mi-cuenta': {
+      id: '/demo_/mi-cuenta'
+      path: '/demo/mi-cuenta'
+      fullPath: '/demo/mi-cuenta'
+      preLoaderRoute: typeof DemoMiCuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/multiempresa': {
       id: '/demo_/multiempresa'
       path: '/demo/multiempresa'
@@ -1450,6 +1443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$slug_/clave': {
+      id: '/c/$slug_/clave'
+      path: '/c/$slug/clave'
+      fullPath: '/c/$slug/clave'
+      preLoaderRoute: typeof CSlugClaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/equipo-profesional_/agendas-horarios': {
       id: '/demo_/equipo-profesional_/agendas-horarios'
       path: '/demo/equipo-profesional/agendas-horarios'
@@ -1478,7 +1478,6 @@ interface AdminRouteChildren {
   AdminAccesosRoute: typeof AdminAccesosRoute
   AdminActividadRoute: typeof AdminActividadRoute
   AdminAtencionRoute: typeof AdminAtencionRoute
-  AdminMarketingRoute: typeof AdminMarketingRoute
   AdminAuditoriaRoute: typeof AdminAuditoriaRoute
   AdminClinicasRoute: typeof AdminClinicasRoute
   AdminCuentaRoute: typeof AdminCuentaRoute
@@ -1486,6 +1485,7 @@ interface AdminRouteChildren {
   AdminGastosRoute: typeof AdminGastosRoute
   AdminIaRoute: typeof AdminIaRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminMarketingRoute: typeof AdminMarketingRoute
   AdminNominaRoute: typeof AdminNominaRoute
   AdminNotificacionesRoute: typeof AdminNotificacionesRoute
   AdminPagosRoute: typeof AdminPagosRoute
@@ -1503,7 +1503,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAccesosRoute: AdminAccesosRoute,
   AdminActividadRoute: AdminActividadRoute,
   AdminAtencionRoute: AdminAtencionRoute,
-  AdminMarketingRoute: AdminMarketingRoute,
   AdminAuditoriaRoute: AdminAuditoriaRoute,
   AdminClinicasRoute: AdminClinicasRoute,
   AdminCuentaRoute: AdminCuentaRoute,
@@ -1511,6 +1510,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGastosRoute: AdminGastosRoute,
   AdminIaRoute: AdminIaRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AdminMarketingRoute: AdminMarketingRoute,
   AdminNominaRoute: AdminNominaRoute,
   AdminNotificacionesRoute: AdminNotificacionesRoute,
   AdminPagosRoute: AdminPagosRoute,
@@ -1533,25 +1533,23 @@ const rootRouteChildren: RootRouteChildren = {
   CaracteristicasRoute: CaracteristicasRoute,
   DemoRoute: DemoRoute,
   DemostracionRoute: DemostracionRoute,
-  PagarRoute: PagarRoute,
   DuenoRoute: DuenoRoute,
   EquipoRoute: EquipoRoute,
   FormularioRoute: FormularioRoute,
   LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
+  PagarRoute: PagarRoute,
   PlanesRoute: PlanesRoute,
   PortalRoute: PortalRoute,
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
+  CSlugRoute: CSlugRoute,
+  DemoAccesosRoute: DemoAccesosRoute,
   DemoAdminRoute: DemoAdminRoute,
   DemoAgendaRoute: DemoAgendaRoute,
-  DemoAccesosRoute: DemoAccesosRoute,
-  DemoComunicacionInternaRoute: DemoComunicacionInternaRoute,
-  DemoMiCuentaRoute: DemoMiCuentaRoute,
-  CSlugRoute: CSlugRoute,
-  CSlugClaveRoute: CSlugClaveRoute,
   DemoAutomatizacionesRoute: DemoAutomatizacionesRoute,
   DemoBiRoute: DemoBiRoute,
+  DemoComunicacionInternaRoute: DemoComunicacionInternaRoute,
   DemoComunicacionesRoute: DemoComunicacionesRoute,
   DemoConfiguracionRoute: DemoConfiguracionRoute,
   DemoEquipoProfesionalRoute: DemoEquipoProfesionalRoute,
@@ -1564,6 +1562,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoInventarioRoute: DemoInventarioRoute,
   DemoLaboratorioRoute: DemoLaboratorioRoute,
   DemoMarketingRoute: DemoMarketingRoute,
+  DemoMiCuentaRoute: DemoMiCuentaRoute,
   DemoMultiempresaRoute: DemoMultiempresaRoute,
   DemoNotificacionesRoute: DemoNotificacionesRoute,
   DemoOdontogramaRoute: DemoOdontogramaRoute,
@@ -1575,6 +1574,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRrhhRoute: DemoRrhhRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
   AppIndexRoute: AppIndexRoute,
+  CSlugClaveRoute: CSlugClaveRoute,
   DemoEquipoProfesionalAgendasHorariosRoute:
     DemoEquipoProfesionalAgendasHorariosRoute,
   DemoEquipoProfesionalEspecialidadesRoute:

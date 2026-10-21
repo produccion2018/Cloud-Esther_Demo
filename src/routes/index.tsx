@@ -15,8 +15,6 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   HeartPulse,
   ReceiptText,
   Rocket,
@@ -689,20 +687,17 @@ function ModuleCard({
   );
 }
 
-/* Carrusel del hero: tarjetas en arco alrededor de un diente central con anillos orbitando.
-   Avanza solo en bucle infinito, con flechas ← →, puntitos y swipe. Respeta reduced-motion. */
+/* Carrusel del hero: las tarjetas giran de forma CONTINUA e infinita en arco alrededor del
+   diente central (sin flechas). Frena suave al pasar el mouse. Respeta reduced-motion. */
+const VELOCIDAD_TARJETAS = 0.36; // tarjetas que pasan por el centro por segundo
+
 function CarruselModulos() {
-  const [active, setActive] = useState(1);
-  const [paused, setPaused] = useState(false);
-  const [spacing, setSpacing] = useState(150);
   const reduce = useReducedMotion();
   const n = modules.length;
-
-  useEffect(() => {
-    if (paused || reduce) return undefined;
-    const id = window.setTimeout(() => setActive((a) => (a + 1) % n), 2800);
-    return () => window.clearTimeout(id);
-  }, [active, paused, reduce, n]);
+  const [spacing, setSpacing] = useState(150);
+  const [centro, setCentro] = useState(1);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     const calc = () => setSpacing(window.innerWidth < 640 ? 96 : 150);
@@ -711,26 +706,76 @@ function CarruselModulos() {
     return () => window.removeEventListener("resize", calc);
   }, []);
 
-  const ir = (d: number) => setActive((a) => (a + d + n) % n);
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    let progress = 1; // posición (decimal) de la tarjeta que está al centro
+    let speed = reduce ? 0 : VELOCIDAD_TARJETAS;
+    let centroActual = -1;
 
-  const flecha =
-    "absolute top-[40%] z-40 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-primary/15 bg-white/90 text-primary shadow-[0_8px_22px_rgba(88,28,135,0.16)] backdrop-blur transition hover:scale-110 hover:border-primary/35";
+    const colocar = () => {
+      for (let i = 0; i < n; i += 1) {
+        const el = cardRefs.current[i];
+        if (!el) continue;
+
+        // Distancia circular (decimal) de la tarjeta i al centro: -n/2 .. n/2
+        let off = i - progress;
+        off = (((off + n / 2) % n) + n) % n - n / 2;
+        const abs = Math.abs(off);
+
+        const x = off * spacing;
+        const y = abs * abs * 9 - 22 * Math.max(0, 1 - abs);
+        const scale =
+          1.14 -
+          0.17 * Math.min(abs, 1) -
+          0.07 * Math.max(0, Math.min(abs, 3) - 1);
+        const opacity = Math.max(0, Math.min(1, 1 - Math.max(0, abs - 1.6) / 1.2));
+        const rotY = Math.max(-40, Math.min(40, -off * 14));
+        const blur = abs > 1.5 ? (abs - 1.5) * 1.5 : 0;
+
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotateY(${rotY}deg) scale(${scale})`;
+        el.style.opacity = String(opacity);
+        el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "none";
+        el.style.zIndex = String(Math.round(100 - abs * 10));
+        el.style.pointerEvents = abs < 2.4 ? "auto" : "none";
+      }
+
+      const c = Math.round(progress) % n;
+      if (c !== centroActual) {
+        centroActual = c;
+        setCentro(c);
+      }
+    };
+
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+
+      const objetivo = reduce || pausedRef.current ? 0 : VELOCIDAD_TARJETAS;
+      speed += (objetivo - speed) * Math.min(1, dt * 5);
+      progress = (progress + speed * dt) % n;
+
+      colocar();
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    colocar();
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [n, spacing, reduce]);
 
   return (
     <div
       className="relative flex h-full w-full flex-col items-center justify-center"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseEnter={() => {
+        pausedRef.current = true;
+      }}
+      onMouseLeave={() => {
+        pausedRef.current = false;
+      }}
     >
       {/* Escenario */}
-      <motion.div
-        className="relative h-[340px] w-full [perspective:1200px] sm:h-[380px]"
-        style={{ touchAction: "pan-y" }}
-        onPanEnd={(_, info) => {
-          if (info.offset.x < -40) ir(1);
-          else if (info.offset.x > 40) ir(-1);
-        }}
-      >
+      <div className="relative h-[340px] w-full [perspective:1200px] sm:h-[380px]">
         {/* Anillos + puntos orbitando */}
         <div
           aria-hidden="true"
@@ -771,65 +816,38 @@ function CarruselModulos() {
           </motion.div>
         </div>
 
-        {/* Tarjetas en arco */}
-        {modules.map((m, i) => {
-          let off = i - active;
-          if (off > n / 2) off -= n;
-          if (off < -n / 2) off += n;
-          const abs = Math.abs(off);
-          const isActive = off === 0;
-          const visible = abs <= 2;
-          return (
-            <div
-              key={m.title}
-              className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2"
-              style={{ zIndex: 20 - abs }}
-            >
-              <motion.div
-                initial={false}
-                animate={{
-                  x: off * spacing,
-                  y: isActive ? -22 : abs * abs * 9,
-                  scale: isActive ? 1.14 : 1 - abs * 0.09,
-                  opacity: visible ? (abs === 2 ? 0.6 : 1) : 0,
-                  rotateY: off * -14,
-                  filter: abs >= 2 ? "blur(1.5px)" : "blur(0px)",
-                }}
-                transition={{ type: "spring", stiffness: 190, damping: 26 }}
-                onClick={() => setActive(i)}
-                className={visible ? "cursor-pointer" : ""}
-                style={{ pointerEvents: visible ? "auto" : "none" }}
-              >
-                <ModuleCard module={m} active={isActive} />
-              </motion.div>
-            </div>
-          );
-        })}
-
-        <button type="button" aria-label="Módulo anterior" onClick={() => ir(-1)} className={`${flecha} left-0 sm:left-2`}>
-          <ChevronLeft className="size-5" />
-        </button>
-        <button type="button" aria-label="Módulo siguiente" onClick={() => ir(1)} className={`${flecha} right-0 sm:right-2`}>
-          <ChevronRight className="size-5" />
-        </button>
-      </motion.div>
-
-      <div className="mt-3 flex items-center gap-2">
+        {/* Tarjetas girando en arco (posición, escala y opacidad las maneja el bucle de arriba) */}
         {modules.map((m, i) => (
-          <button
+          <div
             key={m.title}
-            type="button"
-            aria-label={`Ver ${m.title}`}
-            onClick={() => setActive(i)}
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2"
+          >
+            <div
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+              style={{ opacity: 0, willChange: "transform, opacity" }}
+            >
+              <ModuleCard module={m} active={i === centro} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Indicador (solo informativo) */}
+      <div aria-hidden="true" className="mt-3 flex items-center gap-2">
+        {modules.map((m, i) => (
+          <span
+            key={m.title}
             className={`h-2 rounded-full transition-all duration-300 ${
-              i === active ? "w-6 bg-fuchsia-500" : "w-2 bg-primary/25 hover:bg-primary/50"
+              i === centro ? "w-6 bg-fuchsia-500" : "w-2 bg-primary/25"
             }`}
           />
         ))}
       </div>
 
       <p className="mt-3 text-xs font-medium text-muted-foreground">
-        Deslizá para explorar todos los módulos
+        Explorá todos los módulos de la plataforma
       </p>
     </div>
   );

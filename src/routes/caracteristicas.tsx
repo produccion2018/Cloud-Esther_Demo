@@ -420,23 +420,23 @@ function ModulosOclu() {
   const ActualIcon = actual.icon;
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#140d2b] p-5 shadow-[0_30px_80px_-30px_rgba(76,29,149,0.8)] sm:p-7">
-      {/* luces de fondo */}
-      <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-primary/25 blur-[90px]" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 size-64 rounded-full bg-fuchsia-500/15 blur-[90px]" />
+    <div className="relative overflow-hidden rounded-[28px] border border-primary/15 bg-card p-5 shadow-[0_20px_60px_-30px_rgba(88,28,135,0.4)] sm:p-7">
+      {/* luces de fondo suaves (ADN Cloud Esther) */}
+      <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-primary/10 blur-[90px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 size-64 rounded-full bg-fuchsia-300/10 blur-[90px]" />
 
       <div className="relative grid gap-6 lg:grid-cols-[1fr_300px]">
         {/* Área activa: sus módulos */}
         <div>
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_12px_28px_rgba(124,58,237,0.4)]">
+            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_12px_28px_rgba(124,58,237,0.32)]">
               <ActualIcon className="size-5" />
             </span>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/60">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
                 Área {String(area + 1).padStart(2, "0")}
               </p>
-              <h3 className="font-display text-xl font-bold text-white sm:text-2xl">{actual.titulo}</h3>
+              <h3 className="font-display text-xl font-bold tracking-tight sm:text-2xl">{actual.titulo}</h3>
             </div>
           </div>
 
@@ -457,12 +457,12 @@ function ModulosOclu() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, delay: 0.05 + i * 0.03 }}
-                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 transition-colors duration-300 hover:border-primary/40 hover:bg-white/[0.08]"
+                    className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/70 px-3.5 py-3 transition-all duration-300 hover:border-primary/35 hover:bg-lavender/40"
                   >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/20 text-primary-foreground">
-                      <It className="size-4 text-violet-200" />
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-lavender text-primary">
+                      <It className="size-4" />
                     </span>
-                    <span className="text-sm font-medium text-white/90">{it.n}</span>
+                    <span className="text-sm font-medium text-foreground/90">{it.n}</span>
                   </motion.div>
                 );
               })}
@@ -483,21 +483,21 @@ function ModulosOclu() {
                 aria-pressed={on}
                 className={`group relative flex shrink-0 items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-300 lg:w-full ${
                   on
-                    ? "border-primary/50 bg-gradient-to-r from-primary/30 to-fuchsia-500/15"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
+                    ? "border-primary/40 bg-gradient-to-r from-primary/15 to-fuchsia-500/10 shadow-[0_12px_30px_-16px_rgba(124,58,237,0.6)]"
+                    : "border-border/70 bg-card hover:border-primary/25 hover:bg-lavender/30"
                 }`}
               >
-                <span className={`font-display text-2xl font-extrabold tabular-nums ${on ? "text-white" : "text-white/25"}`}>
+                <span className={`font-display text-2xl font-extrabold tabular-nums ${on ? "text-primary" : "text-primary/25"}`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
-                    <Icon className={`size-3.5 ${on ? "text-violet-200" : "text-white/40"}`} />
-                    <span className={`truncate text-sm font-semibold ${on ? "text-white" : "text-white/70"}`}>
+                    <Icon className={`size-3.5 ${on ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`truncate text-sm font-semibold ${on ? "text-foreground" : "text-foreground/70"}`}>
                       {a.titulo}
                     </span>
                   </span>
-                  <span className={`mt-0.5 block text-[11px] ${on ? "text-white/60" : "text-white/35"}`}>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
                     {a.items.length} funcionalidades
                   </span>
                 </span>
@@ -508,11 +508,11 @@ function ModulosOclu() {
       </div>
 
       {/* Pie */}
-      <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-        <p className="text-sm text-white/60">
-          <span className="font-bold text-white">{TOTAL_OCLU} funcionalidades</span> en 4 áreas
+      <div className="relative mt-6 flex items-center justify-between border-t border-border/70 pt-4">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{TOTAL_OCLU} funcionalidades</span> en 4 áreas
         </p>
-        <Link to="/planes" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-200 transition hover:text-white">
+        <Link to="/planes" className="inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:gap-2">
           Ver planes
           <ArrowRight className="size-4" />
         </Link>

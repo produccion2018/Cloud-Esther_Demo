@@ -22,6 +22,9 @@ import {
   CalendarCheck,
   ThumbsUp,
   Clock,
+  Sparkles,
+  Rocket,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
@@ -116,6 +119,56 @@ const stats: Stat[] = [
     suffix: "/7",
     fill: 100,
     v: "disponibilidad en la nube",
+  },
+];
+
+/* Historia de Cloud Esther, contada por etapas (sin fechas ni logros inventados). */
+const HISTORIA = [
+  {
+    icon: Target,
+    etapa: "El punto de partida",
+    texto:
+      "Nace de una necesidad real: la gestión diaria de una clínica odontológica. Quienes la viven de cerca sabían qué faltaba, y quisimos resolverlo con tecnología.",
+  },
+  {
+    icon: Blocks,
+    etapa: "Construcción",
+    texto:
+      "Desarrollamos una plataforma modular: pacientes, agenda, odontograma, tratamientos, facturación y reportes, en un solo lugar y en la nube.",
+  },
+  {
+    icon: Sparkles,
+    etapa: "Esther Infinity",
+    texto:
+      "Sumamos inteligencia artificial que asiste al profesional: resúmenes clínicos, sugerencias de agenda y lectura del rendimiento de la clínica.",
+  },
+  {
+    icon: Rocket,
+    etapa: "Hoy",
+    texto:
+      "Una plataforma integral, modular y segura, pensada para crecer con cada clínica, del consultorio individual al grupo con varias sedes.",
+  },
+];
+
+/* Equipo. Perfiles redactados sin inventar títulos, empresas, años ni logros extra. */
+const EQUIPO = [
+  {
+    iniciales: "MB",
+    nombre: "Mireya Becerra Méndez",
+    rol: "Asistente e higienista dental",
+    bio: "Más de 30 años de experiencia en el ámbito odontológico. Su trayectoria y el contacto con distintas especialidades le permiten conocer las necesidades reales de las clínicas y de los profesionales.",
+  },
+  {
+    iniciales: "MP",
+    nombre: "Mauro Pinto",
+    rol: "CEO",
+    bio: "Licenciado en Comunicación Audiovisual y programador full stack, con especialización y enfoque en inteligencia artificial. Impulsa la visión del producto, la experiencia digital y el desarrollo de soluciones tecnológicas para el sector odontológico.",
+  },
+  {
+    iniciales: "AB",
+    nombre: "Alejandro Becerra Méndez Tobar",
+    rol: "Tecnólogo en ingeniería electrónica · Especialista en IA",
+    bio: "Aporta el perfil técnico y la mirada de innovación: desarrollo tecnológico e integración de soluciones inteligentes dentro de Cloud Esther.",
   },
 ];
 
@@ -262,7 +315,7 @@ function AnimatedTitle({
                       repeat: Infinity,
                       ease: "linear",
                     }}
-                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-brand),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent"
+                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-primary-glow),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent [-webkit-text-fill-color:transparent]"
                   >
                     {word}
                   </motion.span>
@@ -989,6 +1042,129 @@ function Nosotros() {
                 })}
               </StaggerGroup>
             </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            HISTORIA — LÍNEA DE TIEMPO
+        ========================================================= */}
+        <section className="relative overflow-hidden bg-background">
+          <div className="relative mx-auto max-w-4xl px-5 py-20 lg:px-8 lg:py-24">
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                Nuestra historia
+              </span>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
+                Cómo nació Cloud Esther.
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Una idea que creció desde la clínica hacia la tecnología.
+              </p>
+            </Reveal>
+
+            <div className="relative mt-14">
+              {/* Línea vertical que se dibuja al entrar en pantalla */}
+              <motion.span
+                aria-hidden="true"
+                initial={{ scaleY: 0 }}
+                whileInView={{ scaleY: 1 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 1.2, ease: EASE }}
+                className="absolute left-6 top-2 h-[calc(100%-1rem)] w-px origin-top bg-gradient-to-b from-primary/50 via-primary/25 to-transparent sm:left-8"
+              />
+
+              <div className="space-y-8">
+                {HISTORIA.map((h, i) => {
+                  const Icon = h.icon;
+                  return (
+                    <Reveal key={h.etapa} delay={i * 0.08}>
+                      <div className="relative flex items-start gap-5 pl-0 sm:gap-6">
+                        <motion.span
+                          whileInView={{ scale: [0.8, 1.1, 1] }}
+                          viewport={{ once: true, margin: "-80px" }}
+                          transition={{ duration: 0.6, ease: EASE }}
+                          className="relative z-10 grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_10px_26px_rgba(124,58,237,0.32)] sm:size-16"
+                        >
+                          <Icon className="size-5 sm:size-6" />
+                        </motion.span>
+                        <div className="flex-1 rounded-2xl border border-border/70 bg-card p-5 shadow-[0_12px_40px_rgba(88,28,135,0.05)] transition-all duration-300 hover:border-primary/25 hover:shadow-[0_18px_50px_rgba(124,58,237,0.12)]">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
+                            {h.etapa}
+                          </p>
+                          <p className="mt-1.5 text-sm leading-7 text-foreground/85">{h.texto}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ORIGEN — Buenos Aires */}
+            <Reveal className="mt-14">
+              <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-lavender/60 via-card to-card p-6 text-center lg:p-8">
+                <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card px-3.5 py-1.5 text-xs font-semibold text-primary">
+                  <MapPin className="size-3.5" />
+                  Buenos Aires, Argentina
+                </span>
+                <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-foreground/85">
+                  Cloud Esther es una empresa desarrollada en Buenos Aires, Argentina, enfocada en
+                  tecnología para la gestión odontológica.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* =========================================================
+            EQUIPO
+        ========================================================= */}
+        <section className="relative overflow-hidden border-y border-border/60 bg-soft">
+          <div className="relative mx-auto max-w-6xl px-5 py-20 lg:px-8 lg:py-24">
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                Nuestro equipo
+              </span>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
+                Las personas detrás de Cloud Esther.
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Experiencia clínica, visión de producto e innovación tecnológica.
+              </p>
+            </Reveal>
+
+            <StaggerGroup className="mt-14 grid gap-6 md:grid-cols-3">
+              {EQUIPO.map((p) => (
+                <StaggerItem key={p.nombre}>
+                  <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card p-7 shadow-[0_12px_40px_rgba(88,28,135,0.06)] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_24px_60px_rgba(124,58,237,0.16)]">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full opacity-70 transition-opacity duration-500 group-hover:opacity-100"
+                      style={{
+                        background:
+                          "radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 70%)",
+                      }}
+                    />
+                    <div className="relative flex items-center gap-4">
+                      <motion.span
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                        className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 font-display text-lg font-bold text-white shadow-[0_10px_26px_rgba(124,58,237,0.32)]"
+                      >
+                        {p.iniciales}
+                      </motion.span>
+                      <div className="min-w-0">
+                        <p className="font-display text-lg font-bold leading-tight">{p.nombre}</p>
+                        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                          {p.rol}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="relative mt-5 text-sm leading-7 text-muted-foreground">{p.bio}</p>
+                  </div>
+                </StaggerItem>
+              ))}
+            </StaggerGroup>
           </div>
         </section>
 

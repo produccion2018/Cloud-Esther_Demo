@@ -13,7 +13,12 @@ export type ToothState =
   | "caries"
   | "ausente"
   | "endodoncia"
-  | "corona";
+  | "corona"
+  | "implante"
+  | "extraer"
+  | "sellante"
+  | "fractura"
+  | "protesis";
 
 export const TOOTH_STATES: ToothState[] = [
   "sano",
@@ -22,6 +27,11 @@ export const TOOTH_STATES: ToothState[] = [
   "ausente",
   "endodoncia",
   "corona",
+  "implante",
+  "extraer",
+  "sellante",
+  "fractura",
+  "protesis",
 ];
 
 export const TOOTH_STATE_META: Record<
@@ -57,6 +67,31 @@ export const TOOTH_STATE_META: Record<
     label: "Corona",
     color: "#d9b45b",
     description: "Prótesis fija / corona",
+  },
+  implante: {
+    label: "Implante",
+    color: "#38bdf8",
+    description: "Implante dental",
+  },
+  extraer: {
+    label: "A extraer",
+    color: "#ef4444",
+    description: "Extracción indicada",
+  },
+  sellante: {
+    label: "Sellante",
+    color: "#34d399",
+    description: "Sellante de fosas y fisuras",
+  },
+  fractura: {
+    label: "Fractura",
+    color: "#a855f7",
+    description: "Pieza fracturada",
+  },
+  protesis: {
+    label: "Prótesis",
+    color: "#f59e0b",
+    description: "Prótesis removible",
   },
 };
 

@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
-import { PanelEstherIA } from "@/components/site/PanelEstherIA";
+import { EstherInfinityShowcase } from "@/components/site/EstherInfinityShowcase";
 import { Reveal } from "@/components/site/Reveal";
 
 export const Route = createFileRoute("/caracteristicas")({
@@ -824,7 +824,7 @@ function Caracteristicas() {
 
                 <h2 className="mt-5 text-3xl font-bold lg:text-4xl">
                   <motion.span
-                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-brand),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent"
+                    className="inline-block bg-[linear-gradient(90deg,var(--color-primary),var(--color-primary-glow),var(--color-primary))] bg-[length:200%_auto] bg-clip-text text-transparent [-webkit-text-fill-color:transparent]"
                     animate={{
                       backgroundPosition: [
                         "0% center",
@@ -865,8 +865,8 @@ function Caracteristicas() {
                 </div>
               </div>
 
-              {/* Panel IA (datos administrables desde el panel; hoy de prueba) */}
-              <PanelEstherIA />
+              {/* Presentación de Esther Infinity como asistente de IA (datos reales del panel) */}
+              <EstherInfinityShowcase />
             </div>
           </div>
         </Reveal>

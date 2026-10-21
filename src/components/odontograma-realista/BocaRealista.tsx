@@ -29,6 +29,7 @@ function describirPieza(id: number) {
 
 export function BocaRealista({
   pacienteNombre,
+  titulo = "Odontograma 3D",
   estados = {},
   selected: selectedProp,
   onSeleccion,
@@ -36,6 +37,8 @@ export function BocaRealista({
   leyenda,
 }: {
   pacienteNombre?: string;
+  /** Título que se muestra arriba: "Odontograma 3D" o "Periodoncia" según dónde se use. */
+  titulo?: string;
   /** Color de cada pieza por su número FDI (estado clínico / periodontal). */
   estados?: Record<number, string>;
   /** Pieza elegida, controlada desde afuera (para sincronizar con la ficha clínica). */
@@ -75,7 +78,7 @@ export function BocaRealista({
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Boca 3D realista</p>
           <p className="font-display text-base font-bold leading-tight">
-            Periodoncia · Modelo 3D{pacienteNombre ? ` · ${pacienteNombre}` : ""}
+            {titulo} · Modelo 3D{pacienteNombre ? ` · ${pacienteNombre}` : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">

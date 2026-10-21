@@ -1048,7 +1048,7 @@ function Home() {
 
             <div className="relative mt-14">
               {/* LÍNEA CONECTORA (desktop) */}
-              <div className="pointer-events-none absolute left-[16.66%] right-[16.66%] top-8 hidden h-0.5 md:block">
+              <div className="pointer-events-none absolute left-[16.66%] right-[16.66%] top-8 hidden h-0.5 overflow-visible md:block">
                 <div className="absolute inset-0 rounded-full bg-primary/15" />
 
                 <motion.div
@@ -1058,6 +1058,22 @@ function Home() {
                   transition={{ duration: 1.3, delay: 0.3, ease: EASE }}
                   style={{ originX: 0 }}
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-purple-400 to-fuchsia-400"
+                />
+
+                {/* Brillo que recorre la línea (infinito) */}
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 w-24 rounded-full bg-gradient-to-r from-transparent via-white/80 to-transparent"
+                  animate={{ x: ["-25%", "560%"] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+                />
+
+                {/* Luz que viaja de paso en paso (infinita) */}
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.95)]"
+                  animate={{ left: ["0%", "50%", "100%"], scale: [1, 1.3, 1] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
                 />
               </div>
 
@@ -1074,15 +1090,42 @@ function Home() {
                         )}
 
                         <div className="relative z-10 shrink-0">
-                          <div className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_14px_34px_rgba(124,58,237,0.32)]">
-                            <StepIcon className="size-7" />
+                          <motion.div
+                            animate={{ y: [0, -7, 0] }}
+                            transition={{ duration: 3.2 + index * 0.4, repeat: Infinity, ease: "easeInOut" }}
+                            className="relative"
+                          >
+                            {/* Anillos que laten (infinito) */}
+                            <motion.span
+                              aria-hidden="true"
+                              className="absolute inset-0 rounded-2xl border-2 border-primary/30"
+                              animate={{ scale: [1, 1.35, 1], opacity: [0.55, 0, 0.55] }}
+                              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
+                            />
+                            <motion.span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute -inset-3 rounded-[26px]"
+                              animate={{ opacity: [0.25, 0.6, 0.25], scale: [0.92, 1.08, 0.92] }}
+                              transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
+                              style={{ background: "radial-gradient(circle, rgba(124,58,237,0.28) 0%, transparent 70%)" }}
+                            />
 
-                            <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/25 via-transparent to-transparent" />
-                          </div>
+                            <div className="relative flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_14px_34px_rgba(124,58,237,0.32)]">
+                              <motion.span
+                                animate={{ rotate: [-6, 6, -6] }}
+                                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: index * 0.3 }}
+                                className="inline-flex"
+                              >
+                                <StepIcon className="size-7" />
+                              </motion.span>
 
-                          <span className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border border-primary/15 bg-white text-xs font-bold text-primary shadow-sm">
-                            {index + 1}
-                          </span>
+                              <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/25 via-transparent to-transparent" />
+                            </div>
+
+                            <span className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border border-primary/15 bg-white text-xs font-bold text-primary shadow-sm">
+                              {index + 1}
+                            </span>
+                          </motion.div>
                         </div>
 
                         <div className="md:mt-6">

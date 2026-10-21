@@ -355,6 +355,172 @@ function TituloAnimado() {
 /* =========================================================
    EXPLORADOR DE MÓDULOS (lista + panel de detalle)
 ========================================================= */
+/* Panel de módulos estilo Oclu (fondo oscuro, adaptado a los colores de Cloud Esther): 4 áreas;
+   al elegir una se abre y muestra sus módulos reales, las otras quedan como pestañas con contador. */
+const AREAS_OCLU = [
+  {
+    icon: Stethoscope,
+    titulo: "Gestión clínica",
+    items: [
+      { icon: Users, n: "Pacientes" },
+      { icon: CalendarDays, n: "Agenda" },
+      { icon: CalendarCheck, n: "Autoagenda" },
+      { icon: Stethoscope, n: "Odontograma 2D y 3D" },
+      { icon: Activity, n: "Periodontograma" },
+      { icon: FileText, n: "Historia clínica" },
+      { icon: ScrollText, n: "Evoluciones" },
+      { icon: ClipboardList, n: "Consentimientos" },
+      { icon: FileText, n: "Recetas digitales" },
+      { icon: Microscope, n: "Radiografías e imágenes" },
+      { icon: ClipboardList, n: "Tratamientos" },
+      { icon: FlaskConical, n: "Laboratorio" },
+    ],
+  },
+  {
+    icon: Wallet,
+    titulo: "Administración y finanzas",
+    items: [
+      { icon: Calculator, n: "Presupuestos" },
+      { icon: ReceiptText, n: "Facturación" },
+      { icon: CreditCard, n: "Pagos y cuenta corriente" },
+      { icon: Landmark, n: "Caja y finanzas" },
+      { icon: Package, n: "Inventario" },
+      { icon: BarChart3, n: "Reportes y BI" },
+    ],
+  },
+  {
+    icon: Megaphone,
+    titulo: "Comunicación con el paciente",
+    items: [
+      { icon: Bell, n: "Recordatorios por WhatsApp" },
+      { icon: Megaphone, n: "Comunicación y campañas" },
+      { icon: Globe, n: "Portal del paciente" },
+      { icon: Network, n: "Automatizaciones" },
+      { icon: FileText, n: "Mensajería del equipo" },
+    ],
+  },
+  {
+    icon: Building2,
+    titulo: "Plataforma",
+    items: [
+      { icon: Bot, n: "Esther Infinity (IA)" },
+      { icon: Building2, n: "Multiempresa y multi-sede" },
+      { icon: UserCog, n: "Roles y permisos" },
+      { icon: Users, n: "Equipo profesional" },
+      { icon: ShieldCheck, n: "Seguridad y auditoría" },
+      { icon: Network, n: "Integraciones" },
+    ],
+  },
+];
+const TOTAL_OCLU = AREAS_OCLU.reduce((a, x) => a + x.items.length, 0);
+
+function ModulosOclu() {
+  const [area, setArea] = useState(0);
+  const actual = AREAS_OCLU[area];
+  const ActualIcon = actual.icon;
+
+  return (
+    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#140d2b] p-5 shadow-[0_30px_80px_-30px_rgba(76,29,149,0.8)] sm:p-7">
+      {/* luces de fondo */}
+      <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-primary/25 blur-[90px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 size-64 rounded-full bg-fuchsia-500/15 blur-[90px]" />
+
+      <div className="relative grid gap-6 lg:grid-cols-[1fr_300px]">
+        {/* Área activa: sus módulos */}
+        <div>
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_12px_28px_rgba(124,58,237,0.4)]">
+              <ActualIcon className="size-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/60">
+                Área {String(area + 1).padStart(2, "0")}
+              </p>
+              <h3 className="font-display text-xl font-bold text-white sm:text-2xl">{actual.titulo}</h3>
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={area}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-6 grid gap-2.5 sm:grid-cols-2"
+            >
+              {actual.items.map((it, i) => {
+                const It = it.icon;
+                return (
+                  <motion.div
+                    key={it.n}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.05 + i * 0.03 }}
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 transition-colors duration-300 hover:border-primary/40 hover:bg-white/[0.08]"
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/20 text-primary-foreground">
+                      <It className="size-4 text-violet-200" />
+                    </span>
+                    <span className="text-sm font-medium text-white/90">{it.n}</span>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Pestañas de las 4 áreas */}
+        <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+          {AREAS_OCLU.map((a, i) => {
+            const Icon = a.icon;
+            const on = i === area;
+            return (
+              <button
+                key={a.titulo}
+                type="button"
+                onClick={() => setArea(i)}
+                aria-pressed={on}
+                className={`group relative flex shrink-0 items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-300 lg:w-full ${
+                  on
+                    ? "border-primary/50 bg-gradient-to-r from-primary/30 to-fuchsia-500/15"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
+                }`}
+              >
+                <span className={`font-display text-2xl font-extrabold tabular-nums ${on ? "text-white" : "text-white/25"}`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <Icon className={`size-3.5 ${on ? "text-violet-200" : "text-white/40"}`} />
+                    <span className={`truncate text-sm font-semibold ${on ? "text-white" : "text-white/70"}`}>
+                      {a.titulo}
+                    </span>
+                  </span>
+                  <span className={`mt-0.5 block text-[11px] ${on ? "text-white/60" : "text-white/35"}`}>
+                    {a.items.length} funcionalidades
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Pie */}
+      <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+        <p className="text-sm text-white/60">
+          <span className="font-bold text-white">{TOTAL_OCLU} funcionalidades</span> en 4 áreas
+        </p>
+        <Link to="/planes" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-200 transition hover:text-white">
+          Ver planes
+          <ArrowRight className="size-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function ModulosExplorer() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -761,7 +927,7 @@ function Caracteristicas() {
         </Reveal>
 
         <Reveal>
-          <ModulosExplorer />
+          <ModulosOclu />
         </Reveal>
       </section>
 

@@ -128,7 +128,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, selected, 
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
       <CameraRig view={view} nonce={nonce} />
     </Canvas>
   );

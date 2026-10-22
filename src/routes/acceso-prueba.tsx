@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Briefcase,
   Building2,
-  Crown,
   Download,
   Laptop,
   Loader2,
@@ -15,8 +14,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { BrandMark } from "@/components/cloud-esther/AppShell";
-import { iniciarSesionAdmin } from "@/lib/admin/api";
-import { guardarSesion } from "@/lib/admin/sesion";
 import { setStoredPlan, type PlanId } from "@/lib/cloud-esther/data";
 import {
   asegurarAcceso,
@@ -57,7 +54,7 @@ const PLANES: { id: PlanId; nombre: string }[] = [
 ];
 
 type Perfil = {
-  id: "propietario" | "clinica" | "profesional" | "secretaria" | "paciente";
+  id: "clinica" | "profesional" | "secretaria" | "paciente";
   titulo: string;
   quien: string;
   detalle: string;
@@ -66,14 +63,6 @@ type Perfil = {
 };
 
 const PERFILES: Perfil[] = [
-  {
-    id: "propietario",
-    titulo: "Panel del propietario",
-    quien: "Vos, dueño de Cloud Esther",
-    detalle: "Clínicas, demos, cobros, planes, empresa, soporte y auditoría.",
-    icon: Crown,
-    color: "from-amber-400 to-orange-500",
-  },
   {
     id: "clinica",
     titulo: "Panel de la clínica",
@@ -120,11 +109,7 @@ function AccesoPrueba() {
     setCargando(perfil);
     marcarAccesoPrueba();
     try {
-      if (perfil === "propietario") {
-        const sesion = await iniciarSesionAdmin("dueno@cloudesther.com", "Dueno2026!");
-        guardarSesion(sesion, true);
-        await navigate({ to: "/admin" as never });
-      } else if (perfil === "clinica") {
+      if (perfil === "clinica") {
         setStoredPlan(plan);
         await navigate({ to: "/demo" as never });
       } else if (perfil === "secretaria") {

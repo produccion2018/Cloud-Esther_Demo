@@ -1227,10 +1227,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         // RRHH ya tiene su propia Esther (especializada en el equipo) en el mismo lugar.
         !pathname.startsWith("/demo/rrhh") && (
           <>
-            <EstherBriefing
-              moduloId={modulo?.id ?? "dashboard"}
-              modulo={modulo?.label ?? "el inicio"}
-            />
+            {(modulo?.id ?? "dashboard") === "dashboard" && (
+              <EstherBriefing
+                moduloId={modulo?.id ?? "dashboard"}
+                modulo={modulo?.label ?? "el inicio"}
+              />
+            )}
             <EstherFlotante
               moduloId={modulo?.id ?? "dashboard"}
               modulo={modulo?.label ?? "el inicio"}

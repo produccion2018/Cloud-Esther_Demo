@@ -231,7 +231,7 @@ export function ContactCenter({
                   <p className="text-sm font-semibold text-foreground">{conv.contacto}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {conv.canal} · {conv.intencion}
-                    {automatizado ? " · recordatorios y seguimientos automáticos con n8n" : ""}
+                    {automatizado ? " · recordatorios y seguimientos automáticos" : ""}
                   </p>
                 </div>
                 {tomada ? (

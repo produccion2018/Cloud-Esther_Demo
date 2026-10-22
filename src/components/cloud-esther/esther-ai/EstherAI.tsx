@@ -495,7 +495,7 @@ export function EstherAI({
                   <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
                     {ultimaEj
                       ? `Última ejecución: ${ultimaEj.flujo} (${ultimaEj.estado.toLowerCase()}).`
-                      : "n8n le pide a Esther que redacte, priorice o clasifique, y ejecuta la acción."}
+                      : "El motor de automatización le pide a Esther que redacte, priorice o clasifique, y ejecuta la acción."}
                   </p>
                 </div>
               )}

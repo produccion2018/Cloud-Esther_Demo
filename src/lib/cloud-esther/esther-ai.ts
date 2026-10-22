@@ -29,11 +29,11 @@ export type EstherReply = {
 
 /** Consultas que tienen una automatización natural en n8n (Enterprise). */
 const AUTOMATIZABLE: Record<string, string> = {
-  presupuestos: "Automatizar el seguimiento con n8n",
-  agenda: "Automatizar recordatorios con n8n",
-  facturacion: "Automatizar la cobranza con n8n",
-  inventario: "Automatizar la reposición con n8n",
-  pacientes: "Automatizar la reactivación con n8n",
+  presupuestos: "Automatizar el seguimiento con Esther",
+  agenda: "Automatizar recordatorios con Esther",
+  facturacion: "Automatizar la cobranza con Esther",
+  inventario: "Automatizar la reposición con Esther",
+  pacientes: "Automatizar la reactivación con Esther",
 };
 
 export const contextProgress: Record<EstherSection, string> = {

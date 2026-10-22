@@ -154,7 +154,7 @@ export const plans: Plan[] = [
       "Comunicación avanzada",
       "Marketing y captación avanzada",
       "Recursos Humanos avanzado",
-      "Automatizaciones y workflows con n8n",
+      "Automatizaciones y workflows inteligentes",
       "Esther Infinity avanzada",
       "Analítica avanzada",
       "Auditoría completa",
@@ -284,7 +284,7 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Automatizaciones n8n",
+    feature: "Automatizaciones inteligentes",
     values: ["—", "—", "—", "✓"],
   },
 
@@ -434,8 +434,8 @@ export const additionalModules: AdditionalModule[] = [
   },
   {
     id: "automatizaciones-n8n",
-    name: "Automatizaciones n8n",
-    description: "Automatización de procesos y flujos de trabajo mediante n8n.",
+    name: "Automatizaciones inteligentes",
+    description: "Automatización de procesos y flujos de trabajo con el motor interno de Esther.",
   },
 ];
 
@@ -463,7 +463,7 @@ export const modulesOfInterest = [
   "Marketing y captación",
   "Inventario",
   "Recursos Humanos",
-  "Automatizaciones n8n",
+  "Automatizaciones inteligentes",
   "Directorio de clínicas y odontólogos",
   "Seguridad y control de accesos",
   "Auditoría",

@@ -54,7 +54,7 @@ const DATOS_INICIALES: Conector[] = [
   },
   {
     id: "n8n",
-    nombre: "n8n",
+    nombre: "Motor de automatización",
     descripcion: "Motor de automatización — conecta y dispara los flujos de Automatización.",
     categoria: "Automatización",
     icon: "workflow",

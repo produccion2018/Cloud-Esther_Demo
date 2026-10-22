@@ -6,6 +6,34 @@ import { buildArch, buildGumGeometry, buildPalateGeometry, buildToothGeometry, t
 
 export type ViewName = "front" | "top" | "bottom" | "side";
 
+/** Acabados del modelo 3D, como el visor STL de Oclu: realista / yeso / glossy / wireframe. */
+export type MatMode = "realista" | "yeso" | "glossy" | "wireframe";
+
+type MatPreset = {
+  roughness: number;
+  metalness: number;
+  clearcoat: number;
+  clearcoatRoughness: number;
+  sheen: number;
+  transmission: number;
+  wireframe: boolean;
+  /** true = respeta el color clínico de cada pieza; false = material neutro (yeso). */
+  usarColor: boolean;
+};
+
+export const MAT: Record<MatMode, MatPreset> = {
+  // Esmalte real: translúcido, con brillo suave y profundidad.
+  realista: { roughness: 0.28, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.25, sheen: 0.3, transmission: 0.06, wireframe: false, usarColor: true },
+  // Modelo de yeso: mate, sin reflejos, color hueso uniforme.
+  yeso: { roughness: 0.95, metalness: 0, clearcoat: 0, clearcoatRoughness: 1, sheen: 0, transmission: 0, wireframe: false, usarColor: false },
+  // Escaneo brillante: superficie muy pulida y reflejos marcados.
+  glossy: { roughness: 0.06, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.04, sheen: 0, transmission: 0, wireframe: false, usarColor: true },
+  // Malla técnica: solo las aristas de la geometría.
+  wireframe: { roughness: 0.5, metalness: 0, clearcoat: 0, clearcoatRoughness: 0.5, sheen: 0, transmission: 0, wireframe: true, usarColor: true },
+};
+
+const COLOR_YESO = "#efe7d6";
+
 const VIEWS: Record<ViewName, [number, number, number]> = {
   front: [0, 6, 140],
   top: [0, -130, 30],
@@ -13,8 +41,8 @@ const VIEWS: Record<ViewName, [number, number, number]> = {
   side: [115, 10, 60],
 };
 
-function Tooth({ t, color, selected, hovered, onSelect, onHover }: {
-  t: PlacedTooth; color: string; selected: boolean; hovered: boolean;
+function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: {
+  t: PlacedTooth; color: string; mat: MatPreset; selected: boolean; hovered: boolean;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const geo = useMemo(() => buildToothGeometry(t.type, t.jaw, t.id).geo, [t]);
@@ -37,17 +65,18 @@ function Tooth({ t, color, selected, hovered, onSelect, onHover }: {
     >
       <meshPhysicalMaterial
         ref={mat}
-        vertexColors
-        color={color}
-        roughness={0.28}
-        metalness={0}
-        clearcoat={0.7}
-        clearcoatRoughness={0.25}
-        sheen={0.3}
+        vertexColors={preset.usarColor}
+        color={preset.usarColor ? color : COLOR_YESO}
+        roughness={preset.roughness}
+        metalness={preset.metalness}
+        clearcoat={preset.clearcoat}
+        clearcoatRoughness={preset.clearcoatRoughness}
+        sheen={preset.sheen}
         sheenColor="#fff6e6"
-        transmission={0.06}
+        transmission={preset.transmission}
         thickness={2}
         ior={1.62}
+        wireframe={preset.wireframe}
         emissive={selected ? "#7c5cff" : "#5ec8ff"}
         emissiveIntensity={0}
       />
@@ -55,8 +84,8 @@ function Tooth({ t, color, selected, hovered, onSelect, onHover }: {
   );
 }
 
-function Jaw({ jaw, offset, estados, selected, hovered, onSelect, onHover }: {
-  jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; selected: number | null; hovered: number | null;
+function Jaw({ jaw, offset, estados, mat, selected, hovered, onSelect, onHover }: {
+  jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; mat: MatPreset; selected: number | null; hovered: number | null;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const arch = useMemo(() => buildArch(jaw), [jaw]);
@@ -66,16 +95,18 @@ function Jaw({ jaw, offset, estados, selected, hovered, onSelect, onHover }: {
   useFrame(() => {
     if (group.current) group.current.position.y += (offset - group.current.position.y) * 0.1;
   });
-  const gumMat = (
-    <meshPhysicalMaterial vertexColors roughness={0.42} clearcoat={0.55} clearcoatRoughness={0.35}
-      sheen={0.6} sheenColor="#ffb3b8" sheenRoughness={0.5} side={THREE.DoubleSide} />
+  const gumMat = mat.usarColor ? (
+    <meshPhysicalMaterial vertexColors roughness={mat.wireframe ? 0.5 : 0.42} clearcoat={mat.clearcoat * 0.8} clearcoatRoughness={0.35}
+      sheen={0.6} sheenColor="#ffb3b8" sheenRoughness={0.5} wireframe={mat.wireframe} side={THREE.DoubleSide} />
+  ) : (
+    <meshPhysicalMaterial color={COLOR_YESO} roughness={0.95} clearcoat={0} sheen={0} side={THREE.DoubleSide} />
   );
   return (
     <group ref={group}>
       <mesh geometry={gum} castShadow receiveShadow>{gumMat}</mesh>
       <mesh geometry={palate} receiveShadow>{gumMat}</mesh>
       {arch.teeth.map((t) => (
-        <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
+        <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} mat={mat} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
       ))}
     </group>
   );
@@ -96,11 +127,12 @@ function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
   return null;
 }
 
-export default function MouthScene({ view, nonce, open, estados = {}, selected, onSelect, showUpper, showLower }: {
-  view: ViewName; nonce: number; open: boolean; estados?: Record<number, string>; selected: number | null; onSelect: (id: number | null) => void;
+export default function MouthScene({ view, nonce, open, estados = {}, material = "realista", selected, onSelect, showUpper, showLower }: {
+  view: ViewName; nonce: number; open: boolean; estados?: Record<number, string>; material?: MatMode; selected: number | null; onSelect: (id: number | null) => void;
   showUpper: boolean; showLower: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const preset = MAT[material];
   return (
     <Canvas
       shadows
@@ -123,8 +155,8 @@ export default function MouthScene({ view, nonce, open, estados = {}, selected, 
       </Environment>
 
       <group rotation={[0.08, 0, 0]}>
-        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />

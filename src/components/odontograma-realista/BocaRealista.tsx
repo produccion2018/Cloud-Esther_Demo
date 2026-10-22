@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { ViewName } from "./MouthScene";
+import type { ViewName, MatMode } from "./MouthScene";
 import { ORDER, TYPE_LABEL } from "./anatomy";
 
 /* Ubicación: src/components/odontograma-realista/BocaRealista.tsx
@@ -15,6 +15,14 @@ const VIEW_LABELS: [ViewName, string][] = [
   ["top", "Superior"],
   ["bottom", "Inferior"],
   ["side", "Lateral"],
+];
+
+/** Acabados del modelo 3D (como el visor STL de Oclu). */
+const MAT_LABELS: [MatMode, string][] = [
+  ["realista", "Realista"],
+  ["yeso", "Yeso"],
+  ["glossy", "Glossy"],
+  ["wireframe", "Wireframe"],
 ];
 
 /** Nombre y ubicación de la pieza por su número FDI. */
@@ -56,6 +64,7 @@ export function BocaRealista({
   const [open, setOpen] = useState(true);
   const [upper, setUpper] = useState(true);
   const [lower, setLower] = useState(true);
+  const [material, setMaterial] = useState<MatMode>("realista");
   const [selInterna, setSelInterna] = useState<number | null>(null);
   const selected = selectedProp !== undefined ? selectedProp : selInterna;
   useEffect(() => setMontado(true), []);
@@ -110,6 +119,7 @@ export function BocaRealista({
               nonce={nonce}
               open={open}
               estados={estados}
+              material={material}
               selected={selected}
               onSelect={elegir}
               showUpper={upper}
@@ -130,6 +140,18 @@ export function BocaRealista({
           <button type="button" className={chip(open)} onClick={() => setOpen((x) => !x)}>
             {open ? "Boca abierta" : "En oclusión"}
           </button>
+        </div>
+
+        {/* Acabado del modelo 3D (como el visor STL de Oclu) */}
+        <div className="absolute right-4 top-4 rounded-2xl border border-primary/12 bg-card/85 p-2 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
+          <p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-[0.16em] text-primary">Acabado</p>
+          <div className="flex flex-col gap-1.5">
+            {MAT_LABELS.map(([m, l]) => (
+              <button key={m} type="button" className={chip(material === m)} onClick={() => setMaterial(m)}>
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
 
         {leyenda && (

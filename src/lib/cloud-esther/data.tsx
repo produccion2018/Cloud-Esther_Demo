@@ -454,7 +454,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "Todo lo anterior",
     "Odontograma 3D avanzado",
     "Portal del paciente y portal del profesional",
-    "Automatizaciones con n8n",
+    "Automatizaciones inteligentes",
     "Multi-clínica",
     "Multiempresa",
   ],

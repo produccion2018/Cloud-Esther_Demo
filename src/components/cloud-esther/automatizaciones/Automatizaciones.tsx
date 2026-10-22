@@ -97,7 +97,7 @@ const QUIEN: Record<string, { nodo: string; pill: string }> = {
     nodo: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
     pill: "bg-primary/10 text-primary",
   },
-  n8n: { nodo: "bg-rose-100 text-rose-600", pill: "bg-rose-50 text-rose-600" },
+  "Automatización": { nodo: "bg-rose-100 text-rose-600", pill: "bg-rose-50 text-rose-600" },
   "Cloud Esther": { nodo: "bg-sky-100 text-sky-700", pill: "bg-sky-50 text-sky-700" },
 };
 const ESTADO_EJ: Record<Ejecucion["estado"], string> = {
@@ -411,7 +411,7 @@ export function Automatizaciones() {
 function Nodo({ paso, ultimo }: { paso: Paso; ultimo: boolean }) {
   const meta = PASOS[paso.tipo];
   const Icon = ICONO[paso.tipo];
-  const q = QUIEN[meta.quien] ?? QUIEN["n8n"]!;
+  const q = QUIEN[meta.quien] ?? QUIEN["Automatización"]!;
   return (
     <li className="relative flex gap-3 pb-3">
       {!ultimo && (
@@ -656,7 +656,7 @@ function Flujos({
             {(
               [
                 ["Esther Infinity", Sparkles, "Analiza, prioriza y redacta"],
-                ["n8n", Workflow, "Esperas, condiciones y canales externos"],
+                ["Automatización", Workflow, "Esperas, condiciones y canales externos"],
                 ["Cloud Esther", RefreshCw, "Tareas, avisos y registros internos"],
               ] as const
             ).map(([q, Icon, d]) => (
@@ -1026,7 +1026,7 @@ function Editor({
           {f.pasos.map((p, i) => {
             const meta = PASOS[p.tipo];
             const Icon = ICONO[p.tipo];
-            const q = QUIEN[meta.quien] ?? QUIEN["n8n"]!;
+            const q = QUIEN[meta.quien] ?? QUIEN["Automatización"]!;
             return (
               <li
                 key={p.id}
@@ -1129,7 +1129,7 @@ function Plantillas({ flujos, onUsar }: { flujos: Flujo[]; onUsar: (id: string) 
             <div className="mt-3 flex flex-wrap items-center gap-1">
               {pasos.map((p, i) => {
                 const Icon = ICONO[p.tipo];
-                const q = QUIEN[PASOS[p.tipo].quien] ?? QUIEN["n8n"]!;
+                const q = QUIEN[PASOS[p.tipo].quien] ?? QUIEN["Automatización"]!;
                 return (
                   <span key={p.id} className="flex items-center gap-1">
                     <span
@@ -1255,7 +1255,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
   const [apiKey, setApiKey] = useState(est.apiKey);
   const [probando, setProbando] = useState(false);
   const tenant = clinicaActualId() ?? "demo";
-  const webhook = `https://api.cloudesther.com/webhooks/n8n/${tenant}`;
+  const webhook = `https://api.cloudesther.com/webhooks/automatizacion/${tenant}`;
   const probar = () => {
     setProbando(true);
     window.setTimeout(() => {
@@ -1270,7 +1270,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
       });
       onToast(
         ok
-          ? "Conexión con n8n verificada"
+          ? "Motor de automatización conectado"
           : "No se pudo conectar: revisá la URL y la API key (mínimo 12 caracteres)",
       );
     }, 700);
@@ -1283,7 +1283,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
       c: "bg-sky-100 text-sky-700",
     },
     {
-      t: "n8n",
+      t: "Automatización",
       d: "Detecta el evento y orquesta el flujo",
       i: Workflow,
       c: "bg-rose-100 text-rose-600",
@@ -1306,7 +1306,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card-grad space-y-3 p-5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold">Instancia de n8n</p>
+          <p className="text-sm font-semibold">Motor de automatización</p>
           <Pill
             clase={
               est.conectado ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
@@ -1320,7 +1320,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
             className={INPUT}
             value={instancia}
             onChange={(e) => setInstancia(e.target.value)}
-            placeholder="https://n8n.tuclinica.com"
+            placeholder="https://automatizacion.tuclinica.com"
           />
         </Field>
         <Field label="API key">
@@ -1329,11 +1329,11 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="n8n_api_…"
+            placeholder="clave_api_…"
             autoComplete="off"
           />
         </Field>
-        <Field label="Webhook de esta empresa (para los nodos de n8n)">
+        <Field label="Webhook de esta empresa">
           <div className="flex gap-2">
             <input className={`${INPUT} font-mono text-xs`} value={webhook} readOnly />
             <button
@@ -1350,7 +1350,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
           </div>
         </Field>
         <p className="text-[11px] leading-5 text-muted-foreground">
-          Cada empresa tiene su propio webhook firmado: n8n nunca recibe datos de otra clínica. Las
+          Cada empresa tiene su propio webhook firmado: el motor de automatización nunca recibe datos de otra clínica. Las
           llamadas a Esther Infinity usan el token de la empresa y respetan plan, rol y sede.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1366,7 +1366,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
 
       <div className="space-y-4">
         <div className="card-grad p-5">
-          <p className="text-sm font-semibold">Credenciales en n8n</p>
+          <p className="text-sm font-semibold">Credenciales conectadas</p>
           <ul className="mt-3 space-y-2">
             {est.credenciales.map((c) => (
               <li
@@ -1419,7 +1419,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
             ))}
           </ol>
           <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
-            n8n no reemplaza a la IA: se encarga de los tiempos, las condiciones y los canales
+            El motor de automatización no reemplaza a la IA: se encarga de los tiempos, las condiciones y los canales
             externos. Esther Infinity decide qué decir y a quién priorizar.
           </p>
         </div>

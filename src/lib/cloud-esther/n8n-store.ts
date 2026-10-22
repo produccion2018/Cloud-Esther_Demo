@@ -98,7 +98,7 @@ export const PASOS: Record<
   TipoPaso,
   {
     nombre: string;
-    quien: "Esther Infinity" | "n8n" | "Cloud Esther";
+    quien: "Esther Infinity" | "Automatización" | "Cloud Esther";
     detalle: string;
     defecto: ConfigPaso;
   }
@@ -109,22 +109,22 @@ export const PASOS: Record<
     detalle: "Analiza, redacta o clasifica con el contexto permitido",
     defecto: { tarea: "Redactar mensaje" },
   },
-  esperar: { nombre: "Esperar", quien: "n8n", detalle: "Pausa el flujo", defecto: { dias: "3" } },
+  esperar: { nombre: "Esperar", quien: "Automatización", detalle: "Pausa el flujo", defecto: { dias: "3" } },
   condicion: {
     nombre: "Condición",
-    quien: "n8n",
+    quien: "Automatización",
     detalle: "Sigue solo si se cumple",
     defecto: { regla: "Sin respuesta del paciente" },
   },
   whatsapp: {
     nombre: "Enviar WhatsApp",
-    quien: "n8n",
+    quien: "Automatización",
     detalle: "WhatsApp Business",
     defecto: { mensaje: "Mensaje redactado por Esther Infinity" },
   },
   email: {
     nombre: "Enviar correo",
-    quien: "n8n",
+    quien: "Automatización",
     detalle: "SMTP / Gmail",
     defecto: { asunto: "Novedades de tu clínica" },
   },
@@ -142,13 +142,13 @@ export const PASOS: Record<
   },
   webhook: {
     nombre: "Webhook externo",
-    quien: "n8n",
+    quien: "Automatización",
     detalle: "Llama a otro servicio",
     defecto: { url: "https://hooks.ejemplo.com/cloud-esther" },
   },
   notificar: {
     nombre: "Notificar al equipo",
-    quien: "n8n",
+    quien: "Automatización",
     detalle: "Slack, correo o aviso interno",
     defecto: { canal: "Aviso interno" },
   },
@@ -230,7 +230,7 @@ export const PLANTILLAS: {
     id: "seguimiento-presupuesto",
     nombre: "Seguimiento de presupuestos",
     descripcion:
-      "Si el paciente no responde en 3 días, Esther redacta un mensaje personalizado y n8n lo envía por WhatsApp.",
+      "Si el paciente no responde en 3 días, Esther redacta un mensaje personalizado y lo envía por WhatsApp.",
     evento: "presupuesto_sin_respuesta",
     pasos: () => [
       p("esperar", { dias: "3" }),
@@ -282,7 +282,7 @@ export const PLANTILLAS: {
   {
     id: "cobranza",
     nombre: "Recordatorio de facturas vencidas",
-    descripcion: "Esther redacta un recordatorio amable y n8n lo manda por correo y WhatsApp.",
+    descripcion: "Esther redacta un recordatorio amable y lo manda por correo y WhatsApp.",
     evento: "factura_vencida",
     pasos: () => [
       p("ia", { tarea: "Redactar mensaje" }),
@@ -306,7 +306,7 @@ export const PLANTILLAS: {
     id: "contact-center",
     nombre: "Contact Center por WhatsApp",
     descripcion:
-      "Mensaje entrante → Esther Infinity lo interpreta → agenda o deriva → n8n confirma por WhatsApp.",
+      "Mensaje entrante → Esther Infinity lo interpreta → agenda o deriva → Esther confirma por WhatsApp.",
     evento: "mensaje_contact_center",
     pasos: () => [
       p("ia", { tarea: "Clasificar respuesta" }),
@@ -318,7 +318,7 @@ export const PLANTILLAS: {
 
 export const storeN8n = crearStorePorEmpresa<EstadoN8n>(
   () => ({
-    instancia: "https://n8n.clinicaesther.com",
+    instancia: "https://automatizacion.clinicaesther.com",
     apiKey: "",
     conectado: false,
     ultimaPrueba: "",

@@ -154,7 +154,7 @@ const DEFINICION: Record<
   n8n: {
     minPlan: "grupo",
     campos: [
-      { k: "instancia", l: "URL de la instancia n8n", placeholder: "https://n8n.tuclinica.com" },
+      { k: "instancia", l: "URL de la instancia del motor", placeholder: "https://automatizacion.tuclinica.com" },
     ],
     ayuda: "Los flujos, plantillas y ejecuciones se manejan desde Automatizaciones.",
     ir: { label: "Abrir Automatizaciones", to: "/demo/automatizaciones" },
@@ -375,7 +375,7 @@ function IntegracionesInner() {
               <b>{ocultos} integraciones más</b>{" "}
               <span className="text-muted-foreground">
                 ({planLevel(plan) < 3 ? "DICOM, Webhooks" : ""}
-                {planLevel(plan) < 3 ? " y n8n" : "n8n"}) vienen con los planes superiores.
+                {planLevel(plan) < 3 ? " y Automatización" : "Automatización"}) vienen con los planes superiores.
               </span>
             </p>
             {!planContratado && (

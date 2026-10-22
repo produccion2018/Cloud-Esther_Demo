@@ -150,7 +150,7 @@ export function conexionesEsther(plan: PlanId, conN8n: boolean): Conexion[] {
     const n8n = storeN8n.leer();
     visibles.push({
       id: "n8n",
-      nombre: "n8n · Automatizaciones",
+      nombre: "Automatizaciones",
       dato: pl(n8n.flujos.filter((f) => f.activo).length, "flujo activo", "flujos activos"),
       to: "/demo/automatizaciones",
     });

@@ -1,6 +1,8 @@
 import { responderRRHH } from "@/lib/cloud-esther/rrhh-store";
 import { responder, type Bloque } from "@/lib/cloud-esther/esther-motor";
 import { auditarConsulta, type RolIA } from "@/lib/cloud-esther/ia-store";
+import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
+import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
 import type { PlanId } from "@/lib/cloud-esther/data";
 
 export type EstherContext = {
@@ -197,8 +199,30 @@ export async function askEsther(
       ...(bloques ?? []),
       { tipo: "acciones", items: [{ label: auto, to: "/demo/automatizaciones" }] },
     ];
+
+  // Cerebro real (solo planes con IA): el modelo redacta usando el dato ya aterrizado por el
+  // motor + un resumen real de la clínica. Nunca sobre respuestas restringidas, y con respaldo:
+  // si no hay clave o falla, queda la respuesta del motor interno.
+  let texto = conCierre(r.texto, r.modulo, r.resultado);
+  const plan = context.plan ?? "avanzada";
+  const tieneIA = plan === "avanzada" || plan === "grupo";
+  if (tieneIA && r.resultado !== "Sin permiso" && r.resultado !== "Fuera del plan") {
+    try {
+      const resumen = hallazgosEsther(plan)
+        .map((h) => `- ${h.texto}: ${h.detalle}`)
+        .join("\n");
+      const contexto = [r.texto, resumen && `Resumen de la clínica:\n${resumen}`]
+        .filter(Boolean)
+        .join("\n\n");
+      const ia = await preguntarIA({ data: { pregunta: message, contexto } }).catch(() => null);
+      if (ia?.text) texto = ia.text;
+    } catch {
+      /* respaldo: queda la respuesta del motor interno */
+    }
+  }
+
   return {
-    text: conCierre(r.texto, r.modulo, r.resultado),
+    text: texto,
     needsRealData: false,
     modulo: r.modulo,
     resultado: r.resultado,

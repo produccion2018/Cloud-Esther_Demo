@@ -30,6 +30,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModuloMockup } from "./ModuloMockups";
 
 /* Ubicación: src/components/site/ModulosPanel.tsx
    Panel de módulos de Cloud Esther (estilo Oclu, colores propios). Se usa en la página
@@ -97,7 +98,6 @@ export function ModulosPanel({ onLinkClick }: { onLinkClick?: () => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const actual = AREAS_OCLU[area];
   const mod = sel != null ? actual.items[sel] : null;
-  const ModIcon = mod ? mod.icon : actual.icon;
 
   return (
     <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-card via-card to-lavender/40 p-5 shadow-[0_28px_70px_-32px_rgba(88,28,135,0.55)] sm:p-7">
@@ -174,18 +174,9 @@ export function ModulosPanel({ onLinkClick }: { onLinkClick?: () => void }) {
             </button>
 
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-              <div className="relative grid h-36 w-full place-items-center">
-                {[0, 1, 2].map((r) => (
-                  <motion.span key={r} aria-hidden className="absolute size-28 rounded-full border border-primary/20" animate={{ scale: [1, 1.5, 1], opacity: [0.45, 0, 0.45] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: r * 0.7 }} />
-                ))}
-                <motion.span aria-hidden className="absolute size-40" animate={{ rotate: 360 }} transition={{ duration: 16, repeat: Infinity, ease: "linear" }}>
-                  {[0, 120, 240].map((d) => (
-                    <span key={d} className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/60 shadow-[0_0_10px_rgba(124,58,237,0.7)]" style={{ transform: `rotate(${d}deg) translateY(-80px)` }} />
-                  ))}
-                </motion.span>
-                <motion.span className="relative grid size-20 place-items-center rounded-3xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_18px_40px_-14px_rgba(124,58,237,0.8)]" animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}>
-                  <ModIcon className="size-9" />
-                </motion.span>
+              {/* Mini-maqueta temática del módulo (animación infinita) */}
+              <div className="w-full">
+                <ModuloMockup nombre={mod.n} />
               </div>
 
               <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-lavender px-3 py-1 text-[11px] font-semibold text-lavender-foreground">{actual.titulo}</span>

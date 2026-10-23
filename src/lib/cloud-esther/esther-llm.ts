@@ -23,20 +23,25 @@ const SISTEMA =
 export const preguntarIA = createServerFn({ method: "POST" })
   .inputValidator((d: EntradaIA) => d)
   .handler(async ({ data }): Promise<{ text: string } | null> => {
-    const key = process.env.OPENAI_API_KEY;
+    // Proveedor flexible (todos usan la misma API estilo OpenAI):
+    //  - OpenAI (pago):   OPENAI_API_KEY   (sin más, usa gpt-4o-mini)
+    //  - Gratuito (Groq / Gemini u otro): ESTHER_IA_KEY + ESTHER_IA_URL + ESTHER_IA_MODEL
+    const key = process.env.OPENAI_API_KEY ?? process.env.ESTHER_IA_KEY;
     if (!key) return null; // sin clave: la pantalla usa el motor interno
+    const url = process.env.ESTHER_IA_URL ?? "https://api.openai.com/v1/chat/completions";
+    const model = process.env.ESTHER_IA_MODEL ?? "gpt-4o-mini";
 
     try {
       const ctrl = new AbortController();
       const timeout = setTimeout(() => ctrl.abort(), 12000);
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model,
           max_tokens: 400,
           temperature: 0.3,
           messages: [

@@ -23,7 +23,7 @@ type MatPreset = {
 
 export const MAT: Record<MatMode, MatPreset> = {
   // Esmalte real: translúcido, con brillo suave y profundidad.
-  realista: { roughness: 0.28, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.25, sheen: 0.3, transmission: 0.06, wireframe: false, usarColor: true },
+  realista: { roughness: 0.52, metalness: 0, clearcoat: 0.12, clearcoatRoughness: 0.4, sheen: 0.22, transmission: 0.03, wireframe: false, usarColor: true },
   // Modelo de yeso: mate, sin reflejos, color hueso uniforme.
   yeso: { roughness: 0.95, metalness: 0, clearcoat: 0, clearcoatRoughness: 1, sheen: 0, transmission: 0, wireframe: false, usarColor: false },
   // Escaneo brillante: superficie muy pulida y reflejos marcados.

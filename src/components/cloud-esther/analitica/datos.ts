@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
@@ -107,6 +108,10 @@ export function useAnalitica(profesionalesPlan: string[], sucursales: string[]) 
   const { pacientes } = usePacientes();
   const registros = useTodosLosRegistros();
   const mkt = storeMarketing.usar();
+  // En una clínica real (producción) NUNCA se usa el histórico sintético: la analítica
+  // muestra solo los datos reales de la clínica (vacía si es nueva). El histórico de ejemplo
+  // es solo para el demo.
+  const esReal = !!useClinicaReal();
   const profes = miembros
     .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
     .map((m) => `${m.firstName} ${m.lastName}`.trim());
@@ -114,14 +119,14 @@ export function useAnalitica(profesionalesPlan: string[], sucursales: string[]) 
 
   const hist = useMemo(
     () =>
-      cfg.incluirHistorico
+      !esReal && cfg.incluirHistorico
         ? generarHistorico(tenant, profesionales, sucursales)
         : {
             hechos: [] as Hecho[],
             presupuestos: [] as PresupuestoHecho[],
             leads: [] as LeadHecho[],
           },
-    [cfg.incluirHistorico, tenant, profesionales.join(","), sucursales.join(",")], // eslint-disable-line react-hooks/exhaustive-deps
+    [esReal, cfg.incluirHistorico, tenant, profesionales.join(","), sucursales.join(",")], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const vivos = useMemo(() => {

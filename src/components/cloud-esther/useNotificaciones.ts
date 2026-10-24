@@ -235,7 +235,7 @@ export function useNotificaciones() {
 
   /* ── Insumos: stock bajo, agotados, vencimientos y pedidos del equipo ── */
   if (tiene("inventario")) {
-    const sedes = sucursalesDelPlan(plan === "grupo");
+    const sedes = sucursalesDelPlan(plan);
     const prov = (id: string) => inventario.proveedores.find((p) => p.id === id)?.nombre ?? "—";
     for (const s of inventario.insumos.filter((x) => sedes.includes(x.sucursal))) {
       const nivel = nivelStock(s);

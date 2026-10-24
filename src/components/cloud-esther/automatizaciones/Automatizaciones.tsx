@@ -149,7 +149,7 @@ export function Automatizaciones() {
   const timer = useRef<number | null>(null);
   useEffect(() => setMontado(true), []);
   const usuario = u?.nombre ?? "Administración";
-  const sedes = sucursalesDelPlan(plan === "grupo");
+  const sedes = sucursalesDelPlan(plan);
   const onToast = (m: string) => {
     setToast(m);
     if (timer.current) window.clearTimeout(timer.current);

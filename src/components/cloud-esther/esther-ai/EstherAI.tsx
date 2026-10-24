@@ -107,7 +107,7 @@ export function EstherAI({
   const [aviso, setAviso] = useState("");
   const [modo, setModo] = useState<"asistente" | "contact">("asistente");
   const [montado, setMontado] = useState(false);
-  const sedes = sucursalesDelPlan(plan === "grupo");
+  const sedes = sucursalesDelPlan(plan);
   const conN8n = useConN8n();
   const n8n = storeN8n.usar();
   const nombreUsuario = context?.usuario ?? usuario?.nombre ?? "Andrés Becerra";

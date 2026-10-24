@@ -113,7 +113,7 @@ export function Finanzas() {
   useEffect(() => setMontado(true), []);
   const nivel = planLevel(plan);
   const moneda = paisFiscal(libro.fac.config.pais).moneda;
-  const sucursales = sucursalesDelPlan(nivel >= 4);
+  const sucursales = sucursalesDelPlan(plan);
   const onToast = (m: string) => {
     setToast(m);
     if (timer.current) window.clearTimeout(timer.current);

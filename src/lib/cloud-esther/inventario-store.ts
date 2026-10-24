@@ -1,5 +1,6 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
+import type { PlanId } from "@/lib/cloud-esther/data";
 
 /* Ubicación: src/lib/cloud-esther/inventario-store.ts
 
@@ -26,8 +27,21 @@ export type Unidad = (typeof UNIDADES)[number];
 
 /** Sede extra que solo aparece en el plan Grupo Odontológico (multi-sede). */
 export const SUCURSAL_GRUPO = "Clínica Belgrano";
-export function sucursalesDelPlan(esGrupo: boolean): string[] {
-  return esGrupo ? [...SUCURSALES, SUCURSAL_GRUPO] : [...SUCURSALES];
+
+/** Límite de sucursales por plan (igual que la configuración de planes). */
+const LIMITE_SUCURSALES: Record<PlanId, number> = {
+  inicial: 1,
+  profesional: 3,
+  avanzada: 6,
+  grupo: 20,
+};
+
+/** Sucursales de ejemplo acotadas al límite real del plan (inicial=1, pro=3, avanzada/grupo
+    hasta las disponibles). Así no se muestran límites arbitrarios que no corresponden al plan. */
+export function sucursalesDelPlan(plan: PlanId): string[] {
+  const todas = [...SUCURSALES, SUCURSAL_GRUPO];
+  const limite = LIMITE_SUCURSALES[plan] ?? 1;
+  return todas.slice(0, Math.min(limite, todas.length));
 }
 
 export type Insumo = {

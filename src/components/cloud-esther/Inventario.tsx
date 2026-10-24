@@ -481,7 +481,7 @@ export function Inventario() {
   useEffect(() => setMontado(true), []);
 
   const esGrupo = plan === "grupo";
-  const sucursales = sucursalesDelPlan(esGrupo);
+  const sucursales = sucursalesDelPlan(plan);
   const insumos = estado.insumos.filter((i) => sucursales.includes(i.sucursal));
   const ids = new Set(insumos.map((i) => i.id));
 

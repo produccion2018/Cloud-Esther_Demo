@@ -108,7 +108,7 @@ export function RRHH() {
   const ctx: Ctx = {
     onToast,
     usuario: u?.nombre ?? "Administración",
-    sucursales: sucursalesDelPlan(plan === "grupo"),
+    sucursales: sucursalesDelPlan(plan),
     ir: setSeccion,
     abrirPersona: setPersona,
     preguntar,

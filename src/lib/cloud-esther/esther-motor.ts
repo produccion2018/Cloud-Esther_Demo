@@ -203,7 +203,7 @@ const enPeriodo = (f: string, p: Periodo) => f.slice(0, 10) >= p.desde && f.slic
 /* ───────────── Acceso a datos (siempre de la empresa activa) ───────────── */
 
 function sedesVisibles(ctx: ContextoIA) {
-  const todas = sucursalesDelPlan(ctx.plan === "grupo");
+  const todas = sucursalesDelPlan(ctx.plan);
   return ctx.sede === "Todas" ? todas : todas.filter((s) => s === ctx.sede);
 }
 function pacientesVisibles(ctx: ContextoIA) {
@@ -770,7 +770,7 @@ function portal(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function clinicas(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/clinicas?|sedes?|sucursal/.test(q) || !/cuant|cuales|que |lista/.test(q)) return null;
-  const sedes = sucursalesDelPlan(ctx.plan === "grupo");
+  const sedes = sucursalesDelPlan(ctx.plan);
   return {
     texto: `La empresa tiene ${sedes.length} sede${sedes.length === 1 ? "" : "s"}${ctx.sede !== "Todas" ? `; vos estás consultando desde ${ctx.sede}` : ""}.`,
     bloques: [

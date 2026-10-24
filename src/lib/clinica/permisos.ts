@@ -63,6 +63,8 @@ const HABILITADOS = new Set([
   // Pagos, facturación y analítica (punto 20): disponibles de verdad según el plan,
   // sin el cartel de «se está preparando».
   "facturacion", "finanzas", "bi",
+  // Presupuestos (punto 15): funciona de verdad desde Pro (minPlan profesional).
+  "presupuestos",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

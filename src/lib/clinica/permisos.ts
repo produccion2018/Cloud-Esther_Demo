@@ -60,6 +60,9 @@ const HABILITADOS = new Set([
   "historia", "odontograma", "recetas", "estudios", "laboratorio", "tratamientos", "comunicaciones", "configuracion",
   // Comunicación interna (estilo Teams): todos los planes y todos los roles
   "comunicacion-interna",
+  // Pagos, facturación y analítica (punto 20): disponibles de verdad según el plan,
+  // sin el cartel de «se está preparando».
+  "facturacion", "finanzas", "bi",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

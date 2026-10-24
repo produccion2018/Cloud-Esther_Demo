@@ -203,7 +203,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
         <div
           role="dialog"
           aria-label="Ayuda de Esther"
-          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-[60] flex max-h-[min(620px,calc(100vh-10rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-[0_30px_80px_-30px_rgba(76,29,149,0.7)] lg:bottom-24 lg:right-5"
+          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-40 flex max-h-[min(620px,calc(100vh-10rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-[0_30px_80px_-30px_rgba(76,29,149,0.7)] lg:bottom-24 lg:right-5"
         >
           <div className="relative overflow-hidden bg-[linear-gradient(118deg,#4c1d95,#7c3aed_45%,#c026d3)] px-4 py-3.5 text-white">
             <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-fuchsia-300/30 blur-2xl" />
@@ -311,7 +311,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
         }}
         aria-label={abierto ? "Cerrar ayuda" : "Ayuda de Esther"}
         title={abierto ? "Cerrar ayuda" : "¿Necesitás ayuda?"}
-        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-[60] flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 lg:right-5 ${chat ? "" : "sm:pr-4"}`}
+        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-40 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 lg:right-5 ${chat ? "" : "sm:pr-4"}`}
       >
         {!abierto && <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />}
         <AvatarEsther tam="md" enLinea={!abierto} />

@@ -18,7 +18,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
       {abierto && (
         <Suspense
           fallback={
-            <div className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-[60] lg:bottom-24 lg:right-5 h-[560px] w-[min(400px,calc(100vw-2.5rem))] animate-pulse rounded-3xl border border-primary/15 bg-card shadow-2xl" />
+            <div className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-40 lg:bottom-24 lg:right-5 h-[560px] w-[min(400px,calc(100vw-2.5rem))] animate-pulse rounded-3xl border border-primary/15 bg-card shadow-2xl" />
           }
         >
           <Panel moduloId={moduloId} modulo={modulo} onClose={() => setAbierto(false)} />
@@ -29,7 +29,7 @@ export function EstherFlotante({ moduloId, modulo }: { moduloId: string; modulo:
         onClick={() => setAbierto((v) => !v)}
         aria-label={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
         title={abierto ? "Cerrar Esther" : "Preguntale a Esther"}
-        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-[60] lg:right-5 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 ${chat ? "" : "sm:pr-4"} shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_44px_-16px_rgba(124,58,237,0.85)]`}
+        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-40 lg:right-5 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 ${chat ? "" : "sm:pr-4"} shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_44px_-16px_rgba(124,58,237,0.85)]`}
       >
         {/* Brillo que cruza el botón cada tanto (sutil; se apaga con «menos movimiento») */}
         {!abierto && <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />}

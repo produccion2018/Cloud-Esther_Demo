@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { Activity, ArrowDownRight, ArrowUpRight, Copy, Lock, Minus, Plus, Sparkles } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus, Sparkles } from "lucide-react";
 
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
@@ -43,6 +43,58 @@ function LeyendaPerio() {
           {l}
         </span>
       ))}
+    </div>
+  );
+}
+
+/** Periodontograma 2D (Start y Pro): esquema de piezas por arcada, pintadas por su estado
+    periodontal. Al tocar una pieza se abre su edición (igual que la boca 3D en Plus/Enterprise). */
+function PerioBoca2D({
+  piezas,
+  seleccion,
+  onSeleccion,
+}: {
+  piezas: Record<string, Pieza>;
+  seleccion: number | null;
+  onSeleccion: (n: number) => void;
+}) {
+  const fila = (nums: number[], etiqueta: string) => (
+    <div>
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{etiqueta}</p>
+      <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {nums.map((n) => {
+          const c = colorPerio(piezas[n]);
+          const activa = seleccion === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onSeleccion(n)}
+              className={`flex shrink-0 flex-col items-center gap-1 rounded-lg border px-1 py-1.5 transition ${
+                activa ? "border-primary bg-primary/[0.06] ring-2 ring-primary/40" : "border-primary/10 hover:border-primary/35 hover:bg-white/50"
+              }`}
+            >
+              <span className="size-7 rounded-md ring-1 ring-black/10" style={{ background: c }} />
+              <span className="text-[10px] font-bold tabular-nums text-foreground/80">{n}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  return (
+    <div className="rounded-2xl border border-primary/12 bg-gradient-to-br from-card to-lavender/30 p-4 shadow-[0_18px_44px_-30px_rgba(124,58,237,0.55)]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Periodoncia · Vista 2D</p>
+          <p className="font-display text-base font-bold leading-tight">Cada pieza por su estado</p>
+        </div>
+        <LeyendaPerio />
+      </div>
+      <div className="space-y-3">
+        {fila(SUP, "Arcada superior")}
+        {fila(INF, "Arcada inferior")}
+      </div>
     </div>
   );
 }
@@ -138,6 +190,8 @@ export function PeriodontogramaSec({
   contexto?: ContextoPaciente | undefined;
 }) {
   const { plan } = useCloudEsther();
+  // La boca 3D es solo de Plus y Enterprise. Start y Pro usan el periodontograma 2D.
+  const con3D = plan === "avanzada" || plan === "grupo";
   const evaluaciones = useMemo(
     () => [...(datos.periodontograma ?? [])].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
     [datos.periodontograma],
@@ -146,19 +200,6 @@ export function PeriodontogramaSec({
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const actual = evaluaciones.find((e) => e.id === actualId) ?? evaluaciones[0];
   const anterior = actual ? evaluaciones[evaluaciones.indexOf(actual) + 1] : undefined;
-
-  if (plan === "inicial")
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.05] to-fuchsia-500/[0.05] px-6 py-12 text-center">
-        <span className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
-          <Lock className="size-6" />
-        </span>
-        <p className="font-display text-lg font-bold">Periodontograma: desde el plan Pro</p>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Sondaje por sitio, sangrado, placa, NIC y comparación entre evaluaciones. Se activa al pasar a Pro, Plus o Enterprise.
-        </p>
-      </div>
-    );
 
   const guardar = (ev: EvaluacionPerio) =>
     cambiar("periodontograma", (prev) => (prev ?? []).map((x) => (x.id === ev.id ? ev : x)));
@@ -321,26 +362,31 @@ export function PeriodontogramaSec({
 
       {/* Boca 3D realista (misma del odontograma) + edición periodontal de la pieza elegida */}
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]">
-        <Suspense
-          fallback={
-            <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
-              Cargando el modelo 3D…
-            </div>
-          }
-        >
-          <BocaRealista
-            key={`perio-${actual.id}`}
-            titulo="Periodoncia"
-            pacienteNombre={contexto?.paciente}
-            estados={estadosPerio}
-            selected={seleccion}
-            onSeleccion={setSeleccion}
-            mostrarInfo={false}
-            leyenda={<LeyendaPerio />}
-          />
-        </Suspense>
+        {con3D ? (
+          <Suspense
+            fallback={
+              <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
+                Cargando el modelo 3D…
+              </div>
+            }
+          >
+            <BocaRealista
+              key={`perio-${actual.id}`}
+              titulo="Periodoncia"
+              pacienteNombre={contexto?.paciente}
+              estados={estadosPerio}
+              selected={seleccion}
+              onSeleccion={setSeleccion}
+              mostrarInfo={false}
+              leyenda={<LeyendaPerio />}
+            />
+          </Suspense>
+        ) : (
+          <PerioBoca2D piezas={actual.piezas} seleccion={seleccion} onSeleccion={setSeleccion} />
+        )}
 
         <div className="space-y-3">
+          {con3D && (
           <div className="rounded-2xl border border-primary/10 bg-card p-2.5">
             <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
               Cordales (sin vista 3D)
@@ -367,6 +413,7 @@ export function PeriodontogramaSec({
               })}
             </div>
           </div>
+          )}
 
           {seleccion != null ? (
             <PeriodonciaPieza
@@ -378,7 +425,9 @@ export function PeriodontogramaSec({
             />
           ) : (
             <div className="grid min-h-[220px] place-items-center rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-4 text-center text-sm text-muted-foreground">
-              Tocá una pieza en la boca 3D (o una cordal de arriba) para cargar su sondaje, margen, sangrado, placa, movilidad y furca.
+              {con3D
+                ? "Tocá una pieza en la boca 3D (o una cordal de arriba) para cargar su sondaje, margen, sangrado, placa, movilidad y furca."
+                : "Tocá una pieza del esquema para cargar su sondaje, margen, sangrado, placa, movilidad y furca."}
             </div>
           )}
         </div>
@@ -386,7 +435,7 @@ export function PeriodontogramaSec({
 
       <p className="flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
-        La boca 3D pinta cada pieza según su estado periodontal. Elegí una pieza para cargar sus sitios (distal · medio · mesial por cara), sangrado, placa, movilidad y furca. NIC = PS − MG; MG negativo = recesión.
+        {con3D ? "La boca 3D" : "El esquema"} pinta cada pieza según su estado periodontal. Elegí una pieza para cargar sus sitios (distal · medio · mesial por cara), sangrado, placa, movilidad y furca. NIC = PS − MG; MG negativo = recesión.
       </p>
     </div>
   );

@@ -419,6 +419,9 @@ type RecetaPaciente = {
   medicamentos: MedicamentoReceta[];
   indicaciones: string;
   vencimiento: string;
+  /** Firma del profesional (imagen) y sello/matrícula (imagen), para la impresa y el email. */
+  firmaUrl?: string;
+  selloUrl?: string;
 };
 
 export type LineaPresupuesto = {
@@ -4244,8 +4247,10 @@ function RecetaForm({
   onSubmit,
   onCancel,
   alergias = [],
+  recetasPrevias = [],
 }: {
   alergias?: string[];
+  recetasPrevias?: RecetaPaciente[];
   onSubmit: (r: {
     fecha: string;
     profesional: string;
@@ -4254,6 +4259,8 @@ function RecetaForm({
     medicamentos: MedicamentoReceta[];
     indicaciones: string;
     vencimiento: string;
+    firmaUrl?: string;
+    selloUrl?: string;
   }) => void;
   onCancel: () => void;
 }) {
@@ -4262,6 +4269,24 @@ function RecetaForm({
   const [profesional, setProfesional] = useState(profesionales[0] ?? "");
   const [aceptaRiesgo, setAceptaRiesgo] = useState(false);
   const [matricula, setMatricula] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
+  const [firmaUrl, setFirmaUrl] = useState("");
+  const [selloUrl, setSelloUrl] = useState("");
+  const [subiendo, setSubiendo] = useState<"firma" | "sello" | null>(null);
+  // Reusa la firma y el sello de la última receta del mismo profesional (se cargan una vez).
+  useEffect(() => {
+    const previa = recetasPrevias.find((r) => r.profesional === profesional);
+    setFirmaUrl(previa?.firmaUrl ?? "");
+    setSelloUrl(previa?.selloUrl ?? "");
+    if (previa?.matricula) setMatricula((m) => m || previa.matricula);
+  }, [profesional]); // eslint-disable-line react-hooks/exhaustive-deps
+  const subirImg = async (tipo: "firma" | "sello", file: File) => {
+    setSubiendo(tipo);
+    const url = await urlPersistenteImagen(file, slug);
+    if (tipo === "firma") setFirmaUrl(url);
+    else setSelloUrl(url);
+    setSubiendo(null);
+  };
   const [diagnostico, setDiagnostico] = useState("");
   const [vencimiento, setVencimiento] = useState("");
   const [indicaciones, setIndicaciones] = useState("");
@@ -4296,6 +4321,8 @@ function RecetaForm({
       diagnostico: diagnostico.trim(),
       indicaciones: indicaciones.trim(),
       vencimiento,
+      ...(firmaUrl ? { firmaUrl } : {}),
+      ...(selloUrl ? { selloUrl } : {}),
       medicamentos: validos.map((m) => ({
         nombre: m.nombre.trim(),
         presentacion: m.presentacion.trim(),
@@ -4342,6 +4369,48 @@ function RecetaForm({
             placeholder="Ej: MN 00000"
           />
         </Field>
+      </div>
+
+      {/* Firma y sello del profesional: aparecen en la receta impresa y en la que se manda por correo. */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {([["firma", "Firma del profesional", firmaUrl], ["sello", "Sello / matrícula", selloUrl]] as const).map(
+          ([tipo, label, valor]) => (
+            <div key={tipo}>
+              <span className="mb-1 block text-xs font-medium">{label}</span>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/[0.03] px-3 py-2 text-sm transition hover:bg-primary/[0.06]">
+                {valor ? (
+                  <img src={valor} alt={label} className="h-10 w-auto max-w-[120px] rounded bg-white object-contain" />
+                ) : (
+                  <span className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <ImagePlus className="size-5" />
+                  </span>
+                )}
+                <span className="text-muted-foreground">
+                  {subiendo === tipo ? "Subiendo…" : valor ? "Cambiar imagen" : "Subir imagen (foto o escaneo)"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void subirImg(tipo, f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {valor && (
+                <button
+                  type="button"
+                  onClick={() => (tipo === "firma" ? setFirmaUrl("") : setSelloUrl(""))}
+                  className="mt-1 text-[11px] font-medium text-muted-foreground hover:text-destructive"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          ),
+        )}
       </div>
 
       {alergias.length > 0 ? (
@@ -4675,8 +4744,11 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
   ${r.indicaciones ? `<div class="ind"><div class="et">Indicaciones</div>${escapar(r.indicaciones)}</div>` : ""}
 
   <div class="pie">
-    <div>Estado: ${escapar(r.estado)}<br/>Firma digital: pendiente de integración</div>
-    <div class="firma"><strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}</div>
+    <div>Estado: ${escapar(r.estado)}${r.selloUrl ? `<br/><img src="${escapar(r.selloUrl)}" alt="Sello" style="height:56px;margin-top:6px" />` : ""}</div>
+    <div class="firma">
+      ${r.firmaUrl ? `<img src="${escapar(r.firmaUrl)}" alt="Firma" style="height:46px;margin-bottom:2px" /><br/>` : ""}
+      <strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}
+    </div>
   </div>
 </body>
 </html>`;
@@ -4908,6 +4980,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         <Modal title="Nueva receta digital" onClose={() => setAbierto(false)}>
           <RecetaForm
             alergias={datos.antecedentes?.alergias ?? []}
+            recetasPrevias={datos.recetas}
             onCancel={() => setAbierto(false)}
             onSubmit={(nueva) => {
               // TODO backend: POST /pacientes/:id/recetas (el número y la firma digital los asigna el servidor)

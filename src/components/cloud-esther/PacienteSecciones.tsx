@@ -102,13 +102,6 @@ const MEDICAMENTOS = [
   "Dexametasona 4 mg",
   "Clorhexidina 0,12 % (colutorio)",
 ];
-const LABORATORIOS_PROVEEDORES = [
-  "Laboratorio Dental Sur",
-  "ProDent Lab",
-  "OrthoLab Argentina",
-  "Cerámica Dental Norte",
-];
-
 /* ───────────── Opciones fijas del producto ───────────── */
 
 const TIPOS_DOCUMENTO = [
@@ -1777,11 +1770,6 @@ function Datalists() {
       </datalist>
       <datalist id="dl-medicamentos">
         {MEDICAMENTOS.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
-      <datalist id="dl-laboratorios">
-        {LABORATORIOS_PROVEEDORES.map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -8103,9 +8091,16 @@ function CampoLaboratorio({ valor, onChange }: { valor: string; onChange: (v: st
   const usados = Object.values(todos).flatMap((r) => (r?.laboratorio ?? []).map((t) => t.proveedor?.trim() ?? ""));
   // Primero los laboratorios del directorio de la clínica (Laboratorio → Todos los laboratorios)
   const directorio = storeLaboratorios.usar().laboratorios.map((l) => l.nombre);
-  const opciones = [...new Set([...directorio, ...usados.filter(Boolean), ...LABORATORIOS_PROVEEDORES])].slice(0, 8);
+  // Solo laboratorios REALES de la clínica: su directorio + los que ya usó. Sin nombres inventados.
+  // Si no hay ninguno, igual se puede escribir el nombre manualmente (el "Otro").
+  const opciones = [...new Set([...directorio, ...usados.filter(Boolean)])].slice(0, 8);
   return (
     <div className="space-y-2">
+      <datalist id="dl-laboratorios">
+        {opciones.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
       <input
         list="dl-laboratorios"
         value={valor}

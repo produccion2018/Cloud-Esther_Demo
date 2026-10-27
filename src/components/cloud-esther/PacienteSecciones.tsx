@@ -80,6 +80,8 @@ import {
   FichasEspecialidadSec,
   type FichaEspecialidad,
 } from "@/components/cloud-esther/pacientes/FichasEspecialidad";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -3962,8 +3964,9 @@ function DocumentoForm({
   const [fecha, setFecha] = useState(hoyISO());
   const [notas, setNotas] = useState("");
   const [error, setError] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!archivo) {
       setError("Adjuntá un archivo.");
@@ -3978,8 +3981,8 @@ function DocumentoForm({
       fecha,
       archivoNombre: archivo.name,
       archivoTamano: archivo.size,
-      // TODO backend: subir el archivo (multipart) y guardar la URL que devuelva el servidor
-      url: URL.createObjectURL(archivo),
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: await urlPersistenteImagen(archivo, slug),
       notas: notas.trim(),
     });
   };
@@ -5178,8 +5181,9 @@ function EstudioForm({
   const [diagnostico, setDiagnostico] = useState("");
   const [estadoInforme, setEstadoInforme] = useState<EstadoInforme>("Sin informar");
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     onSubmit({
       tipo,
@@ -5191,8 +5195,8 @@ function EstudioForm({
       observaciones: observaciones.trim(),
       diagnostico: diagnostico.trim(),
       archivoNombre: archivo?.name ?? "",
-      // TODO backend: subir el archivo (multipart) y guardar la URL que devuelva el servidor
-      url: archivo ? URL.createObjectURL(archivo) : "",
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: archivo ? await urlPersistenteImagen(archivo, slug) : "",
       estadoInforme,
       tratamientoId,
     });
@@ -6480,8 +6484,9 @@ function FotografiaForm({
   const [observacion, setObservacion] = useState("");
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
   const [pieza, setPieza] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!archivo) return;
     onSubmit({
@@ -6492,7 +6497,8 @@ function FotografiaForm({
       tratamientoId,
       pieza: pieza.trim(),
       archivoNombre: archivo.name,
-      url: URL.createObjectURL(archivo),
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: await urlPersistenteImagen(archivo, slug),
     });
   };
   return (
@@ -6683,7 +6689,8 @@ function SimulacionForm({
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
   const [observacion, setObservacion] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
-  const enviar = (e: FormEvent) => {
+  const slug = useClinicaReal()?.slug ?? null;
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!fotografiaId) return;
     onSubmit({
@@ -6693,7 +6700,8 @@ function SimulacionForm({
       fotografiaId,
       tratamientoId,
       imagenSimuladaNombre: archivo?.name ?? "",
-      imagenSimuladaUrl: archivo ? URL.createObjectURL(archivo) : "",
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      imagenSimuladaUrl: archivo ? await urlPersistenteImagen(archivo, slug) : "",
       estado: "Preparada",
       observacion: observacion.trim(),
     });

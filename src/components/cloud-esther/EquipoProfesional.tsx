@@ -35,7 +35,8 @@ import {
   type TeamRole,
   type MemberStatus,
 } from "@/lib/cloud-esther/equipo-profesional-data"
-import { useEquipo } from "@/lib/cloud-esther/equipo-store"
+import { useEquipo, usuariosInternos } from "@/lib/cloud-esther/equipo-store"
+import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-config"
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
@@ -368,6 +369,8 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
   // Permisos y accesos: desde el plan Plus (Start y Pro usan los permisos por rol predeterminados).
   const { plan } = useCloudEsther()
   const conPermisos = planLevel(plan) >= 3
+  // Punto 7: si se alcanzó el límite de usuarios del plan, no se ofrece agregar más (se amplía el plan).
+  const puedeAgregar = dentroDelLimite(plan, "usuarios", usuariosInternos(members))
 
   const [addOpen, setAddOpen] = useState(false)
 
@@ -602,17 +605,27 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
               </button>
               <button
                 onClick={() => {
+                  if (!puedeAgregar) return
                   setDraft(emptyMember())
                   setEditingMember(null)
                   setAddOpen(true)
                 }}
-                className="btn-ce"
+                disabled={!puedeAgregar}
+                title={!puedeAgregar ? MENSAJE_LIMITE.usuarios : undefined}
+                className="btn-ce disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="size-4" />
                 Agregar integrante
               </button>
             </div>
           </div>
+
+          {!puedeAgregar && (
+            <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <span className="mt-0.5 font-bold">•</span>
+              <span>{MENSAJE_LIMITE.usuarios}</span>
+            </div>
+          )}
 
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Profesionales" value={stats.profesionales} hint={`${stats.asistentes} asistentes · ${stats.administracion} administración`} icon={ToothIcon} tono={0} />

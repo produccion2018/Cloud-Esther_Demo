@@ -64,7 +64,8 @@ import {
   PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { blobABase64, descargarBlob, descargarPDF, documentoPDF, pdfBlobDeHtml } from "@/lib/descargas";
+import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import {
@@ -1736,14 +1737,22 @@ function ControlesZoom({ zoom, setZoom }: { zoom: number; setZoom: (z: number) =
   );
 }
 
-function Acciones({ etiqueta, onCancel }: { etiqueta: string; onCancel: () => void }) {
+function Acciones({
+  etiqueta,
+  onCancel,
+  enviando = false,
+}: {
+  etiqueta: string;
+  onCancel: () => void;
+  enviando?: boolean;
+}) {
   return (
     <div className="flex justify-end gap-3 pt-1">
-      <button type="button" onClick={onCancel} className={BTN_SECUNDARIO}>
+      <button type="button" onClick={onCancel} disabled={enviando} className={BTN_SECUNDARIO}>
         Cancelar
       </button>
-      <button type="submit" className={BTN_PRIMARIO}>
-        {etiqueta}
+      <button type="submit" disabled={enviando} className={BTN_PRIMARIO}>
+        {enviando ? "Enviando…" : etiqueta}
       </button>
     </div>
   );
@@ -4654,10 +4663,10 @@ function RecetaDocumento({
       <div className="mt-6 flex items-end justify-between gap-4 border-t border-neutral-200 pt-3">
         <div className="text-[11px] text-neutral-500">
           <p>Estado: {r.estado}</p>
-          {/* TODO backend: firma digital y código de verificación de la receta */}
-          <p>Firma digital: pendiente de integración</p>
+          {r.selloUrl && <img src={r.selloUrl} alt="Sello" className="mt-1.5 h-14 w-auto" />}
         </div>
         <div className="w-40 text-center">
+          {r.firmaUrl && <img src={r.firmaUrl} alt="Firma" className="mx-auto mb-1 h-12 w-auto" />}
           <div className="border-t border-neutral-400 pt-1 text-[11px]">
             <p className="font-semibold">{r.profesional || "Profesional"}</p>
             {r.matricula && <p className="text-neutral-500">Mat. {r.matricula}</p>}
@@ -4805,16 +4814,25 @@ function EnviarRecetaForm({
 }: {
   receta: RecetaPaciente;
   emailInicial: string;
-  onSubmit: (d: { email: string; asunto: string; mensaje: string }) => void;
+  onSubmit: (d: { email: string; asunto: string; mensaje: string }) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const [email, setEmail] = useState(emailInicial);
   const [asunto, setAsunto] = useState(`Receta digital ${receta.numero}`);
   const [mensaje, setMensaje] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ email: email.trim(), asunto: asunto.trim(), mensaje: mensaje.trim() });
+    if (enviando) return;
+    setEnviando(true);
+    try {
+      await onSubmit({ email: email.trim(), asunto: asunto.trim(), mensaje: mensaje.trim() });
+    } catch {
+      /* el padre ya avisa con un aviso en pantalla */
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -4846,7 +4864,7 @@ function EnviarRecetaForm({
         <Paperclip className="size-3.5 shrink-0 text-primary" />
         Se adjunta la receta {receta.numero} en PDF.
       </div>
-      <Acciones etiqueta="Enviar receta" onCancel={onCancel} />
+      <Acciones etiqueta="Enviar receta" onCancel={onCancel} enviando={enviando} />
     </form>
   );
 }
@@ -4869,6 +4887,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   };
 
   const marca = useMarca();
+  const slug = useClinicaReal()?.slug ?? null;
   const descargar = (r: RecetaPaciente) => {
     imprimirReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
     onToast(`${r.numero}: descargando la receta en PDF`);
@@ -5022,10 +5041,42 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             receta={recetaEnvio}
             emailInicial={contexto?.email ?? ""}
             onCancel={() => setEnviarId(null)}
-            onSubmit={({ email }) => {
-              // TODO backend: POST /pacientes/:id/recetas/:recetaId/enviar { email, asunto, mensaje }
-              setEnviarId(null);
-              onToast(`${recetaEnvio.numero}: envío a ${email} pendiente de integración`);
+            onSubmit={async ({ email, asunto, mensaje }) => {
+              const r = recetaEnvio;
+              // En el demo (sin clínica real) no hay servidor que mande el correo.
+              if (!slug) {
+                setEnviarId(null);
+                onToast(`${r.numero}: el envío por correo funciona en la clínica real`);
+                return;
+              }
+              onToast(`${r.numero}: preparando el envío…`);
+              const html = htmlReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
+              const blob = await pdfBlobDeHtml(html, "a5");
+              if (!blob) {
+                onToast("No se pudo generar el PDF de la receta. Probá de nuevo.");
+                return;
+              }
+              const archivoBase64 = await blobABase64(blob);
+              try {
+                await pedirAClinica(slug, "POST", "/recetas/enviar", {
+                  para: email,
+                  asunto,
+                  mensaje,
+                  nombrePaciente: contexto?.paciente,
+                  numeroReceta: r.numero,
+                  nombreClinica: contexto?.clinica,
+                  archivoNombre: `receta-${r.numero}.pdf`,
+                  archivoBase64,
+                });
+                setEnviarId(null);
+                onToast(`${r.numero}: receta enviada a ${email}`);
+              } catch (err) {
+                onToast(
+                  err instanceof ErrorClinica
+                    ? `No se pudo enviar: ${err.message}`
+                    : "No se pudo enviar la receta. Probá de nuevo.",
+                );
+              }
             }}
           />
         </Modal>

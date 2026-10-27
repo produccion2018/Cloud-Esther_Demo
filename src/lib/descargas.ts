@@ -41,10 +41,11 @@ const ANCHO_A4_PX = 794; // 210 mm a 96 ppp
 /** Convierte un documento HTML completo (con sus estilos) en un PDF A4 y lo descarga. */
 const ANCHO_A5_PX = 559; // 148 mm a 96 ppp
 
-/** Convierte un documento HTML completo en PDF (A4 o A5, ej. recetas) y lo descarga. */
-export async function descargarPDF(html: string, titulo: string, formato: "a4" | "a5" = "a4"): Promise<boolean> {
+/** Convierte un documento HTML completo en un PDF (A4 o A5, ej. recetas) y devuelve el archivo
+ *  (Blob) para adjuntarlo o descargarlo; null si el PDF no se pudo armar. */
+export async function pdfBlobDeHtml(html: string, formato: "a4" | "a5" = "a4"): Promise<Blob | null> {
   const anchoPx = formato === "a5" ? ANCHO_A5_PX : ANCHO_A4_PX;
-  if (typeof document === "undefined") return false;
+  if (typeof document === "undefined") return null;
   // Sin scripts: los documentos traían «window.print()» al cargar.
   const limpio = html.replace(/<script[\s\S]*?<\/script>/gi, "");
   const iframe = document.createElement("iframe");
@@ -117,15 +118,39 @@ export async function descargarPDF(html: string, titulo: string, formato: "a4" |
       desde += alto;
       pagina += 1;
     }
-    descargarBlob(nombreArchivo(titulo, "pdf"), pdf.output("blob"));
-    return true;
+    return pdf.output("blob");
   } catch {
-    // Respaldo: si el PDF no se pudo armar, se descarga el documento para abrir e imprimir.
-    descargarBlob(nombreArchivo(titulo, "html"), new Blob([limpio], { type: "text/html" }));
-    return false;
+    return null;
   } finally {
     window.setTimeout(() => iframe.remove(), 1000);
   }
+}
+
+/** Convierte un documento HTML completo en PDF (A4 o A5, ej. recetas) y lo descarga. */
+export async function descargarPDF(html: string, titulo: string, formato: "a4" | "a5" = "a4"): Promise<boolean> {
+  const blob = await pdfBlobDeHtml(html, formato);
+  if (blob) {
+    descargarBlob(nombreArchivo(titulo, "pdf"), blob);
+    return true;
+  }
+  // Respaldo: si el PDF no se pudo armar, se descarga el HTML para abrir e imprimir.
+  if (typeof document === "undefined") return false;
+  const limpio = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+  descargarBlob(nombreArchivo(titulo, "html"), new Blob([limpio], { type: "text/html" }));
+  return false;
+}
+
+/** Lee un Blob y devuelve su contenido en base64 (sin el prefijo "data:...;base64,"). */
+export function blobABase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const s = String(fr.result);
+      resolve(s.includes(",") ? s.slice(s.indexOf(",") + 1) : s);
+    };
+    fr.onerror = () => reject(fr.error ?? new Error("No se pudo leer el archivo"));
+    fr.readAsDataURL(blob);
+  });
 }
 
 async function esperarCarga(doc: Document) {

@@ -97,7 +97,7 @@ const PERIODOS: { v: Periodo; l: string }[] = [
 export function Analitica() {
   const { plan } = useCloudEsther();
   const nivel = planLevel(plan);
-  const todasSedes = sucursalesDelPlan(nivel >= 4);
+  const todasSedes = sucursalesDelPlan(plan);
   const datos = useAnalitica(ODONTOLOGOS, todasSedes);
   const moneda = paisFiscal(storeFacturacion.usar().config.pais).moneda;
   const fmt = formatos((n) => formatoMoneda(n, moneda));

@@ -34,6 +34,7 @@ import {
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { abrirRecordatorioWhatsApp } from "@/lib/clinica/whatsapp";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { toast as avisoWhatsApp } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
@@ -2004,10 +2005,23 @@ function AgendaInner() {
   // Odontólogos del equipo de la empresa y pacientes de su listado.
   const { miembros } = useEquipo();
   const { pacientes: listaPacientes } = usePacientes();
+  const real = useClinicaReal();
+  const { usuario } = useSesion();
   const odontologosEquipo = miembros
     .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
     .map((m) => `${m.firstName} ${m.lastName}`.trim())
     .filter(Boolean);
+
+  // Punto 2: el administrador/dueño también puede atender. Se lo agrega como profesional
+  // seleccionable en la agenda (conserva su rol de admin). En clínica real solo si es admin;
+  // en el demo, el dueño de la cuenta.
+  const nombreAdmin = (
+    real ? (real.rol === "admin" ? real.sesion.usuario.nombre : "") : (usuario?.nombre ?? "")
+  ).trim();
+  const odontologosConAdmin =
+    nombreAdmin && !odontologosEquipo.includes(nombreAdmin)
+      ? [...odontologosEquipo, nombreAdmin]
+      : odontologosEquipo;
 
   const [vista, setVista] = useState<Vista>("dia");
   // Start: agenda del día y la semana, lista de turnos y filtro por odontólogo.
@@ -2040,7 +2054,7 @@ function AgendaInner() {
   ).sort((a, b) => a.localeCompare(b));
 
   const opcionesAgenda: OpcionesAgenda = {
-    odontologos: odontologosEquipo.length ? odontologosEquipo : ODONTOLOGOS,
+    odontologos: odontologosConAdmin.length ? odontologosConAdmin : ODONTOLOGOS,
     pacientes: nombresPacientes,
   };
 

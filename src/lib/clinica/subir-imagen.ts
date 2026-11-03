@@ -13,6 +13,26 @@ type FirmaImagen = {
   folder: string;
 };
 
+/** URL PERSISTENTE para una imagen (que sobrevive a recargar la página):
+ *  - Clínica real → la sube a Cloudinary y devuelve su URL.
+ *  - Demo o si Cloudinary falla → la convierte a data URL (base64), que también persiste.
+ *  Nunca usar URL.createObjectURL para guardar: esa URL (blob:) se rompe al recargar. */
+export async function urlPersistenteImagen(archivo: File, slug: string | null): Promise<string> {
+  if (slug) {
+    try {
+      return await subirImagenClinica(slug, archivo);
+    } catch {
+      /* cae a data URL */
+    }
+  }
+  return await new Promise<string>((resolve) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : "");
+    fr.onerror = () => resolve("");
+    fr.readAsDataURL(archivo);
+  });
+}
+
 export async function subirImagenClinica(slug: string, file: File): Promise<string> {
   const f = await pedirAClinica<FirmaImagen>(slug, "POST", "/imagenes/firma");
 

@@ -64,7 +64,8 @@ import {
   PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { blobABase64, descargarBlob, descargarPDF, documentoPDF, pdfBlobDeHtml } from "@/lib/descargas";
+import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import {
@@ -80,6 +81,8 @@ import {
   FichasEspecialidadSec,
   type FichaEspecialidad,
 } from "@/components/cloud-esther/pacientes/FichasEspecialidad";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -100,13 +103,6 @@ const MEDICAMENTOS = [
   "Dexametasona 4 mg",
   "Clorhexidina 0,12 % (colutorio)",
 ];
-const LABORATORIOS_PROVEEDORES = [
-  "Laboratorio Dental Sur",
-  "ProDent Lab",
-  "OrthoLab Argentina",
-  "Cerámica Dental Norte",
-];
-
 /* ───────────── Opciones fijas del producto ───────────── */
 
 const TIPOS_DOCUMENTO = [
@@ -424,6 +420,9 @@ type RecetaPaciente = {
   medicamentos: MedicamentoReceta[];
   indicaciones: string;
   vencimiento: string;
+  /** Firma del profesional (imagen) y sello/matrícula (imagen), para la impresa y el email. */
+  firmaUrl?: string;
+  selloUrl?: string;
 };
 
 export type LineaPresupuesto = {
@@ -1738,14 +1737,22 @@ function ControlesZoom({ zoom, setZoom }: { zoom: number; setZoom: (z: number) =
   );
 }
 
-function Acciones({ etiqueta, onCancel }: { etiqueta: string; onCancel: () => void }) {
+function Acciones({
+  etiqueta,
+  onCancel,
+  enviando = false,
+}: {
+  etiqueta: string;
+  onCancel: () => void;
+  enviando?: boolean;
+}) {
   return (
     <div className="flex justify-end gap-3 pt-1">
-      <button type="button" onClick={onCancel} className={BTN_SECUNDARIO}>
+      <button type="button" onClick={onCancel} disabled={enviando} className={BTN_SECUNDARIO}>
         Cancelar
       </button>
-      <button type="submit" className={BTN_PRIMARIO}>
-        {etiqueta}
+      <button type="submit" disabled={enviando} className={BTN_PRIMARIO}>
+        {enviando ? "Enviando…" : etiqueta}
       </button>
     </div>
   );
@@ -1775,11 +1782,6 @@ function Datalists() {
       </datalist>
       <datalist id="dl-medicamentos">
         {MEDICAMENTOS.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
-      <datalist id="dl-laboratorios">
-        {LABORATORIOS_PROVEEDORES.map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -3962,8 +3964,9 @@ function DocumentoForm({
   const [fecha, setFecha] = useState(hoyISO());
   const [notas, setNotas] = useState("");
   const [error, setError] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!archivo) {
       setError("Adjuntá un archivo.");
@@ -3978,8 +3981,8 @@ function DocumentoForm({
       fecha,
       archivoNombre: archivo.name,
       archivoTamano: archivo.size,
-      // TODO backend: subir el archivo (multipart) y guardar la URL que devuelva el servidor
-      url: URL.createObjectURL(archivo),
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: await urlPersistenteImagen(archivo, slug),
       notas: notas.trim(),
     });
   };
@@ -4253,8 +4256,10 @@ function RecetaForm({
   onSubmit,
   onCancel,
   alergias = [],
+  recetasPrevias = [],
 }: {
   alergias?: string[];
+  recetasPrevias?: RecetaPaciente[];
   onSubmit: (r: {
     fecha: string;
     profesional: string;
@@ -4263,6 +4268,8 @@ function RecetaForm({
     medicamentos: MedicamentoReceta[];
     indicaciones: string;
     vencimiento: string;
+    firmaUrl?: string;
+    selloUrl?: string;
   }) => void;
   onCancel: () => void;
 }) {
@@ -4271,6 +4278,24 @@ function RecetaForm({
   const [profesional, setProfesional] = useState(profesionales[0] ?? "");
   const [aceptaRiesgo, setAceptaRiesgo] = useState(false);
   const [matricula, setMatricula] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
+  const [firmaUrl, setFirmaUrl] = useState("");
+  const [selloUrl, setSelloUrl] = useState("");
+  const [subiendo, setSubiendo] = useState<"firma" | "sello" | null>(null);
+  // Reusa la firma y el sello de la última receta del mismo profesional (se cargan una vez).
+  useEffect(() => {
+    const previa = recetasPrevias.find((r) => r.profesional === profesional);
+    setFirmaUrl(previa?.firmaUrl ?? "");
+    setSelloUrl(previa?.selloUrl ?? "");
+    if (previa?.matricula) setMatricula((m) => m || previa.matricula);
+  }, [profesional]); // eslint-disable-line react-hooks/exhaustive-deps
+  const subirImg = async (tipo: "firma" | "sello", file: File) => {
+    setSubiendo(tipo);
+    const url = await urlPersistenteImagen(file, slug);
+    if (tipo === "firma") setFirmaUrl(url);
+    else setSelloUrl(url);
+    setSubiendo(null);
+  };
   const [diagnostico, setDiagnostico] = useState("");
   const [vencimiento, setVencimiento] = useState("");
   const [indicaciones, setIndicaciones] = useState("");
@@ -4305,6 +4330,8 @@ function RecetaForm({
       diagnostico: diagnostico.trim(),
       indicaciones: indicaciones.trim(),
       vencimiento,
+      ...(firmaUrl ? { firmaUrl } : {}),
+      ...(selloUrl ? { selloUrl } : {}),
       medicamentos: validos.map((m) => ({
         nombre: m.nombre.trim(),
         presentacion: m.presentacion.trim(),
@@ -4351,6 +4378,48 @@ function RecetaForm({
             placeholder="Ej: MN 00000"
           />
         </Field>
+      </div>
+
+      {/* Firma y sello del profesional: aparecen en la receta impresa y en la que se manda por correo. */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {([["firma", "Firma del profesional", firmaUrl], ["sello", "Sello / matrícula", selloUrl]] as const).map(
+          ([tipo, label, valor]) => (
+            <div key={tipo}>
+              <span className="mb-1 block text-xs font-medium">{label}</span>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/[0.03] px-3 py-2 text-sm transition hover:bg-primary/[0.06]">
+                {valor ? (
+                  <img src={valor} alt={label} className="h-10 w-auto max-w-[120px] rounded bg-white object-contain" />
+                ) : (
+                  <span className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <ImagePlus className="size-5" />
+                  </span>
+                )}
+                <span className="text-muted-foreground">
+                  {subiendo === tipo ? "Subiendo…" : valor ? "Cambiar imagen" : "Subir imagen (foto o escaneo)"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void subirImg(tipo, f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {valor && (
+                <button
+                  type="button"
+                  onClick={() => (tipo === "firma" ? setFirmaUrl("") : setSelloUrl(""))}
+                  className="mt-1 text-[11px] font-medium text-muted-foreground hover:text-destructive"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          ),
+        )}
       </div>
 
       {alergias.length > 0 ? (
@@ -4594,10 +4663,10 @@ function RecetaDocumento({
       <div className="mt-6 flex items-end justify-between gap-4 border-t border-neutral-200 pt-3">
         <div className="text-[11px] text-neutral-500">
           <p>Estado: {r.estado}</p>
-          {/* TODO backend: firma digital y código de verificación de la receta */}
-          <p>Firma digital: pendiente de integración</p>
+          {r.selloUrl && <img src={r.selloUrl} alt="Sello" className="mt-1.5 h-14 w-auto" />}
         </div>
         <div className="w-40 text-center">
+          {r.firmaUrl && <img src={r.firmaUrl} alt="Firma" className="mx-auto mb-1 h-12 w-auto" />}
           <div className="border-t border-neutral-400 pt-1 text-[11px]">
             <p className="font-semibold">{r.profesional || "Profesional"}</p>
             {r.matricula && <p className="text-neutral-500">Mat. {r.matricula}</p>}
@@ -4684,8 +4753,11 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
   ${r.indicaciones ? `<div class="ind"><div class="et">Indicaciones</div>${escapar(r.indicaciones)}</div>` : ""}
 
   <div class="pie">
-    <div>Estado: ${escapar(r.estado)}<br/>Firma digital: pendiente de integración</div>
-    <div class="firma"><strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}</div>
+    <div>Estado: ${escapar(r.estado)}${r.selloUrl ? `<br/><img src="${escapar(r.selloUrl)}" alt="Sello" style="height:56px;margin-top:6px" />` : ""}</div>
+    <div class="firma">
+      ${r.firmaUrl ? `<img src="${escapar(r.firmaUrl)}" alt="Firma" style="height:46px;margin-bottom:2px" /><br/>` : ""}
+      <strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}
+    </div>
   </div>
 </body>
 </html>`;
@@ -4742,16 +4814,25 @@ function EnviarRecetaForm({
 }: {
   receta: RecetaPaciente;
   emailInicial: string;
-  onSubmit: (d: { email: string; asunto: string; mensaje: string }) => void;
+  onSubmit: (d: { email: string; asunto: string; mensaje: string }) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const [email, setEmail] = useState(emailInicial);
   const [asunto, setAsunto] = useState(`Receta digital ${receta.numero}`);
   const [mensaje, setMensaje] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ email: email.trim(), asunto: asunto.trim(), mensaje: mensaje.trim() });
+    if (enviando) return;
+    setEnviando(true);
+    try {
+      await onSubmit({ email: email.trim(), asunto: asunto.trim(), mensaje: mensaje.trim() });
+    } catch {
+      /* el padre ya avisa con un aviso en pantalla */
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -4783,7 +4864,7 @@ function EnviarRecetaForm({
         <Paperclip className="size-3.5 shrink-0 text-primary" />
         Se adjunta la receta {receta.numero} en PDF.
       </div>
-      <Acciones etiqueta="Enviar receta" onCancel={onCancel} />
+      <Acciones etiqueta="Enviar receta" onCancel={onCancel} enviando={enviando} />
     </form>
   );
 }
@@ -4806,6 +4887,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   };
 
   const marca = useMarca();
+  const slug = useClinicaReal()?.slug ?? null;
   const descargar = (r: RecetaPaciente) => {
     imprimirReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
     onToast(`${r.numero}: descargando la receta en PDF`);
@@ -4917,6 +4999,7 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         <Modal title="Nueva receta digital" onClose={() => setAbierto(false)}>
           <RecetaForm
             alergias={datos.antecedentes?.alergias ?? []}
+            recetasPrevias={datos.recetas}
             onCancel={() => setAbierto(false)}
             onSubmit={(nueva) => {
               // TODO backend: POST /pacientes/:id/recetas (el número y la firma digital los asigna el servidor)
@@ -4958,10 +5041,42 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             receta={recetaEnvio}
             emailInicial={contexto?.email ?? ""}
             onCancel={() => setEnviarId(null)}
-            onSubmit={({ email }) => {
-              // TODO backend: POST /pacientes/:id/recetas/:recetaId/enviar { email, asunto, mensaje }
-              setEnviarId(null);
-              onToast(`${recetaEnvio.numero}: envío a ${email} pendiente de integración`);
+            onSubmit={async ({ email, asunto, mensaje }) => {
+              const r = recetaEnvio;
+              // En el demo (sin clínica real) no hay servidor que mande el correo.
+              if (!slug) {
+                setEnviarId(null);
+                onToast(`${r.numero}: el envío por correo funciona en la clínica real`);
+                return;
+              }
+              onToast(`${r.numero}: preparando el envío…`);
+              const html = htmlReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
+              const blob = await pdfBlobDeHtml(html, "a5");
+              if (!blob) {
+                onToast("No se pudo generar el PDF de la receta. Probá de nuevo.");
+                return;
+              }
+              const archivoBase64 = await blobABase64(blob);
+              try {
+                await pedirAClinica(slug, "POST", "/recetas/enviar", {
+                  para: email,
+                  asunto,
+                  mensaje,
+                  nombrePaciente: contexto?.paciente,
+                  numeroReceta: r.numero,
+                  nombreClinica: contexto?.clinica,
+                  archivoNombre: `receta-${r.numero}.pdf`,
+                  archivoBase64,
+                });
+                setEnviarId(null);
+                onToast(`${r.numero}: receta enviada a ${email}`);
+              } catch (err) {
+                onToast(
+                  err instanceof ErrorClinica
+                    ? `No se pudo enviar: ${err.message}`
+                    : "No se pudo enviar la receta. Probá de nuevo.",
+                );
+              }
             }}
           />
         </Modal>
@@ -5178,8 +5293,9 @@ function EstudioForm({
   const [diagnostico, setDiagnostico] = useState("");
   const [estadoInforme, setEstadoInforme] = useState<EstadoInforme>("Sin informar");
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     onSubmit({
       tipo,
@@ -5191,8 +5307,8 @@ function EstudioForm({
       observaciones: observaciones.trim(),
       diagnostico: diagnostico.trim(),
       archivoNombre: archivo?.name ?? "",
-      // TODO backend: subir el archivo (multipart) y guardar la URL que devuelva el servidor
-      url: archivo ? URL.createObjectURL(archivo) : "",
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: archivo ? await urlPersistenteImagen(archivo, slug) : "",
       estadoInforme,
       tratamientoId,
     });
@@ -6480,8 +6596,9 @@ function FotografiaForm({
   const [observacion, setObservacion] = useState("");
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
   const [pieza, setPieza] = useState("");
+  const slug = useClinicaReal()?.slug ?? null;
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!archivo) return;
     onSubmit({
@@ -6492,7 +6609,8 @@ function FotografiaForm({
       tratamientoId,
       pieza: pieza.trim(),
       archivoNombre: archivo.name,
-      url: URL.createObjectURL(archivo),
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      url: await urlPersistenteImagen(archivo, slug),
     });
   };
   return (
@@ -6683,7 +6801,8 @@ function SimulacionForm({
   const [tratamientoId, setTratamientoId] = useState<number | null>(null);
   const [observacion, setObservacion] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
-  const enviar = (e: FormEvent) => {
+  const slug = useClinicaReal()?.slug ?? null;
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!fotografiaId) return;
     onSubmit({
@@ -6693,7 +6812,8 @@ function SimulacionForm({
       fotografiaId,
       tratamientoId,
       imagenSimuladaNombre: archivo?.name ?? "",
-      imagenSimuladaUrl: archivo ? URL.createObjectURL(archivo) : "",
+      // Clínica real → Cloudinary; demo → data URL. Nunca blob: (se rompe al recargar).
+      imagenSimuladaUrl: archivo ? await urlPersistenteImagen(archivo, slug) : "",
       estado: "Preparada",
       observacion: observacion.trim(),
     });
@@ -8095,9 +8215,16 @@ function CampoLaboratorio({ valor, onChange }: { valor: string; onChange: (v: st
   const usados = Object.values(todos).flatMap((r) => (r?.laboratorio ?? []).map((t) => t.proveedor?.trim() ?? ""));
   // Primero los laboratorios del directorio de la clínica (Laboratorio → Todos los laboratorios)
   const directorio = storeLaboratorios.usar().laboratorios.map((l) => l.nombre);
-  const opciones = [...new Set([...directorio, ...usados.filter(Boolean), ...LABORATORIOS_PROVEEDORES])].slice(0, 8);
+  // Solo laboratorios REALES de la clínica: su directorio + los que ya usó. Sin nombres inventados.
+  // Si no hay ninguno, igual se puede escribir el nombre manualmente (el "Otro").
+  const opciones = [...new Set([...directorio, ...usados.filter(Boolean)])].slice(0, 8);
   return (
     <div className="space-y-2">
+      <datalist id="dl-laboratorios">
+        {opciones.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
       <input
         list="dl-laboratorios"
         value={valor}

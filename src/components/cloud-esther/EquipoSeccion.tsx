@@ -332,6 +332,13 @@ const DIA_CORTO: Record<ScheduleDay["day"], string> = {
   Sábado: "Sáb",
 };
 
+const ROL_CORTO: Record<string, string> = {
+  odontologo: "Odontólogo/a",
+  asistente: "Asistente",
+  secretaria: "Secretaría",
+  administrador: "Administrador",
+};
+
 function resumenHorario(schedule: ScheduleDay[]) {
   const activos = schedule.filter((d) => d.active);
   if (activos.length === 0) return "Sin días de atención";
@@ -364,6 +371,7 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
   const { miembros, actualizarMiembro } = useEquipo();
   const [seleccionado, setSeleccionado] = useState<string | null>(miembros[0]?.id ?? null);
   const miembro = miembros.find((m) => m.id === seleccionado) ?? miembros[0];
+  const [busqueda, setBusqueda] = useState("");
 
   const cambiarDia = (dia: ScheduleDay["day"], cambios: Partial<ScheduleDay>) => {
     if (!miembro) return;
@@ -406,8 +414,94 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
 
   const totalSemana = miembro.schedule.reduce((t, d) => t + minutosDia(d), 0);
 
+  const q = busqueda.trim().toLowerCase();
+  const encontrados = miembros
+    .filter((m) => m.status !== "inactivo")
+    .filter((m) =>
+      !q
+        ? true
+        : `${m.firstName} ${m.lastName} ${(m.specialties ?? []).join(" ")} ${m.office ?? ""}`
+            .toLowerCase()
+            .includes(q),
+    );
+
   return (
     <div className="space-y-4">
+      {/* Buscador rápido de horarios (punto 8): días/horas, días libres y dónde atiende cada uno. */}
+      <div className={CARD}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-base font-semibold">Buscador de horarios</p>
+            <p className="text-xs text-muted-foreground">
+              Días y horas de cada profesional, sus días libres y en qué sede atiende.
+            </p>
+          </div>
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, especialidad o sede…"
+            className="h-9 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm sm:w-72"
+            aria-label="Buscar horarios"
+          />
+        </div>
+        <div className="mt-3 space-y-2.5">
+          {encontrados.length === 0 && (
+            <p className="rounded-xl bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
+              Nadie coincide con «{busqueda}».
+            </p>
+          )}
+          {encontrados.map((m) => {
+            const activos = m.schedule.filter((d) => d.active);
+            const tot = m.schedule.reduce((t, d) => t + minutosDia(d), 0);
+            return (
+              <div key={m.id} className="rounded-2xl border border-primary/10 bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {m.firstName} {m.lastName}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {ROL_CORTO[m.role] ?? m.role}
+                      {m.office ? ` · ${m.office}` : ""}
+                      {m.specialties?.length ? ` · ${m.specialties.join(", ")}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                    {activos.length ? `${horasTexto(tot)} / semana` : "Sin días cargados"}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                  {m.schedule.map((d) => (
+                    <div
+                      key={d.day}
+                      className={`rounded-lg px-2 py-1.5 text-center ${d.active ? "bg-primary/[0.06]" : "bg-muted/40"}`}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                        {DIA_CORTO[d.day]}
+                      </p>
+                      {d.active ? (
+                        <>
+                          <p className="mt-0.5 text-[11px] font-semibold tabular-nums">
+                            {d.start}–{d.end}
+                          </p>
+                          {d.breakStart && d.breakEnd && (
+                            <p className="text-[9px] text-muted-foreground tabular-nums">
+                              corte {d.breakStart}–{d.breakEnd}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">Libre</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Para qué sirve */}
       <div className={`${CARD} bg-gradient-to-br from-card via-card to-primary/[0.05]`}>
         <p className="text-base font-semibold">¿Para qué sirve esta sección?</p>

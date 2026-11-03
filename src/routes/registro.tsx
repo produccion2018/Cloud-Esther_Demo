@@ -85,6 +85,18 @@ function Registro() {
                   </p>
                 </div>
 
+                {/* Punto 11: el registro inicial lo hace el administrador principal (dueño/a). */}
+                <div className="rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 text-left">
+                  <p className="text-sm font-semibold text-foreground">
+                    El registro inicial lo hace el administrador principal de la clínica.
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                    Quien crea la cuenta queda como <b>dueño/a (administrador)</b> de la clínica. Si sos de
+                    secretaría u otro integrante del equipo, no te registres acá: pedile a tu administrador que
+                    te invite desde el panel con tu rol.
+                  </p>
+                </div>
+
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();

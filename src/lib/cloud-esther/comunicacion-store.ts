@@ -2,7 +2,7 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/cloud-esther/comunicacion-store.ts
 
-   Datos de práctica del módulo Comunicación (bandeja, recordatorios, plantillas,
+   Datos del módulo Comunicación (bandeja, recordatorios, plantillas,
    campañas, historial y canales), separados por empresa: lo que una clínica
    escribe o configura nunca aparece en otra.
    TODO backend: reemplazar por la API de mensajería filtrada por clinicId
@@ -122,164 +122,9 @@ export type EstadoComunicacion = {
   config: ConfigComunicacion;
 };
 
-/* ───────────── Datos de ejemplo ───────────── */
+/* ───────────── Datos base ───────────── */
 
-function haceMin(min: number) {
-  return new Date(Date.now() - min * 60_000).toISOString();
-}
-
-let idMsj = 1;
-const m = (
-  de: Mensaje["de"],
-  texto: string,
-  min: number,
-  extra: Partial<Mensaje> = {},
-): Mensaje => ({
-  id: idMsj++,
-  de,
-  texto,
-  fecha: haceMin(min),
-  ...(de === "clinica" ? { estado: "leido" as const } : {}),
-  ...extra,
-});
-
-/* El demo tiene dos pacientes de ejemplo: una conversación por paciente. */
-function conversacionesEjemplo(): Conversacion[] {
-  const vistos = new Set<string>();
-  return conversacionesBase().filter((c) => !vistos.has(c.paciente) && !!vistos.add(c.paciente));
-}
-
-function conversacionesBase(): Conversacion[] {
-  return [
-    {
-      id: 1,
-      paciente: "Mauro Pinto",
-      telefono: "+54 11 5174-2826",
-      email: "mauro.pinto@example.com",
-      canal: "WhatsApp",
-      estado: "Pendiente",
-      asignado: "",
-      etiquetas: ["Turno"],
-      noLeidos: 2,
-      fijada: true,
-      mensajes: [
-        m(
-          "clinica",
-          "Hola Mauro 👋 Te recordamos tu turno de hoy a las 10:30 hs para Limpieza dental. ¿Nos confirmás tu asistencia?",
-          190,
-          { autor: "Recordatorio automático" },
-        ),
-        m("paciente", "Hola! Sí, voy. ¿Puedo llegar 10 minutos tarde?", 24),
-        m("paciente", "Salgo del trabajo justo a las 10.", 23),
-      ],
-    },
-    {
-      id: 2,
-      paciente: "Alejo Becerra",
-      telefono: "+54 11 5137-2413",
-      email: "alejo.becerra@example.com",
-      canal: "WhatsApp",
-      estado: "Abierta",
-      asignado: "",
-      etiquetas: ["Presupuesto"],
-      noLeidos: 1,
-      fijada: false,
-      mensajes: [
-        m(
-          "clinica",
-          "Hola Alejo, te enviamos el presupuesto del tratamiento de ortodoncia. Cualquier duda nos escribís.",
-          60 * 26,
-        ),
-        m("paciente", "Gracias. ¿Se puede pagar en cuotas?", 58),
-      ],
-    },
-    {
-      id: 3,
-      paciente: "Mauro Pinto",
-      telefono: "+54 11 5555-8899",
-      email: "mauro.pinto@example.com",
-      canal: "WhatsApp",
-      estado: "Resuelta",
-      asignado: "",
-      etiquetas: ["Turno"],
-      noLeidos: 0,
-      fijada: false,
-      mensajes: [
-        m("paciente", "Buen día, quería sacar un turno de control.", 60 * 30),
-        m(
-          "clinica",
-          "¡Hola Mauro! Te agendamos el control para dentro de 2 días a las 11:30 hs. ¿Te queda bien?",
-          60 * 29,
-        ),
-        m("paciente", "Perfecto, gracias 🙌", 60 * 29 - 5),
-        m("sistema", "Conversación marcada como resuelta", 60 * 29 - 4),
-      ],
-    },
-    {
-      id: 4,
-      paciente: "Mauro Pinto",
-      telefono: "+54 11 5211-3239",
-      email: "mauro.pinto@example.com",
-      canal: "SMS",
-      estado: "Abierta",
-      asignado: "",
-      etiquetas: [],
-      noLeidos: 0,
-      fijada: false,
-      mensajes: [
-        m(
-          "clinica",
-          "Clínica: recordá tu turno de hoy 15:00 hs (Restauración). Respondé SI para confirmar.",
-          60 * 3,
-          { estado: "entregado" },
-        ),
-      ],
-    },
-    {
-      id: 5,
-      paciente: "Mauro Pinto",
-      telefono: "+54 11 5322-4478",
-      email: "mauro.pinto@example.com",
-      canal: "Email",
-      estado: "Pendiente",
-      asignado: "",
-      etiquetas: ["Consulta"],
-      noLeidos: 1,
-      fijada: false,
-      mensajes: [
-        m(
-          "paciente",
-          "Hola, mañana tengo el blanqueamiento. ¿Tengo que evitar algo antes de ir? ¿Puedo tomar café?",
-          95,
-        ),
-      ],
-    },
-    {
-      id: 6,
-      paciente: "Alejo Becerra",
-      telefono: "+54 11 5433-5891",
-      email: "alejo.becerra@example.com",
-      canal: "WhatsApp",
-      estado: "Abierta",
-      asignado: "",
-      etiquetas: ["Post-operatorio"],
-      noLeidos: 0,
-      fijada: false,
-      mensajes: [
-        m(
-          "clinica",
-          "Hola Alejo, ¿cómo seguís después de la consulta? Recordá las indicaciones: frío local y nada de comidas calientes hoy.",
-          60 * 5,
-        ),
-        m("paciente", "Bien, un poco de molestia nada más.", 60 * 4),
-        m("nota", "Si mañana sigue con dolor, ofrecerle sobreturno con el Dr.", 60 * 4 - 3, {
-          autor: "Recepción",
-        }),
-      ],
-    },
-  ];
-}
-
+/* Las plantillas son textos listos para usar (no son datos de pacientes). */
 const PLANTILLAS: Plantilla[] = [
   {
     id: 1,
@@ -374,101 +219,6 @@ const PLANTILLAS: Plantilla[] = [
   },
 ];
 
-const CAMPANAS: Campana[] = [
-  {
-    id: 1,
-    nombre: "Control semestral de septiembre",
-    canal: "WhatsApp",
-    audiencia: "sin-visita",
-    filtro: "",
-    texto: PLANTILLAS[8]?.texto ?? "",
-    estado: "Enviada",
-    programada: "",
-    destinatarios: 48,
-    entregados: 46,
-    leidos: 39,
-    respondidos: 14,
-    turnos: 9,
-  },
-  {
-    id: 2,
-    nombre: "Saludo de cumpleaños del mes",
-    canal: "WhatsApp",
-    audiencia: "cumpleanos",
-    filtro: "",
-    texto: PLANTILLAS[9]?.texto ?? "",
-    estado: "Programada",
-    programada: "",
-    destinatarios: 0,
-    entregados: 0,
-    leidos: 0,
-    respondidos: 0,
-    turnos: 0,
-  },
-  {
-    id: 3,
-    nombre: "Promoción blanqueamiento",
-    canal: "Email",
-    audiencia: "activos",
-    filtro: "",
-    texto:
-      "Hola {{paciente}}, este mes tenemos 15% de descuento en blanqueamiento. ¡Reservá tu turno!",
-    estado: "Borrador",
-    programada: "",
-    destinatarios: 0,
-    entregados: 0,
-    leidos: 0,
-    respondidos: 0,
-    turnos: 0,
-  },
-];
-
-function enviosEjemplo(convs: Conversacion[]): Envio[] {
-  const desdeChats = convs.flatMap((c) =>
-    c.mensajes
-      .filter((x) => x.de === "clinica")
-      .map((x) => ({
-        id: x.id,
-        fecha: x.fecha,
-        paciente: c.paciente,
-        canal: c.canal,
-        tipo: (x.autor === "Recordatorio automático" ? "Recordatorio" : "Mensaje") as TipoEnvio,
-        texto: x.texto,
-        estado: x.estado ?? "leido",
-      })),
-  );
-  const extra: Envio[] = [
-    {
-      id: 9001,
-      fecha: haceMin(60 * 22),
-      paciente: "Mauro Pinto",
-      canal: "Email",
-      tipo: "Automático",
-      texto: "Encuesta de satisfacción",
-      estado: "leido",
-    },
-    {
-      id: 9002,
-      fecha: haceMin(60 * 23),
-      paciente: "Alejo Becerra",
-      canal: "SMS",
-      tipo: "Recordatorio",
-      texto: "Recordatorio de turno",
-      estado: "fallido",
-    },
-    {
-      id: 9003,
-      fecha: haceMin(60 * 48),
-      paciente: "Alejo Becerra",
-      canal: "WhatsApp",
-      tipo: "Campaña",
-      texto: "Control semestral de septiembre",
-      estado: "leido",
-    },
-  ];
-  return [...desdeChats, ...extra].sort((a, b) => b.fecha.localeCompare(a.fecha));
-}
-
 const CONFIG: ConfigComunicacion = {
   canales: {
     WhatsApp: {
@@ -501,21 +251,10 @@ const CONFIG: ConfigComunicacion = {
   firma: "Equipo de {{clinica}}",
 };
 
-export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(() => {
-  const conversaciones = conversacionesEjemplo();
+/* Estado inicial: sin mensajes, campañas ni envíos, y con los canales sin conectar.
+   Es el mismo para el demo y para una clínica real (el demo se ve igual que producción). */
+function estadoInicial(): EstadoComunicacion {
   return {
-    conversaciones,
-    plantillas: PLANTILLAS,
-    campanas: CAMPANAS,
-    envios: enviosEjemplo(conversaciones),
-    recordatorios: {},
-    config: CONFIG,
-  };
-}, {
-  persistir: "comunicacion",
-  // Clínica real: sin mensajes ni envíos de ejemplo y con los canales sin conectar
-  // (las plantillas sí quedan: son textos listos para usar).
-  vacio: () => ({
     conversaciones: [],
     plantillas: PLANTILLAS,
     campanas: [],
@@ -530,7 +269,12 @@ export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(() => 
       },
       recordatorios: { ...CONFIG.recordatorios, activo: false },
     },
-  }),
+  };
+}
+
+export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(estadoInicial, {
+  persistir: "comunicacion",
+  vacio: estadoInicial,
 });
 
 type Actualizar<T> = T | ((prev: T) => T);

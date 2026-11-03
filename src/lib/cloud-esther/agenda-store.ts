@@ -7,11 +7,6 @@ import { capitalizarNombre } from "@/lib/utils";
    Agenda compartida entre "Agenda y turnos" y el Dashboard (lo que se agenda en uno
    se ve en el otro), separada por empresa. TODO backend: API de turnos por clinicId. */
 
-function hoyISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export type EstadoTurno = "Atendida" | "Confirmada" | "Pendiente" | "Ausente" | "Cancelada";
 
 export type Turno = {
@@ -91,48 +86,6 @@ export const TRATAMIENTOS = [
   "Urgencia",
 ];
 
-const ESPERA_EJEMPLO: Espera[] = [
-  {
-    id: 1,
-    nombre: "Alejo Becerra",
-    motivo: "Limpieza dental",
-    franja: "Tardes",
-    sucursal: "Clínica Centro",
-  },
-];
-
-/* Turnos de ejemplo para practicar: varios hoy y otros en la semana. */
-function turnosEjemplo(hoy: string): Turno[] {
-  const od = (i: number) => ODONTOLOGOS[i % ODONTOLOGOS.length] ?? "Odontólogo/a";
-  const dia = (n: number) => {
-    const d = new Date(`${hoy}T12:00:00`);
-    d.setDate(d.getDate() + n);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-  // Solo los dos pacientes de ejemplo (Mauro Pinto y Alejo Becerra) con los dos odontólogos
-  const base: [number, string, string, string, number, string, EstadoTurno][] = [
-    [0, "10:30", "Mauro Pinto", "Control", 0, "Gabinete 1", "Confirmada"],
-    [0, "15:00", "Alejo Becerra", "Evaluación de implante", 1, "Gabinete 2", "Pendiente"],
-    [2, "11:30", "Mauro Pinto", "Control de ortodoncia", 0, "Gabinete 1", "Pendiente"],
-    [5, "16:00", "Alejo Becerra", "Limpieza dental", 0, "Gabinete 1", "Pendiente"],
-    [-3, "10:00", "Alejo Becerra", "Primera consulta", 1, "Gabinete 2", "Atendida"],
-    [-32, "15:00", "Mauro Pinto", "Restauración", 0, "Gabinete 1", "Atendida"],
-    [-50, "10:30", "Mauro Pinto", "Primera consulta", 0, "Gabinete 1", "Atendida"],
-  ];
-  return base.map(([d, hora, paciente, tratamiento, o, gabinete, estado], i) => ({
-    id: i + 1,
-    fecha: dia(d),
-    hora,
-    paciente,
-    tratamiento,
-    odontologo: od(o),
-    sucursal: "Clínica Centro",
-    gabinete,
-    estado,
-    notas: "",
-  }));
-}
-
 /* Estado de la agenda separado por empresa: se conserva al navegar por el demo
    y ninguna clínica ve los turnos de otra. TODO backend: API de turnos por clinicId. */
 /** Feriado o día que la clínica no atiende (lo carga cada clínica: varían por país y ciudad). */
@@ -147,17 +100,16 @@ export type EstadoAgenda = {
   /** Feriados y cierres de la clínica (opcional: los datos guardados antes no lo traen). */
   feriados?: Feriado[];
 };
+
+/* Arranca vacío (sin turnos, lista de espera ni tareas de ejemplo), igual que producción. */
 export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(
-  () => {
-    const hoy = hoyISO();
-    return {
-      turnos: turnosEjemplo(hoy),
-      bloqueos: [],
-      espera: ESPERA_EJEMPLO,
-      recordatorios: RECORDATORIOS_INICIAL,
-      tareas: [{ ...TAREA_EJEMPLO, id: 1, fecha: hoy }],
-    };
-  },
+  () => ({
+    turnos: [],
+    bloqueos: [],
+    espera: [],
+    recordatorios: RECORDATORIOS_INICIAL,
+    tareas: [],
+  }),
   { persistir: "agenda", normalizar: nombresProlijosAgenda },
 );
 
@@ -198,13 +150,6 @@ export const setEsperaStore = setterAgenda("espera");
 export const setRecordatoriosStore = setterAgenda("recordatorios");
 export const setTareasStore = setterAgenda("tareas");
 export const setFeriadosStore = setterAgenda("feriados");
-
-const TAREA_EJEMPLO: Omit<Tarea, "id" | "fecha"> = {
-  texto: "Llamar para confirmar el turno",
-  categoria: "Llamar al paciente",
-  paciente: "Mauro Pinto",
-  hecha: false,
-};
 
 const RECORDATORIOS_INICIAL: Recordatorio[] = [
   { id: 1, canal: "WhatsApp", cuando: "24 h antes del turno", activo: true },

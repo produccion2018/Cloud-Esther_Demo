@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CircleCheckBig, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { CircleCheckBig, Loader2, Lock, Mail, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
@@ -22,7 +22,8 @@ import {
    de ningún servidor.
    1. Resumen: plan, monto inicial, suscripción, impuestos de cada concepto y total.
    2. «Confirmar contratación y pagar» → se abre la ventana segura de Paddle.
-   3. Paddle confirma el pago al servidor → la clínica se activa sola. */
+   3. Paddle confirma el pago al servidor → la clínica se activa sola.
+   Al completarse el pago se cierra la ventana de Paddle y se muestra la pantalla propia. */
 
 export const Route = createFileRoute("/pagar")({
   head: () => ({
@@ -40,6 +41,16 @@ function leerToken(): string {
   if (typeof window === "undefined") return "";
   const m = /[#&]t=([A-Za-z0-9_-]{20,200})/.exec(window.location.hash);
   return m?.[1] ?? "";
+}
+
+// Cierra la ventana de Paddle (y su pantalla verde) para mostrar la pantalla propia
+function cerrarVentanaPaddle() {
+  try {
+    const w = window as unknown as { Paddle?: { Checkout?: { close?: () => void } } };
+    w.Paddle?.Checkout?.close?.();
+  } catch {
+    /* si no se puede cerrar, queda la ventana de Paddle y no pasa nada grave */
+  }
 }
 
 function Pagar() {
@@ -86,10 +97,13 @@ function Pagar() {
     })();
   }, []);
 
-  // Cuando Paddle avisa que se pagó: se espera la confirmación del servidor
+  // Cuando Paddle avisa que se pagó: se cierra su ventana y se espera la confirmación del servidor
   useEffect(() => {
     return escucharPaddle((e) => {
-      if (e.name === "checkout.completed") setPaso("procesando");
+      if (e.name === "checkout.completed") {
+        setPaso("procesando");
+        cerrarVentanaPaddle();
+      }
       if (e.name === "checkout.closed") setPaso((p) => (p === "abriendo" ? "resumen" : p));
     });
   }, []);
@@ -176,15 +190,49 @@ function Pagar() {
               )}
               <h1 className="mt-6 text-2xl font-bold">
                 {paso === "procesando" && "Confirmando tu pago…"}
-                {paso === "listo" && "¡Listo! Tu clínica quedó activada"}
-                {paso === "pendiente" && "¡Pago recibido!"}
+                {paso === "listo" && "¡Bienvenido a Cloud Esther!"}
+                {paso === "pendiente" && "Estamos confirmando tu pago"}
               </h1>
+              {resumen && (
+                <p className="mt-2 text-sm font-semibold text-primary">
+                  {resumen.clinica} · plan {resumen.planNombre}
+                </p>
+              )}
               <p className="mt-3 max-w-md text-muted-foreground">
                 {paso === "procesando" && "Paddle nos está confirmando el pago. No cierres esta página."}
-                {paso === "listo" && "Te mandamos un correo de bienvenida. Un asesor te contacta para darte los accesos."}
+                {paso === "listo" && "Tu clínica quedó activada. Ya podés empezar a usar el sistema."}
                 {paso === "pendiente" &&
                   "La confirmación puede demorar unos minutos. Apenas se confirme, tu clínica se activa sola y te llega un correo."}
               </p>
+
+              {paso !== "procesando" && (
+                <ul className="mt-8 w-full max-w-md space-y-3 text-left text-sm">
+                  <li className="flex items-start gap-3 rounded-2xl border border-border p-4">
+                    <Mail className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <span>
+                      <b className="text-foreground">Revisá tu correo.</b>{" "}
+                      <span className="text-muted-foreground">
+                        Te enviamos el comprobante de Paddle y el correo de bienvenida.
+                      </span>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3 rounded-2xl border border-border p-4">
+                    <UserCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <span>
+                      <b className="text-foreground">Un asesor te contacta.</b>{" "}
+                      <span className="text-muted-foreground">Te acompaña con los accesos y los primeros pasos.</span>
+                    </span>
+                  </li>
+                </ul>
+              )}
+              {resumen && paso !== "procesando" && (
+                <p className="mt-6 text-xs text-muted-foreground">Código de contratación: {resumen.codigo}</p>
+              )}
+              {paso !== "procesando" && (
+                <Button asChild variant="outlineBrand" size="lg" className="mt-6">
+                  <Link to="/">Volver al inicio</Link>
+                </Button>
+              )}
             </div>
           )}
 

@@ -17,7 +17,7 @@ import { leerPacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { leerRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { norm } from "@/lib/cloud-esther/esther-motor";
-import type { ConversacionCC, MensajeCC } from "@/lib/cloud-esther/ia-store";
+import type { ConversacionCC } from "@/lib/cloud-esther/ia-store";
 
 export type EstadoDialogo = {
   paso: "inicio" | "identificar" | "motivo" | "horario" | "cancelar" | "nombre" | "derivada";
@@ -525,65 +525,7 @@ export function responderPaciente(texto: string, e0: EstadoDialogo): Resultado {
   return r;
 }
 
-/** Conversaciones de ejemplo para practicar (se muestran la primera vez). */
+/** Conversaciones iniciales: arranca vacío, igual que producción. */
 export function conversacionesEjemplo(): ConversacionCC[] {
-  const h = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
-  const m = (de: MensajeCC["de"], texto: string, min: number): MensajeCC => ({
-    de,
-    texto,
-    fecha: h(min),
-  });
-  return [
-    {
-      id: "cc1",
-      canal: "WhatsApp",
-      contacto: "+54 9 11 5566-7788",
-      pacienteId: 2,
-      inicio: h(95),
-      estado: "Resuelta por IA",
-      intencion: "Confirmación",
-      mensajes: [
-        m("paciente", "Hola, quiero confirmar mi turno", 95),
-        m("esther", "Para buscar tu información necesito identificarte: ¿me pasás tu DNI?", 94),
-        m("paciente", "Soy Alejo Becerra", 93),
-        m("esther", "Gracias, Julián. Confirmé tu turno. ¡Te esperamos!", 93),
-      ],
-    },
-    {
-      id: "cc2",
-      canal: "Webchat",
-      contacto: "Visitante del sitio",
-      pacienteId: null,
-      inicio: h(40),
-      estado: "Derivada a humano",
-      intencion: "Urgencia",
-      mensajes: [
-        m("paciente", "Hola, tengo mucho dolor en una muela y se me hinchó la cara", 40),
-        m(
-          "esther",
-          "Entiendo, eso requiere atención. Ya le aviso a recepción con prioridad para que te contacten enseguida.",
-          40,
-        ),
-      ],
-    },
-    {
-      id: "cc3",
-      canal: "WhatsApp",
-      contacto: "+54 9 11 4433-2211",
-      pacienteId: 4,
-      inicio: h(12),
-      estado: "Resuelta por IA",
-      intencion: "Estado de presupuesto",
-      mensajes: [
-        m("paciente", "Hola! Quería saber en qué quedó mi presupuesto", 12),
-        m("esther", "Para buscar tu información necesito identificarte: ¿me pasás tu DNI?", 12),
-        m("paciente", "Mauro Pinto", 11),
-        m(
-          "esther",
-          "Gracias, Lucía. Estos son tus presupuestos: PR-0005 enviado (esperando tu respuesta).",
-          11,
-        ),
-      ],
-    },
-  ];
+  return [];
 }

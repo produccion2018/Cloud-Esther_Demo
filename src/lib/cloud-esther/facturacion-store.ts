@@ -382,8 +382,9 @@ export function tipoSugerido(config: ConfigFiscal, receptor: CondicionIva) {
 
 /* ───────────── Estado inicial ───────────── */
 
-/* Sin comprobantes, liquidaciones, caja, histórico ni facturas de suscripción de ejemplo:
-   el cliente carga lo suyo. La configuración fiscal queda con sus valores de siempre. */
+/* Sin comprobantes, liquidaciones, caja, histórico ni facturas de suscripción de ejemplo,
+   y sin datos fiscales de ejemplo (razón social, CUIT, domicilio, inicio de actividades):
+   el cliente carga lo suyo. Quedan solo los valores de configuración por defecto. */
 export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
   () => ({
     comprobantes: [],
@@ -400,12 +401,12 @@ export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
     },
     config: {
       pais: "AR",
-      razonSocial: "Clínica Dental Esther S.A.",
-      idFiscal: "30-71555444-2",
+      razonSocial: "",
+      idFiscal: "",
       condicion: "Responsable Inscripto",
       puntoVenta: 3,
-      domicilio: "Av. Santa Fe 1234, CABA",
-      inicioActividades: "2018-03-01",
+      domicilio: "",
+      inicioActividades: "",
       conectado: true,
       vencimientoDias: 15,
       leyenda: "Prestaciones de salud exentas de IVA (Ley 23.349, art. 7).",

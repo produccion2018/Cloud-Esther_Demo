@@ -119,12 +119,8 @@ export function mapSitePlanToPlanId(siteId: string): PlanId {
   }
 }
 
-export const CLINICS = [
-  { id: "centro", name: "Clínica Centro" },
-  { id: "norte", name: "Clínica Norte" },
-  { id: "palermo", name: "Clínica Palermo" },
-  { id: "belgrano", name: "Clínica Belgrano" },
-];
+/* Sede por defecto (sin datos de ejemplo). Cada clínica carga sus sedes reales. */
+export const CLINICS = [{ id: "centro", name: "Sede principal" }];
 
 export const ROLES = [
   { id: "admin", label: "Administrador" },
@@ -399,7 +395,7 @@ export function incluidoEnPlan(module: AppModule, plan: PlanId) {
 
 /** Módulos que el plan no incluye y se pueden comprar como adicionales (Start, Pro y Plus). */
 /* Automatizaciones (n8n), Portal del paciente y Multiempresa vienen por defecto en Enterprise y
-   también se pueden comprar como adicionales en Start, Pro y Plus (Camilo, 15 oct). */
+   también se pueden comprar como adicionales en Start, Pro y Plus. */
 export function comprableEn(module: AppModule, plan: PlanId) {
   // Los odontogramas no se compran: el plan define cuál se usa (2D en Start/Pro, 3D en Plus/Enterprise).
   if (module.id === "odontograma" || module.id === "odontograma3d") return false;

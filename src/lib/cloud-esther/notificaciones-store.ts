@@ -70,69 +70,6 @@ export type EstadoNotificaciones = {
   historial: EventoNotif[];
 };
 
-function hoyMas(dias: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + dias);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function haceHoras(h: number) {
-  return new Date(Date.now() - h * 3_600_000).toISOString();
-}
-
-function manualesEjemplo(): NotifManual[] {
-  return [
-    {
-      id: "m-1",
-      titulo: "Llamar al proveedor de implantes",
-      detalle: "Confirmar la entrega del kit de implantes para la cirugía del jueves.",
-      categoria: "Insumos",
-      prioridad: "Alta",
-      asignado: "Administración",
-      vence: hoyMas(0),
-      horaVence: "12:00",
-      creada: haceHoras(3),
-      creadaPor: "Recepción",
-    },
-    {
-      id: "m-2",
-      titulo: "Enviar factura a obra social",
-      detalle: "Presentar las prestaciones del mes de OSDE antes del cierre.",
-      categoria: "Administración",
-      prioridad: "Normal",
-      asignado: "Administración",
-      vence: hoyMas(2),
-      horaVence: "",
-      creada: haceHoras(20),
-      creadaPor: "Administración",
-    },
-    {
-      id: "m-3",
-      titulo: "Revisar autoclave",
-      detalle: "Service técnico programado: dejar el equipo libre a las 18 h.",
-      categoria: "Equipo",
-      prioridad: "Normal",
-      asignado: "",
-      vence: hoyMas(1),
-      horaVence: "18:00",
-      creada: haceHoras(26),
-      creadaPor: "Dirección",
-    },
-    {
-      id: "m-4",
-      titulo: "Actualizar precios de la lista",
-      detalle: "Aplicar el aumento acordado a partir del día 1.",
-      categoria: "Administración",
-      prioridad: "Baja",
-      asignado: "",
-      vence: hoyMas(-1),
-      horaVence: "",
-      creada: haceHoras(50),
-      creadaPor: "Dirección",
-    },
-  ];
-}
-
 const PREF = (email = false, whatsapp = false): PreferenciaCategoria => ({
   activa: true,
   app: true,
@@ -155,36 +92,18 @@ const PREFERENCIAS: Preferencias = {
   sonido: true,
 };
 
-export const storeNotificaciones = crearStorePorEmpresa<EstadoNotificaciones>(() => ({
-  manuales: manualesEjemplo(),
-  estados: { "m-4": { completada: haceHoras(10), leida: true } },
+/* Estado inicial: sin avisos ni historial de ejemplo, igual que producción.
+   Se usa tanto para el demo como para una clínica real. */
+const estadoInicial = (): EstadoNotificaciones => ({
+  manuales: [],
+  estados: {},
   preferencias: PREFERENCIAS,
-  historial: [
-    {
-      id: "h-1",
-      fecha: haceHoras(10),
-      usuario: "Administración",
-      accion: "Completó",
-      titulo: "Actualizar precios de la lista",
-    },
-    {
-      id: "h-2",
-      fecha: haceHoras(20),
-      usuario: "Administración",
-      accion: "Creó",
-      titulo: "Enviar factura a obra social",
-    },
-    {
-      id: "h-3",
-      fecha: haceHoras(3),
-      usuario: "Recepción",
-      accion: "Creó",
-      titulo: "Llamar al proveedor de implantes",
-    },
-  ],
-}), {
+  historial: [],
+});
+
+export const storeNotificaciones = crearStorePorEmpresa<EstadoNotificaciones>(estadoInicial, {
   persistir: "notificaciones",
-  vacio: () => ({ manuales: [], estados: {}, preferencias: PREFERENCIAS, historial: [] }),
+  vacio: estadoInicial,
 });
 
 type Actualizar<T> = T | ((prev: T) => T);

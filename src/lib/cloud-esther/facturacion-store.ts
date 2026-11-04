@@ -1,5 +1,4 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
-import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import type { PlanId } from "@/lib/cloud-esther/data";
 
 /* Ubicación: src/lib/cloud-esther/facturacion-store.ts
@@ -7,6 +6,7 @@ import type { PlanId } from "@/lib/cloud-esther/data";
    Facturación por empresa: comprobantes electrónicos (según el país fiscal de la clínica),
    cobros, caja diaria por sucursal, liquidaciones a obras sociales y datos fiscales.
    Los cobros y notas de crédito de pacientes también se registran en su cuenta corriente.
+   Arranca vacío, igual que producción: lo carga cada clínica.
    TODO backend: integración real con el ente fiscal (ARCA/AFIP, DIAN, SAT, SII, DGI, SUNAT,
    Verifactu) y con Mercado Pago / pasarelas de pago. */
 
@@ -277,6 +277,7 @@ export type Suscripcion = {
   facturas: FacturaSuscripcion[];
 };
 
+/** Ya no se usa para arrancar el demo (queda exportada por si otra pantalla la importa). */
 export function suscripcionEjemplo(): Suscripcion {
   const dia = (d: Date) => d.toISOString().slice(0, 10);
   const facturas: FacturaSuscripcion[] = [4, 3, 2, 1, 0].map((n, i) => {
@@ -379,346 +380,24 @@ export function tipoSugerido(config: ConfigFiscal, receptor: CondicionIva) {
   return receptor === "Responsable Inscripto" ? "Factura A" : "Factura B";
 }
 
-/* ───────────── Datos de ejemplo ───────────── */
+/* ───────────── Estado inicial ───────────── */
 
-const [CENTRO = "Clínica Centro", NORTE = "Clínica Norte"] = SUCURSALES;
-
-function comprobante(
-  c: Partial<Comprobante> & Pick<Comprobante, "id" | "numero" | "fecha" | "cliente" | "items">,
-): Comprobante {
-  return {
-    tipo: "Factura B",
-    clase: "Factura",
-    puntoVenta: 3,
-    vencimiento: c.fecha,
-    pacienteId: null,
-    descuentoPct: 0,
-    cae: codigoFijo(c.id),
-    caeVto: c.fecha,
-    pagos: [],
-    anulada: false,
-    profesional: "",
-    sucursal: CENTRO,
-    origen: "Manual",
-    asociadaA: "",
-    linkPago: "",
-    ...c,
-  };
-}
-function codigoFijo(semilla: string) {
-  let h = 7;
-  for (const ch of semilla) h = (h * 31 + ch.charCodeAt(0)) % 1_000_000_007;
-  return `7${String(h).padStart(13, "4")}`.slice(0, 14);
-}
-const cf = (
-  nombre: string,
-  documento: string,
-  email = "",
-  telefono = "",
-): Comprobante["cliente"] => ({
-  nombre,
-  documento,
-  condicion: "Consumidor Final",
-  email,
-  telefono,
-});
-const pago = (
-  id: string,
-  dias: number,
-  monto: number,
-  medio: MedioPago,
-  referencia = "",
-): Pago => ({ id, fecha: diaISO(-dias), monto, medio, referencia, usuario: "Ketty Margarita" });
-
-function comprobantesEjemplo(): Comprobante[] {
-  return [
-    comprobante({
-      id: "c1",
-      numero: 1041,
-      fecha: diaISO(-40),
-      vencimiento: diaISO(-25),
-      pacienteId: 1,
-      cliente: cf("Mauro Pinto", "95193944", "mauro.pinto@example.com", "+54 11 5555-8899"),
-      items: [
-        { descripcion: "Restauración estética pieza 21", cantidad: 1, precio: 60000, ivaPct: 0 },
-      ],
-      pagos: [pago("p1", 38, 25000, "Transferencia")],
-      profesional: "Dr. Andrés Becerra",
-      origen: "Presupuesto PR-0001",
-    }),
-    comprobante({
-      id: "c2",
-      numero: 1042,
-      fecha: diaISO(-22),
-      vencimiento: diaISO(-7),
-      pacienteId: 3,
-      cliente: cf("Alejo Becerra", "28444555", "alejo.becerra@example.com", "+54 11 5174-2826"),
-      items: [
-        { descripcion: "Implante de titanio pieza 46", cantidad: 1, precio: 650000, ivaPct: 0 },
-        { descripcion: "Pilar protésico", cantidad: 1, precio: 180000, ivaPct: 0 },
-      ],
-      pagos: [pago("p2", 20, 415000, "Tarjeta de crédito", "Visa 6 cuotas")],
-      profesional: "Andrés Becerra",
-      origen: "Presupuesto PR-0003",
-    }),
-    comprobante({
-      id: "c3",
-      numero: 1043,
-      fecha: diaISO(-15),
-      vencimiento: diaISO(0),
-      pacienteId: 2,
-      cliente: cf("Mauro Pinto", "30111222", "mauro.pinto@example.com", "+54 11 5100-2000"),
-      items: [
-        { descripcion: "Limpieza y profilaxis", cantidad: 1, precio: 45000, ivaPct: 0 },
-        { descripcion: "Aplicación de flúor", cantidad: 1, precio: 18000, ivaPct: 0 },
-      ],
-      pagos: [pago("p3", 15, 63000, "Efectivo")],
-      profesional: "Andrés Becerra",
-    }),
-    comprobante({
-      id: "c4",
-      numero: 1044,
-      fecha: diaISO(-9),
-      vencimiento: diaISO(6),
-      pacienteId: 9,
-      cliente: cf("Alejo Becerra", "27999888", "alejo.becerra@example.com", "+54 11 5359-4478"),
-      items: [
-        { descripcion: "Raspaje y alisado por cuadrante", cantidad: 4, precio: 60000, ivaPct: 0 },
-      ],
-      pagos: [pago("p4", 9, 80000, "Mercado Pago", "Cuota 1/3")],
-      profesional: "Andrés Becerra",
-      origen: "Presupuesto PR-0010",
-    }),
-    comprobante({
-      id: "c5",
-      numero: 1045,
-      fecha: diaISO(-6),
-      vencimiento: diaISO(9),
-      pacienteId: 6,
-      cliente: cf("Mauro Pinto", "33222111", "mauro.pinto@example.com", "+54 11 5248-3239"),
-      items: [
-        {
-          descripcion: "Kit de blanqueamiento domiciliario",
-          cantidad: 1,
-          precio: 38000,
-          ivaPct: 21,
-        },
-        { descripcion: "Blanqueamiento en consultorio", cantidad: 1, precio: 90000, ivaPct: 0 },
-      ],
-      profesional: "Andrés Becerra",
-    }),
-    comprobante({
-      id: "c6",
-      numero: 1046,
-      fecha: diaISO(-3),
-      vencimiento: diaISO(12),
-      pacienteId: 8,
-      cliente: cf("Mauro Pinto", "40123456", "mauro.pinto@example.com", "+54 11 5322-4652"),
-      items: [
-        {
-          descripcion: "Endodoncia multirradicular pieza 26",
-          cantidad: 1,
-          precio: 180000,
-          ivaPct: 0,
-        },
-      ],
-      pagos: [pago("p5", 3, 180000, "Transferencia")],
-      profesional: "Andrés Becerra",
-      sucursal: NORTE,
-      origen: "Presupuesto PR-0009",
-    }),
-    comprobante({
-      id: "c7",
-      numero: 1047,
-      fecha: diaISO(-1),
-      vencimiento: diaISO(14),
-      cliente: {
-        nombre: "Laboratorio Dental Sur SRL",
-        documento: "30-71234567-9",
-        condicion: "Responsable Inscripto",
-        email: "admin@labsur.com.ar",
-        telefono: "",
-      },
-      tipo: "Factura A",
-      items: [
-        {
-          descripcion: "Alquiler de consultorio (septiembre)",
-          cantidad: 1,
-          precio: 250000,
-          ivaPct: 21,
-        },
-      ],
-      profesional: "",
-    }),
-    comprobante({
-      id: "c8",
-      numero: 1048,
-      fecha: diaISO(-2),
-      vencimiento: diaISO(-2),
-      pacienteId: 12,
-      cliente: cf("Alejo Becerra", "38444333"),
-      items: [{ descripcion: "Consulta y diagnóstico", cantidad: 1, precio: 25000, ivaPct: 0 }],
-      anulada: true,
-      profesional: "Mireya Becerra",
-    }),
-    comprobante({
-      id: "c9",
-      numero: 21,
-      clase: "Nota de crédito",
-      tipo: "Nota de crédito B",
-      fecha: diaISO(-2),
-      vencimiento: diaISO(-2),
-      pacienteId: 12,
-      cliente: cf("Alejo Becerra", "38444333"),
-      items: [
-        {
-          descripcion: "Anula factura 0003-00001048 (cargada por error)",
-          cantidad: 1,
-          precio: 25000,
-          ivaPct: 0,
-        },
-      ],
-      asociadaA: "c8",
-      profesional: "Mireya Becerra",
-    }),
-  ];
-}
-
-function liquidacionesEjemplo(): LiquidacionOS[] {
-  const periodo = (n: number) => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - n);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  };
-  const pr = (
-    pacienteId: number,
-    paciente: string,
-    dias: number,
-    codigo: string,
-    descripcion: string,
-    importe: number,
-    debitado = false,
-    motivoDebito = "",
-  ): Prestacion => ({
-    pacienteId,
-    paciente,
-    fecha: diaISO(-dias),
-    codigo,
-    descripcion,
-    importe,
-    debitado,
-    motivoDebito,
-  });
-  return [
-    {
-      id: "l1",
-      obraSocial: "OSDE",
-      periodo: periodo(1),
-      estado: "Pagada",
-      presentada: diaISO(-28),
-      cobrada: diaISO(-4),
-      prestaciones: [
-        pr(1, "Mauro Pinto", 45, "01.01", "Consulta", 18000),
-        pr(3, "Alejo Becerra", 40, "05.02", "Limpieza", 32000),
-        pr(8, "Mauro Pinto", 36, "03.01", "Obturación", 41000),
-      ],
-    },
-    {
-      id: "l2",
-      obraSocial: "Swiss Medical",
-      periodo: periodo(1),
-      estado: "Con débitos",
-      presentada: diaISO(-27),
-      cobrada: diaISO(-2),
-      prestaciones: [
-        pr(2, "Mauro Pinto", 44, "01.01", "Consulta", 17500),
-        pr(
-          10,
-          "Mauro Pinto",
-          38,
-          "08.04",
-          "Radiografía panorámica",
-          26000,
-          true,
-          "Falta orden médica",
-        ),
-      ],
-    },
-    {
-      id: "l3",
-      obraSocial: "OSDE",
-      periodo: periodo(0),
-      estado: "Borrador",
-      presentada: "",
-      cobrada: "",
-      prestaciones: [
-        pr(1, "Mauro Pinto", 12, "01.01", "Consulta", 18000),
-        pr(3, "Alejo Becerra", 8, "05.02", "Limpieza", 32000),
-        pr(8, "Mauro Pinto", 3, "04.01", "Endodoncia", 95000),
-      ],
-    },
-    {
-      id: "l4",
-      obraSocial: "Galeno",
-      periodo: periodo(0),
-      estado: "Presentada",
-      presentada: diaISO(-1),
-      cobrada: "",
-      prestaciones: [
-        pr(4, "Mauro Pinto", 14, "01.01", "Consulta", 16000),
-        pr(12, "Alejo Becerra", 6, "05.02", "Limpieza", 30000),
-      ],
-    },
-  ];
-}
-
+/* Sin comprobantes, liquidaciones, caja, histórico ni facturas de suscripción de ejemplo:
+   el cliente carga lo suyo. La configuración fiscal queda con sus valores de siempre. */
 export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
   () => ({
-    comprobantes: comprobantesEjemplo(),
-    liquidaciones: liquidacionesEjemplo(),
-    sesiones: [
-      {
-        id: "s1",
-        sucursal: CENTRO,
-        abierta: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(),
-        inicial: 50000,
-        cerrada: "",
-        contado: 0,
-        usuario: "Ketty Margarita",
-      },
-    ],
-    movimientos: [
-      {
-        id: "m1",
-        sesionId: "s1",
-        fecha: new Date(new Date().setHours(9, 40, 0, 0)).toISOString(),
-        tipo: "Ingreso",
-        concepto: "Consulta · Alejo Becerra",
-        medio: "Efectivo",
-        monto: 25000,
-        comprobanteId: "",
-      },
-      {
-        id: "m2",
-        sesionId: "s1",
-        fecha: new Date(new Date().setHours(10, 15, 0, 0)).toISOString(),
-        tipo: "Egreso",
-        concepto: "Compra de insumos de limpieza",
-        medio: "Efectivo",
-        monto: 8500,
-        comprobanteId: "",
-      },
-    ],
-    cargosFacturados: ["1:1"],
-    historico: [
-      { mes: mesISO(5), facturado: 1420000, cobrado: 1290000 },
-      { mes: mesISO(4), facturado: 1585000, cobrado: 1460000 },
-      { mes: mesISO(3), facturado: 1370000, cobrado: 1405000 },
-      { mes: mesISO(2), facturado: 1710000, cobrado: 1530000 },
-      { mes: mesISO(1), facturado: 1640000, cobrado: 1580000 },
-    ],
-    suscripcion: suscripcionEjemplo(),
+    comprobantes: [],
+    liquidaciones: [],
+    sesiones: [],
+    movimientos: [],
+    cargosFacturados: [],
+    historico: [],
+    suscripcion: {
+      ciclo: "Mensual",
+      medio: null,
+      debitoAutomatico: false,
+      facturas: [],
+    },
     config: {
       pais: "AR",
       razonSocial: "Clínica Dental Esther S.A.",

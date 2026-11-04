@@ -3,9 +3,9 @@ import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/demo-admin.ts
    ADMINISTRACIÓN DE LA CLÍNICA EN EL DEMO: las mismas pantallas de una clínica real
-   (Accesos del equipo, Permisos por rol, Qué ve cada persona, Actividad del equipo) con un
-   equipo de ejemplo. Todo vive en la memoria de esta pestaña: no toca ningún servidor y
-   se pierde al recargar. La dirección «__demo__» nunca puede ser la de una clínica real
+   (Accesos del equipo, Permisos por rol, Qué ve cada persona, Actividad del equipo) arrancando
+   vacías: solo existe el Administrador. Todo vive en la memoria de esta pestaña: no toca ningún
+   servidor y se pierde al recargar. La dirección «__demo__» nunca puede ser la de una clínica real
    (las direcciones reales no llevan guiones bajos). */
 
 export const SLUG_DEMO = "__demo__";
@@ -17,13 +17,9 @@ const NOMBRE_ROL: Record<RolClinica, string> = {
   asistente: "Asistente",
 };
 
-/** El equipo de ejemplo (el mismo de la Comunicación interna del demo) */
+/** El equipo del demo: solo el Administrador. El resto lo invita el cliente al probar. */
 export const EQUIPO_DEMO: { id: string; nombre: string; email: string; rol: RolClinica }[] = [
   { id: "demo-yo", nombre: "Carolina Méndez", email: "duenio@tuclinica.com", rol: "admin" },
-  { id: "demo-1", nombre: "Mireya Becerra", email: "mireya.becerra@tuclinica.com", rol: "odontologo" },
-  { id: "demo-2", nombre: "Andrés Becerra", email: "andres.becerra@tuclinica.com", rol: "odontologo" },
-  { id: "demo-4", nombre: "Ketty Margarita", email: "ketty.margarita@tuclinica.com", rol: "secretaria" },
-  { id: "demo-5", nombre: "Lucía Fernández", email: "lucia.fernandez@tuclinica.com", rol: "asistente" },
 ];
 
 const PREDETERMINADOS: Record<"odontologo" | "secretaria" | "asistente", string[]> = {
@@ -52,8 +48,8 @@ const MAXIMOS: Record<RolP, string[]> = { odontologo: TODOS, secretaria: TODOS, 
 
 const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
 
-/* ROLES PROPIOS en el demo (como en una clínica real con plan Plus o Enterprise):
-   «Facturación» (Sandra) y «Recursos humanos» (Luis). En Start y Pro no aparecen. */
+/* ROLES PROPIOS en el demo (como en una clínica real con plan Plus o Enterprise).
+   Arrancan vacíos: el cliente crea los que necesite. En Start y Pro no aparecen. */
 type RolPropioDemo = { codigo: string; nombre: string; modulos: string[] };
 const conRolesPropios = () => {
   try {
@@ -81,26 +77,16 @@ const estado = (() => {
   const personas: PersonaDemo[] = EQUIPO_DEMO.map((p, i) => ({
     ...p,
     estado: "activa",
-    ultimoIngreso: hace([15, 45, 95, 30, 120][i] ?? 60),
+    ultimoIngreso: hace([15][i] ?? 60),
     acceso: null,
   }));
-  // Un ejemplo de permiso elegido a mano: Lucía (asistente) no ve Laboratorio
-  const lucia = personas.find((p) => p.id === "demo-5");
-  if (lucia) lucia.acceso = [...PREDETERMINADOS.asistente.filter((m) => m !== "laboratorio"), "recetas"];
+  // Sin permisos armados a mano: todos los roles arrancan con sus valores predeterminados
   const porRol: Record<RolP, string[] | null> = {
     odontologo: null,
-    // Ejemplo: la Secretaría no ve Marketing
-    secretaria: PREDETERMINADOS.secretaria.filter((m) => m !== "marketing"),
+    secretaria: null,
     asistente: null,
   };
-  const rolesPropios: RolPropioDemo[] = [
-    { codigo: "extra-0000fac1", nombre: "Facturación", modulos: ["dashboard", "notificaciones", "presupuestos", "facturacion", "finanzas"] },
-    { codigo: "extra-00001aa1", nombre: "Recursos humanos", modulos: ["dashboard", "notificaciones", "equipo", "rrhh"] },
-  ];
-  personas.push(
-    { id: "demo-6", nombre: "Sandra Ruiz", email: "sandra.ruiz@tuclinica.com", rol: "secretaria", estado: "activa", ultimoIngreso: hace(55), acceso: null, rolPropio: "extra-0000fac1" },
-    { id: "demo-7", nombre: "Luis Gómez", email: "luis.gomez@tuclinica.com", rol: "secretaria", estado: "activa", ultimoIngreso: hace(200), acceso: null, rolPropio: "extra-00001aa1" },
-  );
+  const rolesPropios: RolPropioDemo[] = [];
   return { personas, porRol, limite: 15, rolesPropios };
 })();
 
@@ -148,36 +134,21 @@ const limpiar = (rol: RolP, lista: string[] | null) => {
   return out.length === base.length && out.every((m) => base.includes(m)) ? null : out;
 };
 
+type EventoDemo = {
+  id: string;
+  tipo: string;
+  personaId: string;
+  modulo: string | null;
+  detalle: Record<string, { a: number; m: number; b: number }> | null;
+  motivo: string | null;
+  fecha: string;
+};
+
 function actividad(dias: number, persona?: string) {
-  const ev = [
-    { tipo: "cambio", p: "demo-4", modulo: "agenda", detalle: { turnos: { a: 2, m: 1, b: 0 } }, min: 6 },
-    { tipo: "consulta", p: "demo-1", modulo: "registros", detalle: null, min: 14 },
-    { tipo: "cambio", p: "demo-1", modulo: "registros", detalle: { _: { a: 0, m: 1, b: 0 } }, min: 18 },
-    { tipo: "comunicado", p: "demo-yo", modulo: "comunicacion-interna", detalle: null, min: 40 },
-    { tipo: "cambio", p: "demo-5", modulo: "radiografias", detalle: { _: { a: 1, m: 0, b: 0 } }, min: 52 },
-    { tipo: "ingreso", p: "demo-1", modulo: null, detalle: null, min: 95 },
-    { tipo: "cambio", p: "demo-4", modulo: "pacientes", detalle: { pacientes: { a: 1, m: 1, b: 0 } }, min: 110 },
-    { tipo: "ingreso", p: "demo-5", modulo: null, detalle: null, min: 120 },
-    { tipo: "cambio", p: "demo-2", modulo: "odontograma", detalle: { _: { a: 0, m: 2, b: 0 } }, min: 1500 },
-    { tipo: "salida", p: "demo-2", modulo: null, detalle: null, min: 1440, motivo: "Manual" },
-    { tipo: "ingreso", p: "demo-2", modulo: null, detalle: null, min: 1700 },
-    { tipo: "cambio", p: "demo-4", modulo: "agenda", detalle: { turnos: { a: 3, m: 0, b: 1 }, espera: { a: 1, m: 0, b: 0 } }, min: 1600 },
-    { tipo: "cambio", p: "demo-yo", modulo: "configuracion", detalle: { _: { a: 0, m: 1, b: 0 } }, min: 3000 },
-  ] as const;
   const desde = Date.now() - dias * 86_400_000;
-  const eventos = ev
-    .map((e, i) => ({
-      id: `demo-e${i}`,
-      tipo: e.tipo,
-      personaId: e.p,
-      modulo: e.modulo,
-      detalle: e.detalle,
-      motivo: "motivo" in e ? e.motivo : null,
-      fecha: hace(e.min),
-    }))
-    .filter((e) => new Date(e.fecha).getTime() > desde && (!persona || e.personaId === persona))
-    .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-  const enLinea = new Set(["demo-yo", "demo-4", "demo-1"]);
+  // Sin eventos de ejemplo: la actividad se va llenando con lo que haga el cliente.
+  const eventos: EventoDemo[] = [];
+  const enLinea = new Set(["demo-yo"]);
   const personas = visibles()
     .filter((p) => !persona || p.id === persona)
     .map((p) => {
@@ -207,7 +178,7 @@ class ErrorDemo extends Error {
   }
 }
 
-/** Responde como el servidor, pero con el equipo de ejemplo (solo para el demo) */
+/** Responde como el servidor, pero con el equipo del demo (solo para el demo) */
 export async function pedidoDemo<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
   await new Promise((r) => setTimeout(r, 180)); // se siente como una pantalla real
   const [camino, query = ""] = ruta.split("?");

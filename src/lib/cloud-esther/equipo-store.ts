@@ -1,14 +1,11 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
-import {
-  ESPECIALIDADES,
-  TEAM_MEMBERS,
-  type TeamMember,
-} from "@/lib/cloud-esther/equipo-profesional-data";
+import { ESPECIALIDADES, type TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
 
 /* Ubicación: src/lib/cloud-esther/equipo-store.ts
 
    Equipo profesional compartido entre "Integrantes", "Especialidades", "Agendas y
    horarios" y "Permisos y accesos", separado por empresa (cada clínica tiene su equipo).
+   Arranca vacío: cada clínica carga sus propios integrantes.
    TODO backend: reemplazar por GET/PUT /equipo filtrado por clinicId. */
 
 export const TIPOS_AUSENCIA = [
@@ -33,38 +30,15 @@ export type EstadoEquipo = {
   ausencias: Ausencia[];
 };
 
-function diaISO(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 const store = crearStorePorEmpresa<EstadoEquipo>(
   () => ({
-    miembros: TEAM_MEMBERS,
+    miembros: [],
     especialidades: ESPECIALIDADES,
-    ausencias: [
-      {
-        id: "a-1",
-        miembroId: "4",
-        tipo: "Capacitación",
-        desde: diaISO(0),
-        hasta: diaISO(0),
-        nota: "Curso de bioseguridad",
-      },
-      {
-        id: "a-2",
-        miembroId: "2",
-        tipo: "Vacaciones",
-        desde: diaISO(12),
-        hasta: diaISO(19),
-        nota: "",
-      },
-    ],
+    ausencias: [],
   }),
   {
     persistir: "equipo",
-    // Clínica real: sin integrantes de ejemplo, pero con la lista de especialidades para elegir
+    // Sin integrantes de ejemplo, pero con la lista de especialidades para elegir
     vacio: () => ({ miembros: [], especialidades: ESPECIALIDADES, ausencias: [] }),
   },
 );

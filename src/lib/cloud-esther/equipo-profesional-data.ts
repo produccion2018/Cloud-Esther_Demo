@@ -106,64 +106,8 @@ function permsFor(role: TeamRole): Permission[] {
   }));
 }
 
-/* Equipo de la clínica de ejemplo del demo: dos odontólogos y una secretaria (pedido de Camilo, 13 oct:
-   pocos nombres para que el cliente no se complique). Los pacientes de ejemplo son Mauro Pinto y
-   Alejo Becerra. */
-export const TEAM_MEMBERS: TeamMember[] = [
-  {
-    id: "1",
-    firstName: "Mireya",
-    lastName: "Becerra",
-    role: "odontologo",
-    specialties: ["Ortodoncia", "Odontología general"],
-    licenseNumber: "M.P. 45872",
-    office: "Consultorio 1",
-    email: "mireya.becerra@cloudesther.com",
-    phone: "+54 11 4455-1200",
-    status: "activo",
-    schedule: fullWeek("08:00", "16:00", "12:00", "13:00"),
-    permissions: permsFor("odontologo"),
-    commissions: [
-      { service: "Consultas", percentage: 20 },
-      { service: "Tratamientos", percentage: 15 },
-      { service: "Implantes", percentage: 10 },
-    ],
-    nextAppointment: "Hoy 10:30 · Mauro Pinto",
-    todayAppointments: 2,
-  },
-  {
-    id: "2",
-    firstName: "Andrés",
-    lastName: "Becerra",
-    role: "odontologo",
-    specialties: ["Implantología", "Cirugía oral"],
-    licenseNumber: "M.P. 39281",
-    office: "Consultorio 2",
-    email: "andres.becerra@cloudesther.com",
-    phone: "+54 11 4455-1201",
-    status: "activo",
-    schedule: fullWeek("10:00", "18:00", "13:30", "14:30"),
-    permissions: permsFor("odontologo"),
-    commissions: [
-      { service: "Consultas", percentage: 20 },
-      { service: "Implantes", percentage: 12 },
-    ],
-    nextAppointment: "Hoy 15:00 · Alejo Becerra",
-    todayAppointments: 1,
-  },
-  {
-    id: "4",
-    firstName: "Ketty",
-    lastName: "Margarita",
-    role: "secretaria",
-    office: "Recepción",
-    email: "ketty.margarita@cloudesther.com",
-    phone: "+54 11 4455-1203",
-    status: "activo",
-    schedule: fullWeek("08:00", "17:00"),
-    permissions: permsFor("secretaria"),
-  },
-];
+/* Equipo inicial vacío: cada clínica da de alta a sus propios integrantes. */
+export const TEAM_MEMBERS: TeamMember[] = [];
 
 export function emptyMember(): TeamMember {
   return {

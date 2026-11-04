@@ -7,7 +7,7 @@ import { EQUIPO_DEMO } from "@/lib/clinica/demo-admin";
    COMUNICACIÓN INTERNA (estilo Teams) — todos los planes.
    - Clínica real: todo pasa por el servidor (/c/<clínica>/chat…). Los mensajes y archivos
      se guardan cifrados y cada clínica ve solo los suyos. Nada queda en el navegador.
-   - Demo: la misma pantalla con una conversación de ejemplo (en memoria, se pierde al recargar). */
+   - Demo: la misma pantalla, vacía como producción (en memoria, se pierde al recargar). */
 
 export type PermisosChat = { comunicados: boolean; canales: boolean; directos: boolean; archivos: boolean };
 export type RolChat = Exclude<RolClinica, "admin">;
@@ -323,7 +323,7 @@ export function useAvisosChat(onNuevo?: AlLlegar): AvisosChat {
   );
 }
 
-/* ───────────── DEMO: una conversación de ejemplo (en memoria) ───────────── */
+/* ───────────── DEMO: vacío, como producción (en memoria) ───────────── */
 const demo = (() => {
   const NOMBRE_ROL: Record<RolClinica, string> = {
     admin: "Administrador",
@@ -333,7 +333,6 @@ const demo = (() => {
   };
   const YO = "demo-yo";
   const personas: PersonaChat[] = EQUIPO_DEMO.map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol, rolNombre: NOMBRE_ROL[p.rol], estado: "activa" }));
-  const otros = personas.filter((p) => p.id !== YO);
   const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
   let permisos: Record<RolChat, PermisosChat> = {
     odontologo: { comunicados: false, canales: false, directos: true, archivos: true },
@@ -341,42 +340,18 @@ const demo = (() => {
     asistente: { comunicados: false, canales: false, directos: true, archivos: true },
   };
   type CanalDemo = Omit<CanalChat, "noLeidos" | "pendientes" | "ultimo" | "soyMiembro" | "puedoAdministrar"> & { leido: string };
-  const recepcionistas = otros.filter((p) => p.rol === "secretaria" || p.rol === "asistente").map((p) => p.id);
-  const clinicos = otros.filter((p) => p.rol === "odontologo" || p.rol === "asistente").map((p) => p.id);
+  /* Solo el canal General (existe siempre). Sin canales por área, privados ni mensajes de ejemplo. */
   const canales: CanalDemo[] = [
     { id: "demo-general", tipo: "general", nombre: "General", descripcion: "Toda la clínica", area: "", miembros: personas.map((p) => p.id), creado: hace(9000), leido: hace(200) },
-    { id: "demo-recepcion", tipo: "area", nombre: "Recepción", descripcion: "Turnos, llamados y sala de espera", area: "Recepción", miembros: [YO, ...recepcionistas], creado: hace(8000), leido: hace(30) },
-    { id: "demo-clinica", tipo: "area", nombre: "Clínica", descripcion: "Casos, interconsultas y materiales", area: "Clínica", miembros: [YO, ...clinicos], creado: hace(7000), leido: hace(400) },
   ];
-  if (otros[0]) canales.push({ id: `demo-dm-${otros[0].id}`, tipo: "directo", nombre: otros[0].nombre, descripcion: "", area: "", miembros: [YO, otros[0].id], creado: hace(600), leido: hace(100) });
-  const pid = (i: number) => otros[i % Math.max(1, otros.length)]?.id ?? YO;
   const nom = (id: string) => personas.find((p) => p.id === id)?.nombre ?? "Persona";
   type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; fecha: string; quitado: boolean; acks: Record<string, string> };
   let seq = 0;
   const m = (canalId: string, autor: string, texto: string, min: number, extra: Partial<MsgDemo> = {}): MsgDemo => ({
     id: `demo-m${++seq}`, canalId, autor, tipo: "mensaje", texto, archivo: null, fecha: hace(min), quitado: false, acks: {}, ...extra,
   });
-  const archivos: Record<string, string> = { "demo-a1": btoa("Protocolo de esterilizacion (ejemplo del demo)") };
-  const mensajes: MsgDemo[] = [
-    m("demo-general", YO, "¡Bienvenidos a la comunicación interna de la clínica! Acá van los avisos importantes y las novedades del día.", 600, {
-      tipo: "comunicado",
-      acks: Object.fromEntries(otros.slice(0, 3).map((p, i) => [p.id, hace(590 - i * 20)])),
-    }),
-    m("demo-general", pid(0), "¡Genial! Ya lo vi 👌", 580),
-    m("demo-general", YO, "Recordatorio: el viernes cerramos a las 16 hs por capacitación. Confirmen que lo leyeron, por favor.", 120, {
-      tipo: "comunicado",
-      acks: Object.fromEntries(otros.slice(0, 2).map((p, i) => [p.id, hace(100 - i * 10)])),
-    }),
-    m("demo-recepcion", "demo-4", "Llegó Mauro Pinto para su control de las 10:30, lo hago pasar a sala de espera.", 45),
-    m("demo-recepcion", YO, "Perfecto, avisale que en 5 minutos lo atiende la Dra. Becerra.", 43),
-    m("demo-recepcion", "demo-4", "Alejo Becerra pidió pasar su limpieza al jueves a las 15 hs. Ya lo cambié en la agenda ✅", 12),
-    m("demo-clinica", "demo-1", "Mauro Pinto: le actualicé el odontograma después del control. Queda pendiente la restauración de la 16.", 420),
-    m("demo-clinica", "demo-5", "Les comparto el protocolo actualizado de esterilización.", 380, {
-      archivo: { id: "demo-a1", nombre: "protocolo-esterilizacion.pdf", tipo: "application/pdf", tamano: 182_400 },
-    }),
-    m("demo-clinica", "demo-2", "Gracias Lucía, lo imprimo para el gabinete 2. Mañana evalúo el implante de Alejo Becerra.", 360),
-  ];
-  if (otros[0]) mensajes.push(m(`demo-dm-${otros[0].id}`, otros[0].id, "¿Mañana puedo entrar 30 minutos más tarde? El primer turno es Mauro Pinto a las 10:30, llego bien.", 90));
+  const archivos: Record<string, string> = {};
+  const mensajes: MsgDemo[] = [];
 
   const visible = (c: CanalDemo) => c.tipo !== "directo" || c.miembros.includes(YO);
   const aDto = (x: MsgDemo): MensajeChat => {

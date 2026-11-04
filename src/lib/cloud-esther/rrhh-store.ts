@@ -2,7 +2,7 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { storeEquipo, type Ausencia, type TipoAusencia } from "@/lib/cloud-esther/equipo-store";
 import { storeEquipoPortal } from "@/lib/cloud-esther/portal-equipo-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
-import { TEAM_MEMBERS, type TeamMember, type TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
+import { type TeamMember, type TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 import {
   COTIZACIONES_INICIALES,
   contratoDe,
@@ -21,6 +21,7 @@ import {
    RRHH les suma el legajo, contrato, sueldo, documentos, capacitaciones y evaluaciones.
    Las licencias aprobadas se guardan como ausencias de Equipo (se ven en Agenda y Equipo)
    y la asistencia combina los fichajes del portal del equipo con el historial de RRHH.
+   Arranca vacío: cada clínica carga su propia información.
    TODO backend: tablas legajos / liquidaciones / capacitaciones / evaluaciones por clinicId. */
 
 /* ───────────── Tipos ───────────── */
@@ -256,13 +257,6 @@ export function diasEntre(desde: string, hasta: string) {
       86_400_000,
   );
 }
-/** Mismo mes/día del año `anios` atrás (para cumpleaños e ingresos de ejemplo). */
-function haceAnios(anios: number, masDias = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + masDias);
-  d.setFullYear(d.getFullYear() - anios);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 const DIAS_SEMANA = [
   "Domingo",
   "Lunes",
@@ -280,9 +274,9 @@ export function aMinutos(h: string) {
   return (a ?? 0) * 60 + (b ?? 0);
 }
 
-/* ───────────── Datos de ejemplo ───────────── */
+/* ───────────── Estado inicial (vacío) ───────────── */
 
-const [CENTRO = "Clínica Centro", NORTE = "Clínica Norte"] = SUCURSALES;
+const [CENTRO = "Clínica Centro"] = SUCURSALES;
 
 function legajo(
   l: Partial<Legajo> &
@@ -302,598 +296,41 @@ function legajo(
     nacimiento: "",
     direccion: "",
     emergencia: "",
-    obraSocial: "OSDE",
+    obraSocial: "",
     cbu: "",
     sucursal: CENTRO,
     finContrato: "",
     jornada: 40,
-    convenio: "Sanidad (FATSA)",
+    convenio: "",
     baja: null,
     historial: [],
     ...l,
   };
 }
 
-function legajosEjemplo(): Record<string, Legajo> {
-  const lista: Legajo[] = [
-    legajo({
-      miembroId: "1",
-      numero: "L-0001",
-      puesto: "Odontóloga · Ortodoncista",
-      departamento: "Clínico",
-      ingreso: haceAnios(6, -40),
-      modalidad: "Relación de dependencia",
-      basico: 1_650_000,
-      dni: "30.112.456",
-      cuil: "27-30112456-3",
-      nacimiento: haceAnios(41, 3),
-      direccion: "Av. Corrientes 2450, CABA",
-      emergencia: "Familiar · +54 11 5512-0098",
-      obraSocial: "OSDE 310",
-      cbu: "0070 0999 2000 0012 3456 78",
-      historial: [
-        { fecha: haceAnios(6, -40), texto: "Ingreso como odontóloga general" },
-        { fecha: haceAnios(3, -10), texto: "Pasa a coordinar Ortodoncia" },
-      ],
-    }),
-    legajo({
-      miembroId: "2",
-      cbu: "0170 0999 4000 0033 2211 09",
-      numero: "L-0002",
-      puesto: "Implantólogo",
-      departamento: "Clínico",
-      ingreso: haceAnios(3, 60),
-      modalidad: "Monotributo",
-      esquema: "Mixto",
-      comisionPct: 20,
-      basico: 1_200_000,
-      dni: "28.765.332",
-      cuil: "20-28765332-1",
-      nacimiento: haceAnios(45, 80),
-      direccion: "Cabildo 1820, CABA",
-      emergencia: "Familiar · +54 11 4455-2211",
-      obraSocial: "Swiss Medical",
-      sucursal: NORTE,
-      jornada: 30,
-      convenio: "Sin convenio (factura honorarios)",
-    }),
-    legajo({
-      miembroId: "3",
-      cbu: "0110 0999 3000 0045 6677 12",
-      numero: "L-0003",
-      puesto: "Asistente dental",
-      departamento: "Clínico",
-      ingreso: diaISO(-340),
-      modalidad: "Plazo fijo",
-      finContrato: diaISO(18),
-      basico: 890_000,
-      dni: "40.221.908",
-      cuil: "27-40221908-5",
-      nacimiento: haceAnios(26, 12),
-      direccion: "Rivadavia 5320, CABA",
-      emergencia: "Familiar · +54 11 6011-4432",
-      obraSocial: "OSPSA",
-    }),
-    legajo({
-      miembroId: "4",
-      cbu: "0720 0999 1100 0098 1234 55",
-      numero: "L-0004",
-      puesto: "Recepcionista",
-      departamento: "Recepción",
-      ingreso: haceAnios(4, 5),
-      modalidad: "Relación de dependencia",
-      basico: 920_000,
-      dni: "35.998.120",
-      cuil: "27-35998120-9",
-      nacimiento: haceAnios(33, 150),
-      direccion: "Scalabrini Ortiz 980, CABA",
-      emergencia: "Familiar · +54 11 5099-1102",
-      obraSocial: "OSPSA",
-    }),
-    legajo({
-      miembroId: "5",
-      cbu: "0150 0999 7700 0011 2233 44",
-      numero: "L-0005",
-      puesto: "Administrador",
-      departamento: "Administración",
-      ingreso: haceAnios(8, -100),
-      modalidad: "Relación de dependencia",
-      basico: 1_380_000,
-      dni: "27.554.001",
-      cuil: "20-27554001-7",
-      nacimiento: haceAnios(47, -20),
-      direccion: "Av. Santa Fe 3100, CABA",
-      emergencia: "Familiar · +54 11 4788-9012",
-      obraSocial: "OSDE 210",
-      convenio: "Fuera de convenio",
-    }),
-    legajo({
-      miembroId: "6",
-      numero: "L-0006",
-      puesto: "Endodoncista",
-      departamento: "Clínico",
-      ingreso: diaISO(-20),
-      modalidad: "Monotributo",
-      esquema: "Mixto",
-      comisionPct: 15,
-      basico: 780_000,
-      dni: "36.441.207",
-      cuil: "20-36441207-4",
-      nacimiento: haceAnios(34, 200),
-      jornada: 30,
-      convenio: "Sin convenio (factura honorarios)",
-    }),
-    legajo({
-      miembroId: "7",
-      numero: "L-0007",
-      puesto: "Asistente dental",
-      departamento: "Clínico",
-      ingreso: haceAnios(2, 30),
-      modalidad: "Relación de dependencia",
-      basico: 860_000,
-      dni: "41.335.790",
-      cuil: "27-41335790-2",
-      nacimiento: haceAnios(24, 90),
-      jornada: 30,
-      baja: { fecha: diaISO(-45), motivo: "Renuncia (se muda al interior)" },
-    }),
-    legajo({
-      miembroId: "8",
-      cbu: "0340 0999 5500 0077 8899 01",
-      numero: "L-0008",
-      puesto: "Odontólogo general",
-      departamento: "Clínico",
-      ingreso: haceAnios(2, 150),
-      modalidad: "Relación de dependencia",
-      basico: 1_520_000,
-      dni: "95.193.944",
-      cuil: "20-95193944-6",
-      nacimiento: haceAnios(38, 45),
-      direccion: "Av. Belgrano 1450, CABA",
-      emergencia: "Familiar · +54 11 6677-3344",
-      obraSocial: "Galeno",
-    }),
-    legajo({
-      miembroId: "9",
-      numero: "L-0009",
-      puesto: "Atención al paciente (remoto)",
-      departamento: "Recepción",
-      ingreso: haceAnios(1, -30),
-      modalidad: "Prestación de servicios",
-      pais: "CO",
-      contratoId: "co-servicios",
-      esquema: "Por hora",
-      valorHora: 32_000,
-      basico: 0,
-      jornada: 30,
-      dni: "1.020.456.789",
-      cuil: "CC 1020456789",
-      nacimiento: haceAnios(29, 70),
-      direccion: "Cra. 15 #93-47, Bogotá",
-      emergencia: "Familiar · +57 310 555 0199",
-      obraSocial: "EPS Sura",
-      cbu: "Bancolombia · Ahorros 123-456789-01",
-      convenio: "Cuenta de cobro mensual",
-    }),
-    legajo({
-      miembroId: "10",
-      numero: "L-0010",
-      puesto: "Contabilidad y facturación (remoto)",
-      departamento: "Administración",
-      ingreso: haceAnios(2, 40),
-      modalidad: "Empresa unipersonal",
-      pais: "UY",
-      contratoId: "uy-unipersonal",
-      esquema: "Mensual",
-      basico: 68_000,
-      jornada: 20,
-      dni: "4.512.338-7",
-      cuil: "RUT 21 456789 0012",
-      nacimiento: haceAnios(36, 110),
-      direccion: "Bv. Artigas 1250, Montevideo",
-      emergencia: "Familiar · +598 99 222 333",
-      obraSocial: "Médica Uruguaya",
-      cbu: "BROU · Cta. 001234567-00001",
-      convenio: "Factura mensual",
-    }),
-  ];
-
-  return Object.fromEntries(lista.map((l) => [l.miembroId, l]));
-}
-
-/** Historial de fichajes de las últimas dos semanas (hoy lo aporta el portal del equipo). */
-function fichajesEjemplo(): FichajeRRHH[] {
-  const horarios: Record<string, [string, string]> = {
-    "1": ["08:00", "16:00"],
-    "9": ["08:00", "14:00"],
-    "10": ["09:00", "13:00"],
-    "2": ["10:00", "18:00"],
-    "3": ["08:00", "16:00"],
-    "4": ["08:00", "17:00"],
-    "5": ["09:00", "18:00"],
-    "8": ["09:00", "17:00"],
-  };
-  const tardes: Record<string, number[]> = { "3": [2, 5, 9], "4": [7], "8": [4] };
-  const lista: FichajeRRHH[] = [];
-  for (let d = 1; d <= 14; d++) {
-    const fecha = diaISO(-d);
-    const dia = new Date(`${fecha}T12:00:00`).getDay();
-    if (dia === 0 || dia === 6) continue;
-    for (const [id, [ent, sal]] of Object.entries(horarios)) {
-      if (id === "1" && d === 3) continue; // ausencia sin fichaje
-      const tarde = tardes[id]?.includes(d) ? 18 + d : 0;
-      const m = aMinutos(ent) - 6 + ((d * 7 + Number(id)) % 9) + tarde;
-      const s = aMinutos(sal) + ((d * 5 + Number(id)) % 25);
-      const hh = (x: number) =>
-        `${String(Math.floor(x / 60)).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`;
-      lista.push({
-        id: `fh-${id}-${d}`,
-        miembroId: id,
-        fecha,
-        entrada: hh(m),
-        salida: hh(s),
-        origen: "Portal",
-        nota: "",
-      });
-    }
-  }
-  return lista;
-}
-
-function puntajes(
-  a: number,
-  b: number,
-  c: number,
-  d: number,
-  e: number,
-): Record<Competencia, number> {
-  return {
-    "Atención al paciente": a,
-    "Calidad técnica": b,
-    "Trabajo en equipo": c,
-    Puntualidad: d,
-    Comunicación: e,
-  };
-}
-
-const CAPACITACIONES: Capacitacion[] = [
-  {
-    id: "c1",
-    titulo: "Bioseguridad y control de infecciones",
-    tipo: "Obligatoria",
-    modalidad: "Presencial",
-    horas: 6,
-    fecha: diaISO(-120),
-    vigenciaMeses: 12,
-    asignados: [
-      { miembroId: "1", estado: "Completada", completada: diaISO(-120) },
-      { miembroId: "3", estado: "Completada", completada: diaISO(-120) },
-      { miembroId: "4", estado: "Completada", completada: diaISO(-118) },
-      { miembroId: "8", estado: "Pendiente", completada: "" },
-    ],
-  },
-  {
-    id: "c2",
-    titulo: "RCP y primeros auxilios",
-    tipo: "Obligatoria",
-    modalidad: "Presencial",
-    horas: 4,
-    fecha: diaISO(-350),
-    vigenciaMeses: 12,
-    asignados: [
-      { miembroId: "1", estado: "Completada", completada: diaISO(-350) },
-      { miembroId: "2", estado: "Completada", completada: diaISO(-350) },
-      { miembroId: "5", estado: "Completada", completada: diaISO(-349) },
-    ],
-  },
-  {
-    id: "c3",
-    titulo: "Atención al paciente y manejo de reclamos",
-    tipo: "Opcional",
-    modalidad: "Virtual",
-    horas: 8,
-    fecha: diaISO(10),
-    vigenciaMeses: 0,
-    asignados: [
-      { miembroId: "4", estado: "En curso", completada: "" },
-      { miembroId: "3", estado: "Pendiente", completada: "" },
-    ],
-  },
-  {
-    id: "c4",
-    titulo: "Radioprotección en consultorio",
-    tipo: "Obligatoria",
-    modalidad: "Virtual",
-    horas: 10,
-    fecha: diaISO(25),
-    vigenciaMeses: 24,
-    asignados: [
-      { miembroId: "1", estado: "Pendiente", completada: "" },
-      { miembroId: "8", estado: "En curso", completada: "" },
-      { miembroId: "2", estado: "Pendiente", completada: "" },
-    ],
-  },
-];
-
-const EVALUACIONES: Evaluacion[] = [
-  {
-    id: "e1",
-    miembroId: "1",
-    ciclo: "2026 · 1er semestre",
-    fecha: diaISO(-90),
-    evaluador: "Ketty Margarita",
-    puntajes: puntajes(5, 5, 4, 5, 4),
-    fortalezas: "Excelente trato con pacientes de ortodoncia y muy ordenada con las historias.",
-    mejoras: "Delegar más tareas a las asistentes.",
-    objetivos: "Formar a una asistente en ortodoncia preventiva.",
-    estado: "Cerrada",
-  },
-  {
-    id: "e2",
-    miembroId: "3",
-    ciclo: "2026 · 1er semestre",
-    fecha: diaISO(-88),
-    evaluador: "Mireya Becerra",
-    puntajes: puntajes(4, 4, 5, 3, 4),
-    fortalezas: "Muy buena predisposición y trabajo en equipo.",
-    mejoras: "Mejorar la puntualidad al inicio del turno.",
-    objetivos: "Completar el curso de atención al paciente.",
-    estado: "Cerrada",
-  },
-  {
-    id: "e3",
-    miembroId: "4",
-    ciclo: "2026 · 1er semestre",
-    fecha: diaISO(-85),
-    evaluador: "Ketty Margarita",
-    puntajes: puntajes(5, 4, 4, 5, 5),
-    fortalezas: "Resuelve la agenda con mucha agilidad y es clara con los pacientes.",
-    mejoras: "Documentar mejor las derivaciones.",
-    objetivos: "Bajar el ausentismo de turnos con confirmaciones.",
-    estado: "Cerrada",
-  },
-  {
-    id: "e4",
-    miembroId: "8",
-    ciclo: "2026 · 2do semestre",
-    fecha: diaISO(-2),
-    evaluador: "Mireya Becerra",
-    puntajes: puntajes(5, 4, 4, 4, 4),
-    fortalezas: "Muy buena comunicación con pacientes nuevos.",
-    mejoras: "",
-    objetivos: "",
-    estado: "Borrador",
-  },
-];
-
-const COMUNICADOS: Comunicado[] = [
-  {
-    id: "co1",
-    titulo: "Nuevo protocolo de esterilización",
-    texto:
-      "Desde el lunes, cada ciclo de autoclave se registra en el portal del equipo (Gabinete). Gracias por sumarse.",
-    fecha: new Date(Date.now() - 2 * 86_400_000).toISOString(),
-    autor: "Ketty Margarita",
-    destino: "Todos",
-    fijado: true,
-    leidos: ["1", "3", "5"],
-  },
-  {
-    id: "co2",
-    titulo: "Cierre por feriado",
-    texto:
-      "La clínica permanecerá cerrada el próximo feriado nacional. Reprogramen los turnos con tiempo.",
-    fecha: new Date(Date.now() - 6 * 86_400_000).toISOString(),
-    autor: "Ketty Margarita",
-    destino: "Todos",
-    fijado: false,
-    leidos: ["1", "2", "3", "4", "5", "8"],
-  },
-  {
-    id: "co3",
-    titulo: "Reunión clínica mensual",
-    texto: "El jueves a las 18 h revisamos casos complejos del mes. Traigan sus dudas.",
-    fecha: new Date(Date.now() - 1 * 86_400_000).toISOString(),
-    autor: "Mireya Becerra",
-    destino: "odontologo",
-    fijado: false,
-    leidos: ["1"],
-  },
-];
-
-const DOCUMENTOS: DocumentoRRHH[] = [
-  {
-    id: "d1",
-    miembroId: "1",
-    tipo: "Matrícula profesional",
-    archivo: "matricula-martinez.pdf",
-    subido: diaISO(-340),
-    vence: diaISO(24),
-  },
-  {
-    id: "d2",
-    miembroId: "1",
-    tipo: "Seguro de mala praxis",
-    archivo: "poliza-martinez-2026.pdf",
-    subido: diaISO(-200),
-    vence: diaISO(165),
-  },
-  {
-    id: "d3",
-    miembroId: "2",
-    tipo: "Seguro de mala praxis",
-    archivo: "poliza-gonzalez.pdf",
-    subido: diaISO(-370),
-    vence: diaISO(-5),
-  },
-  {
-    id: "d4",
-    miembroId: "2",
-    tipo: "Matrícula profesional",
-    archivo: "matricula-gonzalez.pdf",
-    subido: diaISO(-100),
-    vence: diaISO(265),
-  },
-  {
-    id: "d5",
-    miembroId: "3",
-    tipo: "Contrato firmado",
-    archivo: "contrato-plazo-fijo-lopez.pdf",
-    subido: diaISO(-340),
-    vence: diaISO(18),
-  },
-  {
-    id: "d6",
-    miembroId: "3",
-    tipo: "Vacuna hepatitis B",
-    archivo: "vacuna-lopez.jpg",
-    subido: diaISO(-330),
-    vence: "",
-  },
-  {
-    id: "d7",
-    miembroId: "4",
-    tipo: "DNI",
-    archivo: "dni-rodriguez.pdf",
-    subido: diaISO(-900),
-    vence: "",
-  },
-  {
-    id: "d8",
-    miembroId: "8",
-    tipo: "Matrícula profesional",
-    archivo: "matricula-mendez.pdf",
-    subido: diaISO(-560),
-    vence: diaISO(170),
-  },
-  {
-    id: "d9",
-    miembroId: "8",
-    tipo: "Título",
-    archivo: "titulo-mendez.pdf",
-    subido: diaISO(-560),
-    vence: "",
-  },
-  {
-    id: "d10",
-    miembroId: "5",
-    tipo: "Alta ART",
-    archivo: "art-fernandez.pdf",
-    subido: diaISO(-1200),
-    vence: "",
-  },
-
-  {
-    id: "d11",
-    miembroId: "1",
-    tipo: "DNI",
-    archivo: "dni-martinez.pdf",
-    subido: diaISO(-2100),
-    vence: "",
-  },
-  {
-    id: "d12",
-    miembroId: "1",
-    tipo: "Título",
-    archivo: "titulo-martinez.pdf",
-    subido: diaISO(-2100),
-    vence: "",
-  },
-  {
-    id: "d13",
-    miembroId: "1",
-    tipo: "Vacuna hepatitis B",
-    archivo: "vacuna-martinez.jpg",
-    subido: diaISO(-1500),
-    vence: "",
-  },
-  {
-    id: "d14",
-    miembroId: "2",
-    tipo: "DNI",
-    archivo: "dni-gonzalez.pdf",
-    subido: diaISO(-1000),
-    vence: "",
-  },
-  {
-    id: "d15",
-    miembroId: "2",
-    tipo: "Título",
-    archivo: "titulo-gonzalez.pdf",
-    subido: diaISO(-1000),
-    vence: "",
-  },
-  {
-    id: "d16",
-    miembroId: "3",
-    tipo: "DNI",
-    archivo: "dni-lopez.pdf",
-    subido: diaISO(-340),
-    vence: "",
-  },
-  {
-    id: "d17",
-    miembroId: "3",
-    tipo: "Alta ART",
-    archivo: "art-lopez.pdf",
-    subido: diaISO(-340),
-    vence: "",
-  },
-  {
-    id: "d18",
-    miembroId: "4",
-    tipo: "Alta ART",
-    archivo: "art-rodriguez.pdf",
-    subido: diaISO(-1400),
-    vence: "",
-  },
-  {
-    id: "d19",
-    miembroId: "4",
-    tipo: "Contrato firmado",
-    archivo: "contrato-rodriguez.pdf",
-    subido: diaISO(-1400),
-    vence: "",
-  },
-  {
-    id: "d20",
-    miembroId: "5",
-    tipo: "DNI",
-    archivo: "dni-fernandez.pdf",
-    subido: diaISO(-2800),
-    vence: "",
-  },
-  {
-    id: "d21",
-    miembroId: "8",
-    tipo: "DNI",
-    archivo: "dni-mendez.pdf",
-    subido: diaISO(-560),
-    vence: "",
-  },
-];
-
+/* Flujos automáticos de RRHH: son funciones del sistema (se pueden activar o desactivar),
+   no datos de ejemplo. Arrancan con cero ejecuciones. */
 const FLUJOS: FlujoRRHH[] = [
   {
     id: "f1",
     nombre: "Aviso de contrato por vencer",
     detalle: "30 días antes avisa a administración y al integrante.",
     activo: true,
-    ejecuciones: 14,
+    ejecuciones: 0,
   },
   {
     id: "f2",
     nombre: "Alta de legajo y acceso al portal",
     detalle: "Al dar de alta a una persona crea su legajo y el código del portal del equipo.",
     activo: true,
-    ejecuciones: 9,
+    ejecuciones: 0,
   },
   {
     id: "f3",
     nombre: "Saludo de cumpleaños",
     detalle: "Publica un comunicado para todo el equipo el día del cumpleaños.",
     activo: true,
-    ejecuciones: 22,
+    ejecuciones: 0,
   },
   {
     id: "f4",
@@ -908,137 +345,35 @@ const FLUJOS: FlujoRRHH[] = [
     nombre: "Recibo de sueldo por correo",
     detalle: "Al marcar el período como pagado envía el recibo a cada persona.",
     activo: true,
-    ejecuciones: 36,
+    ejecuciones: 0,
   },
 ];
 
-/* El demo usa solo el equipo de ejemplo (Mireya y Andrés Becerra, odontólogos, y Ketty Margarita,
-   secretaria): se quitan los datos de ejemplo de otras personas. */
-function soloEquipoEjemplo(e: EstadoRRHH): EstadoRRHH {
-  const ids = new Set(TEAM_MEMBERS.map((m) => m.id));
-  const ok = (id: string) => ids.has(id);
-  return {
-    ...e,
-    legajos: Object.fromEntries(Object.entries(e.legajos).filter(([id]) => ok(id))),
-    solicitudes: e.solicitudes.filter((x) => ok(x.miembroId)),
-    fichajes: e.fichajes.filter((x) => ok(x.miembroId)),
-    periodos: e.periodos.map((p) => ({
-      ...p,
-      ajustes: Object.fromEntries(Object.entries(p.ajustes).filter(([id]) => ok(id))),
-    })),
-    capacitaciones: e.capacitaciones.map((c) => ({ ...c, asignados: c.asignados.filter((a) => ok(a.miembroId)) })),
-    evaluaciones: e.evaluaciones.filter((x) => ok(x.miembroId)),
-    documentos: e.documentos.filter((x) => ok(x.miembroId)),
-  };
-}
-
 export const storeRRHH = crearStorePorEmpresa<EstadoRRHH>(
-  () => {
-    const actual = periodoActual();
-    return soloEquipoEjemplo({
-      legajos: legajosEjemplo(),
-      solicitudes: [
-        {
-          id: "s1",
-          miembroId: "4",
-          tipo: "Vacaciones",
-          desde: diaISO(20),
-          hasta: diaISO(30),
-          motivo: "Viaje familiar",
-          estado: "Pendiente",
-          creada: new Date(Date.now() - 86_400_000).toISOString(),
-          origen: "Portal del equipo",
-          respuesta: "",
-        },
-        {
-          id: "s2",
-          miembroId: "8",
-          tipo: "Trámite personal",
-          desde: diaISO(6),
-          hasta: diaISO(6),
-          motivo: "Renovación de pasaporte",
-          estado: "Pendiente",
-          creada: new Date(Date.now() - 3 * 3_600_000).toISOString(),
-          origen: "Portal del equipo",
-          respuesta: "",
-        },
-        {
-          id: "s3",
-          miembroId: "2",
-          tipo: "Vacaciones",
-          desde: diaISO(12),
-          hasta: diaISO(19),
-          motivo: "",
-          estado: "Aprobada",
-          creada: diaISO(-15),
-          origen: "RRHH",
-          respuesta: "Aprobada. Cubre Mireya Becerra.",
-        },
-      ],
-      fichajes: fichajesEjemplo(),
-      periodos: [
-        {
-          periodo: periodoAnterior(actual, 2),
-          estado: "Pagada",
-          pagado: diaISO(-55),
-          ajustes: { "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 980_000 } },
-        },
-        {
-          periodo: periodoAnterior(actual, 1),
-          estado: "Pagada",
-          pagado: diaISO(-25),
-          ajustes: {
-            "4": { horasExtra: 6, bono: 0, adelanto: 0 },
-            "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 1_150_000 },
-          },
-        },
-        {
-          periodo: actual,
-          estado: "Borrador",
-          pagado: "",
-          ajustes: {
-            "3": { horasExtra: 4, bono: 0, adelanto: 150_000 },
-            "8": { horasExtra: 0, bono: 120_000, adelanto: 0 },
-            "2": { horasExtra: 0, bono: 0, adelanto: 0, produccion: 1_320_000 },
-            "4": { horasExtra: 0, bono: 0, adelanto: 0, descuento: 25_000, nota: "Uniforme" },
-          },
-        },
-      ],
-      capacitaciones: CAPACITACIONES,
-      evaluaciones: EVALUACIONES,
-      comunicados: COMUNICADOS,
-      documentos: DOCUMENTOS,
-      flujos: FLUJOS,
-      auditoria: [
-        {
-          id: "au1",
-          fecha: new Date(Date.now() - 86_400_000).toISOString(),
-          usuario: "Portal del equipo",
-          accion: "Solicitud",
-          detalle: "Ketty Margarita pidió vacaciones",
-        },
-        {
-          id: "au2",
-          fecha: new Date(Date.now() - 25 * 86_400_000).toISOString(),
-          usuario: "Ketty Margarita",
-          accion: "Nómina",
-          detalle: `Período ${nombrePeriodo(periodoAnterior(actual, 1))} pagado`,
-        },
-      ],
-      config: {
-        toleranciaMin: 10,
-        presentismoPct: 8.33,
-        aportesPct: 17,
-        contribucionesPct: 24,
-        recargoExtraPct: 50,
-        diaPago: 5,
-        antiguedadPct: 1,
-        cotizaciones: COTIZACIONES_INICIALES,
-        tasas: {},
-      },
-      lotes: [],
-    });
-  },
+  () => ({
+    legajos: {},
+    solicitudes: [],
+    fichajes: [],
+    periodos: [{ periodo: periodoActual(), estado: "Borrador", pagado: "", ajustes: {} }],
+    capacitaciones: [],
+    evaluaciones: [],
+    comunicados: [],
+    documentos: [],
+    flujos: FLUJOS,
+    auditoria: [],
+    config: {
+      toleranciaMin: 10,
+      presentismoPct: 8.33,
+      aportesPct: 17,
+      contribucionesPct: 24,
+      recargoExtraPct: 50,
+      diaPago: 5,
+      antiguedadPct: 1,
+      cotizaciones: COTIZACIONES_INICIALES,
+      tasas: {},
+    },
+    lotes: [],
+  }),
   { persistir: "rrhh" },
 );
 
@@ -1703,6 +1038,6 @@ export function responderRRHH(pregunta: string): string {
     `Hoy: ${deHoy.length} fichadas, ${ausentesHoy.length} con licencia.`,
     `Solicitudes pendientes: ${r.solicitudes.filter((s) => s.estado === "Pendiente").length}.`,
     `Costo laboral estimado del mes: ${ars(recibos.reduce((a, x) => a + x.costoBase, 0))}.`,
-    "Podés preguntarme por una persona (ej. «¿Cómo está Ketty?»), vencimientos, llegadas tarde, vacaciones o costos.",
+    "Podés preguntarme por una persona del equipo (por su nombre), vencimientos, llegadas tarde, vacaciones o costos.",
   ].join("\n");
 }

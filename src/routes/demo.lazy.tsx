@@ -3,7 +3,6 @@ import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
 import {
   GABINETES,
-  ODONTOLOGOS,
   SUCURSALES,
   TRATAMIENTOS,
   setTurnosStore,
@@ -28,7 +27,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { salirYVolver, useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { NOMBRE_ROL } from "@/lib/clinica/permisos";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
-import { GraficoBarras, GraficoEvolucion } from "@/components/cloud-esther/graficos-premium";
+import { GraficoBarras } from "@/components/cloud-esther/graficos-premium";
 import { descargarPDFdeElemento } from "@/lib/descargas";
 
 export const Route = createLazyFileRoute("/demo")({
@@ -42,51 +41,19 @@ type Turno = { id: number; hora: string; paciente: string; detalle: string; esta
 type Actividad = { id: number; hora: string; quien: string; accion: string };
 type ModalActivo = "cita" | "paciente" | "presupuesto" | null;
 
-/* ───────────── Datos de ejemplo ───────────── */
+/* ───────────── Estructura de las tarjetas (sin datos de ejemplo: todo arranca en cero) ───────────── */
 
 const STATS = [
-  { label: "Turnos de hoy", value: "11", valueColor: "text-primary", tono: "from-primary to-fuchsia-500", icon: Clock, delta: "+9%", deltaColor: "text-emerald-600", sub: "7 confirmados · 2 pendientes" },
-  { label: "Ingresos del día", value: "$ 1.284.000", valueColor: "text-emerald-600", tono: "from-emerald-500 to-teal-500", icon: DollarSign, delta: "+14%", deltaColor: "text-emerald-600", sub: "6 cobros registrados" },
-  { label: "Recordatorios enviados", value: "34", valueColor: "text-foreground", tono: "from-sky-500 to-indigo-500", icon: Bell, delta: "94% entregados", deltaColor: "text-muted-foreground", sub: "" },
-  { label: "Deuda vencida", value: "$ 572.000", valueColor: "text-destructive", tono: "from-rose-500 to-pink-500", icon: TriangleAlert, delta: "-4%", deltaColor: "text-destructive", sub: "2 pacientes" },
+  { label: "Turnos de hoy", value: "0", valueColor: "text-primary", tono: "from-primary to-fuchsia-500", icon: Clock, delta: "", deltaColor: "text-muted-foreground", sub: "0 confirmados · 0 pendientes" },
+  { label: "Ingresos del día", value: "$ 0", valueColor: "text-foreground", tono: "from-emerald-500 to-teal-500", icon: DollarSign, delta: "", deltaColor: "text-muted-foreground", sub: "0 cobros registrados" },
+  { label: "Recordatorios enviados", value: "0", valueColor: "text-foreground", tono: "from-sky-500 to-indigo-500", icon: Bell, delta: "", deltaColor: "text-muted-foreground", sub: "" },
+  { label: "Deuda vencida", value: "$ 0", valueColor: "text-foreground", tono: "from-rose-500 to-pink-500", icon: TriangleAlert, delta: "", deltaColor: "text-muted-foreground", sub: "0 pacientes" },
 ];
 
 type Stat = (typeof STATS)[number];
 
-const PRODUCCION = [
-  { nombre: "Martínez", valor: 4.0 },
-  { nombre: "López", valor: 3.8 },
-  { nombre: "Gómez", valor: 3.95 },
-  { nombre: "Ruiz", valor: 3.45 },
-  { nombre: "Ibarra", valor: 3.3 },
-];
-
-const ACTIVIDAD_INICIAL: Actividad[] = [
-  { id: 1, hora: "09:42", quien: "Ketty Margarita", accion: "Confirmó el turno de Mauro Pinto" },
-  { id: 2, hora: "09:31", quien: "Dra. Mireya Becerra", accion: "Actualizó la historia clínica de Mauro Pinto" },
-  { id: 3, hora: "09:18", quien: "Automatización", accion: "Envió 34 recordatorios de turno por WhatsApp" },
-  { id: 4, hora: "08:55", quien: "Ketty Margarita", accion: "Emitió la factura F-0001-00184" },
-  { id: 5, hora: "08:40", quien: "Sistema", accion: "Alerta de stock crítico: Guantes nitrilo M" },
-  { id: 6, hora: "08:12", quien: "Dr. Andrés Becerra", accion: "Aprobó el presupuesto PR-2026-0141" },
-];
-
 const GENEROS = ["Femenino", "Masculino", "No binario", "Prefiere no decir"];
 const OBRAS_SOCIALES = ["No aplica / particular", "OSDE", "Swiss Medical", "Galeno", "Medicus", "PAMI", "IOMA"];
-
-const EVOLUCION = [
-  { mes: "Abril", ingresos: 21400000 },
-  { mes: "Mayo", ingresos: 22900000 },
-  { mes: "Junio", ingresos: 24800000 },
-  { mes: "Julio", ingresos: 27300000 },
-  { mes: "Agosto", ingresos: 30100000 },
-  { mes: "Septiembre", ingresos: 33600000 },
-];
-
-/** Meta mensual de ingresos del demo (línea punteada del gráfico). */
-const META_MENSUAL = 28000000;
-
-/** $ 21,4 M (pesos en millones, para ejes y tarjetas) */
-const millones = (v: number) => `$ ${(v / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`;
 
 const CARD =
   "relative overflow-hidden rounded-3xl border border-primary/10 bg-card p-4 shadow-[0_14px_36px_-28px_rgba(124,58,237,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-26px_rgba(124,58,237,0.75)] sm:p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-primary before:via-fuchsia-500 before:to-pink-400 before:opacity-70 before:content-['']";
@@ -259,16 +226,19 @@ function SelectField({
   onChange,
   options,
   placeholder,
+  required,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder?: string;
+  required?: boolean;
 }) {
   return (
     <div className="relative">
       <select
         value={value}
+        required={required}
         onChange={(e) => onChange(e.target.value)}
         className={`${INPUT} appearance-none pr-10 ${value === "" ? "text-muted-foreground" : ""}`}
       >
@@ -369,8 +339,17 @@ function NuevaCitaForm({
         <Field label="Sucursal">
           <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
         </Field>
-        <Field label="Odontólogo">
-          <SelectField value={odontologo} onChange={setOdontologo} options={odontologos} />
+        <Field
+          label="Odontólogo"
+          {...(odontologos.length === 0 ? { hint: "Primero cargá un odontólogo en Equipo para poder agendar." } : {})}
+        >
+          <SelectField
+            value={odontologo}
+            onChange={setOdontologo}
+            options={odontologos}
+            placeholder="Seleccionar odontólogo"
+            required
+          />
         </Field>
         <Field label="Gabinete">
           <SelectField value={gabinete} onChange={setGabinete} options={GABINETES} />
@@ -509,10 +488,10 @@ function NuevoPacienteForm({
       <h3 className="text-sm font-semibold">Datos personales</h3>
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
         <Field label="Nombre *">
-          <input autoFocus required value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Mauro" />
+          <input autoFocus required value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Nombre" />
         </Field>
         <Field label="Apellido *">
-          <input required value={apellido} onChange={(e) => setApellido(e.target.value)} className={INPUT} placeholder="Pinto" />
+          <input required value={apellido} onChange={(e) => setApellido(e.target.value)} className={INPUT} placeholder="Apellido" />
         </Field>
         <Field
           label="Documento *"
@@ -528,7 +507,7 @@ function NuevoPacienteForm({
               setErrorDocumento("");
             }}
             className={INPUT}
-            placeholder="95.222.294"
+            placeholder="Sin puntos ni espacios"
           />
         </Field>
         <Field label="Fecha de nacimiento">
@@ -538,10 +517,10 @@ function NuevoPacienteForm({
           <SelectField value={genero} onChange={setGenero} options={GENEROS} placeholder="Seleccionar" />
         </Field>
         <Field label="Correo electrónico *">
-          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="mauro.pinto@email.com" />
+          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="correo@ejemplo.com" />
         </Field>
         <Field label="Teléfono">
-          <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} className={INPUT} placeholder="+54 11 5555-8899" />
+          <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} className={INPUT} placeholder="Código de área y número" />
         </Field>
         <Field label="Sucursal">
           <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
@@ -554,13 +533,13 @@ function NuevoPacienteForm({
           <SelectField value={obraSocial} onChange={setObraSocial} options={obrasCatalogo} />
         </Field>
         <Field label="Número de afiliado">
-          <input value={afiliado} onChange={(e) => setAfiliado(e.target.value)} className={INPUT} placeholder="OS-45892177" />
+          <input value={afiliado} onChange={(e) => setAfiliado(e.target.value)} className={INPUT} placeholder="Número de afiliado" />
         </Field>
       </div>
 
       <h3 className="text-sm font-semibold">Información de contacto</h3>
       <Field label="Dirección">
-        <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={INPUT} placeholder="Av. Corrientes 1234, Buenos Aires" />
+        <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={INPUT} placeholder="Calle, número y ciudad" />
       </Field>
       <Field label="Nota de interés">
         <textarea
@@ -610,10 +589,10 @@ function NuevoPresupuestoForm({
         <PacientesDatalist nombres={pacientes} />
       </Field>
       <Field label="Tratamiento">
-        <input required value={tratamiento} onChange={(e) => setTratamiento(e.target.value)} className={INPUT} placeholder="Ej: Implante unitario" />
+        <input required value={tratamiento} onChange={(e) => setTratamiento(e.target.value)} className={INPUT} placeholder="Tratamiento a presupuestar" />
       </Field>
       <Field label="Monto (ARS)">
-        <input required type="number" min={1} value={monto} onChange={(e) => setMonto(e.target.value)} className={INPUT} placeholder="350000" />
+        <input required type="number" min={1} value={monto} onChange={(e) => setMonto(e.target.value)} className={INPUT} placeholder="Monto total" />
       </Field>
       <FormActions submitLabel="Crear presupuesto" onCancel={onCancel} />
     </form>
@@ -729,39 +708,43 @@ function TopBanner({
                       </button>
                     </div>
                   </div>
-                  <ul className="scroll-sutil max-h-80 divide-y divide-border/60 overflow-y-auto">
-                    {notificaciones.slice(0, 6).map((n, i) => {
-                      const nueva = i < sinLeer;
-                      const sistema = /sistema|automatizaci/i.test(n.quien);
-                      const ini = n.quien
-                        .replace(/^(Dra?\.)\s*/i, "")
-                        .split(/\s+/)
-                        .slice(0, 2)
-                        .map((w) => w.charAt(0).toUpperCase())
-                        .join("");
-                      return (
-                        <li
-                          key={n.id}
-                          style={{ animationDelay: `${i * 40}ms` }}
-                          className={`ce-aparecer flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.04] ${nueva ? "bg-primary/[0.035]" : ""}`}
-                        >
-                          <span
-                            className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white shadow-[0_6px_14px_-8px_rgba(76,29,149,0.8)] ${
-                              sistema ? "bg-gradient-to-br from-amber-400 to-rose-500" : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
-                            }`}
+                  {notificaciones.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-muted-foreground">Todavía no hay notificaciones.</p>
+                  ) : (
+                    <ul className="scroll-sutil max-h-80 divide-y divide-border/60 overflow-y-auto">
+                      {notificaciones.slice(0, 6).map((n, i) => {
+                        const nueva = i < sinLeer;
+                        const sistema = /sistema|automatizaci/i.test(n.quien);
+                        const ini = n.quien
+                          .replace(/^(Dra?\.)\s*/i, "")
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((w) => w.charAt(0).toUpperCase())
+                          .join("");
+                        return (
+                          <li
+                            key={n.id}
+                            style={{ animationDelay: `${i * 40}ms` }}
+                            className={`ce-aparecer flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.04] ${nueva ? "bg-primary/[0.035]" : ""}`}
                           >
-                            {sistema ? <Sparkles className="size-3.5" /> : ini || "•"}
-                          </span>
-                          <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
-                            <span className="font-medium text-foreground">{n.quien}</span>{" "}
-                            <span className="text-muted-foreground">{n.accion}</span>
-                            <span className="mt-0.5 block text-[10.5px] tabular-nums text-muted-foreground/80">Hoy · {n.hora}</span>
-                          </span>
-                          {nueva && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.7)]" />}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            <span
+                              className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white shadow-[0_6px_14px_-8px_rgba(76,29,149,0.8)] ${
+                                sistema ? "bg-gradient-to-br from-amber-400 to-rose-500" : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
+                              }`}
+                            >
+                              {sistema ? <Sparkles className="size-3.5" /> : ini || "•"}
+                            </span>
+                            <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
+                              <span className="font-medium text-foreground">{n.quien}</span>{" "}
+                              <span className="text-muted-foreground">{n.accion}</span>
+                              <span className="mt-0.5 block text-[10.5px] tabular-nums text-muted-foreground/80">Hoy · {n.hora}</span>
+                            </span>
+                            {nueva && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.7)]" />}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                   <a
                     href="/demo/notificaciones"
                     className="flex items-center justify-center gap-1.5 border-t border-border/60 bg-gradient-to-r from-primary/[0.04] to-fuchsia-500/[0.04] px-4 py-2.5 text-xs font-semibold text-primary transition hover:from-primary/[0.08] hover:to-fuchsia-500/[0.08]"
@@ -1064,22 +1047,20 @@ function SearchBar({
   );
 }
 
-function ProduccionOdontologo({ datos, unidad = "M" }: { datos?: { nombre: string; valor: number }[]; unidad?: string }) {
-  const PRODUCCION_ = datos ?? PRODUCCION;
+function ProduccionOdontologo({ datos }: { datos: { nombre: string; valor: number }[] }) {
   return (
     <div className={`${CARD} flex flex-col`}>
-      <CabeceraCard icon={Stethoscope} titulo={datos ? "Turnos atendidos por odontólogo" : "Producción por odontólogo"} detalle="Mes en curso" />
-      {datos && datos.length === 0 && (
+      <CabeceraCard icon={Stethoscope} titulo="Turnos atendidos por odontólogo" detalle="Mes en curso" />
+      {datos.length === 0 ? (
         <VacioCard className="flex-1">
           Cuando los odontólogos atiendan turnos este mes, acá vas a ver cuántos atendió cada uno.
         </VacioCard>
-      )}
-      {!(datos && datos.length === 0) && (
+      ) : (
         <div className="mt-1 flex-1">
           <GraficoBarras
-            datos={PRODUCCION_}
-            formato={unidad === "turnos" ? (v) => `${Math.round(v)}` : (v) => `$ ${v.toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`}
-            detalle={unidad === "turnos" ? "turnos del mes" : "producción del mes"}
+            datos={datos}
+            formato={(v) => `${Math.round(v)}`}
+            detalle="turnos del mes"
           />
         </div>
       )}
@@ -1199,7 +1180,7 @@ function AccesosRapidos({
 function DashboardInner() {
   const { plan } = useCloudEsther();
   const { usuario, clinica } = useSesion();
-  // Clínica real: todo sale de SUS datos (nada de ejemplo)
+  // Clínica real: todo sale de SUS datos
   const real = useClinicaReal();
   const { pacientes: pacientesReales, setPacientes } = usePacientes();
   const nombreUsuario = usuario?.nombre ?? "Invitado";
@@ -1222,15 +1203,9 @@ function DashboardInner() {
       detalle: `${t.tratamiento} · ${t.odontologo}`,
       estado: t.estado,
     }));
-  const [actividad, setActividad] = useState<Actividad[]>(() => (real ? [] : ACTIVIDAD_INICIAL));
-  const [sinLeer, setSinLeer] = useState(() => (real ? 0 : 3));
-  // Al saber que es una clínica real (después de abrir la página), nada de actividad de ejemplo
-  const esReal = !!real;
-  useEffect(() => {
-    if (!esReal) return;
-    setActividad((prev) => (prev === ACTIVIDAD_INICIAL ? [] : prev));
-    setSinLeer((n) => (n === 3 ? 0 : n));
-  }, [esReal]);
+  // Arranca vacío: la actividad y las notificaciones se generan con lo que haga el cliente.
+  const [actividad, setActividad] = useState<Actividad[]>([]);
+  const [sinLeer, setSinLeer] = useState(0);
   const [recordatoriosExtra, setRecordatoriosExtra] = useState(0);
   const [presupuestosNuevos, setPresupuestosNuevos] = useState(0);
   const [pacientesNuevos, setPacientesNuevos] = useState<{ nombre: string; documento: string }[]>([]);
@@ -1311,7 +1286,7 @@ function DashboardInner() {
       show("Presupuestos se está preparando para tu clínica");
       return;
     }
-    const numero = `PR-2026-${String(142 + presupuestosNuevos).padStart(4, "0")}`;
+    const numero = `PR-${new Date().getFullYear()}-${String(presupuestosNuevos + 1).padStart(4, "0")}`;
     setPresupuestosNuevos((n) => n + 1);
     registrar(
       nombreUsuario,
@@ -1366,19 +1341,9 @@ function DashboardInner() {
     );
   };
 
+  // Todavía no hay cobros registrados, así que no hay nada que exportar.
   const exportarExcel = () => {
-    const filas = [["Mes", "Ingresos (ARS)"], ...EVOLUCION.map((e) => [e.mes, String(e.ingresos)])];
-    const csv = "\uFEFF" + filas.map((f) => f.join(";")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "evolucion-clinica.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    show("Descargando evolucion-clinica.csv");
+    show("Todavía no hay datos para exportar");
   };
 
   const compartir = async () => {
@@ -1420,19 +1385,17 @@ function DashboardInner() {
     : [
         { ...s0, value: String(turnos.length), sub: `${confirmadosHoy} confirmados · ${pendientesHoy} pendientes` },
         s1,
-        { ...s2, value: String(34 + recordatoriosExtra) },
+        { ...s2, value: String(recordatoriosExtra) },
         s3,
       ];
-  // Turnos atendidos por odontólogo en el mes (clínica real)
+  // Turnos atendidos por odontólogo en el mes (se calcula con la agenda y el equipo cargados)
   const mes = hoy.slice(0, 7);
-  const atendidosMes = real
-    ? odontologosEquipo
-        .map((nombre) => ({
-          nombre: nombre.split(" ")[0] ?? nombre,
-          valor: turnosAgenda.filter((t) => t.odontologo === nombre && t.estado === "Atendida" && t.fecha.startsWith(mes)).length,
-        }))
-        .filter((x) => x.valor > 0)
-    : undefined;
+  const atendidosMes = odontologosEquipo
+    .map((nombre) => ({
+      nombre: nombre.split(" ")[0] ?? nombre,
+      valor: turnosAgenda.filter((t) => t.odontologo === nombre && t.estado === "Atendida" && t.fecha.startsWith(mes)).length,
+    }))
+    .filter((x) => x.valor > 0);
 
   return (
     <AppShell>
@@ -1488,7 +1451,7 @@ function DashboardInner() {
             <CabeceraCard
               icon={BarChart3}
               titulo="Evolución de la clínica"
-              detalle={real ? "Últimos 6 meses" : "Últimos 6 meses · datos ficticios"}
+              detalle="Últimos 6 meses"
               acciones={
                 <div className="flex items-center gap-1.5 text-xs font-medium">
                   <button onClick={guardarPdf} className={EXPORT_BTN} aria-label="Descargar PDF" title="PDF"><FileText className="size-3.5" /> <span className="hidden sm:inline">PDF</span></button>
@@ -1498,19 +1461,9 @@ function DashboardInner() {
                 </div>
               }
             />
-            {real ? (
-              <VacioCard className="h-40 sm:h-56">
-                Cuando la clínica registre cobros, acá vas a ver cómo evolucionan mes a mes.
-              </VacioCard>
-            ) : (
-            <GraficoEvolucion
-              datos={EVOLUCION.map((e) => ({ etiqueta: e.mes, valor: e.ingresos }))}
-              meta={META_MENSUAL}
-              formato={millones}
-              nombreSerie="Ingresos"
-              nombreMeta="Meta mensual"
-            />
-            )}
+            <VacioCard className="h-40 sm:h-56">
+              Cuando la clínica registre cobros, acá vas a ver cómo evolucionan mes a mes.
+            </VacioCard>
           </div>
 
           <div className={`${CARD} flex flex-col`}>
@@ -1552,7 +1505,7 @@ function DashboardInner() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <ProduccionOdontologo {...(atendidosMes ? { datos: atendidosMes, unidad: "turnos" } : {})} />
+          <ProduccionOdontologo datos={atendidosMes} />
           <ActividadReciente items={actividadFiltrada} buscando={!!q} />
         </div>
 
@@ -1571,7 +1524,7 @@ function DashboardInner() {
             onSubmit={agregarCita}
             onCancel={cerrarModal}
             pacientes={sugerenciasPacientes}
-            odontologos={odontologosEquipo.length || real ? odontologosEquipo : ODONTOLOGOS}
+            odontologos={odontologosEquipo}
           />
         </Modal>
       )}

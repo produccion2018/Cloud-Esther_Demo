@@ -424,7 +424,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
   const [aviso, setAviso] = useState("");
   const [enviando, setEnviando] = useState(false);
   const slug = useClinicaReal()?.slug ?? null;
-  const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
+  const clinica = clinicaSesion?.nombre ?? "Tu clínica";
 
   const buscar = () => {
     const u = usuario.trim().toLowerCase();
@@ -654,7 +654,7 @@ function PortalInner({
       : (activos.find((p) => p.id === pacienteId) ??
         activos.find((p) => p.id === activoId) ??
         activos[0]);
-  const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
+  const clinica = clinicaSesion?.nombre ?? "Tu clínica";
 
   const onToast = (m: string) => {
     setToast(m);

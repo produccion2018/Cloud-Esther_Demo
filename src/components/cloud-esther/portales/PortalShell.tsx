@@ -138,11 +138,11 @@ export function PortalShell({
                     onClick={() => ir(it.id)}
                     title={modoCompacto ? it.label : undefined}
                     aria-current={on ? "page" : undefined}
-                    className={`group relative flex w-full items-center gap-3 rounded-xl text-left text-[13px] font-medium transition-all ${
+                    className={`group relative flex w-full items-center gap-3 rounded-xl text-left text-sm transition-all ${
                       modoCompacto ? "justify-center px-0 py-2.5" : "px-2.5 py-2"
                     } ${
                       on
-                        ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 text-white shadow-[0_14px_28px_-14px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.28)] ring-1 ring-white/15"
+                        ? "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 font-semibold text-white shadow-[0_14px_28px_-14px_rgba(124,58,237,0.95),inset_0_1px_0_rgba(255,255,255,0.28)] ring-1 ring-white/15"
                         : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
                   >

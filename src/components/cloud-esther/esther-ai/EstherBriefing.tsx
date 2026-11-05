@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   X,
   ArrowUpRight,
   CloudSun,
@@ -10,6 +9,7 @@ import {
   AlertTriangle,
   Activity,
 } from "lucide-react";
+import estherSaludando from "@/assets/esther-pose-waving.png";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
@@ -21,7 +21,7 @@ import {
 } from "@/lib/cloud-esther/saludo-clima";
 
 /* Ubicación: src/components/cloud-esther/esther-ai/EstherBriefing.tsx
-   Briefing proactivo de Esther Infinity: aparece ARRIBA al entrar al dashboard con un saludo
+   Briefing proactivo de Esther: aparece ARRIBA al entrar al dashboard con un saludo
    por hora, el clima real, la fecha y lo básico de la clínica (hallazgos reales del plan). Se
    queda unos segundos y se va solo "hacia abajo", donde queda el botón flotante de Esther.
    No inventa datos: clima real (o sin clima) y hallazgos calculados sobre los datos reales.
@@ -34,7 +34,7 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   const { plan } = useCloudEsther();
   const { usuario } = useSesion();
   const clima = useClima();
-  const primerNombre = primerNombreDe(usuario?.nombre ?? "Andrés Becerra");
+  const primerNombre = primerNombreDe(usuario?.nombre ?? "");
 
   const hallazgos = useMemo(() => hallazgosEsther(plan), [plan]);
   const frase = fraseClima(clima);
@@ -89,21 +89,15 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                 {/* Encabezado */}
                 <div className="flex items-start gap-3.5">
                   {/* Avatar con anillo que gira + halo */}
-                  <span className="relative grid size-12 shrink-0 place-items-center">
-                    <motion.span
-                      aria-hidden
-                      className="absolute -inset-[3px] rounded-full bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#ec4899,#38bdf8,#8b5cf6)] opacity-80 blur-[1px]"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-                    />
-                    <motion.span
-                      aria-hidden
-                      className="absolute -inset-2 rounded-full border border-primary/25"
-                      animate={{ scale: [1, 1.35, 1], opacity: [0.55, 0, 0.55] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <span className="relative grid size-12 place-items-center rounded-full bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white ring-2 ring-card">
-                      <Sparkles className="size-5" />
+                  <span className="relative shrink-0">
+                    <span className="grid size-14 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-lavender/80 to-primary/10 ring-1 ring-primary/15 shadow-[0_10px_24px_-14px_rgba(76,29,149,0.6)]">
+                      <motion.img
+                        src={estherSaludando}
+                        alt="Esther"
+                        className="h-[52px] w-auto object-contain"
+                        animate={{ y: [0, -2.5, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                      />
                     </span>
                     <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5">
                       <span className="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-70 motion-safe:animate-ping [animation-duration:2.2s]" />
@@ -187,13 +181,6 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                     Preguntarle a Esther
                     <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </Link>
-                  <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-muted-foreground">
-                    <span className="relative flex size-1.5">
-                      <span className="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-70 motion-safe:animate-ping" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-                    </span>
-                    Esther Infinity
-                  </span>
                 </div>
               </div>
 

@@ -89,8 +89,9 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
   };
 
   const de = (tenant: string): T => {
-    // Una clínica real NUNCA arranca con los datos de ejemplo del demo
-    if (!porEmpresa.has(tenant)) porEmpresa.set(tenant, tenant.startsWith(PREFIJO_TENANT) ? vacio() : inicial());
+    // El demo es igual a producción: TODAS las empresas (demo incluido) arrancan vacías,
+    // sin los datos de ejemplo. El cliente carga sus propios datos durante la prueba.
+    if (!porEmpresa.has(tenant)) porEmpresa.set(tenant, vacio());
     return porEmpresa.get(tenant) as T;
   };
 

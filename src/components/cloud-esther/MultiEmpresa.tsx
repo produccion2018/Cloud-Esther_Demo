@@ -1208,10 +1208,12 @@ function SaludTenant({
 
 export function MultiEmpresa() {
   const [tab, setTab] = useState<TabId>("resumen");
-  const [clinicas, setClinicas] = useState<Clinica[]>(CLINICAS_INICIALES);
-  const [sucursales, setSucursales] = useState<Sucursal[]>(SUCURSALES_INICIALES);
-  const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIALES);
-  const [activaId, setActivaId] = useState(CLINICAS_INICIALES[0].id);
+  // Sin clínicas de ejemplo (igual que producción): la empresa que se registró se agrega sola
+  // más abajo (useEffect) y queda como clínica activa.
+  const [clinicas, setClinicas] = useState<Clinica[]>([]);
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [activaId, setActivaId] = useState("");
   const { usuario: usuarioSesion, clinica: clinicaSesion } = useSesion();
   const { plan: planDemo } = useCloudEsther();
 
@@ -1440,6 +1442,15 @@ export function MultiEmpresa() {
       despues: u.email,
     });
     toast.success(`Se enviará un enlace de restablecimiento a ${u.email}`);
+  }
+
+  // Mientras la clínica propia se agrega (primer render), aún no hay clínica activa.
+  if (!activa) {
+    return (
+      <div className="mx-auto w-full max-w-[1420px] px-4 py-16 text-center text-sm text-muted-foreground">
+        Cargando tu clínica…
+      </div>
+    );
   }
 
   return (

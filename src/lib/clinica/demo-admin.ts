@@ -19,7 +19,7 @@ const NOMBRE_ROL: Record<RolClinica, string> = {
 
 /** El equipo del demo: solo el Administrador. El resto lo invita el cliente al probar. */
 export const EQUIPO_DEMO: { id: string; nombre: string; email: string; rol: RolClinica }[] = [
-  { id: "demo-yo", nombre: "Carolina Méndez", email: "duenio@tuclinica.com", rol: "admin" },
+  { id: "demo-yo", nombre: "Administrador/a", email: "", rol: "admin" },
 ];
 
 const PREDETERMINADOS: Record<"odontologo" | "secretaria" | "asistente", string[]> = {

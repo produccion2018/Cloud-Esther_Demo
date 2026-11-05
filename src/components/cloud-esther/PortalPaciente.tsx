@@ -45,6 +45,8 @@ import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
 import { useRegistrosPacientes, type Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import {
@@ -420,6 +422,8 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
   const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState("");
   const [aviso, setAviso] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const slug = useClinicaReal()?.slug ?? null;
   const clinica = clinicaSesion?.nombre ?? "Clínica Dental Esther";
 
   const buscar = () => {
@@ -432,15 +436,41 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
     );
   };
 
-  const pedirCodigo = () => {
+  const pedirCodigo = async () => {
     setError("");
+    setAviso("");
     const p = buscar();
     if (!p) return setError("No encontramos un paciente con ese DNI o correo en esta clínica.");
     const a = accesos[p.id];
     if (!a || a.estado === "Revocado")
       return setError("Todavía no tenés acceso al portal. Pedile a la clínica que te invite.");
     const oculto = p.email.replace(/^(.).*(@.*)$/, "$1***$2");
-    setAviso(`Te enviamos el código a ${oculto}. (Código de práctica: ${a.codigo})`);
+    // Clínica real: el código se ENVÍA de verdad por correo (el paciente no lo ve en pantalla).
+    if (slug) {
+      if (!p.email)
+        return setError("Este paciente no tiene un correo cargado. Agregalo en su ficha y volvé a intentar.");
+      setEnviando(true);
+      try {
+        await pedirAClinica(slug, "POST", "/portal/codigo", {
+          para: p.email,
+          codigo: a.codigo,
+          nombrePaciente: `${p.nombre} ${p.apellido}`.trim(),
+          nombreClinica: clinica,
+        });
+        setAviso(`Te enviamos el código a ${oculto}. Revisá tu correo (mirá también la carpeta de spam).`);
+      } catch (err) {
+        setError(
+          err instanceof ErrorClinica
+            ? `No se pudo enviar el código: ${err.message}`
+            : "No se pudo enviar el código. Probá de nuevo en un momento.",
+        );
+      } finally {
+        setEnviando(false);
+      }
+      return;
+    }
+    // Demo de prueba (sin servidor): se muestra el código en pantalla.
+    setAviso(`Código de prueba: ${a.codigo} (en una clínica real se envía por correo a ${oculto}).`);
   };
 
   const ingresar = async (e: FormEvent) => {
@@ -542,9 +572,10 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
             <button
               type="button"
               onClick={pedirCodigo}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+              disabled={enviando}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
             >
-              <Mail className="size-3.5" /> Recibir el código por correo
+              <Mail className="size-3.5" /> {enviando ? "Enviando el código…" : "Recibir el código por correo"}
             </button>
             {aviso && (
               <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{aviso}</p>
@@ -564,8 +595,8 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
             con la contraseña que creaste en «Mis datos».
           </p>
           <p className="mt-8 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
-            Para practicar: DNI <b>95193944</b> (Mauro Pinto) y el código que muestra “Recibir el
-            código”. Los accesos se gestionan en Cloud Esther → Portal del paciente.
+            Ingresá con el DNI o el correo con el que la clínica te registró y el código que te
+            llega por correo. Los accesos se gestionan en Cloud Esther → Portal del paciente.
           </p>
           <Link
             to="/demo/portal-paciente"

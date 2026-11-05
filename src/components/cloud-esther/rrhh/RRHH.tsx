@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -72,6 +72,28 @@ const SECCIONES: { id: SeccionRRHH; label: string; icon: LucideIcon }[] = [
 ];
 
 type Mensaje = { id: number; de: "yo" | "esther"; texto: string };
+
+/* Si una sección falla (por ejemplo con una clínica recién creada, sin datos), no deja la
+   pantalla en blanco: muestra un estado vacío. Se reinicia al cambiar de sección (key). */
+class SeccionBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
+  state = { error: false };
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="card-grad flex min-h-[320px] flex-col items-center justify-center gap-2 p-8 text-center">
+          <p className="text-sm font-semibold text-foreground">Esta sección todavía no tiene datos</p>
+          <p className="max-w-xs text-xs text-muted-foreground">
+            Se completa a medida que cargás tu equipo y su información.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function RRHH() {
   const { plan } = useCloudEsther();
@@ -288,6 +310,7 @@ export function RRHH() {
         </section>
 
         <div className="mt-5">
+          <SeccionBoundary key={seccion}>
           {!montado || !d ? (
             <div className="card-grad h-[480px] animate-pulse" />
           ) : seccion === "resumen" ? (
@@ -309,6 +332,7 @@ export function RRHH() {
           ) : (
             <Gestion ctx={ctx} />
           )}
+          </SeccionBoundary>
         </div>
       </div>
 

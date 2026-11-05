@@ -4,7 +4,8 @@ import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
    LABORATORIOS DENTALES de la clínica (por empresa): directorio (nombre, contacto, WhatsApp,
    correo, plazo habitual) y pagos hechos a cada uno (para la cuenta corriente).
    Los TRABAJOS siguen en la ficha de cada paciente (registros.laboratorio); acá no hay datos
-   de salud. En una clínica real se guarda en el módulo «laboratorios» del servidor. */
+   de salud. En una clínica real se guarda en el módulo «laboratorios» del servidor.
+   Arranca vacío: cada clínica carga sus propios laboratorios. */
 
 export type Laboratorio = {
   id: string;
@@ -30,10 +31,7 @@ type Estado = { laboratorios: Laboratorio[]; pagos: PagoLaboratorio[] };
 
 export const storeLaboratorios = crearStorePorEmpresa<Estado>(
   () => ({
-    laboratorios: [
-      { id: "lab-1", nombre: "ProDent Lab", contacto: "Raúl Medina", telefono: "+54 11 4555-0190", email: "pedidos@prodentlab.com", plazoDias: 7, notas: "" },
-      { id: "lab-2", nombre: "OrthoLab Argentina", contacto: "Paula Ríos", telefono: "+54 11 4777-2211", email: "hola@ortholab.com", plazoDias: 10, notas: "" },
-    ],
+    laboratorios: [],
     pagos: [],
   }),
   { persistir: "laboratorios" },

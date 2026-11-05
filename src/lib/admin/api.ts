@@ -982,14 +982,16 @@ export async function obtenerActividad(): Promise<EventoActividad[]> {
 
 export async function obtenerConsumoIA(): Promise<ConsumoIAMensual[]> {
   if (CON_BACKEND) return http("GET", "/admin/ia/mensual");
-  return CONSUMO_IA_INICIAL;
+  // Sin datos de ejemplo: se llena con el consumo real.
+  return [];
 }
 
 export async function obtenerCrecimiento(): Promise<
   { mes: string; nuevas: number; total: number }[]
 > {
   if (CON_BACKEND) return http("GET", "/admin/clinicas/crecimiento");
-  return CRECIMIENTO_INICIAL;
+  // Sin datos de ejemplo: se llena con el crecimiento real.
+  return [];
 }
 
 /* ───────────── Borrar empresas de prueba (solo etapa de pruebas) ─────────────

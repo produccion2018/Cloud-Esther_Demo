@@ -7,7 +7,7 @@
    Nunca se guardan respuestas de la API ni datos de pacientes en caché. */
 
 // Al cambiar la versión, el service worker nuevo borra todas las cachés de versiones anteriores.
-const VERSION = "ce-v3";
+const VERSION = "ce-v4";
 const CACHE_PAGINAS = `${VERSION}-paginas`;
 const CACHE_ESTATICOS = `${VERSION}-estaticos`;
 const OFFLINE = "/offline.html";

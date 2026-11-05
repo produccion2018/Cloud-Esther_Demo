@@ -415,6 +415,14 @@ const DUENO_DEMO: TeamMember = {
   permissions: permsFor("administrador"),
 };
 
+/* Demo: el Administrador/a toma el nombre de quien se registró (la sesión), no un texto fijo. */
+function duenoDemoConNombre(nombre: string, email: string): TeamMember {
+  const limpio = nombre.trim();
+  if (!limpio) return DUENO_DEMO;
+  const [first = "", ...resto] = limpio.split(/\s+/);
+  return { ...DUENO_DEMO, firstName: first, lastName: resto.join(" "), email: email || DUENO_DEMO.email };
+}
+
 function duenoComoIntegrante(r: NonNullable<ReturnType<typeof useClinicaReal>>): TeamMember {
   const [nombre = "", ...resto] = r.sesion.usuario.nombre.trim().split(/\s+/);
   return {
@@ -487,6 +495,7 @@ function seccionEnPlan(id: Seccion, plan: Parameters<typeof availableIn>[1]) {
 
 function GateEquipo() {
   const real = useClinicaReal();
+  const { usuario } = useSesion();
   const { miembros } = useEquipo();
   const { accesos } = storeEquipoPortal.usar();
   const [montado, setMontado] = useState(false);
@@ -518,7 +527,14 @@ function GateEquipo() {
   if (!montado || esInvitado || sinLlave) return <div className="min-h-screen bg-background" />;
   if (real) return <AppEquipo miembro={duenoComoIntegrante(real)} real onSalir={() => salirYVolver()} />;
   // Demo: la vista «Administración» del Dueño/a, con los datos de ejemplo (igual que una clínica real)
-  if (vista === "dueno") return <AppEquipo miembro={DUENO_DEMO} duenoDemo onSalir={() => window.location.assign("/demo")} />;
+  if (vista === "dueno")
+    return (
+      <AppEquipo
+        miembro={duenoDemoConNombre(usuario?.nombre ?? "", usuario?.email ?? "")}
+        duenoDemo
+        onSalir={() => window.location.assign("/demo")}
+      />
+    );
   if (vista) {
     const m = miembros.find((x) => x.id === vista);
     if (m) return <AppEquipo miembro={m} vista onSalir={() => {}} />;

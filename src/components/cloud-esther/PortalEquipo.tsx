@@ -405,10 +405,10 @@ export default function PortalEquipo() {
    permisos. No es un integrante cargado en Equipo: es la persona con la sesión abierta. */
 const DUENO_DEMO: TeamMember = {
   id: "demo-yo",
-  firstName: "Carolina",
-  lastName: "Méndez",
+  firstName: "Administrador/a",
+  lastName: "",
   role: "administrador",
-  email: "duenio@tuclinica.com",
+  email: "",
   phone: "",
   status: "activo",
   schedule: [],

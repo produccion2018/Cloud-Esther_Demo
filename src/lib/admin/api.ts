@@ -239,7 +239,8 @@ type BaseLocal = {
   recuperaciones: { token: string; email: string; vence: number }[];
 };
 
-const KEY = "cloud-esther-admin:datos";
+// v2: el portal arranca sin datos de ejemplo; se descartan los guardados de versiones anteriores.
+const KEY = "cloud-esther-admin:datos:v2";
 let base: BaseLocal | null = null;
 
 async function hash(texto: string) {
@@ -275,9 +276,9 @@ async function db(): Promise<BaseLocal> {
           // Países nuevos del catálogo (sin pisar los que ya editó el dueño).
           paises: completarPaises(guardada.colecciones?.paises ?? PAISES_INICIALES),
         },
-        notificaciones: guardada.notificaciones ?? NOTIFICACIONES_INICIALES,
-        sesiones: guardada.sesiones ?? SESIONES_INICIALES,
-        intentos: guardada.intentos ?? INTENTOS_INICIALES,
+        notificaciones: guardada.notificaciones ?? [],
+        sesiones: guardada.sesiones ?? [],
+        intentos: guardada.intentos ?? [],
         configDemo: guardada.configDemo ?? CONFIG_DEMO_INICIAL,
       };
       return base;
@@ -287,19 +288,23 @@ async function db(): Promise<BaseLocal> {
   }
   const claves: Record<string, string> = {};
   for (const [email, clave] of Object.entries(CLAVES_PRUEBA)) claves[email] = await hash(clave);
+  // El portal de Administración arranca igual que producción: SIN datos ficticios.
+  // Solo se conserva lo mínimo para iniciar sesión (admins + claves) y la configuración
+  // real (planes). Las listas de empresas, demos, auditoría, notificaciones, sesiones e
+  // intentos empiezan vacías y se llenan con datos reales a medida que ocurren.
   base = {
     version: 2,
     colecciones: COLECCIONES_INICIALES,
-    notificaciones: NOTIFICACIONES_INICIALES,
-    sesiones: SESIONES_INICIALES,
-    intentos: INTENTOS_INICIALES,
+    notificaciones: [],
+    sesiones: [],
+    intentos: [],
     admins: ADMINS_INICIALES,
     claves,
     planes: PLANES_INICIALES,
-    clinicas: CLINICAS_INICIALES,
-    demos: DEMOS_INICIALES,
+    clinicas: [],
+    demos: [],
     configDemo: CONFIG_DEMO_INICIAL,
-    actividad: ACTIVIDAD_INICIAL,
+    actividad: [],
     recuperaciones: [],
   };
   guardar();

@@ -33,7 +33,20 @@ export function registrarServiceWorker() {
         .catch(() => {});
     return;
   }
-  const registrar = () => void navigator.serviceWorker.register("/sw.js").catch(() => {});
+  // updateViaCache "none": el navegador NUNCA usa su caché para /sw.js, así una versión nueva se
+  // detecta enseguida (y no queda pegada la vieja hasta 24h).
+  const registrar = () =>
+    void navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((reg) => reg.update().catch(() => {}))
+      .catch(() => {});
+  // Cuando un service worker nuevo toma el control, se recarga UNA vez para mostrar la versión nueva.
+  let yaRecargo = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (yaRecargo) return;
+    yaRecargo = true;
+    window.location.reload();
+  });
   // La app hidrata cuando la página suele estar ya cargada: en ese caso se registra enseguida.
   if (document.readyState === "complete") registrar();
   else window.addEventListener("load", registrar, { once: true });

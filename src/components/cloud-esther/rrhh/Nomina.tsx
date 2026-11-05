@@ -115,7 +115,15 @@ export function Nomina({ ctx }: { ctx: Ctx }) {
   const [confirmar, setConfirmar] = useState<"liquidar" | null>(null);
   const [novedades, setNovedades] = useState<Novedad[] | null>(null);
   const archivo = useRef<HTMLInputElement>(null);
-  const periodo = periodos.find((p) => p.periodo === sel) ?? periodos.at(-1)!;
+  // Si la clínica es nueva (sin períodos de nómina), se usa un período de borrador vacío
+  // para que la pantalla no quede en blanco (se llena al liquidar el primer período).
+  const periodo = periodos.find((p) => p.periodo === sel) ??
+    periodos.at(-1) ?? {
+      periodo: periodoActual(),
+      estado: "Borrador" as const,
+      pagado: "",
+      ajustes: {},
+    };
   const activos = miembros.filter((m) => {
     const l = legajoDe(m, legajos);
     const bajaAntes = l.baja && l.baja.fecha.slice(0, 7) < periodo.periodo;
@@ -135,7 +143,7 @@ export function Nomina({ ctx }: { ctx: Ctx }) {
   const paises = [...new Set(todos.map((x) => x.r.pais))];
   const recibos = todos.filter((x) => !pais || x.r.pais === pais);
   const editable = periodo.estado === "Borrador";
-  const siguiente = periodoAnterior(periodos.at(-1)!.periodo, -1);
+  const siguiente = periodoAnterior(periodos.at(-1)?.periodo ?? periodoActual(), -1);
   const clinica = "Clínica Dental Esther";
   const lotePeriodo = lotes.find((x) => x.periodo === periodo.periodo);
   const porMoneda = Object.entries(

@@ -169,88 +169,15 @@ type EstadoPortal = {
   publicados?: Record<string, Publicacion>;
 };
 
-function hace(horas: number) {
-  return new Date(Date.now() - horas * 3_600_000).toISOString();
-}
 
 export function nuevoCodigo() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-export const storePortal = crearStorePorEmpresa<EstadoPortal>(() => ({
-  config: {
-    turnosOnline: true,
-    pagosOnline: true,
-    presupuestosOnline: true,
-    mensajes: true,
-    horasMinimasCancelar: 24,
-    bienvenida: "",
-  },
-  accesos: {
-    1: {
-      estado: "Activo",
-      codigo: "482913",
-      invitado: hace(24 * 40),
-      ultimoIngreso: hace(26),
-      ingresos: 7,
-    },
-    2: { estado: "Invitado", codigo: "735104", invitado: hace(30), ingresos: 0 },
-    3: {
-      estado: "Activo",
-      codigo: "219846",
-      invitado: hace(24 * 20),
-      ultimoIngreso: hace(5),
-      ingresos: 3,
-    },
-    4: {
-      estado: "Activo",
-      codigo: "660172",
-      invitado: hace(24 * 12),
-      ultimoIngreso: hace(24 * 4),
-      ingresos: 2,
-    },
-  },
-  eventos: [
-    { id: "e1", fecha: hace(26), pacienteId: 1, tipo: "Ingreso", detalle: "Entró al portal" },
-    {
-      id: "e2",
-      fecha: hace(25.8),
-      pacienteId: 1,
-      tipo: "Documento subido",
-      detalle: "DNI (frente y dorso)",
-    },
-    { id: "e3", fecha: hace(5), pacienteId: 3, tipo: "Ingreso", detalle: "Entró al portal" },
-    {
-      id: "e4",
-      fecha: hace(4.9),
-      pacienteId: 3,
-      tipo: "Documento subido",
-      detalle: "Credencial de obra social",
-    },
-    { id: "e5", fecha: hace(24 * 4), pacienteId: 4, tipo: "Ingreso", detalle: "Entró al portal" },
-    {
-      id: "e6",
-      fecha: hace(24 * 4 - 0.2),
-      pacienteId: 4,
-      tipo: "Pago online",
-      detalle: "$ 25.000 con tarjeta de débito",
-    },
-  ],
-  docs: {
-    1: DOCS_BASE.map((d) =>
-      d.id === "dni" ? { ...d, estado: "Aprobada" as const, archivo: "dni-mauro.pdf" } : d,
-    ),
-    3: DOCS_BASE.map((d) =>
-      d.id === "credencial"
-        ? { ...d, estado: "En revisión" as const, archivo: "credencial-osde-julian.jpg" }
-        : d,
-    ),
-  },
-}), {
-  persistir: "portal",
-  // Clínica real: arranca vacía y CON APROBACIÓN (nada le llega al paciente hasta que el
-  // Administrador, o quien él autorice, lo envía al portal)
-  vacio: () => ({
+/** Estado vacío del portal: sin pacientes, sin eventos, sin documentos.
+   El demo arranca igual que una clínica real (vacío y con aprobación). */
+function estadoVacioPortal(): EstadoPortal {
+  return {
     config: {
       turnosOnline: true,
       pagosOnline: true,
@@ -264,7 +191,15 @@ export const storePortal = crearStorePorEmpresa<EstadoPortal>(() => ({
     eventos: [],
     docs: {},
     publicados: {},
-  }),
+  };
+}
+
+export const storePortal = crearStorePorEmpresa<EstadoPortal>(estadoVacioPortal, {
+
+  persistir: "portal",
+  // Clínica real: arranca vacía y CON APROBACIÓN (nada le llega al paciente hasta que el
+  // Administrador, o quien él autorice, lo envía al portal)
+  vacio: estadoVacioPortal,
 });
 
 export function setPortal<K extends keyof EstadoPortal>(

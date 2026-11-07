@@ -616,7 +616,7 @@ function PlanFooter() {
             onClick={() => {
               if (
                 window.confirm(
-                  "¿Volver a los datos de ejemplo? Se borra lo que practicaste en esta empresa.",
+                  "¿Vaciar todo el demo? Se borran TODOS los datos de práctica (clínica y administración) y el demo queda vacío, como una clínica nueva.",
                 )
               ) {
                 borrarDatosGuardados();

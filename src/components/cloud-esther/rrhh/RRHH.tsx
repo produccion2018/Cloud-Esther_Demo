@@ -123,7 +123,13 @@ export function RRHH() {
     setMensajes((p) => [...p, { id: Date.now(), de: "yo", texto: t }]);
     setPensando(true);
     window.setTimeout(() => {
-      setMensajes((p) => [...p, { id: Date.now() + 1, de: "esther", texto: responderRRHH(t) }]);
+      let texto: string;
+      try {
+        texto = responderRRHH(t);
+      } catch {
+        texto = "Por ahora no tengo datos para responder eso. Cuando cargues tu equipo y su información, te lo resumo.";
+      }
+      setMensajes((p) => [...p, { id: Date.now() + 1, de: "esther", texto }]);
       setPensando(false);
     }, 900);
   };

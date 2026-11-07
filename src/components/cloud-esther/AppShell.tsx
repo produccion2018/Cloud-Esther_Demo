@@ -36,6 +36,7 @@ import { useAlmacenClinicoListo } from "@/lib/clinica/almacen-clinico";
 import { Toaster } from "@/components/ui/sonner";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
+import { LimiteSeccion } from "@/components/cloud-esther/LimiteSeccion";
 import { contratarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -1212,7 +1213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               icono={modulo.icon}
             />
           ) : (
-            children
+            <LimiteSeccion key={pathname}>{children}</LimiteSeccion>
           )}
         </main>
       </div>

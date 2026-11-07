@@ -89,13 +89,9 @@ const CANAL_FUENTE: Record<string, string> = {
   Doctoralia: "Sitio web",
   Presencial: "Presencial",
 };
-/** Inversión publicitaria mensual por canal (además de las campañas cargadas en Marketing). */
-export const INVERSION_MENSUAL: Record<string, number> = {
-  Google: 120_000,
-  "Meta Ads": 150_000,
-  Instagram: 60_000,
-  "Sitio web": 25_000,
-};
+/** Inversión publicitaria mensual por canal. Sin datos de ejemplo: cada clínica carga la suya
+ *  real desde Marketing (queda en 0 hasta entonces), igual que producción. */
+export const INVERSION_MENSUAL: Record<string, number> = {};
 
 export function useAnalitica(profesionalesPlan: string[], sucursales: string[]) {
   const cfg = storeAnalitica.usar();

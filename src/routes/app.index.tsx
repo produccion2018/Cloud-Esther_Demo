@@ -10,17 +10,15 @@ export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
+// Sin datos de ejemplo: el demo arranca vacío, igual que una clínica real.
 const STATS = [
-  { label: "Turnos de hoy", value: "11", icon: Clock, delta: "+9%", deltaColor: "text-emerald-600", sub: "7 confirmados · 2 pendientes" },
-  { label: "Ingresos del día", value: "$ 1.284.000", icon: DollarSign, delta: "+14%", deltaColor: "text-emerald-600", sub: "6 cobros registrados" },
-  { label: "Recordatorios enviados", value: "34", icon: Bell, delta: "94% entregados", deltaColor: "text-muted-foreground", sub: "" },
-  { label: "Deuda vencida", value: "$ 572.000", icon: TriangleAlert, delta: "-4%", deltaColor: "text-destructive", sub: "2 pacientes" },
+  { label: "Turnos de hoy", value: "0", icon: Clock, delta: "", deltaColor: "text-muted-foreground", sub: "" },
+  { label: "Ingresos del día", value: "$ 0", icon: DollarSign, delta: "", deltaColor: "text-muted-foreground", sub: "" },
+  { label: "Recordatorios enviados", value: "0", icon: Bell, delta: "", deltaColor: "text-muted-foreground", sub: "" },
+  { label: "Deuda vencida", value: "$ 0", icon: TriangleAlert, delta: "", deltaColor: "text-muted-foreground", sub: "" },
 ];
 
-const TURNOS = [
-  { hora: "10:30", paciente: "Mauro Pinto", detalle: "Control de ortodoncia · Dra. Mireya Becerra", estado: "Confirmado" },
-  { hora: "15:00", paciente: "Alejo Becerra", detalle: "Evaluación de implante · Dr. Andrés Becerra", estado: "Pendiente" },
-];
+const TURNOS: { hora: string; paciente: string; detalle: string; estado: string }[] = [];
 
 function EstadoBadge({ estado }: { estado: string }) {
   const confirmado = estado === "Confirmado";

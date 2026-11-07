@@ -43,7 +43,6 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
 import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
-import { EstherFlotante } from "@/components/cloud-esther/esther-ai/EstherFlotante";
 import { EstherBriefing } from "@/components/cloud-esther/esther-ai/EstherBriefing";
 import { AyudaEsther } from "@/components/cloud-esther/esther-ai/AyudaEsther";
 import { vieneDeAccesoPrueba, volverSiEsPrueba } from "@/lib/acceso-prueba";
@@ -1218,27 +1217,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <BarraInferior onMas={() => setMenuMovil(true)} />
-      {/* Esther a mano en todos los módulos, solo en planes con IA (Plus y Enterprise). */}
+      {/* Esther SOLO en el dashboard (planes con IA): aparece su dibujo y te "habla" con un
+          globo de mensaje (texto + audio). En el resto de los módulos no aparece. */}
       {iaDisponible &&
         !real &&
         !bloqueado &&
-        !pathname.startsWith("/demo/ia") &&
-        // El Odontograma 2D (Start y Pro) no lleva IA ni audio: eso es del 3D.
-        modulo?.id !== "odontograma" &&
-        // RRHH ya tiene su propia Esther (especializada en el equipo) en el mismo lugar.
-        !pathname.startsWith("/demo/rrhh") && (
-          <>
-            {(modulo?.id ?? "dashboard") === "dashboard" && (
-              <EstherBriefing
-                moduloId={modulo?.id ?? "dashboard"}
-                modulo={modulo?.label ?? "el inicio"}
-              />
-            )}
-            <EstherFlotante
-              moduloId={modulo?.id ?? "dashboard"}
-              modulo={modulo?.label ?? "el inicio"}
-            />
-          </>
+        (modulo?.id ?? "dashboard") === "dashboard" && (
+          <EstherBriefing
+            moduloId={modulo?.id ?? "dashboard"}
+            modulo={modulo?.label ?? "el inicio"}
+          />
         )}
       {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
           Donde ya está Esther Infinity (Plus y Enterprise en el demo) no se duplica el botón. */}

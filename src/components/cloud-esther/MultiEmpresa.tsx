@@ -1314,6 +1314,16 @@ export function MultiEmpresa() {
     })
     .sort((a, b) => b.valor - a.valor);
 
+  // Sin clínica activa todavía (render del servidor o antes de que el efecto sume la empresa
+  // de la sesión): se muestra un cargando en vez de romper la página.
+  if (!activa) {
+    return (
+      <div className="mx-auto w-full max-w-[1420px] px-4 py-16 text-center text-sm text-muted-foreground">
+        Cargando tu clínica…
+      </div>
+    );
+  }
+
   const sucursalesActiva = sucursales.filter((s) => s.clinic_id === activa.id);
   const usuariosActiva = usuarios.filter((u) => u.clinic_id === activa.id);
   const limActiva = PLAN_INFO[activa.plan];
@@ -1442,15 +1452,6 @@ export function MultiEmpresa() {
       despues: u.email,
     });
     toast.success(`Se enviará un enlace de restablecimiento a ${u.email}`);
-  }
-
-  // Mientras la clínica propia se agrega (primer render), aún no hay clínica activa.
-  if (!activa) {
-    return (
-      <div className="mx-auto w-full max-w-[1420px] px-4 py-16 text-center text-sm text-muted-foreground">
-        Cargando tu clínica…
-      </div>
-    );
   }
 
   return (

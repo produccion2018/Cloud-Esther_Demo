@@ -219,12 +219,17 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
   return { leer: leerConCarga, poner, usar };
 }
 
-/** Borra los datos de práctica guardados de la empresa activa (vuelven los de ejemplo). */
+/** Vacía TODOS los datos de práctica guardados en este navegador: los de las clínicas (todas las
+ *  empresas del demo) y los del panel de administración. El demo queda como una clínica nueva.
+ *  No toca la sesión. */
 export function borrarDatosGuardados() {
   try {
-    const sufijo = `:${tenantActual()}`;
     Object.keys(window.localStorage)
-      .filter((k) => k.startsWith("cloud-esther:v") && k.endsWith(sufijo))
+      .filter(
+        (k) =>
+          k.startsWith("cloud-esther:v") || // datos de práctica de las clínicas (todas las empresas)
+          k.startsWith("cloud-esther-admin:"), // datos del panel de administración
+      )
       .forEach((k) => window.localStorage.removeItem(k));
   } catch {
     /* ignorar */

@@ -18,10 +18,10 @@ const avisar = () => oyentes.forEach((o) => o());
 
 export function registrarServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-  const enDesarrollo = import.meta.env.DEV && import.meta.env["VITE_PWA_DEV"] !== "1";
-  if (enDesarrollo) {
-    // En desarrollo no hay caché de la app: se quita cualquier service worker que haya quedado
-    // de una versión instalada antes, para que siempre se vea el código actual.
+  // Service worker DESACTIVADO: ya no se cachea la app (causaba versiones viejas pegadas y
+  // pantallas en blanco). En cada carga se quita cualquier service worker viejo y se borran
+  // sus cachés, para que la app se sirva siempre fresca desde el CDN.
+  const limpiar = () => {
     void navigator.serviceWorker
       .getRegistrations()
       .then((rs) => Promise.all(rs.map((r) => r.unregister())))
@@ -31,25 +31,9 @@ export function registrarServiceWorker() {
         .keys()
         .then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
         .catch(() => {});
-    return;
-  }
-  // updateViaCache "none": el navegador NUNCA usa su caché para /sw.js, así una versión nueva se
-  // detecta enseguida (y no queda pegada la vieja hasta 24h).
-  const registrar = () =>
-    void navigator.serviceWorker
-      .register("/sw.js", { updateViaCache: "none" })
-      .then((reg) => reg.update().catch(() => {}))
-      .catch(() => {});
-  // Cuando un service worker nuevo toma el control, se recarga UNA vez para mostrar la versión nueva.
-  let yaRecargo = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (yaRecargo) return;
-    yaRecargo = true;
-    window.location.reload();
-  });
-  // La app hidrata cuando la página suele estar ya cargada: en ese caso se registra enseguida.
-  if (document.readyState === "complete") registrar();
-  else window.addEventListener("load", registrar, { once: true });
+  };
+  if (document.readyState === "complete") limpiar();
+  else window.addEventListener("load", limpiar, { once: true });
 }
 
 /** Se llama una vez al iniciar: guarda el aviso de instalación del navegador para usarlo luego. */

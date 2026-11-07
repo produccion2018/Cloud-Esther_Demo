@@ -44,11 +44,6 @@ type Estado = {
   eventos: EventoEquipo[];
 };
 
-function hoyISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 /** Código de 6 dígitos fijo por integrante (para practicar sin tener que anotarlo). */
 export function codigoInicial(miembroId: string) {
   let h = 0;
@@ -57,32 +52,10 @@ export function codigoInicial(miembroId: string) {
 }
 
 export const storeEquipoPortal = crearStorePorEmpresa<Estado>(
+  // Sin datos de ejemplo: el demo arranca vacío, igual que una clínica real.
   () => ({
-    accesos: {
-      "1": {
-        codigo: codigoInicial("1"),
-        estado: "Activo",
-        ultimoIngreso: new Date(Date.now() - 3 * 3_600_000).toISOString(),
-        ingresos: 18,
-      },
-      "2": {
-        codigo: codigoInicial("2"),
-        estado: "Activo",
-        ultimoIngreso: new Date(Date.now() - 5 * 3_600_000).toISOString(),
-        ingresos: 11,
-      },
-      "4": {
-        codigo: codigoInicial("4"),
-        estado: "Activo",
-        ultimoIngreso: new Date(Date.now() - 2 * 3_600_000).toISOString(),
-        ingresos: 25,
-      },
-    },
-    fichajes: [
-      { id: "f0", miembroId: "2", fecha: hoyISO(), entrada: "08:52" },
-      { id: "f1", miembroId: "4", fecha: hoyISO(), entrada: "07:56" },
-      { id: "f2", miembroId: "1", fecha: hoyISO(), entrada: "07:58" },
-    ],
+    accesos: {},
+    fichajes: [],
     checklist: {},
     eventos: [],
   }),

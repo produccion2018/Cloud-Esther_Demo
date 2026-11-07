@@ -27,7 +27,9 @@ export function claveTenant(base: string): string {
 /* Versión de los datos guardados: subirla cuando cambian los datos de ejemplo o su forma,
    así cada navegador arranca de nuevo con los datos actualizados.
    v5: el demo arranca vacío (se descartan los datos de ejemplo guardados en versiones anteriores). */
-const VERSION_DATOS = "v5";
+// v6: se descartan los datos viejos guardados en el navegador (demos con datos de ejemplo
+// pegados). Al subir la versión, cada demo recarga vacío, igual que una clínica real.
+const VERSION_DATOS = "v6";
 
 type OpcionesStore<T> = {
   /** Si se indica, los datos de cada empresa se guardan en el navegador (localStorage) con

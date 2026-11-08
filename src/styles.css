@@ -1606,30 +1606,37 @@ label {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   flex-shrink: 0;
-  border-radius: 0.875rem;
-  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 12%, var(--color-border));
   background: var(--color-card);
-  color: var(--color-muted-foreground);
-  transition: transform 0.16s, background 0.16s, color 0.16s, border-color 0.16s;
+  color: color-mix(in oklab, var(--color-foreground) 58%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--color-primary) 10%, transparent);
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
   &:hover {
     color: var(--color-primary);
-    background: color-mix(in oklab, var(--color-primary) 8%, var(--color-card));
-    border-color: color-mix(in oklab, var(--color-primary) 30%, var(--color-border));
+    border-color: color-mix(in oklab, var(--color-primary) 32%, transparent);
+    box-shadow: 0 6px 16px -6px color-mix(in oklab, var(--color-primary) 40%, transparent);
+    transform: translateY(-1px);
   }
   &:active {
     transform: scale(0.95);
   }
   &[aria-expanded="true"] {
     color: var(--color-primary);
-    background: color-mix(in oklab, var(--color-primary) 12%, var(--color-card));
-    border-color: color-mix(in oklab, var(--color-primary) 38%, var(--color-border));
+    background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card));
+    border-color: color-mix(in oklab, var(--color-primary) 40%, transparent);
   }
   & svg {
-    width: 1.15rem;
-    height: 1.15rem;
+    width: 1.05rem;
+    height: 1.05rem;
   }
 }
 

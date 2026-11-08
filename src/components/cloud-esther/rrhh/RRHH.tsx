@@ -142,8 +142,18 @@ export function RRHH() {
     preguntar,
   };
 
-  const d = montado ? datosRRHH() : null;
-  const insights = montado ? insightsRRHH() : [];
+  // Si algún dato guardado quedó incompleto, no se rompe la pantalla entera: se muestra vacío.
+  let d: ReturnType<typeof datosRRHH> | null = null;
+  let insights: ReturnType<typeof insightsRRHH> = [];
+  if (montado) {
+    try {
+      d = datosRRHH();
+      insights = insightsRRHH();
+    } catch {
+      d = null;
+      insights = [];
+    }
+  }
   const pendientes = rrhh.solicitudes.filter((s) => s.estado === "Pendiente").length;
   const hoy = diaISO();
   const docsVencidos = rrhh.documentos.filter(
@@ -317,8 +327,12 @@ export function RRHH() {
 
         <div className="mt-5">
           <SeccionBoundary key={seccion}>
-          {!montado || !d ? (
+          {!montado ? (
             <div className="card-grad h-[480px] animate-pulse" />
+          ) : !d ? (
+            <div className="card-grad p-10 text-center text-sm text-muted-foreground">
+              Todavía no hay datos del equipo para mostrar.
+            </div>
           ) : seccion === "resumen" ? (
             <Resumen ctx={ctx} insights={insights} d={d} ausencias={ausencias} />
           ) : seccion === "personas" ? (

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import {
@@ -49,7 +50,6 @@ import {
   Square,
   Clock3,
   Camera,
-  Sparkles,
   RotateCw,
   SunMedium,
   Contrast,
@@ -6822,7 +6822,7 @@ function SimulacionForm({
     <form onSubmit={enviar} className="space-y-2.5">
       <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800">
         <div className="flex items-center gap-2 font-semibold">
-          <Sparkles className="size-4" /> Simulación orientativa
+          <CaraEsther className="size-4" /> Simulación orientativa
         </div>
         <p className="mt-1">
           La simulación es una representación visual de referencia y no constituye una garantía de
@@ -7004,7 +7004,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
             </div>
             {datos.fotografias.length > 0 && (
               <BotonMini
-                icon={Sparkles}
+                icon={CaraEsther}
                 label="Nueva simulación"
                 onClick={() => setSimulacionAbierta(true)}
               />
@@ -7018,7 +7018,7 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
             />
           ) : datos.simulaciones.length === 0 ? (
             <EstadoVacio
-              icon={Sparkles}
+              icon={CaraEsther}
               titulo="Sin simulaciones guardadas"
               texto="Prepará una simulación visual sobre una fotografía del paciente."
             />

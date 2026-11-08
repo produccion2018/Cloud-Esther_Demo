@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -31,7 +32,6 @@ import {
   Send,
   Settings2,
   Smartphone,
-  Sparkles,
   StickyNote,
   Tag,
   Trash2,
@@ -2100,7 +2100,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
             <div className="relative flex items-center justify-between gap-2">
               <p className="flex items-center gap-2.5 text-sm font-bold">
                 <span className="grid size-9 place-items-center rounded-xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
-                  <Sparkles className="size-4" />
+                  <CaraEsther className="size-4" />
                 </span>
                 Envío automático
               </p>
@@ -3511,7 +3511,7 @@ function Canales({ ctx }: { ctx: Ctx }) {
         <div className="card-grad space-y-3 p-4">
           <p className="flex items-center justify-between gap-2 text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" /> Respuesta automática fuera de horario
+              <CaraEsther className="size-4 text-primary" /> Respuesta automática fuera de horario
             </span>
             <Interruptor
               activo={config.autoRespuesta.activa}

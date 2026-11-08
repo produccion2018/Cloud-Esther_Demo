@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Mail, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
+import { Building2, Mail, ShieldCheck, UserRound } from "lucide-react";
 
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { MiCuentaClinica } from "@/components/clinica/mi-cuenta";
@@ -37,7 +38,7 @@ function MiCuenta() {
             ? [
                 { l: "Tu rol", v: u.rolNombre, s: "lo define el Administrador", i: ShieldCheck },
                 { l: "Clínica", v: real.sesion.clinica.nombre, s: "donde trabajás", i: Building2 },
-                { l: "Plan", v: PLANS[plan].name, s: "contratado por la clínica", i: Sparkles },
+                { l: "Plan", v: PLANS[plan].name, s: "contratado por la clínica", i: CaraEsther },
                 { l: "Correo", v: u.email, s: "con el que ingresás", i: Mail },
               ]
             : []

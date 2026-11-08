@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, ChevronRight, LifeBuoy, Search, Sparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronRight, LifeBuoy, Search, X } from "lucide-react";
 
 import { AvatarEsther } from "./AvatarEsther";
 import { POS_FLOTANTE, POS_FLOTANTE_CHAT, useHayComposer } from "@/lib/cloud-esther/composer-visible";
@@ -272,7 +273,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
                         resultados.map((p) => (
                           <li key={p.p}>
                             <button type="button" onClick={() => setElegida(p)} className="flex w-full items-center gap-2 rounded-xl border border-primary/10 bg-card px-3 py-2.5 text-left text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/[0.04]">
-                              <Sparkles className="size-4 shrink-0 text-primary" />
+                              <CaraEsther className="size-4 shrink-0 text-primary" />
                               <span className="flex-1">{p.p}</span>
                               <ChevronRight className="size-4 text-muted-foreground" />
                             </button>

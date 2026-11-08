@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Award,
   BookOpen,
@@ -6,7 +7,6 @@ import {
   GraduationCap,
   Pencil,
   Plus,
-  Sparkles,
   Star,
   Target,
   Trash2,
@@ -710,7 +710,7 @@ function EvaluacionForm({
           ctx.onToast("Esther redactó un borrador: revisalo antes de cerrar");
         }}
       >
-        <Sparkles className="size-4" />
+        <CaraEsther className="size-4" />
         Redactar con Esther
       </button>
       {(

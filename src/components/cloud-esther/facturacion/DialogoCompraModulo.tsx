@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Loader2, ShieldCheck, Sparkles, X } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
+import { Check, Loader2, ShieldCheck, X } from "lucide-react";
 
 import { ModuleIcon } from "@/lib/cloud-esther/data";
 
@@ -73,7 +74,7 @@ export function DialogoCompraModulo({
 
         <div className="relative mt-4 space-y-2 rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/[0.05] to-fuchsia-500/[0.04] p-3 text-left">
           <p className="flex items-start gap-2 text-[12.5px]">
-            <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+            <CaraEsther className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
               {planContratado
                 ? "Se activa al instante y el cargo se suma a tu próxima factura de Cloud Esther."

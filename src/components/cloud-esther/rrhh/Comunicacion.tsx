@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Cake,
   Eye,
@@ -7,7 +8,6 @@ import {
   Pin,
   PinOff,
   Send,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
@@ -383,7 +383,7 @@ function ComunicadoForm({
             setTexto(redactarComunicado(t.trim(), ctx.usuario));
           }}
         >
-          <Sparkles className="size-4" />
+          <CaraEsther className="size-4" />
           Redactar con Esther
         </button>
         <label className="flex items-center gap-2 text-sm">

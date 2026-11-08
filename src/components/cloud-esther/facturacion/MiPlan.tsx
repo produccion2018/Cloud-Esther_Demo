@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent } from "react";
 import {
   BadgeCheck,
@@ -11,7 +12,6 @@ import {
   Lock,
   Receipt,
   ShieldCheck,
-  Sparkles,
   Wallet,
 } from "lucide-react";
 import { PlanCard } from "@/components/site/PlanCards";
@@ -170,7 +170,7 @@ export function MiPlan({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="size-3" /> Demo: el plan se cambia desde el menú
+                    <CaraEsther className="size-3" /> Demo: el plan se cambia desde el menú
                   </>
                 )}
               </span>

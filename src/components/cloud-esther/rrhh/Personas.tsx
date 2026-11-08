@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Briefcase,
   Building2,
@@ -15,7 +16,6 @@ import {
   Plus,
   RotateCcw,
   Search,
-  Sparkles,
   Star,
   Upload,
   UserMinus,
@@ -1024,7 +1024,7 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
           className={BTN_SECUNDARIO}
           onClick={() => ctx.preguntar(`¿Cómo está ${m.firstName}?`)}
         >
-          <Sparkles className="size-4" />
+          <CaraEsther className="size-4" />
           Preguntar a Esther
         </button>
         {l.baja || m.status === "inactivo" ? (

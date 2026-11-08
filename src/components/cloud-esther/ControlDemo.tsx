@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle2,
@@ -7,7 +8,6 @@ import {
   Hourglass,
   LogIn,
   MessageSquare,
-  Sparkles,
   TimerOff,
   UserPlus,
 } from "lucide-react";
@@ -186,7 +186,7 @@ export function ControlSesionDemo() {
                   onClick={() => registrarSolicitudDemo("Contratación")}
                   className="btn-ce-outline !h-10"
                 >
-                  <Sparkles className="size-4" />
+                  <CaraEsther className="size-4" />
                   Ver planes y contratar
                 </Link>
                 {sinCuenta ? (
@@ -303,7 +303,7 @@ function DemoVencidoServidor() {
                 onClick={() => registrarSolicitudDemo("Contratación")}
                 className="btn-ce-outline !h-10"
               >
-                <Sparkles className="size-4" />
+                <CaraEsther className="size-4" />
                 Ver planes y contratar
               </Link>
               <PedirInformacion />
@@ -328,7 +328,7 @@ function RegistroRequerido() {
         <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-pink-400/70" />
         <div className="p-7">
           <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <Sparkles className="size-6" />
+            <CaraEsther className="size-6" />
           </span>
           <h2 id="demo-registro" className="mt-4 text-xl font-bold tracking-tight">
             Probá Cloud Esther gratis
@@ -427,7 +427,7 @@ function LimiteIngresosServidor() {
                 onClick={() => registrarSolicitudDemo("Contratación")}
                 className="btn-ce-outline !h-10"
               >
-                <Sparkles className="size-4" />
+                <CaraEsther className="size-4" />
                 Ver planes y contratar
               </Link>
               <PedirInformacion />

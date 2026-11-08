@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
@@ -15,7 +16,6 @@ import {
   Receipt,
   ReceiptText,
   ScanLine,
-  Sparkles,
   UserCog,
   CalendarDays,
   CalendarPlus,
@@ -1064,7 +1064,7 @@ function AppEquipo({
               ),
               ...item("mensajes", "Mensajes", MessageCircle, puede("mensajes")),
               ...item("reportes", "Reportes", BarChart3, puede("reportes")),
-              ...item("ia", "Esther Infinity", Sparkles, puede("ia") && conIA),
+              ...item("ia", "Esther Infinity", CaraEsther, puede("ia") && conIA),
             ],
           },
           { titulo: "Mi cuenta", items: item("perfil", "Perfil y configuración", UserRound) },
@@ -1525,7 +1525,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
       { s: "odontograma", l: "Odontograma 3D", i: Box, g: "from-emerald-500 to-teal-500" },
       { s: "recetas", l: "Recetas", i: PillIcon, g: "from-amber-500 to-orange-500" },
       { s: "mensajes", l: "Mensajes", i: MessageCircle, g: "from-rose-500 to-pink-500" },
-      { s: "ia", l: "Esther Infinity", i: Sparkles, g: "from-violet-500 to-purple-600" },
+      { s: "ia", l: "Esther Infinity", i: CaraEsther, g: "from-violet-500 to-purple-600" },
     ] as const
   ).filter((a) => ctx.puedeIr(a.s));
 
@@ -1746,7 +1746,7 @@ function Hoy({ ctx, avisos }: { ctx: Ctx; avisos: number }) {
               />
               <span className="relative min-w-0">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]">
-                  <Sparkles className="size-3" /> Esther Infinity
+                  <CaraEsther className="size-3" /> Esther Infinity
                 </span>
                 <span className="mt-1.5 block font-display text-base font-bold leading-tight">
                   Tu asistente clínica

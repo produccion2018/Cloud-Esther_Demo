@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
-  Sparkles,
   Send,
   Mic,
   Stethoscope,
@@ -63,7 +63,7 @@ export function EstherAIChat({ onToast }: Props) {
     <div className={CARD}>
       <div className="flex items-center gap-2">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-          <Sparkles className="size-4" />
+          <CaraEsther className="size-4" />
         </span>
 
         <div>

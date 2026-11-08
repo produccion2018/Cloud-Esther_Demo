@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -28,7 +29,6 @@ import {
   Send,
   ShoppingCart,
   SlidersHorizontal,
-  Sparkles,
   Star,
   Trash2,
   TrendingDown,
@@ -1369,7 +1369,7 @@ function InsumoForm({
               className={BTN_ICONO}
               onClick={generarCodigo}
             >
-              <Sparkles className="size-3.5" />
+              <CaraEsther className="size-3.5" />
             </button>
           </div>
         </Field>
@@ -1765,7 +1765,7 @@ function OrdenForm({
       </div>
       {sugeridos.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200">
-          <Sparkles className="size-3.5" />
+          <CaraEsther className="size-3.5" />
           {sugeridos.length} insumos de este proveedor están bajo mínimo.
           <button
             type="button"
@@ -2199,7 +2199,7 @@ function Alertas({ ctx }: { ctx: Ctx }) {
               ctx.ir("ordenes");
             }}
           >
-            <Sparkles className="size-4" />
+            <CaraEsther className="size-4" />
             Generar órdenes sugeridas
           </button>
         )}

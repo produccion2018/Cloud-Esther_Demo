@@ -1,4 +1,5 @@
 import { capitalizarNombre } from "@/lib/utils";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
 import {
@@ -17,8 +18,7 @@ import {
   Clock, DollarSign, Bell, TriangleAlert, FileText, FileSpreadsheet, Printer, Share2,
   CalendarCheck, UserSearch, ReceiptText, BellRing,
   Calendar, MessageSquare, Settings, ChevronDown, Search, Command, UserPlus, CalendarPlus, X, ImagePlus, Users, UserRound, Stethoscope, ShieldCheck, ExternalLink,
-  BarChart3, ChevronRight, Sparkles,
-} from "lucide-react";
+  BarChart3, ChevronRight, } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
 import { CloudEstherProvider, useCloudEsther } from "@/lib/cloud-esther/data";
 import { contarPacientesActivos, leerPacientes, usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -732,7 +732,7 @@ function TopBanner({
                                 sistema ? "bg-gradient-to-br from-amber-400 to-rose-500" : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
                               }`}
                             >
-                              {sistema ? <Sparkles className="size-3.5" /> : ini || "•"}
+                              {sistema ? <CaraEsther className="size-3.5" /> : ini || "•"}
                             </span>
                             <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
                               <span className="font-medium text-foreground">{n.quien}</span>{" "}

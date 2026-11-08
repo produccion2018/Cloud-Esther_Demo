@@ -1,4 +1,5 @@
-import { Briefcase, Crown, HeartPulse, Loader2, Pencil, Plus, ShieldCheck, Sparkles, Trash2, Users } from "lucide-react";
+import { Briefcase, Crown, HeartPulse, Loader2, Pencil, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -127,7 +128,7 @@ export function RolesPropiosPanel({
           onClick={() => setEditando("nuevo")}
           className="relative mt-5 flex w-full flex-col items-center gap-2 rounded-3xl border-2 border-dashed border-primary/20 px-6 py-8 text-center transition hover:border-primary/40 hover:bg-primary/[0.03]"
         >
-          <Sparkles className="size-6 text-primary" />
+          <CaraEsther className="size-6 text-primary" />
           <span className="text-sm font-semibold">Creá tu primer rol</span>
           <span className="text-xs text-muted-foreground">Por ejemplo «Facturación» o «Recursos humanos»</span>
         </button>

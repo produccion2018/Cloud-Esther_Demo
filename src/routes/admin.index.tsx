@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   AlertTriangle,
   ArrowRight,
@@ -7,7 +8,6 @@ import {
   Flame,
   LifeBuoy,
   MonitorPlay,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -233,7 +233,7 @@ function AdminDashboard() {
                   ? `${iaMes >= iaAnterior ? "+" : ""}${Math.round(((iaMes - iaAnterior) / iaAnterior) * 100)}% vs. mes anterior`
                   : ""
               }
-              icon={<Sparkles className="h-4 w-4" />}
+              icon={<CaraEsther className="h-4 w-4" />}
             />
           </div>
 

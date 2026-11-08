@@ -1,4 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Bell,
   Briefcase,
@@ -23,7 +24,6 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   Sun,
   Users,
@@ -71,7 +71,7 @@ const nav: NavGrupo[] = [
     items: [
       { to: "/admin/pagos", label: "Pagos y cobranza", icon: CreditCard },
       { to: "/admin/gastos", label: "Gastos y proveedores", icon: Receipt },
-      { to: "/admin/ia", label: "Consumo de IA", icon: Sparkles },
+      { to: "/admin/ia", label: "Consumo de IA", icon: CaraEsther },
     ],
   },
   {

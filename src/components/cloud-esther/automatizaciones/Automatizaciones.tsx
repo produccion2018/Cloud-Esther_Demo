@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   ArrowDown,
   ArrowUp,
@@ -22,7 +23,6 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   Timer,
   Trash2,
   Webhook,
@@ -81,7 +81,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
 type Seccion = "catalogo" | "flujos" | "plantillas" | "ejecuciones" | "conexion";
 
 const ICONO: Record<TipoPaso, LucideIcon> = {
-  ia: Sparkles,
+  ia: CaraEsther,
   esperar: Clock3,
   condicion: GitBranch,
   whatsapp: MessageCircle,
@@ -655,7 +655,7 @@ function Flujos({
           <ul className="mt-2 space-y-2">
             {(
               [
-                ["Esther Infinity", Sparkles, "Analiza, prioriza y redacta"],
+                ["Esther Infinity", CaraEsther, "Analiza, prioriza y redacta"],
                 ["Automatización", Workflow, "Esperas, condiciones y canales externos"],
                 ["Cloud Esther", RefreshCw, "Tareas, avisos y registros internos"],
               ] as const

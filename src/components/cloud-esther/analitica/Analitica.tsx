@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowDownRight,
@@ -16,7 +17,6 @@ import {
   Megaphone,
   Minus,
   Settings2,
-  Sparkles,
   Stethoscope,
   Target,
   UserMinus,
@@ -227,7 +227,7 @@ export function Analitica() {
                     Administración
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-700">
-                    <Sparkles className="size-3.5" />
+                    <CaraEsther className="size-3.5" />
                     Datos de Agenda, Pacientes, Presupuestos, Facturación y Marketing
                   </span>
                 </div>

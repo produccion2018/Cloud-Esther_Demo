@@ -1,4 +1,5 @@
-import { Lock, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useMemo, useState } from "react";
 
 import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
@@ -174,7 +175,7 @@ export function UsoIAEquipo() {
                 <td className="px-3 py-3 text-sm font-semibold">{c.persona}</td>
                 <td className="px-3 py-3 text-xs">
                   <span className="inline-flex items-center gap-1">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" /> {c.herramienta}
+                    <CaraEsther className="h-3.5 w-3.5 text-primary" /> {c.herramienta}
                   </span>
                 </td>
                 <td className="max-w-[260px] px-3 py-3 text-xs">

@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Sparkles, Stethoscope, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMarca } from "@/lib/cloud-esther/marca";
 import {
@@ -536,7 +537,7 @@ function SelectorPlan({
             TONO_PLAN[plan],
           )}
         >
-          <Sparkles className="size-3.5" />
+          <CaraEsther className="size-3.5" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block whitespace-nowrap text-[9.5px] font-semibold uppercase leading-none tracking-[0.12em] text-sidebar-foreground/45">

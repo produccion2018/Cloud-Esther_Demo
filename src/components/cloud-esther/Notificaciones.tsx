@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -26,7 +27,6 @@ import {
   Plus,
   Search,
   Settings2,
-  Sparkles,
   Trash2,
   UserRound,
   Users,
@@ -891,7 +891,7 @@ function Bandeja({
 
         {grupos.length === 0 ? (
           <Vacio
-            icon={filtroEstado === "completadas" ? CheckCheck : Sparkles}
+            icon={filtroEstado === "completadas" ? CheckCheck : CaraEsther}
             titulo={
               filtroEstado === "completadas" ? "Todavía no completaste avisos" : "¡Todo al día!"
             }
@@ -972,7 +972,7 @@ function Bandeja({
 
         <div className="card-grad p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="size-4 text-primary" /> Aviso rápido
+            <CaraEsther className="size-4 text-primary" /> Aviso rápido
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">Un clic y queda creado para hoy.</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1085,7 +1085,7 @@ function TarjetaNotif({
           <Pill clase={PRIORIDAD_ESTILO[n.prioridad].chip}>{n.prioridad}</Pill>
           {n.origen === "auto" && (
             <Pill clase="bg-gradient-to-r from-primary/10 to-fuchsia-100 text-primary">
-              <Sparkles className="size-3" />
+              <CaraEsther className="size-3" />
               Automática
             </Pill>
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlarmClock,
@@ -24,7 +25,6 @@ import {
   ReceiptText,
   Search,
   Send,
-  Sparkles,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -2468,7 +2468,7 @@ function Financiacion({ ctx }: { ctx: Ctx }) {
         </ul>
         <div className="card-grad p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="size-4 text-primary" /> Simulador para el paciente
+            <CaraEsther className="size-4 text-primary" /> Simulador para el paciente
           </p>
           <Field label="Monto del tratamiento">
             <input

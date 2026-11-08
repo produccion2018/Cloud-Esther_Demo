@@ -12,6 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Conservar los nombres reales de funciones/componentes en el build minificado, para que los
+  // errores en producción muestren el nombre real (ej. "responderRRHH") y no uno minificado ("l").
+  vite: { esbuild: { keepNames: true } },
   // En Vercel (variable VERCEL=1 en sus builds) se compila con el preset de Vercel: genera
   // .vercel/output con las páginas, los archivos estáticos y la función del servidor.
   ...(process.env["VERCEL"] ? { nitro: { preset: "vercel" } } : {}),

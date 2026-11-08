@@ -1606,30 +1606,26 @@ label {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
-  border-radius: 1rem;
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(var(--color-card), var(--color-card)) padding-box,
-    linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
-  color: var(--color-primary);
-  box-shadow: 0 10px 24px -16px rgba(124, 58, 237, 0.9);
-  transition: transform 0.18s, box-shadow 0.18s, color 0.18s, background 0.18s;
+  border-radius: 0.875rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
+  transition: transform 0.16s, background 0.16s, color 0.16s, border-color 0.16s;
   &:hover {
-    transform: translateY(-2px);
-    color: #fff;
-    background:
-      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
-      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
-    box-shadow: 0 16px 30px -14px rgba(124, 58, 237, 0.95);
+    color: var(--color-primary);
+    background: color-mix(in oklab, var(--color-primary) 8%, var(--color-card));
+    border-color: color-mix(in oklab, var(--color-primary) 30%, var(--color-border));
+  }
+  &:active {
+    transform: scale(0.95);
   }
   &[aria-expanded="true"] {
-    color: #fff;
-    background:
-      linear-gradient(135deg, #7c3aed, #c026d3) padding-box,
-      linear-gradient(135deg, #8b5cf6, #d946ef 55%, #ec4899) border-box;
+    color: var(--color-primary);
+    background: color-mix(in oklab, var(--color-primary) 12%, var(--color-card));
+    border-color: color-mix(in oklab, var(--color-primary) 38%, var(--color-border));
   }
   & svg {
     width: 1.15rem;

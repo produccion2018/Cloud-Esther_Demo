@@ -52,6 +52,12 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+        {(error?.message || error?.stack) && (
+          <p className="mx-auto mt-4 max-w-md break-words rounded-lg bg-muted/60 px-3 py-2 text-left font-mono text-[11px] leading-snug text-muted-foreground">
+            Detalle: {error?.message || "error"}
+            {error?.stack ? ` · ${error.stack.split("\n").slice(1, 3).join(" ").trim()}` : ""}
+          </p>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

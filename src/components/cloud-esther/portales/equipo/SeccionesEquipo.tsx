@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   BarChart3,
   Bot,
@@ -10,7 +11,6 @@ import {
   MessageCircle,
   Send,
   ShieldAlert,
-  Sparkles,
   Stethoscope,
   UserRound,
   Users,
@@ -867,7 +867,7 @@ export function IAPortal({
           />
           <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.16em] ring-1 ring-white/25">
-              <Sparkles className="size-3.5" /> Esther Infinity · asistente clínica
+              <CaraEsther className="size-3.5" /> Esther Infinity · asistente clínica
             </span>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
               Hola, {yo.firstName}. ¿En qué te ayudo hoy?

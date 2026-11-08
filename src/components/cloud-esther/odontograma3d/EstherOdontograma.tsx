@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   ClipboardList,
   FileText,
@@ -11,7 +12,6 @@ import {
   Search,
   Send,
   Smile,
-  Sparkles,
   Stethoscope,
   BarChart3,
   Check,
@@ -264,7 +264,7 @@ export function EstherOdontograma({
   const FUNCIONES: {
     id: string;
     label: string;
-    icon: typeof Sparkles;
+    icon: typeof CaraEsther;
     accion: () => void;
     requierePieza?: boolean;
   }[] = [
@@ -326,7 +326,7 @@ export function EstherOdontograma({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="size-5" />
+              <CaraEsther className="size-5" />
             </span>
             <div>
               <p className="text-sm font-bold">Esther Infinity en el odontograma</p>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
 import {
   CheckCircle2,
@@ -25,7 +26,6 @@ import {
   Plus,
   Search,
   Send,
-  Sparkles,
   Star,
   Target,
   Trash2,
@@ -804,7 +804,7 @@ function Resumen({ ctx }: { ctx: Ctx }) {
         </div>
         <div className="rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-4 text-white shadow-lg">
           <p className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="size-4" /> Sugerencia
+            <CaraEsther className="size-4" /> Sugerencia
           </p>
           <p className="mt-1 text-xs text-white/85">
             {porFuente[0]
@@ -2129,7 +2129,7 @@ function PromoForm({
                 )
               }
             >
-              <Sparkles className="size-3.5" />
+              <CaraEsther className="size-3.5" />
             </button>
           </div>
         </Field>

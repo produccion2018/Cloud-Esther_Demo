@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Activity,
   Camera,
@@ -11,7 +12,6 @@ import {
   Plus,
   ScanSearch,
   Smile,
-  Sparkles,
   Stethoscope,
   Trash2,
   Upload,
@@ -153,7 +153,7 @@ export function FichaPieza(props: Props) {
         <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-primary/20" />
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <Sparkles className="size-6" />
+            <CaraEsther className="size-6" />
           </span>
           <div>
             <p className="text-base font-bold text-foreground">Ficha clínica por pieza</p>
@@ -824,7 +824,7 @@ function SeccionTratamientos({
       <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-card to-card p-3">
         <Titulo>
           <span className="inline-flex items-center gap-1.5">
-            <Sparkles className="size-3.5 text-primary" />
+            <CaraEsther className="size-3.5 text-primary" />
             Simulación orientativa
           </span>
         </Titulo>

@@ -1,4 +1,5 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,7 +14,6 @@ import {
   Palmtree,
   Receipt,
   Send,
-  Sparkles,
   UserCheck,
   UserPlus,
   Users,
@@ -210,7 +210,7 @@ export function RRHH() {
                     Personas
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200/70 bg-fuchsia-50/80 px-3 py-1.5 text-[11px] font-bold text-fuchsia-700">
-                    <Sparkles className="size-3.5" />
+                    <CaraEsther className="size-3.5" />
                     Con Esther Infinity
                   </span>
                   {montado && pendientes > 0 && (
@@ -551,7 +551,7 @@ function Resumen({
         <div className="card-grad p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="size-4 text-fuchsia-500" /> Esther detectó
+              <CaraEsther className="size-4 text-fuchsia-500" /> Esther detectó
             </p>
             <span className="text-[11px] text-muted-foreground">{insights.length} temas</span>
           </div>

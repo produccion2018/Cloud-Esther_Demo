@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   AlertTriangle,
   Brush,
@@ -18,7 +19,6 @@ import {
   Save,
   ShieldCheck,
   Smile,
-  Sparkles,
   SplitSquareHorizontal,
   Trash2,
   Wand2,
@@ -56,7 +56,7 @@ import {
 type Estado = "vacio" | "lista" | "procesando" | "resultado" | "error";
 
 const ICONO: Record<TratamientoEstetico, LucideIcon> = {
-  blanqueamiento: Sparkles,
+  blanqueamiento: CaraEsther,
   carillas: Smile,
   diseno: Wand2,
   alineacion: Columns2,
@@ -851,7 +851,7 @@ export function SimuladorSonrisa({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="size-4" /> Generar simulación
+                    <CaraEsther className="size-4" /> Generar simulación
                   </>
                 )}
               </button>

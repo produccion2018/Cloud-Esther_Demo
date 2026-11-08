@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { useEffect, useState } from "react";
 import {
@@ -6,7 +7,6 @@ import {
   Palette,
   ShieldCheck,
   Bell,
-  Sparkles,
   Moon,
   Type,
   Users,
@@ -465,7 +465,7 @@ function GeneralTab({
 
       <div className={`${CARD} p-5`}>
         <SectionHeader
-          icon={Sparkles}
+          icon={CaraEsther}
           title="Preferencias generales"
           description="Configurá el comportamiento de la plataforma."
         />
@@ -481,7 +481,7 @@ function GeneralTab({
 
           {conIA && (
             <FilaSwitch
-              icon={Sparkles}
+              icon={CaraEsther}
               titulo="Esther Infinity"
               descripcion="Asistente inteligente disponible en la plataforma."
               checked={settings.aiEnabled}

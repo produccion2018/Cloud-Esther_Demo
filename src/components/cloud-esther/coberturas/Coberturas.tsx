@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Building2,
   CalendarDays,
@@ -8,7 +9,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  Sparkles,
   Trash2,
   Upload,
   Wand2,
@@ -245,7 +245,7 @@ function ListaCoberturas({ editable, pais, onToast }: { editable: boolean; pais:
         <aside className="space-y-3">
           <section className="rounded-3xl border border-primary/12 bg-card p-4 shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)]">
             <p className="flex items-center gap-2 font-display text-sm font-bold">
-              <Sparkles className="size-4 text-primary" /> Sumar las de un país
+              <CaraEsther className="size-4 text-primary" /> Sumar las de un país
             </p>
             <select value={paisSug} onChange={(e) => setPaisSug(e.target.value)} className={`${INPUT} mt-3`}>
               {PAISES_SOPORTADOS.map((p) => (

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Sparkles, TrendingUp, Trophy } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
+import { Building2, TrendingUp, Trophy } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -61,7 +62,7 @@ function AiPage() {
                   ? `${mes >= anterior ? "+" : ""}${Math.round(((mes - anterior) / anterior) * 100)}% vs. mes anterior`
                   : ""
               }
-              icon={<Sparkles className="h-4 w-4" />}
+              icon={<CaraEsther className="h-4 w-4" />}
             />
             <KpiCard
               label="Clínicas que usan IA"

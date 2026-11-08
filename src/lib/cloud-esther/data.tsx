@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { registrarPlanDemo } from "@/lib/cloud-esther/demo-seguimiento";
 import { claveTenant, TENANT_DEMO, useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { modulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
@@ -16,7 +17,6 @@ import {
   Shield,
   Settings,
   Workflow,
-  Sparkles,
   Stethoscope,
   Pill,
   ScanLine,
@@ -469,7 +469,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   shield: Shield,
   settings: Settings,
   workflow: Workflow,
-  sparkles: Sparkles,
+  sparkles: CaraEsther,
   stethoscope: Stethoscope,
   pill: Pill,
   odontograma: ScanLine,

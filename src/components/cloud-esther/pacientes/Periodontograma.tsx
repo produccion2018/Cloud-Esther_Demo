@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus, Sparkles } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
+import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus } from "lucide-react";
 
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
@@ -434,7 +435,7 @@ export function PeriodontogramaSec({
       </div>
 
       <p className="flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
-        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
+        <CaraEsther className="mt-0.5 size-3.5 shrink-0 text-primary" />
         {con3D ? "La boca 3D" : "El esquema"} pinta cada pieza según su estado periodontal. Elegí una pieza para cargar sus sitios (distal · medio · mesial por cara), sangrado, placa, movilidad y furca. NIC = PS − MG; MG negativo = recesión.
       </p>
     </div>

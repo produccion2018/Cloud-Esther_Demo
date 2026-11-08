@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -11,7 +12,6 @@ import {
   Palette,
   ReceiptText,
   Rocket,
-  Sparkles,
   Stethoscope,
   Users,
   X,
@@ -220,7 +220,7 @@ export function PrimerosPasos() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setAbierto(true)} className="btn-ce !min-h-11">
-              <Sparkles className="size-4" /> {siguiente ? "Seguir configurando" : "Ver la guía"}
+              <CaraEsther className="size-4" /> {siguiente ? "Seguir configurando" : "Ver la guía"}
             </button>
             <button
               type="button"
@@ -384,7 +384,7 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
                         </>
                       ) : (
                         <>
-                          <Sparkles className="size-4 text-primary" /> Falta completarlo
+                          <CaraEsther className="size-4 text-primary" /> Falta completarlo
                         </>
                       )}
                     </p>

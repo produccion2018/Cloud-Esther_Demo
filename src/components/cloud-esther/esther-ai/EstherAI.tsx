@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -9,7 +10,6 @@ import {
   Mic,
   MicOff,
   ShieldCheck,
-  Sparkles,
   Sun,
   Volume2,
   VolumeX,
@@ -193,7 +193,7 @@ export function EstherAI({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                    <Sparkles className="size-3.5" />
+                    <CaraEsther className="size-3.5" />
                     Plan {PLANS[plan].name}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700">
@@ -229,7 +229,7 @@ export function EstherAI({
               >
                 {(
                   [
-                    ["asistente", "Asistente", Sparkles],
+                    ["asistente", "Asistente", CaraEsther],
                     ["contact", "Contact Center", Headset],
                   ] as const
                 ).map(([id, l, I]) => (
@@ -446,7 +446,7 @@ export function EstherAI({
               {hallazgos.length > 0 && (
                 <div className="card-grad p-4">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                    <Sparkles className="size-3.5 text-primary" /> Esther detectó
+                    <CaraEsther className="size-3.5 text-primary" /> Esther detectó
                   </p>
                   <ul className="mt-2.5 space-y-2">
                     {hallazgos.map((h) => (

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { AnimatePresence, motion } from "framer-motion";
-import { MailCheck, ArrowRight, Sparkles, Loader2, Eye, EyeOff } from "lucide-react";
+import { MailCheck, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -399,7 +400,7 @@ function Registro() {
                 >
                   <div className="flex items-center gap-2 border-b border-border pb-3">
                     <span className="bg-brand flex size-8 items-center justify-center rounded-lg">
-                      <Sparkles className="size-4 text-primary-foreground" />
+                      <CaraEsther className="size-4 text-primary-foreground" />
                     </span>
                     <div className="leading-tight">
                       <p className="text-xs font-semibold">Cloud Esther</p>

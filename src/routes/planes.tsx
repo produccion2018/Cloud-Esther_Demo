@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   AnimatePresence,
   MotionConfig,
@@ -8,7 +9,6 @@ import {
 import { useEffect, useState } from "react";
 import {
   Check,
-  Sparkles,
   Plus,
   ArrowRight,
   ChevronLeft,
@@ -1300,7 +1300,7 @@ function Planes() {
           className="relative mb-8 text-center"
         >
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/10 bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <Sparkles className="size-3.5 text-primary" />
+            <CaraEsther className="size-3.5 text-primary" />
             Elegí cómo querés crecer
           </div>
         </motion.div>

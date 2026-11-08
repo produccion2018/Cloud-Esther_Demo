@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   CalendarDays,
   Users,
   Stethoscope,
@@ -63,7 +63,7 @@ export function EstherInfinityShowcase() {
   }, [n]);
 
   const h = panel.hallazgos[i] ?? panel.hallazgos[0];
-  const HIcon = h ? ICONO[h.tipo] : Sparkles;
+  const HIcon = h ? ICONO[h.tipo] : CaraEsther;
 
   return (
     <motion.div
@@ -83,7 +83,7 @@ export function EstherInfinityShowcase() {
       <div className="relative flex items-center justify-between gap-3 px-5 pt-5">
         <div className="flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 text-white shadow-[0_8px_20px_-8px_rgba(124,58,237,0.8)]">
-            <Sparkles className="size-4" />
+            <CaraEsther className="size-4" />
           </span>
           <div className="leading-tight">
             <p className="font-display text-sm font-bold">Esther Infinity</p>
@@ -158,7 +158,7 @@ export function EstherInfinityShowcase() {
             animate={{ scale: [1, 1.06, 1] }}
             transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Sparkles className="size-8" />
+            <CaraEsther className="size-8" />
             <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
               <motion.span className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/40 to-transparent" animate={{ x: ["-120%", "240%"] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />
             </span>

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useState } from "react";
 import {
   Check,
@@ -11,8 +12,7 @@ import {
   Crown,
   Settings,
   SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
+  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { plans, type Plan } from "@/lib/site-data";
 import type { PlanId } from "@/lib/cloud-esther/data";
@@ -220,7 +220,7 @@ export function PlanCard({
 
         {extras.ia && (
           <span className="flex items-center gap-2 text-[11px] font-medium leading-5 text-foreground/80">
-            <Sparkles className="size-3.5 shrink-0 text-primary" />
+            <CaraEsther className="size-3.5 shrink-0 text-primary" />
             Inteligencia artificial
           </span>
         )}

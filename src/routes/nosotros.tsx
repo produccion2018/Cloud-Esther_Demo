@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AnimatePresence,
@@ -20,7 +21,6 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpRight,
-  Sparkles,
   Rocket,
   MapPin,
 } from "lucide-react";
@@ -86,7 +86,7 @@ const ORIGEN: Item[] = [
     text: "Desarrollamos una plataforma modular: pacientes, agenda, odontograma, tratamientos, facturación y reportes, en un solo lugar y en la nube.",
   },
   {
-    icon: Sparkles,
+    icon: CaraEsther,
     title: "Esther Infinity",
     text: "Sumamos inteligencia artificial que asiste al profesional: resúmenes clínicos, sugerencias de agenda y lectura del rendimiento de la clínica.",
   },
@@ -532,7 +532,7 @@ function MisionVision() {
               className="absolute size-14 rounded-full border border-violet-400"
             />
             <span className="grid size-14 place-items-center rounded-full border border-dashed border-violet-300 bg-white/90 shadow-[0_10px_30px_rgba(124,58,237,.25)]">
-              <Sparkles className="size-5 text-violet-600" />
+              <CaraEsther className="size-5 text-violet-600" />
             </span>
           </div>
         </div>

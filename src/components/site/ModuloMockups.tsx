@@ -1,6 +1,7 @@
 import type { ReactNode, ReactElement } from "react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { motion } from "framer-motion";
-import { Check, Bell, ShieldCheck, Sparkles, Building2 } from "lucide-react";
+import { Check, Bell, ShieldCheck, Building2 } from "lucide-react";
 
 /* Ubicación: src/components/site/ModuloMockups.tsx
    Mini-maquetas animadas (animación infinita) para el panel de características: cada módulo
@@ -322,7 +323,7 @@ function IA() {
           animate={{ scale: [1, 1.08, 1] }}
           transition={{ duration: 2.6, ...REPEAT }}
         >
-          <Sparkles className="size-6" />
+          <CaraEsther className="size-6" />
         </motion.span>
       </div>
     </Marco>

@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   ArrowUpRight,
   CalendarClock,
   ClipboardList,
-  Sparkles,
   TrendingUp,
   UserX,
   type LucideIcon,
@@ -47,7 +47,7 @@ export function PanelEstherIA() {
       <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-gradient-to-r from-lavender/70 via-card to-card px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-brand text-primary-foreground shadow-[0_8px_20px_-8px_rgba(124,58,237,0.7)]">
-            <Sparkles className="size-4" />
+            <CaraEsther className="size-4" />
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{panel.titulo}</p>

@@ -1,4 +1,5 @@
-import { Building2, CheckCircle2, Clock, Loader2, MessageCircle, PhoneCall, ShieldCheck, Sparkles, User } from "lucide-react";
+import { Building2, CheckCircle2, Clock, Loader2, MessageCircle, PhoneCall, ShieldCheck, User } from "lucide-react";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useState, type FormEvent } from "react";
 
 import { TelefonoPais } from "@/components/site/TelefonoPais";
@@ -112,7 +113,7 @@ export function TeLlamamos() {
             <span aria-hidden className="pointer-events-none absolute -bottom-20 -left-10 size-40 rounded-full bg-fuchsia-300/30 blur-2xl" />
             <DialogHeader className="relative space-y-2 text-left">
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ring-1 ring-white/25">
-                <Sparkles className="size-3" /> Asesoría sin costo
+                <CaraEsther className="size-3" /> Asesoría sin costo
               </span>
               <DialogTitle className="flex items-center gap-3 text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-white">
                 <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-primary shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)]">

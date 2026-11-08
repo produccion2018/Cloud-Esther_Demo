@@ -61,9 +61,10 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   // Texto que Esther lee en voz alta: el saludo + lo de la clínica.
   const textoVoz = useMemo(() => {
     const saludo = `${saludoHora()}${primerNombre ? `, ${primerNombre}` : ""}.`;
-    const items = hallazgos.map((h) => h.texto).join(". ");
-    return items ? `${saludo} ${items}.` : saludo;
-  }, [hallazgos, primerNombre]);
+    const clima = frase ? ` ${frase}` : "";
+    const items = hallazgos.length ? ` ${hallazgos.map((h) => h.texto).join(". ")}.` : "";
+    return `${saludo}${clima}${items}`;
+  }, [frase, hallazgos, primerNombre]);
 
   useEffect(() => {
     setVisible(true);

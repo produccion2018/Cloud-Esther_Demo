@@ -2492,7 +2492,9 @@ function Mensajes({ ctx }: { ctx: Ctx }) {
   const conv = conversaciones.find((c) => c.paciente === ctx.nombre);
   const [texto, setTexto] = useState("");
   const fin = useRef<HTMLDivElement>(null);
-  useEffect(() => fin.current?.scrollIntoView({ block: "end" }), [conv?.mensajes.length]);
+  useEffect(() => {
+    fin.current?.scrollIntoView({ block: "end" });
+  }, [conv?.mensajes.length]);
   const mensajes = (conv?.mensajes ?? []).filter((m) => m.de === "paciente" || m.de === "clinica");
 
   const enviar = () => {

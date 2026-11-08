@@ -105,6 +105,34 @@ class SeccionBoundary extends Component<{ children: ReactNode }, { error: boolea
   }
 }
 
+/* Aísla los overlays de Esther (chat y ficha de persona): si fallan, NO tumban toda la pantalla
+   de Recursos humanos; se muestra un aviso chico y el resto sigue funcionando. */
+class LimiteOverlay extends Component<{ children: ReactNode }, { error: boolean; detalle: string }> {
+  state = { error: false, detalle: "" };
+  static getDerivedStateFromError(error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { error: true, detalle: msg };
+  }
+  componentDidCatch(error: unknown, info: { componentStack?: string }) {
+    console.error("[Esther RRHH]", error, info?.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="fixed bottom-4 right-4 z-50 max-w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-800 shadow-lg">
+          No se pudo abrir el asistente de Esther. El resto de Recursos humanos funciona normal.
+          {this.state.detalle && (
+            <span className="mt-1 block break-words font-mono text-[10px] text-amber-700/80">
+              {this.state.detalle}
+            </span>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function RRHH() {
   const { plan } = useCloudEsther();
   const { usuario: u } = useSesion();
@@ -366,7 +394,9 @@ export function RRHH() {
         </div>
       </div>
 
-      {persona && <FichaPersona id={persona} ctx={ctx} onClose={() => setPersona(null)} />}
+      <LimiteOverlay>
+        {persona && <FichaPersona id={persona} ctx={ctx} onClose={() => setPersona(null)} />}
+      </LimiteOverlay>
 
       {montado && !chat && (
         <button
@@ -386,15 +416,17 @@ export function RRHH() {
           </span>
         </button>
       )}
-      {chat && (
-        <ChatEsther
-          mensajes={mensajes}
-          pensando={pensando}
-          onPreguntar={preguntar}
-          onCerrar={() => setChat(false)}
-          onLimpiar={() => setMensajes([])}
-        />
-      )}
+      <LimiteOverlay>
+        {chat && (
+          <ChatEsther
+            mensajes={mensajes}
+            pensando={pensando}
+            onPreguntar={preguntar}
+            onCerrar={() => setChat(false)}
+            onLimpiar={() => setMensajes([])}
+          />
+        )}
+      </LimiteOverlay>
 
       {toast && (
         <div

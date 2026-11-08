@@ -75,10 +75,15 @@ type Mensaje = { id: number; de: "yo" | "esther"; texto: string };
 
 /* Si una sección falla (por ejemplo con una clínica recién creada, sin datos), no deja la
    pantalla en blanco: muestra un estado vacío. Se reinicia al cambiar de sección (key). */
-class SeccionBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
-  state = { error: false };
-  static getDerivedStateFromError() {
-    return { error: true };
+class SeccionBoundary extends Component<{ children: ReactNode }, { error: boolean; detalle: string }> {
+  state = { error: false, detalle: "" };
+  static getDerivedStateFromError(error: unknown) {
+    const msg =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    return { error: true, detalle: msg };
+  }
+  componentDidCatch(error: unknown, info: { componentStack?: string }) {
+    console.error(error, info?.componentStack);
   }
   render() {
     if (this.state.error) {
@@ -88,6 +93,11 @@ class SeccionBoundary extends Component<{ children: ReactNode }, { error: boolea
           <p className="max-w-xs text-xs text-muted-foreground">
             Se completa a medida que cargás tu equipo y su información.
           </p>
+          {this.state.detalle && (
+            <p className="mt-2 max-w-xs break-words font-mono text-[10px] text-muted-foreground/70">
+              Detalle: {this.state.detalle}
+            </p>
+          )}
         </div>
       );
     }

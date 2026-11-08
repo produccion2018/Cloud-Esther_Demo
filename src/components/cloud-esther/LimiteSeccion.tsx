@@ -2,16 +2,24 @@ import { Component, type ReactNode } from "react";
 
 /* Error boundary del contenido: si una sección falla (por ejemplo con una clínica recién creada,
    sin datos), NO deja la pantalla en blanco ni muestra el cartel genérico "This page didn't load".
-   Muestra un mensaje claro y mantiene el menú, para poder seguir navegando. */
-export class LimiteSeccion extends Component<{ children: ReactNode }, { error: boolean }> {
-  state = { error: false };
+   Muestra un mensaje claro y mantiene el menú, para poder seguir navegando.
+   Además muestra el detalle técnico del error (chico), para poder diagnosticar qué falló. */
+export class LimiteSeccion extends Component<
+  { children: ReactNode },
+  { error: boolean; detalle: string }
+> {
+  state = { error: false, detalle: "" };
 
-  static getDerivedStateFromError() {
-    return { error: true };
+  static getDerivedStateFromError(error: unknown) {
+    const msg =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    return { error: true, detalle: msg };
   }
 
-  componentDidCatch(error: unknown) {
-    console.error(error);
+  componentDidCatch(error: unknown, info: { componentStack?: string }) {
+    console.error(error, info?.componentStack);
+    const primeraLinea = (info?.componentStack ?? "").trim().split("\n")[0]?.trim() ?? "";
+    if (primeraLinea) this.setState((s) => ({ ...s, detalle: `${s.detalle} · en ${primeraLinea}` }));
   }
 
   render() {
@@ -31,6 +39,11 @@ export class LimiteSeccion extends Component<{ children: ReactNode }, { error: b
             >
               Recargar
             </button>
+            {this.state.detalle && (
+              <p className="mt-4 break-words rounded-lg bg-muted/60 px-3 py-2 text-left font-mono text-[11px] leading-snug text-muted-foreground">
+                Detalle: {this.state.detalle}
+              </p>
+            )}
           </div>
         </div>
       );

@@ -457,10 +457,9 @@ function ChatEsther({
 }) {
   const [txt, setTxt] = useState("");
   const fin = useRef<HTMLDivElement>(null);
-  useEffect(
-    () => fin.current?.scrollIntoView({ behavior: "smooth", block: "end" }),
-    [mensajes, pensando],
-  );
+  useEffect(() => {
+    fin.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [mensajes, pensando]);
   return (
     <aside
       role="dialog"

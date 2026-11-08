@@ -311,7 +311,9 @@ function ChatPacientes({
   const [texto, setTexto] = useState("");
   const conv = lista.find((c) => c.id === actual);
   const fin = useRef<HTMLDivElement>(null);
-  useEffect(() => fin.current?.scrollIntoView({ block: "end" }), [conv?.mensajes.length, actual]);
+  useEffect(() => {
+    fin.current?.scrollIntoView({ block: "end" });
+  }, [conv?.mensajes.length, actual]);
 
   const enviar = () => {
     const t = texto.trim();
@@ -462,7 +464,9 @@ function ChatEquipo({
       : (m.deId === yo.id && m.para === para) || (m.deId === para && m.para === yo.id),
   );
   const fin = useRef<HTMLDivElement>(null);
-  useEffect(() => fin.current?.scrollIntoView({ block: "end" }), [visibles.length, para]);
+  useEffect(() => {
+    fin.current?.scrollIntoView({ block: "end" });
+  }, [visibles.length, para]);
 
   return (
     <TarjetaPortal className="!p-0 overflow-hidden">

@@ -481,7 +481,7 @@ export function saldoVacaciones(miembroId: string, ingreso: string, ausencias: A
 }
 
 export function horarioDe(m: TeamMember, fecha: string) {
-  const d = m.schedule.find((s) => s.day === diaSemana(fecha));
+  const d = (m.schedule ?? []).find((s) => s.day === diaSemana(fecha));
   return d?.active ? d : null;
 }
 

@@ -229,23 +229,64 @@ export function PeriodontogramaSec({
     return (
       <div className="space-y-4">
         <Cabecera contexto={contexto} />
-        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.04] px-6 py-12 text-center">
-          <span className="relative">
-            <span aria-hidden className="absolute -inset-3 rounded-full bg-primary/20 blur-xl" />
-            <span className="relative grid size-16 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
-              <Activity className="size-7" />
-            </span>
-          </span>
-          <div>
-            <p className="font-display text-lg font-bold">Todavía no hay periodontogramas</p>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Registrá la profundidad de sondaje, el margen gingival, el sangrado y la placa de cada sitio. El NIC se calcula solo.
-            </p>
+        {con3D ? (
+          // Plus y Enterprise: se muestra la boca 3D (vacía) ya en el estado inicial, igual que el
+          // odontograma, para que el periodontograma 3D se vea aunque todavía no haya evaluaciones.
+          <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]">
+            <Suspense
+              fallback={
+                <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
+                  Cargando el modelo 3D…
+                </div>
+              }
+            >
+              <BocaRealista
+                key="perio-vacio"
+                titulo="Periodoncia"
+                pacienteNombre={contexto?.paciente}
+                estados={{}}
+                selected={null}
+                onSeleccion={() => {}}
+                mostrarInfo={false}
+                leyenda={<LeyendaPerio />}
+              />
+            </Suspense>
+            <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.04] p-6 text-center">
+              <span className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
+                <Activity className="size-6" />
+              </span>
+              <div>
+                <p className="font-display text-base font-bold">Todavía no hay evaluaciones</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Creá la primera para registrar sondaje, margen gingival, sangrado y placa. El NIC se
+                  calcula solo.
+                </p>
+              </div>
+              <button type="button" onClick={() => nueva(false)} className="btn-ce !min-h-11">
+                <Plus className="size-4" /> Primera evaluación
+              </button>
+            </div>
           </div>
-          <button type="button" onClick={() => nueva(false)} className="btn-ce !min-h-11">
-            <Plus className="size-4" /> Primera evaluación
-          </button>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.04] to-fuchsia-500/[0.04] px-6 py-12 text-center">
+            <span className="relative">
+              <span aria-hidden className="absolute -inset-3 rounded-full bg-primary/20 blur-xl" />
+              <span className="relative grid size-16 place-items-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg">
+                <Activity className="size-7" />
+              </span>
+            </span>
+            <div>
+              <p className="font-display text-lg font-bold">Todavía no hay periodontogramas</p>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                Registrá la profundidad de sondaje, el margen gingival, el sangrado y la placa de cada
+                sitio. El NIC se calcula solo.
+              </p>
+            </div>
+            <button type="button" onClick={() => nueva(false)} className="btn-ce !min-h-11">
+              <Plus className="size-4" /> Primera evaluación
+            </button>
+          </div>
+        )}
       </div>
     );
 

@@ -4559,6 +4559,11 @@ function RecetaForm({
 }
 
 /* Documento de la receta (vista en pantalla) */
+/* Tipografía de firma: si el profesional no cargó una imagen de firma, se muestra su nombre con
+   una letra manuscrita como firma visible en la receta (preview e impresión). */
+const FIRMA_FONT =
+  '"Segoe Script","Bradley Hand","Snell Roundhand","Lucida Handwriting","Brush Script MT",cursive';
+
 function RecetaDocumento({
   receta: r,
   contexto,
@@ -4665,8 +4670,19 @@ function RecetaDocumento({
           <p>Estado: {r.estado}</p>
           {r.selloUrl && <img src={r.selloUrl} alt="Sello" className="mt-1.5 h-14 w-auto" />}
         </div>
-        <div className="w-40 text-center">
-          {r.firmaUrl && <img src={r.firmaUrl} alt="Firma" className="mx-auto mb-1 h-12 w-auto" />}
+        <div className="w-44 text-center">
+          {r.firmaUrl ? (
+            <img src={r.firmaUrl} alt="Firma" className="mx-auto mb-1 h-12 w-auto" />
+          ) : (
+            r.profesional && (
+              <p
+                className="mb-0.5 truncate text-[26px] leading-none text-neutral-700"
+                style={{ fontFamily: FIRMA_FONT }}
+              >
+                {r.profesional}
+              </p>
+            )
+          )}
           <div className="border-t border-neutral-400 pt-1 text-[11px]">
             <p className="font-semibold">{r.profesional || "Profesional"}</p>
             {r.matricula && <p className="text-neutral-500">Mat. {r.matricula}</p>}
@@ -4718,7 +4734,9 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
   .s { font-size: 12px; margin-top: 2px; }
   .ind { border: 1px dashed #d4d4d4; border-radius: 8px; padding: 8px 10px; margin-top: 14px; font-size: 12px; white-space: pre-line; }
   .pie { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 48px; border-top: 1px solid #e5e5e5; padding-top: 10px; font-size: 11px; color: #737373; }
-  .firma { width: 190px; text-align: center; border-top: 1px solid #a3a3a3; padding-top: 4px; color: #171717; }
+  .firma { width: 190px; text-align: center; color: #171717; }
+  .firma-ms { font-family: 'Segoe Script','Bradley Hand','Snell Roundhand','Lucida Handwriting','Brush Script MT',cursive; font-size: 24px; line-height: 1; color: #262626; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .firma-linea { border-top: 1px solid #a3a3a3; padding-top: 4px; }
   .anulada { position: fixed; top: 40%; left: 0; right: 0; text-align: center; font-size: 90px; font-weight: 800; letter-spacing: .1em; color: rgba(239,68,68,.15); transform: rotate(-25deg); }
 </style>
 </head>
@@ -4755,8 +4773,14 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
   <div class="pie">
     <div>Estado: ${escapar(r.estado)}${r.selloUrl ? `<br/><img src="${escapar(r.selloUrl)}" alt="Sello" style="height:56px;margin-top:6px" />` : ""}</div>
     <div class="firma">
-      ${r.firmaUrl ? `<img src="${escapar(r.firmaUrl)}" alt="Firma" style="height:46px;margin-bottom:2px" /><br/>` : ""}
-      <strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}
+      ${
+        r.firmaUrl
+          ? `<img src="${escapar(r.firmaUrl)}" alt="Firma" style="height:46px;margin-bottom:2px" />`
+          : r.profesional
+            ? `<div class="firma-ms">${escapar(r.profesional)}</div>`
+            : ""
+      }
+      <div class="firma-linea"><strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}</div>
     </div>
   </div>
 </body>

@@ -47,6 +47,12 @@ function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: 
 }) {
   const geo = useMemo(() => buildToothGeometry(t.type, t.jaw, t.id).geo, [t]);
   const mat = useRef<THREE.MeshPhysicalMaterial>(null);
+  // Al cambiar de acabado (p. ej. volver a "Realista"), three.js necesita recompilar el shader
+  // porque propiedades como `transmission` o `wireframe` cambian su estructura. Sin esto, al
+  // volver a Realista el material quedaba con el acabado anterior.
+  useEffect(() => {
+    if (mat.current) mat.current.needsUpdate = true;
+  }, [preset]);
   useFrame(() => {
     if (!mat.current) return;
     const target = selected ? 0.35 : hovered ? 0.15 : 0;

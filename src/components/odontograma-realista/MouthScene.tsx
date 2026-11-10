@@ -139,12 +139,37 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const preset = MAT[material];
+  // Al salir de la vista 3D se libera el contexto WebGL de inmediato (forceContextLoss). Sin esto,
+  // navegar entre vistas 3D va acumulando contextos y el navegador llega a su límite ("Error
+  // creating WebGL context"), dejando el 3D en blanco.
+  const glRef = useRef<THREE.WebGLRenderer | null>(null);
+  useEffect(
+    () => () => {
+      const gl = glRef.current;
+      if (!gl) return;
+      try {
+        gl.forceContextLoss();
+      } catch {
+        /* ignorar */
+      }
+      try {
+        gl.dispose();
+      } catch {
+        /* ignorar */
+      }
+      glRef.current = null;
+    },
+    [],
+  );
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       camera={{ position: VIEWS.front, fov: 32, near: 1, far: 1000 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+      onCreated={({ gl }) => {
+        glRef.current = gl;
+      }}
       onPointerMissed={() => onSelect(null)}
     >
       <ambientLight intensity={0.25} />

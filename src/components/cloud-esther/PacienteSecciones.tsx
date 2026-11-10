@@ -31,6 +31,7 @@ import {
   Paperclip,
   ExternalLink,
   Upload,
+  ImagePlus,
   Pill,
   Printer,
   Images,

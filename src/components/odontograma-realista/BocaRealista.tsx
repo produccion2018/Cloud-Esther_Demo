@@ -74,24 +74,61 @@ function Reintento3D({
   );
 }
 
+/* Diagnóstico de WebGL: intenta crear un contexto de prueba y dice qué encontró.
+   Sirve para distinguir "no hay WebGL / aceleración apagada" de "demasiados contextos". */
+function diagnosticoWebGL(): string {
+  if (typeof document === "undefined") return "Sin navegador (render del servidor).";
+  try {
+    const lienzo = document.createElement("canvas");
+    const gl =
+      (lienzo.getContext("webgl2") as WebGLRenderingContext | null) ||
+      (lienzo.getContext("webgl") as WebGLRenderingContext | null) ||
+      (lienzo.getContext("experimental-webgl") as WebGLRenderingContext | null);
+    if (!gl) {
+      return "WebGL NO disponible en este navegador. Suele ser la aceleración por hardware apagada (Configuración → Sistema) o la placa de video en lista negra.";
+    }
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "desconocida";
+    const software = /swiftshader|software|llvmpipe|basic render/i.test(renderer);
+    return software
+      ? `WebGL va por SOFTWARE (sin placa de video real): "${renderer}". La aceleración por hardware está apagada o no hay GPU disponible.`
+      : `WebGL sí funciona en una prueba simple (placa: "${renderer}"). El fallo es al abrir ESTA escena: probablemente demasiados contextos 3D abiertos a la vez.`;
+  } catch (e) {
+    return `No se pudo ni probar WebGL: ${(e as Error)?.message ?? String(e)}`;
+  }
+}
+
 class ReintentoBoundary extends Component<
   { children: ReactNode; onReintentar: () => void },
-  { error: boolean }
+  { error: boolean; detalle: string; diag: string }
 > {
-  state = { error: false };
-  static getDerivedStateFromError() {
-    return { error: true };
+  state = { error: false, detalle: "", diag: "" };
+  static getDerivedStateFromError(e: unknown) {
+    return {
+      error: true,
+      detalle: (e as Error)?.message ? String((e as Error).message) : String(e),
+      diag: diagnosticoWebGL(),
+    };
   }
   render() {
     if (this.state.error) {
       return (
         <div className="grid h-full place-items-center p-6 text-center">
-          <div>
+          <div className="max-w-sm">
             <p className="text-sm font-semibold text-foreground">No se pudo abrir la vista 3D</p>
             <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
               Tu navegador no pudo iniciar el gráfico 3D. La causa más común es tener{" "}
               <strong>muchas pestañas abiertas</strong> (Chrome limita el 3D para todo el
               navegador). Cerrá las que no uses —sobre todo otras de Cloud Esther— y probá de nuevo.
+            </p>
+            <p className="mx-auto mt-2 max-w-xs rounded-lg bg-muted px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground">
+              <span className="font-semibold text-foreground">Diagnóstico:</span> {this.state.diag}
+              {this.state.detalle && (
+                <>
+                  <br />
+                  <span className="font-semibold text-foreground">Error:</span> {this.state.detalle}
+                </>
+              )}
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button

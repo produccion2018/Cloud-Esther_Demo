@@ -4669,7 +4669,17 @@ function RecetaDocumento({
       <div className="mt-6 flex items-end justify-between gap-4 border-t border-neutral-200 pt-3">
         <div className="text-[11px] text-neutral-500">
           <p>Estado: {r.estado}</p>
-          {r.selloUrl && <img src={r.selloUrl} alt="Sello" className="mt-1.5 h-14 w-auto" />}
+          {r.selloUrl ? (
+            <img src={r.selloUrl} alt="Sello" className="mt-1.5 h-14 w-auto" />
+          ) : (
+            r.profesional && (
+              <div className="mt-1.5 inline-block -rotate-2 rounded-md border-2 border-indigo-500/70 px-2.5 py-1 text-center leading-tight text-indigo-700">
+                <p className="text-[8px] font-bold uppercase tracking-[0.15em]">Odontología</p>
+                <p className="text-[11px] font-bold text-indigo-800">{r.profesional}</p>
+                {r.matricula && <p className="text-[9px] font-semibold">Mat. {r.matricula}</p>}
+              </div>
+            )
+          )}
         </div>
         <div className="w-44 text-center">
           {r.firmaUrl ? (
@@ -4772,7 +4782,13 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
   ${r.indicaciones ? `<div class="ind"><div class="et">Indicaciones</div>${escapar(r.indicaciones)}</div>` : ""}
 
   <div class="pie">
-    <div>Estado: ${escapar(r.estado)}${r.selloUrl ? `<br/><img src="${escapar(r.selloUrl)}" alt="Sello" style="height:56px;margin-top:6px" />` : ""}</div>
+    <div>Estado: ${escapar(r.estado)}${
+      r.selloUrl
+        ? `<br/><img src="${escapar(r.selloUrl)}" alt="Sello" style="height:56px;margin-top:6px" />`
+        : r.profesional
+          ? `<br/><span style="display:inline-block;margin-top:6px;transform:rotate(-2deg);border:2px solid #6366f1;border-radius:6px;padding:3px 9px;color:#4338ca;text-align:center;line-height:1.15"><span style="font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">Odontología</span><br/><strong style="font-size:11px;color:#3730a3">${escapar(r.profesional)}</strong>${r.matricula ? `<br/><span style="font-size:9px;font-weight:600">Mat. ${escapar(r.matricula)}</span>` : ""}</span>`
+          : ""
+    }</div>
     <div class="firma">
       ${
         r.firmaUrl

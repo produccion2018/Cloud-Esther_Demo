@@ -13,13 +13,74 @@ const MouthScene = lazy(() => import("./MouthScene"));
 /* Si el navegador no puede abrir el 3D (sin WebGL, poca memoria de video o demasiados contextos
    gráficos abiertos), en vez de tumbar toda la sección se muestra un aviso y un botón para
    recargar. Así el resto de la pantalla sigue usable. */
-class Limite3D extends Component<{ children: ReactNode }, { error: boolean }> {
-  state = { error: false };
+class Limite3D extends Component<
+  { children: ReactNode },
+  { error: boolean; intentos: number }
+> {
+  state = { error: false, intentos: 0 };
+  timer: ReturnType<typeof setTimeout> | null = null;
   static getDerivedStateFromError() {
     return { error: true };
   }
   componentDidCatch(e: unknown) {
     console.error("[Boca 3D]", e);
+    // Reintento automático: a veces el navegador libera un contexto gráfico y el 3D abre al
+    // segundo intento. Se prueba hasta 2 veces antes de mostrar el aviso.
+    if (this.state.intentos < 2) {
+      this.timer = setTimeout(() => {
+        this.setState((s) => ({ error: false, intentos: s.intentos + 1 }));
+      }, 800);
+    }
+  }
+  componentWillUnmount() {
+    if (this.timer) clearTimeout(this.timer);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="grid h-full place-items-center text-sm text-muted-foreground">
+          Abriendo el modelo 3D…
+        </div>
+      );
+    }
+    if (this.state.intentos >= 2) {
+      // Falló aun con reintentos: aviso claro, sin tumbar la pantalla.
+      return (
+        <Reintento3D
+          intentos={this.state.intentos}
+          key={this.state.intentos}
+          onReintentar={() => this.setState({ error: false, intentos: 0 })}
+        >
+          {this.props.children}
+        </Reintento3D>
+      );
+    }
+    return <div key={this.state.intentos}>{this.props.children}</div>;
+  }
+}
+
+/* Último recurso: si tras los reintentos el navegador sigue sin poder abrir el 3D, se muestra un
+   aviso con la causa más común (muchas pestañas) y un botón para reintentar sin recargar. */
+function Reintento3D({
+  children,
+  onReintentar,
+}: {
+  children: ReactNode;
+  intentos: number;
+  onReintentar: () => void;
+}) {
+  return (
+    <ReintentoBoundary onReintentar={onReintentar}>{children}</ReintentoBoundary>
+  );
+}
+
+class ReintentoBoundary extends Component<
+  { children: ReactNode; onReintentar: () => void },
+  { error: boolean }
+> {
+  state = { error: false };
+  static getDerivedStateFromError() {
+    return { error: true };
   }
   render() {
     if (this.state.error) {
@@ -28,16 +89,29 @@ class Limite3D extends Component<{ children: ReactNode }, { error: boolean }> {
           <div>
             <p className="text-sm font-semibold text-foreground">No se pudo abrir la vista 3D</p>
             <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-              Tu navegador no pudo iniciar el gráfico 3D. Suele pasar con muchas pestañas abiertas o
-              poca memoria de video. Probá recargar la página.
+              Tu navegador no pudo iniciar el gráfico 3D. La causa más común es tener{" "}
+              <strong>muchas pestañas abiertas</strong> (Chrome limita el 3D para todo el
+              navegador). Cerrá las que no uses —sobre todo otras de Cloud Esther— y probá de nuevo.
             </p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              Recargar
-            </button>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ error: false });
+                  this.props.onReintentar();
+                }}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Reintentar
+              </button>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
+              >
+                Recargar página
+              </button>
+            </div>
           </div>
         </div>
       );

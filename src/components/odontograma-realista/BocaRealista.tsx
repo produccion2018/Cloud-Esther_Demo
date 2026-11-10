@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import type { ViewName, MatMode } from "./MouthScene";
 import { ORDER, TYPE_LABEL } from "./anatomy";
 
@@ -9,6 +9,42 @@ import { ORDER, TYPE_LABEL } from "./anatomy";
    El modelo 3D (three.js) se descarga solo cuando se muestra, para no frenar el resto. */
 
 const MouthScene = lazy(() => import("./MouthScene"));
+
+/* Si el navegador no puede abrir el 3D (sin WebGL, poca memoria de video o demasiados contextos
+   gráficos abiertos), en vez de tumbar toda la sección se muestra un aviso y un botón para
+   recargar. Así el resto de la pantalla sigue usable. */
+class Limite3D extends Component<{ children: ReactNode }, { error: boolean }> {
+  state = { error: false };
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+  componentDidCatch(e: unknown) {
+    console.error("[Boca 3D]", e);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="grid h-full place-items-center p-6 text-center">
+          <div>
+            <p className="text-sm font-semibold text-foreground">No se pudo abrir la vista 3D</p>
+            <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+              Tu navegador no pudo iniciar el gráfico 3D. Suele pasar con muchas pestañas abiertas o
+              poca memoria de video. Probá recargar la página.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Recargar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const VIEW_LABELS: [ViewName, string][] = [
   ["front", "Frontal"],
@@ -109,23 +145,25 @@ export function BocaRealista({
 
       <div className="relative h-[520px] bg-[radial-gradient(circle_at_50%_30%,#f3efff,#ece6fb_60%,#e7e0f7)] dark:bg-[radial-gradient(circle_at_50%_30%,#1e1b3a,#151228)]">
         {montado ? (
-          <Suspense
-            fallback={
-              <div className="grid h-full place-items-center text-sm text-muted-foreground">Cargando el modelo 3D…</div>
-            }
-          >
-            <MouthScene
-              view={view}
-              nonce={nonce}
-              open={open}
-              estados={estados}
-              material={material}
-              selected={selected}
-              onSelect={elegir}
-              showUpper={upper}
-              showLower={lower}
-            />
-          </Suspense>
+          <Limite3D>
+            <Suspense
+              fallback={
+                <div className="grid h-full place-items-center text-sm text-muted-foreground">Cargando el modelo 3D…</div>
+              }
+            >
+              <MouthScene
+                view={view}
+                nonce={nonce}
+                open={open}
+                estados={estados}
+                material={material}
+                selected={selected}
+                onSelect={elegir}
+                showUpper={upper}
+                showLower={lower}
+              />
+            </Suspense>
+          </Limite3D>
         ) : (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">Cargando el modelo 3D…</div>
         )}

@@ -144,6 +144,7 @@ import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
 import { permsFor } from "@/lib/cloud-esther/equipo-profesional-data";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
+import { cargarSettings } from "@/lib/cloud-esther/settings-store";
 import { refrescarSesionClinica } from "@/lib/clinica/api";
 import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { hayCambiosSinGuardar } from "@/lib/clinica/sincronizar";
@@ -732,7 +733,11 @@ function AppEquipo({
   onSalir: () => void;
 }) {
   const clinicaReal = useClinicaReal();
-  if (real && clinicaReal) ajustarCatalogosClinica(clinicaReal.sesion.clinica.nombre);
+  if (real && clinicaReal)
+    ajustarCatalogosClinica(
+      clinicaReal.sesion.clinica.nombre,
+      cargarSettings(clinicaReal.sesion.clinica.id).sucursales,
+    );
   const slugReal = real ? clinicaReal?.slug : undefined;
   // Rol y plan de ahora (si la sesión venció, se vuelve a ingresar)
   useEffect(() => {

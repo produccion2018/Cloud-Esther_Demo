@@ -27,22 +27,18 @@ export const UNIDADES = ["cajas", "unidades", "kits", "frascos", "jeringas", "ro
 export type Unidad = (typeof UNIDADES)[number];
 
 /** Sede extra que solo aparece en el plan Grupo Odontológico (multi-sede). */
-export const SUCURSAL_GRUPO = "Clínica Belgrano";
-
-/** Límite de sucursales por plan (igual que la configuración de planes). */
-const LIMITE_SUCURSALES: Record<PlanId, number> = {
+/** Límite de sucursales (sedes) por plan (igual que la configuración de planes). */
+export const LIMITE_SUCURSALES: Record<PlanId, number> = {
   inicial: 1,
   profesional: 3,
   avanzada: 6,
   grupo: 20,
 };
 
-/** Sucursales de ejemplo acotadas al límite real del plan (inicial=1, pro=3, avanzada/grupo
-    hasta las disponibles). Así no se muestran límites arbitrarios que no corresponden al plan. */
+/** Sucursales de la clínica (las que cargó el dueño), acotadas al límite del plan. */
 export function sucursalesDelPlan(plan: PlanId): string[] {
-  const todas = [...SUCURSALES, SUCURSAL_GRUPO];
   const limite = LIMITE_SUCURSALES[plan] ?? 1;
-  return todas.slice(0, Math.min(limite, todas.length));
+  return SUCURSALES.slice(0, Math.min(limite, SUCURSALES.length));
 }
 
 export type Insumo = {

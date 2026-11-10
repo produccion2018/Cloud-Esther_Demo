@@ -1043,7 +1043,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const real = useClinicaReal();
   const { sesion } = useSesion();
-  if (real) ajustarCatalogosClinica(real.sesion.clinica.nombre);
+  // Las sucursales (sedes) salen de lo que cargó el dueño en Configuración. Si no cargó ninguna,
+  // la sede es el nombre de la clínica. Vale para el demo y para la clínica real.
+  ajustarCatalogosClinica(
+    real?.sesion.clinica.nombre ?? sesion?.clinica?.nombre ?? "Mi clínica",
+    settings.sucursales,
+  );
   const [montadoShell, setMontadoShell] = useState(false);
   useEffect(() => setMontadoShell(true), []);
   // Clínica real: odontograma, radiografías y configuración llegan del servidor antes de mostrarse

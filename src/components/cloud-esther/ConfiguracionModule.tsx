@@ -15,6 +15,7 @@ import {
   FileClock,
   PlugZap,
   Building2,
+  Trash2,
   Search,
   ChevronRight,
   ExternalLink,
@@ -38,6 +39,7 @@ import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
 import { nivelModulo, useConIA, type NivelModulo } from "@/lib/cloud-esther/niveles";
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import { LIMITE_SUCURSALES } from "@/lib/cloud-esther/inventario-store";
 
 import {
   cargarSettings,
@@ -102,6 +104,7 @@ const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
   auditLogEnabled: "Registrar accesos a módulos",
   auditRetentionDays: "Conservación de registros de auditoría",
   datosClinica: "Datos de la clínica",
+  sucursales: "Sucursales",
   marca: "Marca de la clínica (logo y color)",
 };
 
@@ -373,6 +376,107 @@ function ConfiguracionHeader({
 /*                                GENERAL                                     */
 /* -------------------------------------------------------------------------- */
 
+/* Sucursales (sedes) de la clínica: el dueño las crea y les pone nombre. Lo que escribe acá se usa
+   en agenda, inventario, etc. El límite depende del plan. */
+function SucursalesCard({
+  sucursales,
+  plan,
+  onGuardar,
+  onToast,
+}: {
+  sucursales: string[];
+  plan: PlanId;
+  onGuardar: (lista: string[]) => void;
+  onToast: (msg: string) => void;
+}) {
+  const limite = LIMITE_SUCURSALES[plan] ?? 1;
+  const [lista, setLista] = useState<string[]>(sucursales);
+  const [nueva, setNueva] = useState("");
+  useEffect(() => setLista(sucursales), [sucursales]);
+
+  const guardar = (next: string[]) => {
+    setLista(next);
+    onGuardar(next);
+  };
+  const agregar = () => {
+    const n = nueva.trim();
+    if (!n) return;
+    if (lista.some((s) => s.toLowerCase() === n.toLowerCase())) {
+      onToast("Ya tenés una sucursal con ese nombre");
+      return;
+    }
+    if (lista.length >= limite) {
+      onToast(`Tu plan permite hasta ${limite} ${limite === 1 ? "sucursal" : "sucursales"}`);
+      return;
+    }
+    guardar([...lista, n]);
+    setNueva("");
+  };
+
+  return (
+    <div className={`${CARD} p-5 xl:col-span-full`}>
+      <SectionHeader
+        icon={Building2}
+        title="Sucursales"
+        description="Las sedes de tu clínica, con los nombres que vos elijas. Se usan en la agenda, el inventario y más."
+      />
+      <div className="mt-4 space-y-2">
+        {lista.length === 0 && (
+          <p className="rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Sin sucursales cargadas: se usa el nombre de tu clínica como única sede. Si tenés más de
+            una, agregalas acá abajo.
+          </p>
+        )}
+        {lista.map((s, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Building2 className="size-4" />
+            </span>
+            <input
+              value={s}
+              onChange={(e) => setLista((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))}
+              onBlur={() => guardar(lista.map((x) => x.trim()).filter(Boolean))}
+              className={CAMPO}
+              placeholder={`Sucursal ${i + 1}`}
+            />
+            <button
+              type="button"
+              onClick={() => guardar(lista.filter((_, j) => j !== i))}
+              aria-label="Quitar sucursal"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+      {lista.length < limite && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            value={nueva}
+            onChange={(e) => setNueva(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                agregar();
+              }
+            }}
+            placeholder="Nombre de la nueva sucursal (ej. Sede Centro)"
+            className={CAMPO}
+          />
+          <button type="button" onClick={agregar} className="btn-ce shrink-0 !min-h-10">
+            <Plus className="size-4" /> Agregar
+          </button>
+        </div>
+      )}
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Tu plan ({PLANS[plan].name}) permite hasta {limite}{" "}
+        {limite === 1 ? "sucursal" : "sucursales"}.
+      </p>
+    </div>
+  );
+}
+
 function GeneralTab({
   settings,
   actualizar,
@@ -386,6 +490,7 @@ function GeneralTab({
 }) {
   // El interruptor de Esther Infinity solo existe en planes con IA (Plus y Enterprise).
   const conIA = useConIA();
+  const { plan } = useCloudEsther();
   // País: solo los que el dueño de Cloud Esther tiene seleccionados para vender.
   const paises = usePaisesSeleccionados();
   const [datos, setDatos] = useState<DatosClinica>(settings.datosClinica);
@@ -395,6 +500,12 @@ function GeneralTab({
   const paisElegido = paises.find((p) => p.codigo === datos.pais);
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1fr_300px]">
+      <SucursalesCard
+        sucursales={settings.sucursales}
+        plan={plan}
+        onGuardar={(lista) => actualizar("sucursales", lista)}
+        onToast={onToast}
+      />
       <div className={`${CARD} p-5`}>
         <SectionHeader
           icon={Building2}

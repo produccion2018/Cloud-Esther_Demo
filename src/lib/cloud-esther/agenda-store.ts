@@ -57,7 +57,9 @@ export type Tarea = {
 };
 export type NuevaTarea = Omit<Tarea, "id" | "hecha">;
 
-export const SUCURSALES = ["Clínica Centro", "Clínica Norte", "Clínica Sur"];
+// Sedes de la clínica. El dueño las define en Configuración → Sucursales; acá queda la lista
+// "viva" que usan la agenda, el inventario, etc. Por defecto, una sola sede.
+export const SUCURSALES = ["Sede principal"];
 /* Odontólogos de ejemplo = los del equipo de ejemplo. En la agenda se usan los del
    equipo real de la empresa (useEquipo), así que si agregás uno en Equipo aparece acá. */
 export const ODONTOLOGOS = TEAM_MEMBERS.filter((m) => m.role === "odontologo").map((m) =>
@@ -67,10 +69,16 @@ export const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3", "Gabinete 4"
 
 /* Clínica real (Etapa 8b): sin sucursales ni odontólogos de ejemplo. La sucursal es la clínica
    y los odontólogos son los que cargue en Equipo. (Se ajusta al abrir las pantallas.) */
-export function ajustarCatalogosClinica(nombreClinica: string) {
-  if (SUCURSALES.length !== 1 || SUCURSALES[0] !== nombreClinica) {
-    SUCURSALES.splice(0, SUCURSALES.length, nombreClinica);
-  }
+export function ajustarCatalogosClinica(nombreClinica: string, sucursalesDueno?: string[]) {
+  // Sucursales que definió el dueño (sin vacíos ni repetidos). Si no cargó ninguna, la sede es la
+  // clínica (una sola), así nunca aparecen nombres de ejemplo como "Norte/Sur".
+  const propias = (sucursalesDueno ?? [])
+    .map((s) => s.trim())
+    .filter((s, i, a) => s && a.indexOf(s) === i);
+  const destino = propias.length ? propias : [nombreClinica];
+  const igual =
+    SUCURSALES.length === destino.length && destino.every((s, i) => SUCURSALES[i] === s);
+  if (!igual) SUCURSALES.splice(0, SUCURSALES.length, ...destino);
   if (ODONTOLOGOS.length) ODONTOLOGOS.splice(0, ODONTOLOGOS.length);
 }
 export const TRATAMIENTOS = [

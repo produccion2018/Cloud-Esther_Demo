@@ -164,9 +164,15 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
   return (
     <Canvas
       shadows
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       camera={{ position: VIEWS.front, fov: 32, near: 1, far: 1000 }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+      gl={{
+        antialias: false,
+        powerPreference: "low-power",
+        failIfMajorPerformanceCaveat: false,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.05,
+      }}
       onCreated={({ gl }) => {
         glRef.current = gl;
       }}

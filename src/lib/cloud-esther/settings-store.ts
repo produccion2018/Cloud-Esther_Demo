@@ -74,6 +74,9 @@ export interface ClinicSettings {
   /** Días que se conservan los registros de auditoría. */
   auditRetentionDays: number;
   datosClinica: DatosClinica;
+  /** Sucursales (sedes) de la clínica, con los nombres que elige el dueño (ej. "Sede Centro").
+      Vacío = una sola sede con el nombre de la clínica. El límite depende del plan. */
+  sucursales: string[];
   /** Marca propia (white label, Plus y Enterprise): logo y color de la clínica */
   marca?: MarcaClinica;
 }
@@ -100,6 +103,7 @@ export const DEFAULT_SETTINGS: ClinicSettings = {
   auditLogEnabled: true,
   auditRetentionDays: 365,
   datosClinica: DATOS_CLINICA_VACIOS,
+  sucursales: [],
 };
 
 /* Los ajustes (colores, modo oscuro, etc.) se guardan por empresa de la sesión:

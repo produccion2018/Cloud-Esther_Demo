@@ -39,24 +39,18 @@ const COLOR_YESO = "#efe7d6";
 const TARGET: [number, number, number] = [0, 8, 0];
 
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 10, 80],
-  top: [0, -78, 22],
-  bottom: [0, 80, 22],
-  side: [70, 12, 40],
+  front: [0, 8, 60],
+  top: [0, -58, 17],
+  bottom: [0, 58, 17],
+  side: [52, 10, 30],
 };
 
-function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: {
-  t: PlacedTooth; color: string; mat: MatPreset; selected: boolean; hovered: boolean;
+function Tooth({ t, color, modo, mat: preset, selected, hovered, onSelect, onHover }: {
+  t: PlacedTooth; color: string; modo: MatMode; mat: MatPreset; selected: boolean; hovered: boolean;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const geo = useMemo(() => buildToothGeometry(t.type, t.jaw, t.id).geo, [t]);
   const mat = useRef<THREE.MeshPhysicalMaterial>(null);
-  // Al cambiar de acabado (p. ej. volver a "Realista"), three.js necesita recompilar el shader
-  // porque propiedades como `transmission` o `wireframe` cambian su estructura. Sin esto, al
-  // volver a Realista el material quedaba con el acabado anterior.
-  useEffect(() => {
-    if (mat.current) mat.current.needsUpdate = true;
-  }, [preset]);
   useFrame(() => {
     if (!mat.current) return;
     const target = selected ? 0.35 : hovered ? 0.15 : 0;
@@ -74,6 +68,7 @@ function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: 
       onPointerOut={() => { onHover(null); document.body.style.cursor = ""; }}
     >
       <meshPhysicalMaterial
+        key={modo}
         ref={mat}
         vertexColors={preset.usarColor}
         color={preset.usarColor ? color : COLOR_YESO}
@@ -131,8 +126,8 @@ function GumMaterial({ mat }: { mat: MatPreset }) {
   );
 }
 
-function Jaw({ jaw, offset, estados, mat, selected, hovered, onSelect, onHover }: {
-  jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; mat: MatPreset; selected: number | null; hovered: number | null;
+function Jaw({ jaw, offset, estados, modo, mat, selected, hovered, onSelect, onHover }: {
+  jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; modo: MatMode; mat: MatPreset; selected: number | null; hovered: number | null;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
 }) {
   const arch = useMemo(() => buildArch(jaw), [jaw]);
@@ -144,10 +139,10 @@ function Jaw({ jaw, offset, estados, mat, selected, hovered, onSelect, onHover }
   });
   return (
     <group ref={group}>
-      <mesh geometry={gum} castShadow receiveShadow><GumMaterial mat={mat} /></mesh>
-      <mesh geometry={palate} receiveShadow><GumMaterial mat={mat} /></mesh>
+      <mesh geometry={gum} castShadow receiveShadow><GumMaterial key={modo} mat={mat} /></mesh>
+      <mesh geometry={palate} receiveShadow><GumMaterial key={modo} mat={mat} /></mesh>
       {arch.teeth.map((t) => (
-        <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} mat={mat} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
+        <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} modo={modo} mat={mat} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
       ))}
     </group>
   );
@@ -227,8 +222,8 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
       </Environment>
 
       <group rotation={[0.08, 0, 0]}>
-        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />

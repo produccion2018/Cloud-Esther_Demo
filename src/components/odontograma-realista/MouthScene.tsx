@@ -181,22 +181,31 @@ function AutoFrame({
   useFrame(() => {
     if (!necesitaEncuadre.current) return;
     const g = groupRef.current;
-    if (!g || !controls) return;
+    if (!g) return;
+    // Medir el modelo con el grupo en el origen.
+    g.position.set(0, 0, 0);
     g.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(g);
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
     const dim = box.getSize(new THREE.Vector3());
+    // 1) Centrar el modelo en el origen (arregla que quede pegado arriba, sin depender de controls).
+    g.position.set(-center.x, -center.y, -center.z);
+    // 2) Poner la cámara a la distancia justa para que el modelo LLENE el visor (ancho y alto).
     const fov = (camera.fov * Math.PI) / 180;
     const aspect = sizePx.width / Math.max(1, sizePx.height);
-    // Distancia para que entren tanto el alto como el ancho del modelo, con un margen.
     const fitH = dim.y / 2 / Math.tan(fov / 2);
     const fitW = dim.x / 2 / Math.tan(fov / 2) / aspect;
-    const dist = Math.max(fitH, fitW) * 1.15 + dim.z / 2;
+    const dist = Math.max(fitH, fitW) * 1.08 + dim.z / 2;
     const dir = new THREE.Vector3(...VIEWS[view]).normalize();
-    camera.position.copy(center).add(dir.multiplyScalar(dist));
-    controls.target.copy(center);
-    controls.update();
+    camera.position.copy(dir).multiplyScalar(dist);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+    // Si OrbitControls está disponible, apuntarlo al origen (centro del modelo) para rotar/zoom.
+    if (controls) {
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
     necesitaEncuadre.current = false;
   });
   return null;
@@ -267,7 +276,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={30} maxDistance={220} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />
       <AutoFrame groupRef={jawsRef} view={view} nonce={nonce} open={open} showUpper={showUpper} showLower={showLower} />
     </Canvas>
   );

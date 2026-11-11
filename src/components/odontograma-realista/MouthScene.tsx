@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
@@ -34,15 +34,13 @@ export const MAT: Record<MatMode, MatPreset> = {
 
 const COLOR_YESO = "#efe7d6";
 
-/** Punto al que mira la cámara: el centro real del modelo (un poco por encima de y=0,
-    porque el paladar superior sube más que el piso inferior). Centra la boca en el visor. */
-const TARGET: [number, number, number] = [0, 8, 0];
-
+/** Dirección (no distancia) desde la que mira la cámara en cada vista. La distancia la calcula
+    solo AutoFrame según el tamaño real del modelo, así siempre llena el visor y queda centrado. */
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 8, 60],
-  top: [0, -58, 17],
-  bottom: [0, 58, 17],
-  side: [52, 10, 30],
+  front: [0, 0.13, 1],
+  top: [0, -0.96, 0.28],
+  bottom: [0, 0.96, 0.28],
+  side: [0.86, 0.17, 0.48],
 };
 
 function Tooth({ t, color, modo, mat: preset, selected, hovered, onSelect, onHover }: {
@@ -148,17 +146,58 @@ function Jaw({ jaw, offset, estados, modo, mat, selected, hovered, onSelect, onH
   );
 }
 
-function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
-  const { camera } = useThree();
-  const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update: () => void } | null;
-  const goal = useRef<THREE.Vector3 | null>(null);
-  useEffect(() => { goal.current = new THREE.Vector3(...VIEWS[view]); }, [view, nonce]);
+/* AutoFrame: mide el tamaño REAL del modelo (bounding box) y pone la cámara a la distancia
+   justa para que llene el visor y quede centrado, sea cual sea el alto del contenedor o la
+   vista elegida. Así no hay que adivinar distancias ni centros a mano. */
+function AutoFrame({
+  groupRef,
+  view,
+  nonce,
+  open,
+  showUpper,
+  showLower,
+}: {
+  groupRef: RefObject<THREE.Group | null>;
+  view: ViewName;
+  nonce: number;
+  open: boolean;
+  showUpper: boolean;
+  showLower: boolean;
+}) {
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const sizePx = useThree((s) => s.size);
+  const controls = useThree((s) => s.controls) as unknown as {
+    target: THREE.Vector3;
+    update: () => void;
+  } | null;
+  const goalPos = useRef<THREE.Vector3 | null>(null);
+  const goalTarget = useRef<THREE.Vector3 | null>(null);
+
+  useEffect(() => {
+    const g = groupRef.current;
+    if (!g) return;
+    g.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(g);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const dim = box.getSize(new THREE.Vector3());
+    const fov = (camera.fov * Math.PI) / 180;
+    const aspect = sizePx.width / Math.max(1, sizePx.height);
+    // Distancia para que entren tanto el alto como el ancho del modelo, con un margen.
+    const fitH = dim.y / 2 / Math.tan(fov / 2);
+    const fitW = dim.x / 2 / Math.tan(fov / 2) / aspect;
+    const dist = Math.max(fitH, fitW) * 1.12 + dim.z / 2;
+    const dir = new THREE.Vector3(...VIEWS[view]).normalize();
+    goalPos.current = center.clone().add(dir.multiplyScalar(dist));
+    goalTarget.current = center;
+  }, [view, nonce, open, showUpper, showLower, sizePx.width, sizePx.height, camera, groupRef]);
+
   useFrame(() => {
-    if (!goal.current) return;
-    camera.position.lerp(goal.current, 0.08);
-    controls?.target.lerp(new THREE.Vector3(...TARGET), 0.08);
+    if (!goalPos.current || !goalTarget.current) return;
+    camera.position.lerp(goalPos.current, 0.1);
+    controls?.target.lerp(goalTarget.current, 0.1);
     controls?.update();
-    if (camera.position.distanceTo(goal.current) < 0.3) goal.current = null;
+    if (camera.position.distanceTo(goalPos.current) < 0.3) goalPos.current = null;
   });
   return null;
 }
@@ -173,6 +212,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
   // navegar entre vistas 3D va acumulando contextos y el navegador llega a su límite ("Error
   // creating WebGL context"), dejando el 3D en blanco.
   const glRef = useRef<THREE.WebGLRenderer | null>(null);
+  const jawsRef = useRef<THREE.Group>(null);
   useEffect(
     () => () => {
       const gl = glRef.current;
@@ -195,7 +235,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
     <Canvas
       shadows
       dpr={[1, 1.25]}
-      camera={{ position: VIEWS.front, fov: 32, near: 1, far: 1000 }}
+      camera={{ position: [0, 20, 140], fov: 32, near: 1, far: 1000 }}
       gl={{
         antialias: false,
         powerPreference: "low-power",
@@ -221,14 +261,14 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      <group rotation={[0.08, 0, 0]}>
+      <group ref={jawsRef} rotation={[0.08, 0, 0]}>
         {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
         {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault target={TARGET} enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={30} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
-      <CameraRig view={view} nonce={nonce} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={30} maxDistance={220} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <AutoFrame groupRef={jawsRef} view={view} nonce={nonce} open={open} showUpper={showUpper} showLower={showLower} />
     </Canvas>
   );
 }

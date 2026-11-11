@@ -340,9 +340,9 @@ export function buildGumGeometry(arch: Arch) {
       // color: attached gingiva coral-pink at margin, deeper mucosa red away
       const a = k / P;
       const edge = Math.min(a, 1 - a) * 2;
-      const c1 = new THREE.Color("#e59a98");
-      const c2 = new THREE.Color("#c25a64");
-      const c3 = new THREE.Color("#a8414f");
+      const c1 = new THREE.Color("#f2b0ad");
+      const c2 = new THREE.Color("#e58f93");
+      const c3 = new THREE.Color("#d2727c");
       const c = c1.clone().lerp(c2, smooth(0.03, 0.35, edge)).lerp(c3, smooth(0.45, 1, edge) * 0.6);
       const stip = (hash(i * 97 + k * 13) - 0.5) * 0.03;
       cols.push(c.r + stip, c.g + stip, c.b + stip);
@@ -392,7 +392,7 @@ export function buildPalateGeometry(arch: Arch) {
       // palatal rugae
       const rug = jaw === "upper" && z > -2 ? 0.35 * Math.sin(z * 1.4 + x * 0.3) * smooth(0, 0.3, t) * (1 - t) : 0;
       verts.push(x, y + sign * rug, z);
-      const c = new THREE.Color(jaw === "upper" ? "#d6858a" : "#b85060");
+      const c = new THREE.Color(jaw === "upper" ? "#e8a0a3" : "#dd8890");
       cols.push(c.r, c.g, c.b);
     }
   }

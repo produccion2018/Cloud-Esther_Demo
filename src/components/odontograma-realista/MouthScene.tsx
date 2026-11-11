@@ -206,14 +206,14 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         powerPreference: "low-power",
         failIfMajorPerformanceCaveat: false,
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.05,
+        toneMappingExposure: 1.18,
       }}
       onCreated={({ gl }) => {
         glRef.current = gl;
       }}
       onPointerMissed={() => onSelect(null)}
     >
-      <ambientLight intensity={0.25} />
+      <ambientLight intensity={0.5} />
       <directionalLight position={[30, 60, 80]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004}>
         <orthographicCamera attach="shadow-camera" args={[-60, 60, 60, -60, 1, 300]} />
       </directionalLight>

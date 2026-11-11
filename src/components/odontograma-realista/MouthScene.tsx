@@ -35,10 +35,10 @@ export const MAT: Record<MatMode, MatPreset> = {
 const COLOR_YESO = "#efe7d6";
 
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 6, 140],
-  top: [0, -130, 30],
-  bottom: [0, 130, 30],
-  side: [115, 10, 60],
+  front: [0, 5, 100],
+  top: [0, -95, 24],
+  bottom: [0, 95, 24],
+  side: [85, 8, 45],
 };
 
 function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: {
@@ -90,6 +90,43 @@ function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: 
   );
 }
 
+/* Material de la encía. Igual que en los dientes, al cambiar de acabado (sobre todo volver de
+   "Wireframe" a "Realista") three.js necesita recompilar el shader; sin needsUpdate la encía
+   quedaba con el acabado anterior. */
+function GumMaterial({ mat }: { mat: MatPreset }) {
+  const ref = useRef<THREE.MeshPhysicalMaterial>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.needsUpdate = true;
+  }, [mat]);
+  if (!mat.usarColor) {
+    return (
+      <meshPhysicalMaterial
+        ref={ref}
+        color={COLOR_YESO}
+        roughness={0.95}
+        clearcoat={0}
+        sheen={0}
+        wireframe={mat.wireframe}
+        side={THREE.DoubleSide}
+      />
+    );
+  }
+  return (
+    <meshPhysicalMaterial
+      ref={ref}
+      vertexColors
+      roughness={mat.wireframe ? 0.5 : 0.42}
+      clearcoat={mat.clearcoat * 0.8}
+      clearcoatRoughness={0.35}
+      sheen={0.6}
+      sheenColor="#ffb3b8"
+      sheenRoughness={0.5}
+      wireframe={mat.wireframe}
+      side={THREE.DoubleSide}
+    />
+  );
+}
+
 function Jaw({ jaw, offset, estados, mat, selected, hovered, onSelect, onHover }: {
   jaw: "upper" | "lower"; offset: number; estados: Record<number, string>; mat: MatPreset; selected: number | null; hovered: number | null;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
@@ -101,16 +138,10 @@ function Jaw({ jaw, offset, estados, mat, selected, hovered, onSelect, onHover }
   useFrame(() => {
     if (group.current) group.current.position.y += (offset - group.current.position.y) * 0.1;
   });
-  const gumMat = mat.usarColor ? (
-    <meshPhysicalMaterial vertexColors roughness={mat.wireframe ? 0.5 : 0.42} clearcoat={mat.clearcoat * 0.8} clearcoatRoughness={0.35}
-      sheen={0.6} sheenColor="#ffb3b8" sheenRoughness={0.5} wireframe={mat.wireframe} side={THREE.DoubleSide} />
-  ) : (
-    <meshPhysicalMaterial color={COLOR_YESO} roughness={0.95} clearcoat={0} sheen={0} side={THREE.DoubleSide} />
-  );
   return (
     <group ref={group}>
-      <mesh geometry={gum} castShadow receiveShadow>{gumMat}</mesh>
-      <mesh geometry={palate} receiveShadow>{gumMat}</mesh>
+      <mesh geometry={gum} castShadow receiveShadow><GumMaterial mat={mat} /></mesh>
+      <mesh geometry={palate} receiveShadow><GumMaterial mat={mat} /></mesh>
       {arch.teeth.map((t) => (
         <Tooth key={t.id} t={t} color={estados[t.id] ?? "#ffffff"} mat={mat} selected={selected === t.id} hovered={hovered === t.id} onSelect={onSelect} onHover={onHover} />
       ))}

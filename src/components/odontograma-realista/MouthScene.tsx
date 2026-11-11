@@ -152,12 +152,42 @@ function Jaw({ jaw, offset, estados, modo, mat, selected, hovered, onSelect, onH
      MODEL_SHIFT_Y baja el modelo para centrarlo en el visor (más negativo = más abajo)
      MODEL_SCALE   agranda el modelo (mayor = más grande) */
 const CAM_DIST = 120;
-const MODEL_SHIFT_Y = -16;
-const MODEL_SCALE = 2.3;
+const MODEL_SCALE = 1.3;
+
+/* Centrar: centra el modelo en el origen midiendo su tamaño real (esto SÍ funciona, a diferencia
+   de mover la cámara, que OrbitControls pisa). Así la boca queda centrada en el visor. */
+function Centrar({
+  groupRef,
+  open,
+  showUpper,
+  showLower,
+}: {
+  groupRef: { current: THREE.Group | null };
+  open: boolean;
+  showUpper: boolean;
+  showLower: boolean;
+}) {
+  const necesita = useRef(true);
+  useEffect(() => {
+    necesita.current = true;
+  }, [open, showUpper, showLower]);
+  useFrame(() => {
+    if (!necesita.current) return;
+    const g = groupRef.current;
+    if (!g) return;
+    g.position.set(0, 0, 0);
+    g.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(g);
+    if (box.isEmpty()) return;
+    const c = box.getCenter(new THREE.Vector3());
+    g.position.set(-c.x, -c.y, -c.z);
+    necesita.current = false;
+  });
+  return null;
+}
 
 /* CameraRig: al cambiar de vista (Frontal/Superior/…), apunta la cámara desde esa dirección
-   hacia el centro del modelo (el origen), a CAM_DIST. El modelo ya está centrado en el origen
-   por sus propiedades fijas, así que no hace falta medir nada. */
+   hacia el centro del modelo (el origen), a CAM_DIST. */
 function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as unknown as {
@@ -187,6 +217,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
   // navegar entre vistas 3D va acumulando contextos y el navegador llega a su límite ("Error
   // creating WebGL context"), dejando el 3D en blanco.
   const glRef = useRef<THREE.WebGLRenderer | null>(null);
+  const modeloRef = useRef<THREE.Group>(null);
   useEffect(
     () => () => {
       const gl = glRef.current;
@@ -235,16 +266,19 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      {/* Encuadre por propiedades fijas: escala (agranda) y posición (centra) el modelo. */}
-      <group scale={MODEL_SCALE}>
-        <group position={[0, MODEL_SHIFT_Y, 0]} rotation={[0.08, 0, 0]}>
-          {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-          {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+      {/* El modelo: escala fija (agranda) + centrado dinámico (Centrar lo pone en el origen). */}
+      <group ref={modeloRef}>
+        <group scale={MODEL_SCALE}>
+          <group rotation={[0.08, 0, 0]}>
+            {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+            {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+          </group>
         </group>
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
       <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <Centrar groupRef={modeloRef} open={open} showUpper={showUpper} showLower={showLower} />
       <CameraRig view={view} nonce={nonce} />
     </Canvas>
   );

@@ -34,11 +34,15 @@ export const MAT: Record<MatMode, MatPreset> = {
 
 const COLOR_YESO = "#efe7d6";
 
+/** Punto al que mira la cámara: el centro real del modelo (un poco por encima de y=0,
+    porque el paladar superior sube más que el piso inferior). Centra la boca en el visor. */
+const TARGET: [number, number, number] = [0, 8, 0];
+
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 5, 100],
-  top: [0, -95, 24],
-  bottom: [0, 95, 24],
-  side: [85, 8, 45],
+  front: [0, 10, 80],
+  top: [0, -78, 22],
+  bottom: [0, 80, 22],
+  side: [70, 12, 40],
 };
 
 function Tooth({ t, color, mat: preset, selected, hovered, onSelect, onHover }: {
@@ -157,7 +161,7 @@ function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
   useFrame(() => {
     if (!goal.current) return;
     camera.position.lerp(goal.current, 0.08);
-    controls?.target.lerp(new THREE.Vector3(0, 0, 0), 0.08);
+    controls?.target.lerp(new THREE.Vector3(...TARGET), 0.08);
     controls?.update();
     if (camera.position.distanceTo(goal.current) < 0.3) goal.current = null;
   });
@@ -228,7 +232,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <OrbitControls makeDefault target={TARGET} enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={30} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
       <CameraRig view={view} nonce={nonce} />
     </Canvas>
   );

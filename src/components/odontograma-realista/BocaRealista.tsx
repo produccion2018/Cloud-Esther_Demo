@@ -323,6 +323,10 @@ export function BocaRealista({
           )}
         </div>
         )}
+        {/* Marca de versión: si ves "v4" es la última versión; si no, es caché viejo. */}
+        <div className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] font-bold text-primary/50">
+          3D v4
+        </div>
       </div>
     </div>
   );

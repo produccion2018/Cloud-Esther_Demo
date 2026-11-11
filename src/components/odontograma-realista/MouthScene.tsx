@@ -170,12 +170,18 @@ function AutoFrame({
     target: THREE.Vector3;
     update: () => void;
   } | null;
-  const goalPos = useRef<THREE.Vector3 | null>(null);
-  const goalTarget = useRef<THREE.Vector3 | null>(null);
-
+  // Marca que hay que re-encuadrar. Se hace UNA sola vez por cambio (snap, no lerp), así el
+  // autoRotate de OrbitControls no lo pelea frame a frame (ese era el motivo de que la cámara
+  // no cambiara aunque el color sí).
+  const necesitaEncuadre = useRef(true);
   useEffect(() => {
+    necesitaEncuadre.current = true;
+  }, [view, nonce, open, showUpper, showLower, sizePx.width, sizePx.height]);
+
+  useFrame(() => {
+    if (!necesitaEncuadre.current) return;
     const g = groupRef.current;
-    if (!g) return;
+    if (!g || !controls) return;
     g.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(g);
     if (box.isEmpty()) return;
@@ -186,18 +192,12 @@ function AutoFrame({
     // Distancia para que entren tanto el alto como el ancho del modelo, con un margen.
     const fitH = dim.y / 2 / Math.tan(fov / 2);
     const fitW = dim.x / 2 / Math.tan(fov / 2) / aspect;
-    const dist = Math.max(fitH, fitW) * 1.12 + dim.z / 2;
+    const dist = Math.max(fitH, fitW) * 1.15 + dim.z / 2;
     const dir = new THREE.Vector3(...VIEWS[view]).normalize();
-    goalPos.current = center.clone().add(dir.multiplyScalar(dist));
-    goalTarget.current = center;
-  }, [view, nonce, open, showUpper, showLower, sizePx.width, sizePx.height, camera, groupRef]);
-
-  useFrame(() => {
-    if (!goalPos.current || !goalTarget.current) return;
-    camera.position.lerp(goalPos.current, 0.1);
-    controls?.target.lerp(goalTarget.current, 0.1);
-    controls?.update();
-    if (camera.position.distanceTo(goalPos.current) < 0.3) goalPos.current = null;
+    camera.position.copy(center).add(dir.multiplyScalar(dist));
+    controls.target.copy(center);
+    controls.update();
+    necesitaEncuadre.current = false;
   });
   return null;
 }

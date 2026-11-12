@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Environment, Lightformer, Center } from "@react-three/drei";
+import { OrbitControls, ContactShadows, Environment, Lightformer, Bounds, useBounds } from "@react-three/drei";
 import * as THREE from "three";
 import { buildArch, buildGumGeometry, buildPalateGeometry, buildToothGeometry, type PlacedTooth } from "./anatomy";
 
@@ -147,34 +147,21 @@ function Jaw({ jaw, offset, estados, modo, mat, selected, hovered, onSelect, onH
 }
 
 /* Encuadre del modelo — TODO por propiedades fijas (no por cámara), porque mover la cámara lo
-   pisa OrbitControls. Se ajusta a mano con estos 3 números:
-     CAM_DIST      distancia de la cámara (menor = boca más grande)
-     MODEL_SHIFT_Y baja el modelo para centrarlo en el visor (más negativo = más abajo)
-     MODEL_SCALE   agranda el modelo (mayor = más grande) */
-const CAM_DIST = 120;
-/* Ajuste del modelo por PROPIEDADES FIJAS (lo único que se aplica siempre):
-     MODEL_SCALE        agranda la boca (mayor = más grande)
-     MODEL_CENTER_SHIFT baja la boca para centrarla (se escala junto al modelo) */
-const MODEL_SCALE = 2.3;
+/* Margen del encuadre: menor = boca más grande (llena más el visor). */
+const FIT_MARGIN = 1.05;
 
-/* CameraRig: al cambiar de vista (Frontal/Superior/…), apunta la cámara desde esa dirección
-   hacia el centro del modelo (el origen), a CAM_DIST. */
-function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
+/* AjustarVista: al entrar y al cambiar de vista, orienta la cámara desde esa dirección y pide a
+   <Bounds> que encuadre el modelo completo y centrado (Bounds calcula la distancia justa). */
+function AjustarVista({ view, nonce }: { view: ViewName; nonce: number }) {
+  const api = useBounds();
   const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as unknown as {
-    target: THREE.Vector3;
-    update: () => void;
-  } | null;
   useEffect(() => {
-    const dir = new THREE.Vector3(...VIEWS[view]).normalize().multiplyScalar(CAM_DIST);
+    const dir = new THREE.Vector3(...VIEWS[view]).normalize().multiplyScalar(100);
     camera.position.copy(dir);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
-    if (controls) {
-      controls.target.set(0, 0, 0);
-      controls.update();
-    }
-  }, [view, nonce, camera, controls]);
+    api.refresh().clip().fit();
+  }, [view, nonce, api, camera]);
   return null;
 }
 
@@ -236,18 +223,18 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      {/* <Center> centra la boca sola en el origen (herramienta de la librería). La escala la
-          agranda. Así queda completa y centrada sin cálculos a mano. */}
-      <Center>
-        <group scale={MODEL_SCALE} rotation={[0.08, 0, 0]}>
+      {/* <Bounds fit> encuadra el modelo COMPLETO y centrado al entrar (y al cambiar de vista),
+          calculando solo la distancia de cámara. margin bajo = boca más grande. */}
+      <Bounds fit clip observe margin={FIT_MARGIN}>
+        <AjustarVista view={view} nonce={nonce} />
+        <group rotation={[0.08, 0, 0]}>
           {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
           {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
         </group>
-      </Center>
+      </Bounds>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />
-      <CameraRig view={view} nonce={nonce} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />
     </Canvas>
   );
 }

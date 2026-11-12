@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Environment, Lightformer, Bounds, useBounds } from "@react-three/drei";
+import { OrbitControls, ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import { buildArch, buildGumGeometry, buildPalateGeometry, buildToothGeometry, type PlacedTooth } from "./anatomy";
 
@@ -34,14 +34,17 @@ export const MAT: Record<MatMode, MatPreset> = {
 
 const COLOR_YESO = "#efe7d6";
 
-/** Dirección (no distancia) desde la que mira la cámara en cada vista. La distancia la calcula
-    solo AutoFrame según el tamaño real del modelo, así siempre llena el visor y queda centrado. */
+/** Posición de la cámara en cada vista (como estaba originalmente: muestra la boca completa). */
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 0.04, 1],
-  top: [0, -0.96, 0.28],
-  bottom: [0, 0.96, 0.28],
-  side: [0.86, 0.17, 0.48],
+  front: [0, 6, 140],
+  top: [0, -130, 30],
+  bottom: [0, 130, 30],
+  side: [115, 10, 60],
 };
+
+/** Escala del modelo: lo agranda respecto al original (que se veía completo pero chico).
+    Mayor = más grande. 1.5 = un 50% más grande, sin recortarse. */
+const MODEL_SCALE = 1.5;
 
 function Tooth({ t, color, modo, mat: preset, selected, hovered, onSelect, onHover }: {
   t: PlacedTooth; color: string; modo: MatMode; mat: MatPreset; selected: boolean; hovered: boolean;
@@ -147,21 +150,25 @@ function Jaw({ jaw, offset, estados, modo, mat, selected, hovered, onSelect, onH
 }
 
 /* Encuadre del modelo — TODO por propiedades fijas (no por cámara), porque mover la cámara lo
-/* Margen del encuadre: menor = boca más grande (llena más el visor). */
-const FIT_MARGIN = 1.05;
-
-/* AjustarVista: al entrar y al cambiar de vista, orienta la cámara desde esa dirección y pide a
-   <Bounds> que encuadre el modelo completo y centrado (Bounds calcula la distancia justa). */
-function AjustarVista({ view, nonce }: { view: ViewName; nonce: number }) {
-  const api = useBounds();
-  const camera = useThree((s) => s.camera);
+/* CameraRig: mueve la cámara a la posición de la vista elegida, mirando al centro (como el
+   original que mostraba la boca completa). */
+function CameraRig({ view, nonce }: { view: ViewName; nonce: number }) {
+  const { camera } = useThree();
+  const controls = useThree((s) => s.controls) as unknown as {
+    target: THREE.Vector3;
+    update: () => void;
+  } | null;
+  const goal = useRef<THREE.Vector3 | null>(null);
   useEffect(() => {
-    const dir = new THREE.Vector3(...VIEWS[view]).normalize().multiplyScalar(100);
-    camera.position.copy(dir);
-    camera.lookAt(0, 0, 0);
-    camera.updateProjectionMatrix();
-    api.refresh().clip().fit();
-  }, [view, nonce, api, camera]);
+    goal.current = new THREE.Vector3(...VIEWS[view]);
+  }, [view, nonce]);
+  useFrame(() => {
+    if (!goal.current) return;
+    camera.position.lerp(goal.current, 0.08);
+    controls?.target.lerp(new THREE.Vector3(0, 0, 0), 0.08);
+    controls?.update();
+    if (camera.position.distanceTo(goal.current) < 0.3) goal.current = null;
+  });
   return null;
 }
 
@@ -197,7 +204,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
     <Canvas
       shadows
       dpr={[1, 1.25]}
-      camera={{ position: [0, 4, 119], fov: 32, near: 1, far: 2000 }}
+      camera={{ position: VIEWS.front, fov: 32, near: 1, far: 1000 }}
       gl={{
         antialias: false,
         powerPreference: "low-power",
@@ -223,18 +230,15 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      {/* <Bounds fit> encuadra el modelo COMPLETO y centrado al entrar (y al cambiar de vista),
-          calculando solo la distancia de cámara. margin bajo = boca más grande. */}
-      <Bounds fit clip observe margin={FIT_MARGIN}>
-        <AjustarVista view={view} nonce={nonce} />
-        <group rotation={[0.08, 0, 0]}>
-          {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-          {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
-        </group>
-      </Bounds>
+      {/* Como el original (muestra la boca completa) + escala para agrandarla. */}
+      <group scale={MODEL_SCALE} rotation={[0.08, 0, 0]}>
+        {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+        {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
+      </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <CameraRig view={view} nonce={nonce} />
     </Canvas>
   );
 }

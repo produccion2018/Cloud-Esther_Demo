@@ -232,7 +232,7 @@ export function PeriodontogramaSec({
         {con3D ? (
           // Plus y Enterprise: se muestra la boca 3D (vacía) ya en el estado inicial, igual que el
           // odontograma, para que el periodontograma 3D se vea aunque todavía no haya evaluaciones.
-          <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid gap-4">
             <Suspense
               fallback={
                 <div className="grid h-[520px] place-items-center rounded-2xl bg-muted/30 text-sm text-muted-foreground">
@@ -403,7 +403,7 @@ export function PeriodontogramaSec({
       </div>
 
       {/* Boca 3D realista (misma del odontograma) + edición periodontal de la pieza elegida */}
-      <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-4">
         {con3D ? (
           <Suspense
             fallback={

@@ -391,7 +391,7 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
               className={
                 ampliado
                   ? "grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_380px]"
-                  : "grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px]"
+                  : "grid grid-cols-1 gap-4"
               }
             >
               <Suspense

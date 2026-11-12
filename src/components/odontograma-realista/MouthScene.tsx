@@ -42,10 +42,6 @@ const VIEWS: Record<ViewName, [number, number, number]> = {
   side: [115, 10, 60],
 };
 
-/** Escala del modelo: lo agranda respecto al original (que se veía completo pero chico).
-    Mayor = más grande. 1.5 = un 50% más grande, sin recortarse. */
-const MODEL_SCALE = 1.5;
-
 function Tooth({ t, color, modo, mat: preset, selected, hovered, onSelect, onHover }: {
   t: PlacedTooth; color: string; modo: MatMode; mat: MatPreset; selected: boolean; hovered: boolean;
   onSelect: (id: number) => void; onHover: (id: number | null) => void;
@@ -230,14 +226,14 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      {/* Como el original (muestra la boca completa) + escala para agrandarla. */}
-      <group scale={MODEL_SCALE} rotation={[0.08, 0, 0]}>
+      {/* Igual que el periodontograma standalone: sin escala ni giro, la cámara encuadra la boca. */}
+      <group rotation={[0.08, 0, 0]}>
         {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
         {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
       </group>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={35} maxDistance={180} rotateSpeed={0.7} zoomSpeed={0.8} />
       <CameraRig view={view} nonce={nonce} />
     </Canvas>
   );

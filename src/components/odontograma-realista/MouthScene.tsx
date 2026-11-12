@@ -37,7 +37,7 @@ const COLOR_YESO = "#efe7d6";
 /** Dirección (no distancia) desde la que mira la cámara en cada vista. La distancia la calcula
     solo AutoFrame según el tamaño real del modelo, así siempre llena el visor y queda centrado. */
 const VIEWS: Record<ViewName, [number, number, number]> = {
-  front: [0, 0.13, 1],
+  front: [0, 0.04, 1],
   top: [0, -0.96, 0.28],
   bottom: [0, 0.96, 0.28],
   side: [0.86, 0.17, 0.48],
@@ -156,7 +156,7 @@ const CAM_DIST = 120;
      MODEL_SCALE        agranda la boca (mayor = más grande)
      MODEL_CENTER_SHIFT baja la boca para centrarla (se escala junto al modelo) */
 const MODEL_SCALE = 3.2;
-const MODEL_CENTER_SHIFT = -14;
+const MODEL_CENTER_SHIFT = -21;
 
 /* CameraRig: al cambiar de vista (Frontal/Superior/…), apunta la cámara desde esa dirección
    hacia el centro del modelo (el origen), a CAM_DIST. */
@@ -211,7 +211,7 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
     <Canvas
       shadows
       dpr={[1, 1.25]}
-      camera={{ position: [0, 10, 119], fov: 32, near: 1, far: 2000 }}
+      camera={{ position: [0, 4, 119], fov: 32, near: 1, far: 2000 }}
       gl={{
         antialias: false,
         powerPreference: "low-power",

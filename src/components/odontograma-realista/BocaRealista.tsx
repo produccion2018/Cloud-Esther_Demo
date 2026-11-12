@@ -325,7 +325,7 @@ export function BocaRealista({
         )}
         {/* Marca de versión interna (chica) para control de despliegue. */}
         <div className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] font-bold text-primary/40">
-          3D v6
+          3D v7
         </div>
       </div>
     </div>

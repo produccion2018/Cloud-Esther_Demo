@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Environment, Lightformer } from "@react-three/drei";
+import { OrbitControls, ContactShadows, Environment, Lightformer, Center } from "@react-three/drei";
 import * as THREE from "three";
 import { buildArch, buildGumGeometry, buildPalateGeometry, buildToothGeometry, type PlacedTooth } from "./anatomy";
 
@@ -155,8 +155,7 @@ const CAM_DIST = 120;
 /* Ajuste del modelo por PROPIEDADES FIJAS (lo único que se aplica siempre):
      MODEL_SCALE        agranda la boca (mayor = más grande)
      MODEL_CENTER_SHIFT baja la boca para centrarla (se escala junto al modelo) */
-const MODEL_SCALE = 3.2;
-const MODEL_CENTER_SHIFT = -21;
+const MODEL_SCALE = 2.3;
 
 /* CameraRig: al cambiar de vista (Frontal/Superior/…), apunta la cámara desde esa dirección
    hacia el centro del modelo (el origen), a CAM_DIST. */
@@ -237,13 +236,14 @@ export default function MouthScene({ view, nonce, open, estados = {}, material =
         <Lightformer form="ring" intensity={1.4} position={[0, -40, 40]} scale={20} />
       </Environment>
 
-      {/* El modelo: escala fija (agranda) + corrimiento fijo (centra). Ambos se aplican siempre. */}
-      <group scale={MODEL_SCALE}>
-        <group position={[0, MODEL_CENTER_SHIFT, 0]} rotation={[0.08, 0, 0]}>
+      {/* <Center> centra la boca sola en el origen (herramienta de la librería). La escala la
+          agranda. Así queda completa y centrada sin cálculos a mano. */}
+      <Center>
+        <group scale={MODEL_SCALE} rotation={[0.08, 0, 0]}>
           {showUpper && <Jaw jaw="upper" offset={open ? 6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
           {showLower && <Jaw jaw="lower" offset={open ? -6 : 0} estados={estados} modo={material} mat={preset} selected={selected} hovered={hovered} onSelect={onSelect} onHover={setHovered} />}
         </group>
-      </group>
+      </Center>
 
       <ContactShadows position={[0, -30, 0]} opacity={0.35} scale={140} blur={2.8} far={40} color="#3a2a6a" />
       <OrbitControls makeDefault enableDamping dampingFactor={0.08} autoRotate autoRotateSpeed={0.6} minDistance={1} maxDistance={5000} rotateSpeed={0.7} zoomSpeed={0.8} />

@@ -8,7 +8,10 @@ import { ORDER, TYPE_LABEL } from "./anatomy";
    PASO 2 (siguiente): se conectan los datos clínicos (estados, periodontograma, Esther).
    El modelo 3D (three.js) se descarga solo cuando se muestra, para no frenar el resto. */
 
-const MouthScene = lazy(() => import("./MouthScene"));
+// La escena 3D empieza a bajar apenas se abre este módulo (en paralelo), sin esperar al render.
+const cargarEscena = () => import("./MouthScene");
+if (typeof window !== "undefined") void cargarEscena();
+const MouthScene = lazy(cargarEscena);
 
 /* Si el navegador no puede abrir el 3D (sin WebGL, poca memoria de video o demasiados contextos
    gráficos abiertos), en vez de tumbar toda la sección se muestra un aviso y un botón para
@@ -55,7 +58,7 @@ class Limite3D extends Component<
         </Reintento3D>
       );
     }
-    return <div key={this.state.intentos}>{this.props.children}</div>;
+    return <div key={this.state.intentos} className="h-full w-full">{this.props.children}</div>;
   }
 }
 
@@ -254,7 +257,7 @@ export function BocaRealista({
         </div>
       </div>
 
-      <div className="relative h-[56vh] min-h-[440px] max-h-[720px] bg-[radial-gradient(circle_at_50%_30%,#f3efff,#ece6fb_60%,#e7e0f7)] dark:bg-[radial-gradient(circle_at_50%_30%,#1e1b3a,#151228)]">
+      <div className="relative aspect-[800/504] min-h-[380px] max-h-[78vh] w-full bg-[radial-gradient(ellipse_at_50%_40%,#ffffff_0%,#e8f1fb_55%,#dcdcf3_100%)] dark:bg-[radial-gradient(circle_at_50%_30%,#1e1b3a,#151228)]">
         {montado ? (
           <Limite3D>
             <Suspense
@@ -325,7 +328,7 @@ export function BocaRealista({
         )}
         {/* Marca de versión interna (chica) para control de despliegue. */}
         <div className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] font-bold text-primary/40">
-          3D v13
+          3D v14
         </div>
       </div>
     </div>

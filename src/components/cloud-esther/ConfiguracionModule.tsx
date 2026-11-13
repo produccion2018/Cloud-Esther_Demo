@@ -16,6 +16,7 @@ import {
   PlugZap,
   Building2,
   Trash2,
+  Plus,
   Search,
   ChevronRight,
   ExternalLink,

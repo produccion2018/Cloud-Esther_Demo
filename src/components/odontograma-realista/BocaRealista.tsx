@@ -257,7 +257,7 @@ export function BocaRealista({
         </div>
       </div>
 
-      <div className="relative aspect-[800/504] min-h-[380px] max-h-[78vh] w-full bg-[radial-gradient(ellipse_at_50%_40%,#ffffff_0%,#e8f1fb_55%,#dcdcf3_100%)] dark:bg-[radial-gradient(circle_at_50%_30%,#1e1b3a,#151228)]">
+      <div className="relative aspect-[800/504] min-h-[380px] max-h-[78vh] w-full bg-white dark:bg-[radial-gradient(circle_at_50%_30%,#1e1b3a,#151228)]">
         {montado ? (
           <Limite3D>
             <Suspense
@@ -326,10 +326,6 @@ export function BocaRealista({
           )}
         </div>
         )}
-        {/* Marca de versión interna (chica) para control de despliegue. */}
-        <div className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] font-bold text-primary/40">
-          3D v14
-        </div>
       </div>
     </div>
   );

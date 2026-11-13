@@ -14,7 +14,7 @@ export const roleLabel: Record<AdminRole, string> = {
 
 export const roleDescription: Record<AdminRole, string> = {
   owner: "Acceso total: negocio, importes, planes y precios, equipo y configuración.",
-  partner: "Acceso total, igual que el Dueño: negocio, importes, planes y precios, equipo y configuración.",
+  partner: "Solo lo que el Dueño le asigne en «Equipo y accesos». No ve Planes, Equipo, Países ni configuración salvo que el Dueño se lo dé.",
   support: "Técnico en sistemas / desarrollo: tickets, clínicas, consumo de IA y registros.",
   "customer-care": "Atención y seguimiento: demos para contactar, clínicas, pagos y tickets.",
 };
@@ -31,8 +31,9 @@ export const ROLES: AdminRole[] = ["owner", "partner", "support", "customer-care
 /** Roles que se pueden dar desde "Equipo y accesos" (el Dueño se crea una sola vez, en el servidor). */
 export const ROLES_ASIGNABLES: AdminRole[] = ["partner", "support", "customer-care"];
 
-/** Dueño y Socio ven y administran TODO el panel, sin restricciones (decisión del 9 oct). */
-export const accesoTotal = (r: AdminRole) => r === "owner" || r === "partner";
+/** Acceso total al panel (negocio, importes, Planes y precios, Equipo/accesos, Países, demo):
+    SOLO el Dueño. El Socio ve únicamente lo que el Dueño le asigne en «Equipo y accesos». */
+export const accesoTotal = (r: AdminRole) => r === "owner";
 
 /* ───────────── Permisos por persona (pedido de Camilo, 13 oct) ─────────────
    Dueño y Socio: todo. El resto: lo que el Dueño o el Socio les tildaron en «Equipo y accesos».
@@ -59,7 +60,8 @@ const TODOS: Permiso[] = PERMISOS.map((p) => p.id);
 /** Casillas iniciales de cada rol (las mismas que usa el servidor). */
 export const PERMISOS_DEL_ROL: Record<AdminRole, Permiso[]> = {
   owner: TODOS,
-  partner: TODOS,
+  // El Socio arranca SIN permisos: el Dueño le tilda lo que quiera en «Equipo y accesos».
+  partner: [],
   "customer-care": ["demos", "contrataciones", "cobranza", "atencion", "soporte", "paises", "marketing"],
   support: ["soporte", "ia", "auditoria"],
 };

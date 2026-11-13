@@ -350,9 +350,24 @@ export function reiniciarDatosEjemplo() {
 
 /* ───────────── Autenticación ───────────── */
 
-export async function iniciarSesionAdmin(email: string, clave: string): Promise<SesionAdmin> {
+// Resultado del primer paso del ingreso (correo + contraseña):
+//  * ok        → modo demo (sin backend): entra directo, no hay 2FA.
+//  * 2fa_alta  → con backend, primera vez: hay que configurar el 2FA (QR/secreto).
+//  * 2fa_codigo → con backend, ya lo tiene: solo falta el código del momento.
+export type InicioSesionResultado =
+  | { estado: "ok"; sesion: SesionAdmin }
+  | { estado: "2fa_alta"; desafio: string; secreto: string; otpauth: string }
+  | { estado: "2fa_codigo"; desafio: string };
+
+export async function iniciarSesionAdmin(email: string, clave: string): Promise<InicioSesionResultado> {
   const correo = email.trim().toLowerCase();
-  if (CON_BACKEND) return http<SesionAdmin>("POST", "/admin/auth/login", { email: correo, clave });
+  if (CON_BACKEND) {
+    // El backend NO devuelve sesión acá: devuelve el estado del 2FA.
+    return http<Exclude<InicioSesionResultado, { estado: "ok" }>>("POST", "/admin/auth/login", {
+      email: correo,
+      clave,
+    });
+  }
   await espera();
   const b = await db();
   const usuario = b.admins.find((a) => a.email === correo);
@@ -396,7 +411,32 @@ export async function iniciarSesionAdmin(email: string, clave: string): Promise<
   guardar();
   const sesion: SesionAdmin = { usuario, token, inicio: usuario.ultimoAcceso };
   await registrar("Ingresó al panel", "acceso");
-  return sesion;
+  return { estado: "ok", sesion };
+}
+
+// 2FA — paso 2, primera vez: confirma el código del QR, activa el 2FA y entra.
+// Devuelve también los códigos de recuperación (se muestran UNA sola vez).
+export async function completar2faAlta(
+  desafio: string,
+  codigo: string,
+): Promise<{ sesion: SesionAdmin; codigosRecuperacion: string[] }> {
+  const r = await http<SesionAdmin & { codigosRecuperacion: string[] }>("POST", "/admin/auth/2fa/alta", {
+    desafio,
+    codigo,
+  });
+  const { codigosRecuperacion, ...sesion } = r;
+  return { sesion, codigosRecuperacion };
+}
+
+// 2FA — paso 2, de siempre: verifica el código (o uno de recuperación) y entra.
+export async function completar2faCodigo(desafio: string, codigo: string): Promise<SesionAdmin> {
+  return http<SesionAdmin>("POST", "/admin/auth/2fa/codigo", { desafio, codigo });
+}
+
+// El Dueño reinicia el 2FA de una persona que perdió el teléfono.
+export async function reiniciar2faAdmin(id: string): Promise<void> {
+  if (!CON_BACKEND) throw new ErrorApi("Necesita el servidor conectado.");
+  return http<void>("POST", `/admin/auth/2fa/reset/${id}`, {});
 }
 
 /** Devuelve el enlace solo en modo sin backend (para poder probar sin correo). */

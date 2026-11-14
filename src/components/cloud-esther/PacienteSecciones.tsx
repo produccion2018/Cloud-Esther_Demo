@@ -11,6 +11,7 @@ import {
   type Turno as TurnoAgenda,
 } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -2924,8 +2925,10 @@ function DatoAntecedente({ titulo, children }: { titulo: string; children: React
   );
 }
 
+type FirmanteDoc = { nombre: string; matricula?: string; firmaUrl?: string; selloUrl?: string };
+
 /* Historia clínica completa lista para imprimir o guardar como PDF. */
-function imprimirHistoria(datos: Registros, paciente: string) {
+function imprimirHistoria(datos: Registros, paciente: string, firmante?: FirmanteDoc) {
   const a = datos.antecedentes ?? ANTECEDENTES_VACIOS;
   const lista = (xs: string[]) => (xs.length ? xs.map(escapar).join(", ") : "—");
   const notas = [...datos.notasClinicas]
@@ -2957,11 +2960,26 @@ function imprimirHistoria(datos: Registros, paciente: string) {
       <p>${escapar(e.detalle)}</p><p class="meta">${escapar(e.profesional)}</p></div>`,
     )
     .join("");
+  const firma =
+    firmante && (firmante.firmaUrl || firmante.selloUrl || firmante.matricula)
+      ? `<h2>Firma del profesional</h2>
+      <div class="firma">
+        ${firmante.firmaUrl ? `<div class="fbox"><img src="${firmante.firmaUrl}" alt="Firma"/><div class="flabel">Firma</div></div>` : ""}
+        ${firmante.selloUrl ? `<div class="fbox"><img src="${firmante.selloUrl}" alt="Sello" class="sello"/></div>` : ""}
+        <div class="fdatos"><p><b>${escapar(firmante.nombre)}</b></p>
+          ${firmante.matricula ? `<p class="meta">Matrícula: ${escapar(firmante.matricula)}</p>` : ""}
+          <p class="meta">Emitido el ${escapar(formatearFecha(hoyISO()))}</p></div>
+      </div>
+      <p class="meta" style="font-size:9.5px;margin-top:6px">Documento firmado con imagen de firma y sello. No constituye una firma digital certificada.</p>`
+      : "";
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Historia clínica · ${escapar(paciente)}</title>
   <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:12px}h1{font-size:20px;margin:0}
   h2{font-size:14px;color:#6d28d9;border-bottom:1px solid #e9e3fb;padding-bottom:4px;margin-top:22px}h3{font-size:12.5px;margin:0 0 2px}
   .item{border:1px solid #eee8fb;border-radius:10px;padding:8px 10px;margin:8px 0}.meta{color:#6b6480;font-size:11px;margin:2px 0}
-  .alerta{color:#b91c1c;font-weight:700}p{margin:3px 0}</style></head><body>
+  .alerta{color:#b91c1c;font-weight:700}p{margin:3px 0}
+  .firma{display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.fbox{text-align:center}
+  .firma img{max-height:60px;max-width:180px;object-fit:contain}.firma img.sello{max-height:72px;max-width:140px}
+  .flabel{border-top:1px solid #1f1535;margin-top:3px;padding-top:2px;font-size:10px;color:#6b6480}.fdatos p{margin:1px 0}</style></head><body>
   <h1>Historia clínica</h1><p class="meta">${escapar(paciente)} · Impresa el ${escapar(formatearFecha(hoyISO()))}</p>
   <h2>Antecedentes y alertas médicas</h2>
   <p><b>Alergias:</b> <span class="${a.alergias.length ? "alerta" : ""}">${lista(a.alergias)}</span></p>
@@ -2970,6 +2988,7 @@ function imprimirHistoria(datos: Registros, paciente: string) {
   <p><b>Observaciones:</b> ${escapar(a.observaciones || "—")}</p>
   <h2>Notas clínicas</h2>${notas || "<p class='meta'>Sin notas clínicas.</p>"}
   <h2>Evoluciones</h2>${evoluciones || "<p class='meta'>Sin evoluciones.</p>"}
+  ${firma}
   <script>window.onload=()=>{window.print()}</script></body></html>`;
   const w = documentoPDF(`historia-clinica-${paciente}`);
   w.document.write(html);
@@ -2979,6 +2998,13 @@ function imprimirHistoria(datos: Registros, paciente: string) {
 
 function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
+  // El profesional logueado firma el documento con su firma/sello/matrícula.
+  const { usuario } = useSesion();
+  const { miembros } = useEquipo();
+  const yo = miembros.find((m) => (m.email ?? "").toLowerCase() === (usuario?.email ?? "").toLowerCase());
+  const firmante: FirmanteDoc | undefined = yo
+    ? { nombre: `${yo.firstName} ${yo.lastName}`.trim(), matricula: yo.licenseNumber, firmaUrl: yo.firmaUrl, selloUrl: yo.selloUrl }
+    : undefined;
   const lista = [...datos.historia].sort((a, b) =>
     `${b.fecha}${b.id}`.localeCompare(`${a.fecha}${a.id}`),
   );
@@ -2996,7 +3022,7 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           <button
             type="button"
             onClick={() => {
-              if (!imprimirHistoria(datos, contexto?.paciente ?? "Paciente"))
+              if (!imprimirHistoria(datos, contexto?.paciente ?? "Paciente", firmante))
                 onToast("Permití las ventanas emergentes para imprimir");
             }}
             className={BTN_SECUNDARIO}

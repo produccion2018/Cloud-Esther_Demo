@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import type { PersonaEquipo, RolClinica } from "@/lib/clinica/api";
 import { verEquipo } from "@/lib/clinica/api";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { moduloCargado } from "@/lib/clinica/sincronizar";
+import type { ScheduleDay, TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 
 /* ───────────────────────────────────────────────────────────────
    Unificación del equipo (pedido de Camilo, nov 2026).
@@ -48,4 +51,73 @@ export function useProfesionalesClinica(): string[] {
   if (yo) todos.unshift(yo);
   // Sin repetidos, conservando el orden.
   return Array.from(new Set(todos.filter(Boolean)));
+}
+
+/* ───────── Unificación PROFUNDA del equipo ─────────
+   Da de alta en el Equipo clínico (con perfil completo: horario por defecto,
+   rol, etc.) a cada persona de Acceso que todavía no lo tenga. Así aparecen
+   en TODOS lados (agenda, firma, historia), no solo en los selectores.
+   Es ADDITIVO y seguro: nunca borra ni pisa a nadie, no duplica (match por
+   email), y espera a que el equipo clínico cargue del servidor antes de tocar. */
+
+const DIAS: ScheduleDay["day"][] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const horarioDefecto = (): ScheduleDay[] =>
+  DIAS.map((day, i) => ({ day, active: i < 5, start: "09:00", end: "18:00" }));
+
+const ROL_A_CLINICO: Record<RolClinica, TeamRole> = {
+  admin: "administrador",
+  odontologo: "odontologo",
+  secretaria: "secretaria",
+  asistente: "asistente",
+};
+
+function miembroDesdeAcceso(p: PersonaEquipo): TeamMember {
+  const partes = p.nombre.trim().split(/\s+/);
+  return {
+    id: p.id,
+    firstName: partes[0] ?? p.nombre,
+    lastName: partes.slice(1).join(" "),
+    role: ROL_A_CLINICO[p.rol] ?? "asistente",
+    email: p.email,
+    phone: "",
+    status: p.estado === "desactivada" ? "inactivo" : "activo",
+    schedule: horarioDefecto(),
+    permissions: [],
+    specialties: [],
+  };
+}
+
+export function useSincronizarEquipo(): void {
+  const real = useClinicaReal();
+  const { miembros, setMiembros } = useEquipo();
+  const hecho = useRef<string | null>(null);
+
+  useEffect(() => {
+    const slug = real?.slug;
+    // Solo clínica real, una vez por clínica, y recién cuando el equipo clínico cargó del servidor.
+    if (!slug || hecho.current === slug || !moduloCargado("equipo")) return;
+    hecho.current = slug; // marcar antes del fetch para no duplicar en re-renders
+    let vivo = true;
+    verEquipo(slug)
+      .then((e) => {
+        if (!vivo) return;
+        const existen = new Set(miembros.map((m) => (m.email ?? "").toLowerCase()).filter(Boolean));
+        const nuevos = e.personas
+          .filter((p) => p.email && !existen.has(p.email.toLowerCase()))
+          .map(miembroDesdeAcceso);
+        if (!nuevos.length) return;
+        setMiembros((prev) => {
+          // Re-chequea contra el estado más reciente (por si algo cargó entremedio).
+          const ya = new Set(prev.map((m) => (m.email ?? "").toLowerCase()).filter(Boolean));
+          const faltan = nuevos.filter((n) => !ya.has(n.email.toLowerCase()));
+          return faltan.length ? [...prev, ...faltan] : prev;
+        });
+      })
+      .catch(() => {
+        hecho.current = null; // si falló, permitir reintento
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [real?.slug, miembros, setMiembros]);
 }

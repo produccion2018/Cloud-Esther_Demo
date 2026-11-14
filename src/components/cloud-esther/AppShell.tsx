@@ -27,6 +27,7 @@ import { DEMO_EN_SERVIDOR } from "@/lib/cloud-esther/demo-servidor";
 import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
 // Clínica real (Etapa 8b): mismas pantallas, sus datos en el servidor, menú según el rol
 import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { useSincronizarEquipo } from "@/lib/cloud-esther/profesionales";
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
 import { avisarModuloAdicional, refrescarSesionClinica } from "@/lib/clinica/api";
@@ -1043,6 +1044,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const real = useClinicaReal();
   const { sesion } = useSesion();
+  // Unificación profunda del equipo: da de alta en el equipo clínico a la gente
+  // de Acceso que todavía no tenga perfil (additivo y seguro). Así aparecen en
+  // agenda, firma e historia, no solo en los selectores.
+  useSincronizarEquipo();
   // Las sucursales (sedes) salen de lo que cargó el dueño en Configuración. Si no cargó ninguna,
   // la sede es el nombre de la clínica. Vale para el demo y para la clínica real.
   ajustarCatalogosClinica(

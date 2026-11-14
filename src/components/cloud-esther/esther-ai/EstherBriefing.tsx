@@ -43,7 +43,8 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   const { usuario } = useSesion();
   const esReal = useClinicaReal();
   const clima = useClima();
-  const primerNombre = primerNombreDe(usuario?.nombre ?? "");
+  // Clínica real: el saludo usa el nombre de la sesión real (igual que el resto de la app).
+  const primerNombre = primerNombreDe(esReal?.sesion.usuario.nombre ?? usuario?.nombre ?? "");
 
   const hallazgos = useMemo(() => hallazgosEsther(plan), [plan]);
   const frase = fraseClima(clima);

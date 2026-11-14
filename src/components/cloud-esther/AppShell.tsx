@@ -416,7 +416,11 @@ function iniciales(nombre: string) {
  *  una clínica, así que el sidebar muestra con qué empresa se está trabajando. */
 function EmpresaActiva() {
   const { usuario, clinica } = useSesion();
+  const real = useClinicaReal();
   if (!usuario || !clinica) return null;
+  // En una clínica real manda el nombre de la sesión real (quien inició sesión en la
+  // clínica), igual que la vista de Administración: así no aparece un nombre distinto.
+  const nombreUsuario = real?.sesion.usuario.nombre ?? usuario.nombre;
 
   return (
     <div className="relative mx-3 mb-3 flex items-center gap-2.5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-3 text-white shadow-[0_14px_30px_-18px_rgba(124,58,237,0.95)]">
@@ -428,7 +432,7 @@ function EmpresaActiva() {
         <p className="truncate font-display text-sm font-bold">{clinica.nombre}</p>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-white/80">
           <span className="size-1.5 shrink-0 rounded-full bg-[#6ee7b7] shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
-          {usuario.nombre}
+          {nombreUsuario}
         </p>
       </div>
     </div>
@@ -765,7 +769,8 @@ function UsuarioMovil() {
     document.addEventListener("pointerdown", cerrar);
     return () => document.removeEventListener("pointerdown", cerrar);
   }, [abierto]);
-  const nombre = usuario?.nombre ?? "Invitado";
+  // Clínica real: el nombre sale de la sesión real (igual que Administración), no de la cuenta.
+  const nombre = real?.sesion.usuario.nombre ?? usuario?.nombre ?? "Invitado";
   const primerNombre = nombre.split(/\s+/)[0] ?? nombre;
   const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = real
     ? [

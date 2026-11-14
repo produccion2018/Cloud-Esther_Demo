@@ -1183,7 +1183,9 @@ function DashboardInner() {
   // Clínica real: todo sale de SUS datos
   const real = useClinicaReal();
   const { pacientes: pacientesReales, setPacientes } = usePacientes();
-  const nombreUsuario = usuario?.nombre ?? "Invitado";
+  // En una clínica real manda el nombre de la sesión real (igual que Administración),
+  // así el saludo y el chip muestran el mismo nombre en las dos vistas.
+  const nombreUsuario = real?.sesion.usuario.nombre ?? usuario?.nombre ?? "Invitado";
 
   const { message, show } = useToast();
   // Turnos de hoy tomados de la agenda de la empresa (lo que se agenda acá aparece en Agenda y viceversa).

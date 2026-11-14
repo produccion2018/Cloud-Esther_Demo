@@ -1763,9 +1763,15 @@ function Acciones({
 /** Odontólogos activos del equipo de la empresa. */
 function useProfesionales() {
   const { miembros } = useEquipo();
-  return miembros
+  const { usuario } = useSesion();
+  const nombres = miembros
     .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
     .map((m) => `${m.firstName} ${m.lastName}`.trim());
+  // Que el desplegable nunca quede vacío: suma al usuario logueado (p. ej. el
+  // administrador que también atiende) si todavía no está en el equipo clínico.
+  const yo = usuario?.nombre?.trim();
+  if (yo && !nombres.includes(yo)) nombres.unshift(yo);
+  return nombres;
 }
 
 function Datalists() {

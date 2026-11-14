@@ -12,6 +12,7 @@ import {
 } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useProfesionalesClinica } from "@/lib/cloud-esther/profesionales";
 import { normalizarBusqueda } from "@/lib/utils";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -1761,17 +1762,10 @@ function Acciones({
 }
 
 /** Odontólogos activos del equipo de la empresa. */
+// Profesionales para la receta: equipo clínico + gente de Acceso + usuario
+// logueado, unificados (ver profesionales.ts).
 function useProfesionales() {
-  const { miembros } = useEquipo();
-  const { usuario } = useSesion();
-  const nombres = miembros
-    .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
-    .map((m) => `${m.firstName} ${m.lastName}`.trim());
-  // Que el desplegable nunca quede vacío: suma al usuario logueado (p. ej. el
-  // administrador que también atiende) si todavía no está en el equipo clínico.
-  const yo = usuario?.nombre?.trim();
-  if (yo && !nombres.includes(yo)) nombres.unshift(yo);
-  return nombres;
+  return useProfesionalesClinica();
 }
 
 function Datalists() {

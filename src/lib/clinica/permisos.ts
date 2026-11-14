@@ -58,6 +58,9 @@ const HABILITADOS = new Set([
   "dashboard", "agenda", "pacientes", "equipo", "notificaciones",
   // Plan Start completo (14 oct): ficha clínica, odontograma 2D, estudios, comunicación y configuración
   "historia", "odontograma", "recetas", "estudios", "laboratorio", "tratamientos", "comunicaciones", "configuracion",
+  // Odontograma 3D (Plus y Enterprise): visor andando y guarda en el servidor
+  // (misma persistencia que el 2D). El plan ya lo limita a Plus/Enterprise.
+  "odontograma3d",
   // Comunicación interna (estilo Teams): todos los planes y todos los roles
   "comunicacion-interna",
   // Pagos, facturación y analítica (punto 20): disponibles de verdad según el plan,

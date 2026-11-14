@@ -173,9 +173,13 @@ export function EquipoClinicaPanel({
     setOcupado(p.id);
     try {
       await reenviarInvitacion(slug, p.id);
-      toast.success(`Invitación reenviada a ${p.email}.`);
+      toast.success(
+        p.estado === "invitada"
+          ? `Invitación reenviada a ${p.email}.`
+          : `Enlace de acceso enviado a ${p.email}.`,
+      );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo reenviar.");
+      toast.error(e instanceof Error ? e.message : "No se pudo enviar.");
     } finally {
       setOcupado(null);
     }
@@ -402,6 +406,11 @@ export function EquipoClinicaPanel({
                   {p.estado === "invitada" && (
                     <DropdownMenuItem onSelect={() => void reenviar(p)}>
                       <MailPlus className="mr-2 h-4 w-4" /> Reenviar invitación
+                    </DropdownMenuItem>
+                  )}
+                  {p.estado === "activa" && (
+                    <DropdownMenuItem onSelect={() => void reenviar(p)}>
+                      <MailPlus className="mr-2 h-4 w-4" /> Enviar enlace de acceso
                     </DropdownMenuItem>
                   )}
                   {p.estado === "desactivada" ? (

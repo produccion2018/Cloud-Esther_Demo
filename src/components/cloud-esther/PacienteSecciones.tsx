@@ -4309,12 +4309,16 @@ function RecetaForm({
   const [firmaUrl, setFirmaUrl] = useState("");
   const [selloUrl, setSelloUrl] = useState("");
   const [subiendo, setSubiendo] = useState<"firma" | "sello" | null>(null);
-  // Reusa la firma y el sello de la última receta del mismo profesional (se cargan una vez).
+  const { miembros } = useEquipo();
+  // Autocompleta firma, sello y matrícula desde el PERFIL del profesional (Equipo).
+  // Si todavía no los cargó en su perfil, reusa los de su última receta.
   useEffect(() => {
+    const perfil = miembros.find((m) => `${m.firstName} ${m.lastName}`.trim() === profesional.trim());
     const previa = recetasPrevias.find((r) => r.profesional === profesional);
-    setFirmaUrl(previa?.firmaUrl ?? "");
-    setSelloUrl(previa?.selloUrl ?? "");
-    if (previa?.matricula) setMatricula((m) => m || previa.matricula);
+    setFirmaUrl(perfil?.firmaUrl ?? previa?.firmaUrl ?? "");
+    setSelloUrl(perfil?.selloUrl ?? previa?.selloUrl ?? "");
+    const mat = perfil?.licenseNumber ?? previa?.matricula ?? "";
+    if (mat) setMatricula((m) => m || mat);
   }, [profesional]); // eslint-disable-line react-hooks/exhaustive-deps
   const subirImg = async (tipo: "firma" | "sello", file: File) => {
     setSubiendo(tipo);

@@ -1226,7 +1226,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Esther SOLO en el dashboard (planes con IA): aparece su dibujo y te "habla" con un
           globo de mensaje (texto + audio). En el resto de los módulos no aparece. */}
       {iaDisponible &&
-        !real &&
         !bloqueado &&
         (modulo?.id ?? "dashboard") === "dashboard" && (
           <EstherBriefing
@@ -1237,7 +1236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
           Donde ya está Esther Infinity (Plus y Enterprise en el demo) no se duplica el botón. */}
       {planListo &&
-        (!iaDisponible || !!real) &&
+        !iaDisponible &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
         !pathname.startsWith("/demo/rrhh") && (

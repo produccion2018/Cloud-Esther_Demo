@@ -73,6 +73,8 @@ export interface ClinicSettings {
   auditLogEnabled: boolean;
   /** Días que se conservan los registros de auditoría. */
   auditRetentionDays: number;
+  /** Formato de hora: "auto" (según el país), "12h" (a. m./p. m.) o "24h". */
+  formatoHora: "auto" | "12h" | "24h";
   datosClinica: DatosClinica;
   /** Sucursales (sedes) de la clínica, con los nombres que elige el dueño (ej. "Sede Centro").
       Vacío = una sola sede con el nombre de la clínica. El límite depende del plan. */
@@ -102,6 +104,7 @@ export const DEFAULT_SETTINGS: ClinicSettings = {
   advancedSecurityEnabled: false,
   auditLogEnabled: true,
   auditRetentionDays: 365,
+  formatoHora: "auto",
   datosClinica: DATOS_CLINICA_VACIOS,
   sucursales: [],
 };

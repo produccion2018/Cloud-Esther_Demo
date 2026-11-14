@@ -254,13 +254,14 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
   const primero = Math.max(0, pasos.findIndex((p) => !p.hecho));
   const [i, setI] = useState(primero);
   const [datos, setDatos] = useState<DatosClinica>(() => ({ ...DATOS_CLINICA_VACIOS, ...cargarSettings(clinic).datosClinica }));
+  const [formatoHora, setFormatoHora] = useState<"auto" | "12h" | "24h">(() => cargarSettings(clinic).formatoHora ?? "auto");
   const [guardado, setGuardado] = useState(false);
   const fin = i >= pasos.length;
   const paso = pasos[i];
 
   const guardarDatos = () => {
     const s = cargarSettings(clinic);
-    guardarSettings(clinic, { ...s, datosClinica: { ...datos, nombre: datos.nombre.trim(), direccion: datos.direccion.trim() } });
+    guardarSettings(clinic, { ...s, formatoHora, datosClinica: { ...datos, nombre: datos.nombre.trim(), direccion: datos.direccion.trim() } });
     setGuardado(true);
     window.setTimeout(() => setGuardado(false), 1800);
   };
@@ -367,6 +368,18 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
                             {bandera(p.codigo)} {p.nombre}
                           </option>
                         ))}
+                      </select>
+                    </label>
+                    <label className="text-xs font-semibold">
+                      Formato de hora
+                      <select
+                        value={formatoHora}
+                        onChange={(e) => setFormatoHora(e.target.value as "auto" | "12h" | "24h")}
+                        className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm"
+                      >
+                        <option value="auto">Automático (según el país)</option>
+                        <option value="12h">12 horas (a. m. / p. m.)</option>
+                        <option value="24h">24 horas</option>
                       </select>
                     </label>
                     <div className="sm:col-span-2">

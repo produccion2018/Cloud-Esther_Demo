@@ -101,6 +101,8 @@ function superpuestos(turnos: Turno[]): Map<number, Turno> {
   return choca;
 }
 
+import { useFormatoHora } from "@/lib/cloud-esther/formato-hora";
+
 export function AgendaPortal({
   modo,
   turnos,
@@ -127,6 +129,7 @@ export function AgendaPortal({
   onNuevoTurno?: () => void;
 }) {
   const hoy = iso(new Date());
+  const fmtHora = useFormatoHora();
   const [vista, setVista] = useState<Vista>(modo === "administracion" ? "profesionales" : "dia");
   const [fecha, setFecha] = useState(hoy);
   const [prof, setProf] = useState("");
@@ -187,7 +190,7 @@ export function AgendaPortal({
       >
         <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${BLOQUE[t.estado].split(" text-")[0]}`} />
         <span className="grid min-w-14 place-items-center rounded-xl bg-gradient-to-br from-primary/12 to-fuchsia-500/10 px-2 py-1.5 text-center ring-1 ring-primary/10">
-          <span className="text-sm font-bold tabular-nums text-primary">{t.hora}</span>
+          <span className="text-sm font-bold tabular-nums text-primary">{fmtHora(t.hora)}</span>
         </span>
         <button
           type="button"
@@ -201,7 +204,7 @@ export function AgendaPortal({
           </span>
           {otro && (
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10.5px] font-semibold text-rose-700">
-              <AlertTriangle className="size-3" /> Se superpone con {otro.hora} · {otro.paciente}
+              <AlertTriangle className="size-3" /> Se superpone con {fmtHora(otro.hora)} · {otro.paciente}
             </span>
           )}
         </button>
@@ -477,7 +480,7 @@ export function AgendaPortal({
                           esHoy ? "bg-white/18 text-white" : "bg-primary/[0.07] text-foreground/80"
                         }`}
                       >
-                        <span className={`shrink-0 tabular-nums ${esHoy ? "text-white/80" : "text-primary"}`}>{t.hora}</span>
+                        <span className={`shrink-0 tabular-nums ${esHoy ? "text-white/80" : "text-primary"}`}>{fmtHora(t.hora)}</span>
                         <span className="truncate">{t.paciente}</span>
                       </span>
                     ))}

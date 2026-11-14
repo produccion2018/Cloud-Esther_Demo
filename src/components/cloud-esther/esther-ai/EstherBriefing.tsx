@@ -5,6 +5,7 @@ import { X, ArrowUpRight, CalendarDays, CloudSun, AlertTriangle, Activity, Volum
 import estherSaludando from "@/assets/esther-pose-waving.png";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
 import {
   primerNombreDe,
@@ -40,6 +41,7 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   void modulo;
   const { plan } = useCloudEsther();
   const { usuario } = useSesion();
+  const esReal = useClinicaReal();
   const clima = useClima();
   const primerNombre = primerNombreDe(usuario?.nombre ?? "");
 
@@ -226,17 +228,20 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
               </div>
             )}
 
-            {/* CTA */}
-            <div className="mt-3">
-              <Link
-                to={"/demo/ia" as never}
-                onClick={cerrar}
-                className="group inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:-translate-y-0.5"
-              >
-                Hablar con Esther
-                <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
-            </div>
+            {/* CTA — solo en el demo: lleva al chat de Esther (/demo/ia).
+                En una clínica real el chat es otro módulo, así que acá no se muestra. */}
+            {!esReal && (
+              <div className="mt-3">
+                <Link
+                  to={"/demo/ia" as never}
+                  onClick={cerrar}
+                  className="group inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:-translate-y-0.5"
+                >
+                  Hablar con Esther
+                  <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
+            )}
 
             {/* Barra de tiempo: al llenarse, el globo se va solo */}
             <motion.span

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
 import type { ComponentType, ReactNode } from "react"
 import {
@@ -294,6 +294,60 @@ function Field({
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
       {children}
     </label>
+  )
+}
+
+/** Carga una imagen (firma o sello) del profesional y la guarda como data URL.
+    Es una imagen, NO una firma digital certificada. */
+function FirmaOSello({
+  label,
+  ayuda,
+  valor,
+  onCambio,
+}: {
+  label: string
+  ayuda: string
+  valor?: string
+  onCambio: (url: string | undefined) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const leer = (archivo?: File) => {
+    if (!archivo || !archivo.type.startsWith("image/")) return
+    if (archivo.size > 2_000_000) return // demasiado grande para una firma/sello
+    const r = new FileReader()
+    r.onload = () => onCambio(typeof r.result === "string" ? r.result : undefined)
+    r.readAsDataURL(archivo)
+  }
+  return (
+    <Field label={label}>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => leer(e.target.files?.[0] ?? undefined)}
+      />
+      {valor ? (
+        <div className="flex items-center gap-3">
+          <img src={valor} alt={label} className="h-14 rounded-lg border border-primary/15 bg-white object-contain p-1" />
+          <button type="button" onClick={() => ref.current?.click()} className="text-xs font-semibold text-primary">
+            Cambiar
+          </button>
+          <button type="button" onClick={() => onCambio(undefined)} className="text-xs font-semibold text-destructive">
+            Quitar
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          className="flex h-11 w-full items-center justify-center rounded-xl border border-dashed border-primary/30 text-sm font-semibold text-primary hover:bg-primary/5"
+        >
+          Subir imagen
+        </button>
+      )}
+      <span className="mt-1 block text-[11px] text-muted-foreground">{ayuda}</span>
+    </Field>
   )
 }
 
@@ -1195,6 +1249,23 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
                     className={INPUT}
                   />
                 </Field>
+
+                {/* Firma y sello del profesional: se cargan una vez y se usan en sus
+                    documentos (recetas, historia clínica). Son imágenes, no firma digital. */}
+                <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
+                  <FirmaOSello
+                    label="Firma"
+                    ayuda="Imagen de la firma del profesional. Ideal: PNG con fondo transparente."
+                    valor={draft.firmaUrl}
+                    onCambio={(url) => setDraft({ ...draft, firmaUrl: url })}
+                  />
+                  <FirmaOSello
+                    label="Sello / cuño"
+                    ayuda="Sello profesional. Se usa donde corresponda según el país."
+                    valor={draft.selloUrl}
+                    onCambio={(url) => setDraft({ ...draft, selloUrl: url })}
+                  />
+                </div>
 
                 <div className="sm:col-span-2">
                   <Field label="Especialidad">

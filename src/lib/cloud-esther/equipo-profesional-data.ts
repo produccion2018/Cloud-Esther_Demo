@@ -28,6 +28,11 @@ export interface TeamMember {
   role: TeamRole;
   specialties?: string[];
   licenseNumber?: string;
+  /** Firma del profesional (imagen) y sello/cuño (imagen), cargadas una vez en su perfil.
+      Se usan en sus documentos (recetas, historia clínica). Son imágenes, NO una firma
+      digital certificada. */
+  firmaUrl?: string;
+  selloUrl?: string;
   office?: string;
   email: string;
   phone: string;

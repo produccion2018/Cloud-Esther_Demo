@@ -351,7 +351,15 @@ export function useNotificaciones() {
 
   /* ── Equipo: especialidades sin profesional y odontólogos sin horarios ── */
   const activos = miembros.filter((m) => m.status !== "pendiente");
-  const sinProfesional = especialidades.filter(
+  // Especialidades que la clínica REALMENTE ofrece: las que al menos un integrante del
+  // equipo declara practicar. La lista precargada (ESPECIALIDADES) es solo un menú para
+  // elegir; no significa que la clínica ofrezca las 8, así que no se avisa por ellas.
+  // Clínica nueva sin equipo cargado → ninguna ofrecida → ninguna alerta (dato real).
+  const ofrecidas = especialidades.filter((e) =>
+    miembros.some((m) => (m.specialties ?? []).includes(e)),
+  );
+  // De las ofrecidas, las que no tienen ningún odontólogo activo que las cubra.
+  const sinProfesional = ofrecidas.filter(
     (e) => !activos.some((m) => m.role === "odontologo" && (m.specialties ?? []).includes(e)),
   );
   if (sinProfesional.length)

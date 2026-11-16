@@ -58,6 +58,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
+import { useSincronizarEquipo } from "@/lib/cloud-esther/profesionales";
 import {
   TRATAMIENTOS as PRACTICAS,
   setTurnosStore,
@@ -733,6 +734,10 @@ function AppEquipo({
   onSalir: () => void;
 }) {
   const clinicaReal = useClinicaReal();
+  // Unifica el equipo también desde Administración: da de alta en el equipo clínico a las
+  // personas de Acceso (odontólogos, asistentes…) para que aparezcan en Agendas y horarios.
+  // Antes solo corría en Operaciones, por eso la agenda podía quedar vacía acá.
+  useSincronizarEquipo();
   if (real && clinicaReal)
     ajustarCatalogosClinica(
       clinicaReal.sesion.clinica.nombre,

@@ -28,6 +28,9 @@ export type EstadoEquipo = {
   miembros: TeamMember[];
   especialidades: string[];
   ausencias: Ausencia[];
+  /** El aviso de "especialidades sugeridas" se muestra una vez por clínica; al cerrarlo
+      queda en true y no vuelve a aparecer (se guarda en el servidor como el resto del equipo). */
+  avisoEspecialidadesVisto?: boolean;
 };
 
 const store = crearStorePorEmpresa<EstadoEquipo>(
@@ -48,7 +51,7 @@ const aplicar = <T>(prev: T, a: Actualizar<T>) =>
   typeof a === "function" ? (a as (p: T) => T)(prev) : a;
 
 export function useEquipo() {
-  const { miembros, especialidades, ausencias } = store.usar();
+  const { miembros, especialidades, ausencias, avisoEspecialidadesVisto } = store.usar();
 
   const setMiembros = (a: Actualizar<TeamMember[]>) => {
     const actual = store.leer();
@@ -68,14 +71,23 @@ export function useEquipo() {
   const actualizarMiembro = (id: string, fn: (m: TeamMember) => TeamMember) =>
     setMiembros((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
 
+  /** Marca el aviso de especialidades sugeridas como leído (no vuelve a aparecer). */
+  const ocultarAvisoEspecialidades = () => {
+    const actual = store.leer();
+    if (actual.avisoEspecialidadesVisto) return;
+    store.poner({ ...actual, avisoEspecialidadesVisto: true });
+  };
+
   return {
     miembros,
     especialidades,
     ausencias,
+    avisoEspecialidadesVisto: avisoEspecialidadesVisto ?? false,
     setMiembros,
     setEspecialidades,
     setAusencias,
     actualizarMiembro,
+    ocultarAvisoEspecialidades,
   };
 }
 

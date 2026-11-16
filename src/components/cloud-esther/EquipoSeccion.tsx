@@ -5,6 +5,7 @@ import {
   Check,
   Clock,
   KeyRound,
+  Lightbulb,
   Pencil,
   Plus,
   RotateCcw,
@@ -149,7 +150,14 @@ export function EquipoSeccion({ seccion, embebido = false }: { seccion: EquipoSe
 /* ───────────── Especialidades ───────────── */
 
 function Especialidades({ onToast }: { onToast: (m: string) => void }) {
-  const { miembros, especialidades, setEspecialidades, setMiembros } = useEquipo();
+  const {
+    miembros,
+    especialidades,
+    setEspecialidades,
+    setMiembros,
+    avisoEspecialidadesVisto,
+    ocultarAvisoEspecialidades,
+  } = useEquipo();
   const [nueva, setNueva] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
   const [textoEdicion, setTextoEdicion] = useState("");
@@ -205,6 +213,26 @@ function Especialidades({ onToast }: { onToast: (m: string) => void }) {
 
   return (
     <div className="space-y-4">
+      {!avisoEspecialidadesVisto && (
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm">
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Lightbulb className="size-4" />
+          </span>
+          <p className="min-w-0 flex-1 text-muted-foreground">
+            Estas son <strong className="font-semibold text-foreground">especialidades sugeridas</strong> para
+            empezar. Borrá las que no uses, renombralas o agregá las tuyas con el campo de abajo. Son solo un
+            punto de partida: podés dejar únicamente las que atiende tu clínica.
+          </p>
+          <button
+            type="button"
+            aria-label="Entendido, no volver a mostrar"
+            onClick={ocultarAvisoEspecialidades}
+            className="shrink-0 rounded-lg p-1 text-muted-foreground transition hover:bg-primary/10 hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();

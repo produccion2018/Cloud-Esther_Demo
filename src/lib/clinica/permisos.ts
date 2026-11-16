@@ -74,6 +74,9 @@ const HABILITADOS = new Set([
   // Inventario (punto 10): CRUD real (stock, movimientos, alertas, órdenes, proveedores)
   // que guarda en el servidor (módulo «inventario», admin/asistente) y arranca vacío.
   "inventario",
+  // Marketing (punto 10): CRUD real (leads, campañas, cupones, referidos, reseñas) que
+  // guarda en el servidor (módulo «marketing», admin/secretaría) y arranca vacío.
+  "marketing",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

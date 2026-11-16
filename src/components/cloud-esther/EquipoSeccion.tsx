@@ -621,6 +621,11 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
           </div>
 
           <div className="mt-4 space-y-2">
+            {miembro.schedule.length === 0 && (
+              <p className="rounded-xl border border-dashed border-primary/25 bg-primary/[0.03] p-3 text-xs text-muted-foreground">
+                Este integrante todavía no tiene días de atención cargados.
+              </p>
+            )}
             {miembro.schedule.map((d) => (
               <div
                 key={d.day}

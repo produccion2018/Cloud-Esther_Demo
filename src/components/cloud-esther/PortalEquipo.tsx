@@ -2609,16 +2609,25 @@ function PerfilEquipo({ ctx }: { ctx: Ctx }) {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Tarjeta>
           <p className="text-sm font-semibold">Mi horario</p>
-          <ul className="mt-2 space-y-1 text-xs">
-            {ctx.yo.schedule.map((d) => (
-              <li key={d.day} className="flex justify-between rounded-lg bg-white/80 px-3 py-1.5">
-                <span>{d.day}</span>
-                <span className={d.active ? "font-semibold" : "text-muted-foreground"}>
-                  {d.active ? `${d.start} – ${d.end}` : "No trabaja"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {ctx.yo.schedule.length === 0 ? (
+            <p className="mt-2 rounded-lg bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              Todavía no tenés un horario de atención configurado. Como Administrador no hace
+              falta; si además atendés pacientes, sumate como profesional en{" "}
+              <span className="font-semibold text-foreground">Equipo → Integrantes</span> y cargá
+              tus días en <span className="font-semibold text-foreground">Agendas y horarios</span>.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-1 text-xs">
+              {ctx.yo.schedule.map((d) => (
+                <li key={d.day} className="flex justify-between rounded-lg bg-white/80 px-3 py-1.5">
+                  <span>{d.day}</span>
+                  <span className={d.active ? "font-semibold" : "text-muted-foreground"}>
+                    {d.active ? `${d.start} – ${d.end}` : "No trabaja"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           {misAusencias.length > 0 && (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
               Próxima ausencia: {misAusencias[0]?.tipo} del{" "}

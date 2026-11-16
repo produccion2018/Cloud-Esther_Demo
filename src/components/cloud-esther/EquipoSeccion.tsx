@@ -21,6 +21,9 @@ import {
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
+import { verEquipo, type PersonaEquipo, type RolClinica } from "@/lib/clinica/api";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import { PermisosPortalEditor } from "@/components/cloud-esther/portales/PermisosPortalEditor";
@@ -395,8 +398,64 @@ const horasTexto = (min: number) => {
   return r ? `${h} h ${r} min` : `${h} h`;
 };
 
+/* Convierte a una persona de «Accesos del equipo» en integrante clínico, con un horario
+   por defecto editable. Así, quien se cargó en Accesos también aparece en Agendas. */
+const DIAS_SEMANA: ScheduleDay["day"][] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const horarioPorDefecto = (): ScheduleDay[] =>
+  DIAS_SEMANA.map((day, i) => ({ day, active: i < 5, start: "09:00", end: "18:00" }));
+const ROL_ACCESO_A_CLINICO: Record<RolClinica, TeamRole> = {
+  admin: "administrador",
+  odontologo: "odontologo",
+  secretaria: "secretaria",
+  asistente: "asistente",
+};
+function integranteDesdeAcceso(p: PersonaEquipo): TeamMember {
+  const partes = p.nombre.trim().split(/\s+/);
+  return {
+    id: p.id,
+    firstName: partes[0] ?? p.nombre,
+    lastName: partes.slice(1).join(" "),
+    role: ROL_ACCESO_A_CLINICO[p.rol] ?? "asistente",
+    email: p.email,
+    phone: "",
+    status: p.estado === "desactivada" ? "inactivo" : "activo",
+    schedule: horarioPorDefecto(),
+    permissions: [],
+    specialties: [],
+  };
+}
+
 function Agendas({ onToast }: { onToast: (m: string) => void }) {
-  const { miembros, actualizarMiembro } = useEquipo();
+  const { miembros, actualizarMiembro, setMiembros } = useEquipo();
+  // Trae a la gente de «Accesos del equipo» y la suma al equipo clínico (sin duplicar, por
+  // correo, y nunca al Administrador). Corre al abrir Agendas, así agarra a los recién
+  // invitados. Funciona en demo (vía pedidoDemo) y en clínica real.
+  const real = useClinicaReal();
+  const slugEquipo = real?.slug ?? SLUG_DEMO;
+  useEffect(() => {
+    let vivo = true;
+    verEquipo(slugEquipo)
+      .then((e) => {
+        if (!vivo) return;
+        const nuevos = e.personas
+          .filter((p) => p.email && p.rol !== "admin")
+          .map(integranteDesdeAcceso);
+        if (!nuevos.length) return;
+        setMiembros((prev) => {
+          const ya = new Set(prev.map((m) => (m.email ?? "").toLowerCase()).filter(Boolean));
+          const faltan = nuevos.filter((n) => !ya.has((n.email ?? "").toLowerCase()));
+          return faltan.length ? [...prev, ...faltan] : prev;
+        });
+      })
+      .catch(() => {
+        /* si no se puede traer Accesos, se muestran solo los que ya están */
+      });
+    return () => {
+      vivo = false;
+    };
+    // setMiembros viene del store (estable en la práctica); solo re-ejecutar si cambia la clínica.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slugEquipo]);
   const [seleccionado, setSeleccionado] = useState<string | null>(miembros[0]?.id ?? null);
   const miembro = miembros.find((m) => m.id === seleccionado) ?? miembros[0];
   const [busqueda, setBusqueda] = useState("");

@@ -5,7 +5,7 @@ import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { PersonaEquipo, RolClinica } from "@/lib/clinica/api";
 import { verEquipo } from "@/lib/clinica/api";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { cargarModulo } from "@/lib/clinica/sincronizar";
+import { moduloCargado } from "@/lib/clinica/sincronizar";
 import type { ScheduleDay, TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 
 /* ───────────────────────────────────────────────────────────────
@@ -89,31 +89,25 @@ function miembroDesdeAcceso(p: PersonaEquipo): TeamMember {
 
 export function useSincronizarEquipo(): void {
   const real = useClinicaReal();
-  const { setMiembros } = useEquipo();
+  const { miembros, setMiembros } = useEquipo();
   const hecho = useRef<string | null>(null);
 
   useEffect(() => {
     const slug = real?.slug;
-    // Solo clínica real, una vez por clínica.
-    if (!slug || hecho.current === slug) return;
+    // Solo clínica real, una vez por clínica, y recién cuando el equipo clínico cargó del servidor.
+    if (!slug || hecho.current === slug || !moduloCargado("equipo")) return;
     hecho.current = slug; // marcar antes del fetch para no duplicar en re-renders
     let vivo = true;
-    // Clave: esperamos EXPLÍCITAMENTE a que el equipo clínico cargue del servidor
-    // (cargarModulo resuelve también con 404 = vacío) y recién ahí combinamos con
-    // Acceso. Antes esto dependía de moduloCargado() + un cambio de `miembros`, pero
-    // si el módulo cargaba vacío sobre un estado ya vacío, el efecto no se re-disparaba
-    // y el sync no corría nunca → la agenda quedaba sin integrantes.
-    Promise.all([cargarModulo("equipo"), verEquipo(slug)])
-      .then(([, e]) => {
+    verEquipo(slug)
+      .then((e) => {
         if (!vivo) return;
-        // No damos de alta al Administrador como integrante clínico: es la cuenta, no un
-        // profesional, y no queremos inventarle un horario de atención (ver punto 9).
+        const existen = new Set(miembros.map((m) => (m.email ?? "").toLowerCase()).filter(Boolean));
         const nuevos = e.personas
-          .filter((p) => p.email && p.rol !== "admin")
+          .filter((p) => p.email && !existen.has(p.email.toLowerCase()))
           .map(miembroDesdeAcceso);
         if (!nuevos.length) return;
         setMiembros((prev) => {
-          // Dedupe por email contra el estado más reciente.
+          // Re-chequea contra el estado más reciente (por si algo cargó entremedio).
           const ya = new Set(prev.map((m) => (m.email ?? "").toLowerCase()).filter(Boolean));
           const faltan = nuevos.filter((n) => !ya.has(n.email.toLowerCase()));
           return faltan.length ? [...prev, ...faltan] : prev;
@@ -125,5 +119,5 @@ export function useSincronizarEquipo(): void {
     return () => {
       vivo = false;
     };
-  }, [real?.slug, setMiembros]);
+  }, [real?.slug, miembros, setMiembros]);
 }

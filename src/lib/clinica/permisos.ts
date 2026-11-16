@@ -71,6 +71,9 @@ const HABILITADOS = new Set([
   // Equipo y RRHH (punto 10): CRUD real (legajos, nómina, tiempo, desarrollo, gestión)
   // que guarda en el servidor (módulo «rrhh», solo el admin) y arranca vacío.
   "rrhh",
+  // Inventario (punto 10): CRUD real (stock, movimientos, alertas, órdenes, proveedores)
+  // que guarda en el servidor (módulo «inventario», admin/asistente) y arranca vacío.
+  "inventario",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

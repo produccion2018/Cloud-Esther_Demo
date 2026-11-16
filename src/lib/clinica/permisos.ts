@@ -68,6 +68,9 @@ const HABILITADOS = new Set([
   "facturacion", "finanzas", "bi",
   // Presupuestos (punto 15): funciona de verdad desde Pro (minPlan profesional).
   "presupuestos",
+  // Equipo y RRHH (punto 10): CRUD real (legajos, nómina, tiempo, desarrollo, gestión)
+  // que guarda en el servidor (módulo «rrhh», solo el admin) y arranca vacío.
+  "rrhh",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

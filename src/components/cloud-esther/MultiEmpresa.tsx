@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/data";
 import { leerConfigPlanes, MENSAJE_LIMITE, mostrarLimite } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
 function registrarEvento(evento: {
@@ -1187,12 +1188,28 @@ function SaludTenant({
 
 /* ───────────────────────── Página ───────────────────────── */
 
+/* Clínicas y sucursales se guardan de verdad: en una clínica real van al servidor (módulo
+   «multiempresa»), en el demo al navegador. Antes era estado local y se perdía al recargar. */
+const storeMultiempresa = crearStorePorEmpresa<{ clinicas: Clinica[]; sucursales: Sucursal[] }>(
+  () => ({ clinicas: [], sucursales: [] }),
+  { persistir: "multiempresa" },
+);
+
 export function MultiEmpresa() {
   const [tab, setTab] = useState<TabId>("resumen");
-  // Sin clínicas de ejemplo (igual que producción): la empresa que se registró se agrega sola
-  // más abajo (useEffect) y queda como clínica activa.
-  const [clinicas, setClinicas] = useState<Clinica[]>([]);
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  // Fuente de verdad persistida (reemplaza el estado local que se perdía al recargar). La
+  // empresa que se registró se agrega sola más abajo (useEffect) y queda como clínica activa.
+  const { clinicas, sucursales } = storeMultiempresa.usar();
+  const setClinicas = (fn: Clinica[] | ((prev: Clinica[]) => Clinica[])) => {
+    const prev = storeMultiempresa.leer();
+    const clinicas = typeof fn === "function" ? (fn as (p: Clinica[]) => Clinica[])(prev.clinicas) : fn;
+    storeMultiempresa.poner({ ...prev, clinicas });
+  };
+  const setSucursales = (fn: Sucursal[] | ((prev: Sucursal[]) => Sucursal[])) => {
+    const prev = storeMultiempresa.leer();
+    const sucursales = typeof fn === "function" ? (fn as (p: Sucursal[]) => Sucursal[])(prev.sucursales) : fn;
+    storeMultiempresa.poner({ ...prev, sucursales });
+  };
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [activaId, setActivaId] = useState("");
   const { usuario: usuarioSesion, clinica: clinicaSesion } = useSesion();
@@ -1202,8 +1219,20 @@ export function MultiEmpresa() {
   // con su usuario como administrador, y queda como clínica activa.
   useEffect(() => {
     if (!clinicaSesion || !usuarioSesion) return;
+    const planActual = PLAN_DESDE_DEMO[planDemo];
+    // Idempotente: solo escribe si la clínica de la sesión falta o cambió. Así, cuando la carga
+    // del servidor pisa el store (incluido el 404 = vacío), el efecto la vuelve a sumar, pero si
+    // ya está igual devuelve el mismo estado y no entra en bucle.
     setClinicas((prev) => {
       const previa = prev.find((c) => c.id === clinicaSesion.id);
+      if (
+        previa &&
+        previa.nombre === clinicaSesion.nombre &&
+        previa.adminEmail === usuarioSesion.email &&
+        previa.plan === planActual
+      ) {
+        return prev;
+      }
       const propia: Clinica = {
         razonSocial: clinicaSesion.nombre,
         cuit: "—",
@@ -1216,7 +1245,7 @@ export function MultiEmpresa() {
         id: clinicaSesion.id,
         nombre: clinicaSesion.nombre,
         adminEmail: usuarioSesion.email,
-        plan: PLAN_DESDE_DEMO[planDemo],
+        plan: planActual,
       };
       return [propia, ...prev.filter((c) => c.id !== clinicaSesion.id)];
     });
@@ -1236,8 +1265,8 @@ export function MultiEmpresa() {
             ...prev,
           ],
     );
-    setActivaId(clinicaSesion.id);
-  }, [clinicaSesion, usuarioSesion, planDemo]);
+    setActivaId((id) => id || clinicaSesion.id);
+  }, [clinicaSesion, usuarioSesion, planDemo, clinicas]);
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroPlan, setFiltroPlan] = useState<"Todos" | PlanId>("Todos");

@@ -92,6 +92,10 @@ const HABILITADOS = new Set([
   // verificado contra ese store. En clínica real el código se envía por correo; en el demo
   // se muestra. Solo Enterprise (minPlan grupo).
   "portal-paciente",
+  // Multiempresa (punto 13): muestra la clínica real de la sesión y permite cargar clínicas y
+  // sucursales, que ahora PERSISTEN en el servidor (módulo «multiempresa»). Sin datos de ejemplo
+  // (el feed falso se quitó). Solo Enterprise (minPlan grupo).
+  "multiempresa",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

@@ -372,25 +372,6 @@ const USUARIOS_INICIALES: Usuario[] = [
   },
 ];
 
-const ACTIVIDAD = [
-  {
-    id: "a1",
-    titulo: "Clínica creada en período de prueba",
-    detalle: "Odonto Plaza · Plan Start · hace 6 días",
-  },
-  {
-    id: "a2",
-    titulo: "Cambio de plan",
-    detalle: "Sonrisa Norte Odontología · Start → Pro · hace 3 semanas",
-  },
-  { id: "a3", titulo: "Clínica suspendida por falta de pago", detalle: "Dental Sur · hace 1 mes" },
-  {
-    id: "a4",
-    titulo: "Nueva sucursal habilitada",
-    detalle: "Centro Dental Andes · Godoy Cruz · hace 2 meses",
-  },
-];
-
 /* Garantías de separación entre clínicas, contadas en lenguaje del usuario.
    TODO backend: cada una se valida en el servidor (token con la clínica, consultas filtradas,
    archivos por clínica, auditoría por clínica). */
@@ -1314,6 +1295,25 @@ export function MultiEmpresa() {
     })
     .sort((a, b) => b.valor - a.valor);
 
+  // Actividad REAL: derivada de los datos de verdad (alta de clínicas y sucursales cargadas),
+  // no una lista de ejemplo. Si no hay nada, se muestra el estado vacío.
+  const actividadReal = useMemo(() => {
+    const items: { id: string; titulo: string; detalle: string }[] = [];
+    for (const c of clinicas) {
+      if (c.alta)
+        items.push({ id: `alta-${c.id}`, titulo: c.nombre, detalle: `Clínica dada de alta el ${c.alta}` });
+    }
+    for (const s of sucursales) {
+      const c = clinicas.find((x) => x.id === s.clinic_id);
+      items.push({
+        id: `suc-${s.id}`,
+        titulo: s.nombre,
+        detalle: `Sucursal${c ? ` de ${c.nombre}` : ""}${s.direccion ? ` · ${s.direccion}` : ""}`,
+      });
+    }
+    return items.slice(0, 8);
+  }, [clinicas, sucursales]);
+
   // Sin clínica activa todavía (render del servidor o antes de que el efecto sume la empresa
   // de la sesión): se muestra un cargando en vez de romper la página.
   if (!activa) {
@@ -1670,16 +1670,20 @@ export function MultiEmpresa() {
           </div>
 
           <Panel title="Actividad reciente">
-            <div className="space-y-3">
-              {ACTIVIDAD.map((a) => (
-                <Fila
-                  key={a.id}
-                  avatar={<IconoFila icon={ShieldCheck} />}
-                  titulo={a.titulo}
-                  detalle={a.detalle}
-                />
-              ))}
-            </div>
+            {actividadReal.length === 0 ? (
+              <Vacio texto="Todavía no hay actividad." />
+            ) : (
+              <div className="space-y-3">
+                {actividadReal.map((a) => (
+                  <Fila
+                    key={a.id}
+                    avatar={<IconoFila icon={ShieldCheck} />}
+                    titulo={a.titulo}
+                    detalle={a.detalle}
+                  />
+                ))}
+              </div>
+            )}
           </Panel>
         </div>
       )}

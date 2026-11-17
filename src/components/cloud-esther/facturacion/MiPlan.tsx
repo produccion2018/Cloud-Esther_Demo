@@ -512,7 +512,55 @@ function useTarjeta() {
           : !titular.trim()
             ? "Ingresá el nombre del titular"
             : "";
-  const detalle = `${marcaTarjeta(digitos)} •••• ${digitos.slice(-4)}`;
+  const marca = marcaTarjeta(digitos);
+  const detalle = `${marca} •••• ${digitos.slice(-4)}`;
+
+  // Previsualización premium: una tarjeta real que se va completando mientras escribís.
+  const numeroVista = digitos.padEnd(16, "•").slice(0, 16).replace(/(.{4})(?=.)/g, "$1 ");
+  const preview = (
+    <div
+      className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_22px_48px_-22px_rgba(76,29,149,0.85)]"
+      style={{ background: "linear-gradient(135deg,#3b1673 0%,#7c3aed 55%,#a855f7 100%)" }}
+    >
+      <div className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-white/15 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-8 size-44 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative flex items-center justify-between">
+        {/* Chip dorado + contactless */}
+        <span className="flex items-center gap-2">
+          <span className="h-7 w-10 rounded-md bg-gradient-to-br from-amber-200 via-yellow-300 to-amber-400 ring-1 ring-white/50" />
+          {/* Símbolo contactless */}
+          <svg viewBox="0 0 24 24" fill="none" className="size-4 text-white/70" aria-hidden>
+            <path d="M8.5 7.5a7 7 0 0 1 0 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M12 5a10 10 0 0 1 0 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M15.5 2.5a13 13 0 0 1 0 19" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+        </span>
+        <span className="text-sm font-extrabold uppercase italic tracking-wide text-white/95">
+          {marca !== "Tarjeta" ? marca : "Cloud Esther"}
+        </span>
+      </div>
+      <p className="relative mt-5 font-mono text-[18px] tracking-[0.2em] [font-variant-numeric:tabular-nums]">
+        {numeroVista}
+      </p>
+      <div className="relative mt-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <span className="block text-[8.5px] font-medium uppercase tracking-[0.18em] text-white/55">
+            Titular
+          </span>
+          <span className="block truncate text-[13px] font-semibold uppercase tracking-wide">
+            {titular || "Nombre Apellido"}
+          </span>
+        </div>
+        <div className="shrink-0 text-right">
+          <span className="block text-[8.5px] font-medium uppercase tracking-[0.18em] text-white/55">
+            Vence
+          </span>
+          <span className="block text-[13px] font-semibold tabular-nums">{vto || "MM/AA"}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   const campos = (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
@@ -573,7 +621,7 @@ function useTarjeta() {
       </div>
     </div>
   );
-  return { error, detalle, campos };
+  return { error, detalle, campos, preview };
 }
 
 function ElegirMedio({
@@ -585,20 +633,38 @@ function ElegirMedio({
 }) {
   return (
     <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Medio de pago">
-      {MEDIOS.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          role="radio"
-          aria-checked={valor === m.id}
-          onClick={() => onChange(m.id)}
-          className={`flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-all ${valor === m.id ? "border-primary bg-primary/[0.06] ring-2 ring-primary/20" : "border-primary/12 bg-white hover:border-primary/30"}`}
-        >
-          <m.icon className="size-4 text-primary" />
-          <span className="text-[13px] font-semibold">{m.id}</span>
-          <span className="text-[10.5px] text-muted-foreground">{m.sub}</span>
-        </button>
-      ))}
+      {MEDIOS.map((m) => {
+        const activo = valor === m.id;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            role="radio"
+            aria-checked={activo}
+            onClick={() => onChange(m.id)}
+            className={`group relative flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all duration-200 ${
+              activo
+                ? "border-primary bg-gradient-to-b from-primary/[0.1] to-fuchsia-500/[0.05] shadow-[0_12px_26px_-18px_rgba(124,58,237,0.9)] ring-2 ring-primary/25"
+                : "border-primary/12 bg-white hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_10px_22px_-18px_rgba(124,58,237,0.6)]"
+            }`}
+          >
+            {activo && (
+              <CheckCircle2 className="absolute right-1.5 top-1.5 size-3.5 text-primary" />
+            )}
+            <span
+              className={`grid size-9 place-items-center rounded-xl transition-colors ${
+                activo
+                  ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
+                  : "bg-primary/10 text-primary group-hover:bg-primary/15"
+              }`}
+            >
+              <m.icon className="size-4" />
+            </span>
+            <span className="text-[13px] font-semibold leading-tight">{m.id}</span>
+            <span className="text-[10px] leading-tight text-muted-foreground">{m.sub}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -669,6 +735,7 @@ function PagoForm({
           </div>
         ) : (
           <>
+            {tarjeta.preview}
             {tarjeta.campos}
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
               <input

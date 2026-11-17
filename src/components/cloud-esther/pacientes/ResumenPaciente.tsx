@@ -529,6 +529,16 @@ export function ResumenPaciente({
               <Fila icon={Phone} etiqueta="Teléfono" valor={paciente.telefono} />
               <Fila icon={Mail} etiqueta="Correo" valor={paciente.email} />
               <Fila icon={MapPin} etiqueta="Dirección" valor={paciente.direccion} />
+              {paciente.tutor && (
+                <Fila
+                  icon={ShieldCheck}
+                  etiqueta="Responsable / tutor"
+                  valor={
+                    paciente.tutor +
+                    (paciente.tutorTelefono ? ` · ${paciente.tutorTelefono}` : "")
+                  }
+                />
+              )}
             </div>
             {paciente.nota && (
               <p className="mt-2 rounded-xl bg-primary/[0.05] px-3 py-2 text-xs text-foreground/80">

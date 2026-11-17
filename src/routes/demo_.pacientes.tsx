@@ -470,6 +470,26 @@ function PacienteForm({
   const [fechaNacimiento, setFechaNacimiento] =
     useState(inicial?.fechaNacimiento ?? "");
 
+  const [tutor, setTutor] = useState(
+    inicial?.tutor ?? "",
+  );
+
+  const [tutorTelefono, setTutorTelefono] =
+    useState(inicial?.tutorTelefono ?? "");
+
+  // Edad calculada de la fecha de nacimiento: si es menor de 18, mostramos el responsable/tutor.
+  const edadAnios = (() => {
+    if (!fechaNacimiento) return null;
+    const n = new Date(fechaNacimiento);
+    if (Number.isNaN(n.getTime())) return null;
+    const hoy = new Date();
+    let e = hoy.getFullYear() - n.getFullYear();
+    const m = hoy.getMonth() - n.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < n.getDate())) e--;
+    return e;
+  })();
+  const esMenor = edadAnios !== null && edadAnios < 18;
+
   const [genero, setGenero] = useState(
     inicial?.genero ?? "",
   );
@@ -579,6 +599,8 @@ function PacienteForm({
       apellido: apellidoNormalizado,
       documento: soloDigitos,
       fechaNacimiento,
+      tutor: tutor.trim(),
+      tutorTelefono: tutorTelefono.trim(),
       genero,
       email: email.trim(),
       telefono: telefono.trim(),
@@ -715,6 +737,45 @@ function PacienteForm({
             className={INPUT}
           />
         </Field>
+
+        {/* Responsable / tutor: aparece solo cuando el paciente es menor (o ya tiene datos). */}
+        {(esMenor || tutor || tutorTelefono) && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-3 sm:col-span-2">
+            <p className="flex flex-wrap items-center gap-1.5 text-[12px] font-semibold text-primary">
+              <ShieldCheck className="size-3.5" />
+              Responsable / tutor
+              {esMenor && (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold">
+                  Paciente menor
+                  {edadAnios !== null ? ` · ${edadAnios} año${edadAnios === 1 ? "" : "s"}` : ""}
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Datos del adulto a cargo (madre, padre o tutor). Aparece automáticamente cuando el
+              paciente es menor de edad.
+            </p>
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Nombre del responsable">
+                <input
+                  value={tutor}
+                  onChange={(e) => setTutor(e.target.value)}
+                  className={INPUT}
+                  placeholder="Nombre y apellido"
+                />
+              </Field>
+              <Field label="Teléfono del responsable">
+                <input
+                  type="tel"
+                  value={tutorTelefono}
+                  onChange={(e) => setTutorTelefono(e.target.value)}
+                  className={INPUT}
+                  placeholder="+54 11 5555-8899"
+                />
+              </Field>
+            </div>
+          </div>
+        )}
 
         <Field label="Sexo / género">
           <SelectField

@@ -82,6 +82,11 @@ const HABILITADOS = new Set([
   // la clínica, y si no hay clave cae al motor de reglas. El historial guarda en «ia».
   // Solo Plus y Enterprise (minPlan avanzada), como piden las reglas comerciales.
   "ia",
+  // Automatizaciones/n8n (punto 11): lo interno (seguimiento, tareas, avisos) se registra de
+  // verdad; los envíos EXTERNOS (WhatsApp/email) se SIMULAN y la pantalla lo avisa claramente
+  // (no se finge un envío real). Se habilita con esos avisos visibles hasta conectar un n8n
+  // real. Solo Enterprise (minPlan grupo).
+  "automatizaciones",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

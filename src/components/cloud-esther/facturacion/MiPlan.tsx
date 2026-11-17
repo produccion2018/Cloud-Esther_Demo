@@ -16,8 +16,11 @@ import {
   Lock,
   Receipt,
   Repeat2,
+  Rocket,
   ShieldCheck,
+  Star,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { PlanCard } from "@/components/site/PlanCards";
 import { plans as PLANES_SITIO, type Plan } from "@/lib/site-data";
@@ -38,8 +41,8 @@ import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/Dialo
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import {
+  formatearPrecio,
   leerConfigPlanes,
-  mostrarLimite,
 } from "@/lib/cloud-esther/planes-config";
 import {
   consecuenciasDe,
@@ -829,10 +832,23 @@ function MedioForm({
 
 /* ───────────── Cambiar de plan ───────────── */
 
-/** Capacidad incluida en un plan, en una línea (pacientes · usuarios · sucursales). */
-function capacidadLinea(id: PlanId): string {
+/** Ícono y degradé por nivel de plan (de menor a mayor), para darle jerarquía visual. */
+const TIER_PLAN: Record<PlanId, { Icono: typeof Crown; grad: string }> = {
+  inicial: { Icono: Star, grad: "from-slate-400 to-slate-600" },
+  profesional: { Icono: Zap, grad: "from-sky-500 to-indigo-500" },
+  avanzada: { Icono: Rocket, grad: "from-violet-500 to-fuchsia-500" },
+  grupo: { Icono: Crown, grad: "from-amber-400 to-amber-600" },
+};
+
+/** Capacidad incluida (pacientes · usuarios · sucursales) como mini-stats; ∞ cuando no hay tope. */
+function capacidadDe(id: PlanId) {
   const c = leerConfigPlanes()[id];
-  return `${mostrarLimite(c.pacientesActivos)} pacientes · ${mostrarLimite(c.usuariosInternos)} usuarios · ${mostrarLimite(c.sucursales)} sucursales`;
+  const f = (n: number) => (Number.isFinite(n) ? n.toLocaleString("es-AR") : "∞");
+  return [
+    { n: f(c.pacientesActivos), l: "pacientes" },
+    { n: f(c.usuariosInternos), l: "usuarios" },
+    { n: f(c.sucursales), l: "sucursales" },
+  ];
 }
 
 /** Cambiar de plan (subir o bajar). En el demo cambia al instante; en la clínica real lo gestiona
@@ -874,51 +890,86 @@ function CambiarDePlan({ onToast }: { onToast: (m: string) => void }) {
         </p>
       </div>
 
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {ORDEN.map((id) => {
           const actual = id === plan;
           const elegido = id === destino;
           const d = direccionCambio(plan, id);
+          const { Icono, grad } = TIER_PLAN[id];
+          const cfg = leerConfigPlanes()[id];
+          const subtitulo =
+            cfg.precioMensual !== null
+              ? `${formatearPrecio(cfg.precioMensual)} /mes`
+              : PLANS[id].audience;
           return (
             <li key={id}>
               <button
                 type="button"
                 disabled={actual}
                 onClick={() => setDestino(elegido ? null : id)}
-                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ring-1 transition-all duration-200 ${
+                className={`group relative flex w-full flex-col gap-3 overflow-hidden rounded-2xl p-3.5 text-left transition-all duration-200 ${
                   actual
-                    ? "cursor-default bg-primary/[0.07] ring-primary/30"
+                    ? `cursor-default bg-gradient-to-br ${grad} text-white shadow-[0_18px_40px_-22px_rgba(76,29,149,0.9)]`
                     : elegido
-                      ? "bg-gradient-to-br from-primary/[0.1] to-fuchsia-500/[0.06] ring-primary/40"
-                      : "bg-card/90 ring-primary/10 hover:-translate-y-0.5 hover:ring-primary/25"
+                      ? "bg-white ring-2 ring-primary/40 shadow-[0_14px_30px_-20px_rgba(124,58,237,0.7)]"
+                      : "bg-white ring-1 ring-primary/10 hover:-translate-y-0.5 hover:ring-primary/25 hover:shadow-[0_14px_28px_-20px_rgba(124,58,237,0.6)]"
                 }`}
               >
-                <span
-                  className={`grid size-9 shrink-0 place-items-center rounded-xl ${
-                    actual ? "bg-primary text-white" : "bg-primary/10 text-primary"
-                  }`}
-                >
-                  {actual ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : d > 0 ? (
-                    <ArrowUpRight className="size-4" />
-                  ) : (
-                    <ArrowDownRight className="size-4" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <b className="block text-[13px] font-semibold leading-snug">{PLANS[id].name}</b>
-                  <span className="block text-[11px] text-muted-foreground">{capacidadLinea(id)}</span>
-                </span>
-                {actual ? (
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                    Tu plan
-                  </span>
-                ) : (
-                  <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">
-                    {d > 0 ? "Subir" : "Bajar"}
-                  </span>
+                {actual && (
+                  <span className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-white/15 blur-2xl" />
                 )}
+                <div className="relative flex items-center gap-2.5">
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-xl ${
+                      actual ? "bg-white/20 text-white" : `bg-gradient-to-br ${grad} text-white`
+                    }`}
+                  >
+                    <Icono className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <b className="block text-[14px] font-bold leading-tight">{PLANS[id].name}</b>
+                    <span
+                      className={`block text-[11px] leading-tight ${actual ? "text-white/80" : "text-muted-foreground"}`}
+                    >
+                      {subtitulo}
+                    </span>
+                  </span>
+                  {actual ? (
+                    <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold">
+                      Tu plan
+                    </span>
+                  ) : (
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
+                        d > 0
+                          ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/12 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {d > 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
+                      {d > 0 ? "Subir" : "Bajar"}
+                    </span>
+                  )}
+                </div>
+                <div className="relative grid grid-cols-3 gap-1.5">
+                  {capacidadDe(id).map((x) => (
+                    <div
+                      key={x.l}
+                      className={`rounded-xl px-1.5 py-1.5 text-center ${actual ? "bg-white/12" : "bg-primary/[0.05]"}`}
+                    >
+                      <span
+                        className={`block text-[12.5px] font-bold leading-none tabular-nums ${actual ? "text-white" : "text-foreground"}`}
+                      >
+                        {x.n}
+                      </span>
+                      <span
+                        className={`mt-0.5 block text-[8.5px] font-medium uppercase tracking-wide ${actual ? "text-white/70" : "text-muted-foreground"}`}
+                      >
+                        {x.l}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </button>
             </li>
           );

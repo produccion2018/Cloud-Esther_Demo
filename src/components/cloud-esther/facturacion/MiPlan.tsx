@@ -819,7 +819,12 @@ function MedioForm({
       }}
     >
       <ElegirMedio valor={tipo} onChange={setTipo} />
-      {tipo === "Tarjeta" && tarjeta.campos}
+      {tipo === "Tarjeta" && (
+        <>
+          {tarjeta.preview}
+          {tarjeta.campos}
+        </>
+      )}
       {error && (tipo !== "Tarjeta" || tarjeta.error) && (
         <p className="text-[12px] font-medium text-rose-600">
           {tipo === "Tarjeta" ? tarjeta.error : error}

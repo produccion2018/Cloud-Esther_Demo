@@ -58,6 +58,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
+import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import {
   TRATAMIENTOS as PRACTICAS,
   setTurnosStore,
@@ -1967,7 +1968,7 @@ function FichaPaciente({
     <Hoja titulo={paciente} onClose={onClose}>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>{edad(p.fechaNacimiento)}</span>·<span>{p.obraSocial || "Particular"}</span>·
-        <span>DNI {p.documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>
+        <span><DocPaciente documento={p.documento} /></span>
       </div>
       {r.antecedentes.alergias.length > 0 && (
         <p className="mt-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">

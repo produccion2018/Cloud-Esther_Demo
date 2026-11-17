@@ -66,6 +66,7 @@ import {
   useTodosLosRegistros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
+import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -1133,7 +1134,7 @@ function Emitir({
               <span className="truncate font-semibold">
                 {nombrePac(pac)}{" "}
                 <span className="font-normal text-muted-foreground">
-                  · DNI {pac.documento} · {pac.obraSocial}
+                  · <DocPaciente documento={pac.documento} sinFormato /> · {pac.obraSocial}
                 </span>
               </span>
               <button
@@ -1168,7 +1169,7 @@ function Emitir({
                       >
                         {nombrePac(c)}{" "}
                         <span className="text-[11px] text-muted-foreground">
-                          · DNI {c.documento}
+                          · <DocPaciente documento={c.documento} sinFormato />
                         </span>
                       </button>
                     </li>

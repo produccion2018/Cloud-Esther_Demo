@@ -25,6 +25,7 @@ import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { PanelLaboratorios } from "@/components/cloud-esther/laboratorio/PanelLaboratorios";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
+import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 
 /* Ubicación sugerida: src/components/cloud-esther/SeccionDirecta.tsx
 
@@ -486,7 +487,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                                 {p.nombre} {p.apellido}
                               </span>
                               <span className="block truncate text-[11px] text-muted-foreground">
-                                DNI {formatearDocumento(p.documento)}
+                                <DocPaciente documento={p.documento} />
                               </span>
                               <span className="mt-1.5 flex flex-wrap items-center gap-1">
                                 <BadgeEstado estado={p.estado} />
@@ -519,7 +520,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                                 </div>
 
                                 <p className="mt-1 truncate text-xs text-muted-foreground">
-                                  DNI {formatearDocumento(p.documento)}
+                                  <DocPaciente documento={p.documento} />
                                   {p.telefono ? `  ·  ${p.telefono}` : ""}
                                 </p>
                               </div>
@@ -596,7 +597,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                       <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1.5">
                           <Contact className="size-3.5" />
-                          DNI {formatearDocumento(activo.documento)}
+                          <DocPaciente documento={activo.documento} />
                         </span>
                         {activo.telefono && (
                           <span className="flex items-center gap-1.5">

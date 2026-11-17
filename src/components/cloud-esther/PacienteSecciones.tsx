@@ -13,6 +13,7 @@ import {
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useProfesionalesClinica } from "@/lib/cloud-esther/profesionales";
+import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import { normalizarBusqueda } from "@/lib/utils";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -4302,6 +4303,7 @@ function RecetaForm({
 }) {
   const [fecha, setFecha] = useState(hoyISO());
   const profesionales = useProfesionales();
+  const term = useTerminologia();
   const [profesional, setProfesional] = useState(profesionales[0] ?? "");
   const [aceptaRiesgo, setAceptaRiesgo] = useState(false);
   const [matricula, setMatricula] = useState("");
@@ -4401,7 +4403,7 @@ function RecetaForm({
             placeholder="Seleccionar"
           />
         </Field>
-        <Field label="Matrícula">
+        <Field label={term.matricula}>
           <input
             value={matricula}
             onChange={(e) => setMatricula(e.target.value)}

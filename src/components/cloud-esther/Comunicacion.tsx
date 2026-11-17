@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
+import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import { CloudEstherProvider, PLANS, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -1634,6 +1635,7 @@ function BurbujaMensaje({ msg, canal }: { msg: Mensaje; canal: Canal }) {
 }
 
 function PanelPaciente({ conv, ctx }: { conv: Conversacion; ctx: Ctx }) {
+  const term = useTerminologia();
   const { pacientes, setActivoId } = usePacientes();
   const { turnos } = storeAgenda.usar();
   const { recordatorios } = storeComunicacion.usar();
@@ -1665,7 +1667,7 @@ function PanelPaciente({ conv, ctx }: { conv: Conversacion; ctx: Ctx }) {
         </span>
         <p className="mt-2 text-sm font-semibold">{conv.paciente}</p>
         <p className="text-[11px] text-muted-foreground">
-          {p ? `DNI ${p.documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "Contacto sin ficha"}
+          {p ? `${term.doc} ${p.documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "Contacto sin ficha"}
         </p>
       </div>
       <dl className="space-y-1.5 rounded-xl bg-white/70 p-3 text-xs">

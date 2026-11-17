@@ -32,6 +32,9 @@ export type Paciente = {
   nota: string;
   estado: EstadoPaciente;
   foto: string | null;
+  /** Responsable / tutor (para pacientes menores de edad). Opcional. */
+  tutor?: string;
+  tutorTelefono?: string;
 };
 
 type Estado = {

@@ -1,4 +1,4 @@
-import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
 
 /* Ubicación: src/lib/cloud-esther/terminologia.ts
@@ -35,9 +35,10 @@ export function terminologiaDe(pais: string | undefined): Termino {
   return POR_PAIS[(pais ?? "").trim().toUpperCase()] ?? NEUTRO;
 }
 
-/** Hook: términos según el país configurado en la clínica actual. */
+/** Hook: términos según el país configurado en la clínica actual. Fuera del proveedor
+    (ej. pantallas públicas) devuelve términos neutros, nunca rompe. */
 export function useTerminologia(): Termino {
-  const { clinic } = useCloudEsther();
-  const settings = useClinicSettings(clinic);
+  const ctx = useCloudEstherOpcional();
+  const settings = useClinicSettings(ctx?.clinic ?? "");
   return terminologiaDe(settings.datosClinica?.pais);
 }

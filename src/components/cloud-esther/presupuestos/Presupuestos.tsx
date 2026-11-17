@@ -43,6 +43,7 @@ import {
   type PresupuestoPaciente,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
+import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import {
@@ -1498,7 +1499,7 @@ function Editor({
                       >
                         {nombrePac(c)}{" "}
                         <span className="text-[11px] text-muted-foreground">
-                          · DNI {c.documento}
+                          · <DocPaciente documento={c.documento} sinFormato />
                         </span>
                       </button>
                     </li>

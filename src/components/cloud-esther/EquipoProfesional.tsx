@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react"
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
+import { useTerminologia } from "@/lib/cloud-esther/terminologia"
 import type { ComponentType, ReactNode } from "react"
 import {
   Search,
@@ -411,6 +412,7 @@ type DetailTab = "info" | "agenda" | "permisos" | "comisiones"
 export function EquipoProfesional({ embebido = false }: { embebido?: boolean } = {}) {
   // Equipo compartido con Especialidades / Agendas / Permisos, separado por empresa.
   const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
+  const term = useTerminologia()
   const { turnos } = storeAgenda.usar()
   const [vista, setVista] = useState<VistaEquipo>("integrantes")
   // El portal del profesional es exclusivo de Enterprise.
@@ -930,7 +932,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
 
                 {selected.licenseNumber && (
                   <p className="text-muted-foreground">
-                    Matrícula: {selected.licenseNumber}
+                    {term.matricula}: {selected.licenseNumber}
                   </p>
                 )}
               </div>
@@ -1224,7 +1226,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
 
             {draft.role === "odontologo" && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Matrícula">
+                <Field label={term.matricula}>
                   <input
                     value={draft.licenseNumber}
                     onChange={(e) =>

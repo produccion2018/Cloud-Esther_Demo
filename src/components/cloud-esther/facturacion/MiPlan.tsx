@@ -2,15 +2,20 @@ import { useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent } from "react";
 import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
   BadgeCheck,
   Building2,
   CalendarClock,
+  CheckCircle2,
   CreditCard,
   Crown,
   Download,
   Landmark,
   Lock,
   Receipt,
+  Repeat2,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
@@ -32,6 +37,14 @@ import {
 import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import {
+  leerConfigPlanes,
+  mostrarLimite,
+} from "@/lib/cloud-esther/planes-config";
+import {
+  consecuenciasDe,
+  direccionCambio,
+} from "@/lib/cloud-esther/cambio-plan";
 import { avisarModuloAdicional } from "@/lib/clinica/api";
 import {
   setFacturacion,
@@ -405,6 +418,8 @@ export function MiPlan({
         </div>
       </div>
 
+      <CambiarDePlan onToast={onToast} />
+
       <ModulosAdicionales onToast={onToast} />
 
       {pagar && (
@@ -742,6 +757,143 @@ function MedioForm({
       )}
       <Acciones etiqueta="Guardar" onCancel={onCancel} />
     </form>
+  );
+}
+
+/* ───────────── Cambiar de plan ───────────── */
+
+/** Capacidad incluida en un plan, en una línea (pacientes · usuarios · sucursales). */
+function capacidadLinea(id: PlanId): string {
+  const c = leerConfigPlanes()[id];
+  return `${mostrarLimite(c.pacientesActivos)} pacientes · ${mostrarLimite(c.usuariosInternos)} usuarios · ${mostrarLimite(c.sucursales)} sucursales`;
+}
+
+/** Cambiar de plan (subir o bajar). En el demo cambia al instante; en la clínica real lo gestiona
+    el asesor de Cloud Esther. Siempre se muestran las consecuencias antes de confirmar. */
+function CambiarDePlan({ onToast }: { onToast: (m: string) => void }) {
+  const { plan, setPlan, planContratado } = useCloudEsther();
+  const real = useClinicaReal();
+  const [destino, setDestino] = useState<PlanId | null>(null);
+
+  // En la clínica real solo el Administrador ve esta gestión.
+  if (real && real.rol !== "admin") return null;
+
+  const dir = destino ? direccionCambio(plan, destino) : 0;
+  const consecuencias = destino ? consecuenciasDe(plan, destino) : [];
+
+  const confirmar = () => {
+    if (!destino) return;
+    // Clínica real: el plan lo cambia el asesor desde el panel de Cloud Esther (no es self-service).
+    if (planContratado) {
+      onToast("Le avisamos a tu asesor de Cloud Esther que querés cambiar de plan.");
+      setDestino(null);
+      return;
+    }
+    setPlan(destino);
+    onToast(`Cambiaste al plan ${PLANS[destino].name}.`);
+    setDestino(null);
+  };
+
+  return (
+    <div className="card-grad p-4">
+      <div className="mb-3">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          <Repeat2 className="size-4 text-primary" /> Cambiar de plan
+        </p>
+        <p className="text-[12px] text-muted-foreground">
+          {planContratado
+            ? "Elegí el plan al que querés pasar y mirá qué cambia. El cambio lo gestiona tu asesor de Cloud Esther."
+            : "Elegí el plan al que querés pasar y mirá qué cambia antes de confirmar."}
+        </p>
+      </div>
+
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {ORDEN.map((id) => {
+          const actual = id === plan;
+          const elegido = id === destino;
+          const d = direccionCambio(plan, id);
+          return (
+            <li key={id}>
+              <button
+                type="button"
+                disabled={actual}
+                onClick={() => setDestino(elegido ? null : id)}
+                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ring-1 transition-all duration-200 ${
+                  actual
+                    ? "cursor-default bg-primary/[0.07] ring-primary/30"
+                    : elegido
+                      ? "bg-gradient-to-br from-primary/[0.1] to-fuchsia-500/[0.06] ring-primary/40"
+                      : "bg-card/90 ring-primary/10 hover:-translate-y-0.5 hover:ring-primary/25"
+                }`}
+              >
+                <span
+                  className={`grid size-9 shrink-0 place-items-center rounded-xl ${
+                    actual ? "bg-primary text-white" : "bg-primary/10 text-primary"
+                  }`}
+                >
+                  {actual ? (
+                    <CheckCircle2 className="size-4" />
+                  ) : d > 0 ? (
+                    <ArrowUpRight className="size-4" />
+                  ) : (
+                    <ArrowDownRight className="size-4" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <b className="block text-[13px] font-semibold leading-snug">{PLANS[id].name}</b>
+                  <span className="block text-[11px] text-muted-foreground">{capacidadLinea(id)}</span>
+                </span>
+                {actual ? (
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    Tu plan
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">
+                    {d > 0 ? "Subir" : "Bajar"}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Consecuencias del cambio elegido: honesto, nunca borra datos. */}
+      {destino && consecuencias.length > 0 && (
+        <div
+          className={`mt-3 rounded-2xl p-3 ring-1 ${
+            dir < 0
+              ? "bg-amber-500/10 ring-amber-500/30"
+              : "bg-primary/[0.06] ring-primary/20"
+          }`}
+        >
+          <p className="flex items-center gap-1.5 text-[12px] font-semibold">
+            {dir < 0 ? (
+              <AlertTriangle className="size-3.5 text-amber-600" />
+            ) : (
+              <ArrowUpRight className="size-3.5 text-primary" />
+            )}
+            {dir < 0 ? "Al bajar a" : "Al subir a"} {PLANS[destino].name}:
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {consecuencias.map((t, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-[11.5px] text-muted-foreground">
+                <span className="mt-1 size-1 shrink-0 rounded-full bg-current opacity-60" />
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className={BTN_PRIMARIO} onClick={confirmar}>
+              {planContratado ? "Solicitar cambio a mi asesor" : `Cambiar al plan ${PLANS[destino].name}`}
+            </button>
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => setDestino(null)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

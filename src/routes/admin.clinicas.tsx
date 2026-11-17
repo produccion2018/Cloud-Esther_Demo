@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide-react";
+import { Building2, Info, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { guardarMontosClinica } from "@/lib/admin/api";
+import { RECORDATORIO_ASESOR } from "@/lib/cloud-esther/cambio-plan";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import {
   ETIQUETA_PAGO,
@@ -336,6 +337,13 @@ function DetalleClinica({
             ))}
           </div>
         )}
+        {/* Recordatorio para el asesor antes de cambiarle el plan al cliente (pedido de Camilo). */}
+        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-100">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <b>Recordatorio:</b> {RECORDATORIO_ASESOR}
+          </span>
+        </div>
         {importes && <MontosClinica clinica={c} plan={plan} editable={editarMontos} />}
         <dl className="divide-y divide-border/60 rounded-2xl border border-border">
           {filas.map(([k, v]) => (

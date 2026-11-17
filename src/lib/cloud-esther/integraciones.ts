@@ -1,6 +1,8 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 
-export type EstadoConector = "Conectado" | "Desconectado";
+// «Conectado» solo cuando se verificó de verdad (ping real a la URL). «Configurado» = datos
+// cargados pero sin verificar la conexión (no se finge). «Desconectado» = sin datos.
+export type EstadoConector = "Conectado" | "Configurado" | "Desconectado";
 
 export type CategoriaConector =
   "Comunicación" | "Pagos y facturación" | "Clínico" | "Automatización";
@@ -91,6 +93,10 @@ const DATOS_INICIALES: Conector[] = [
 /* Separado por empresa: cada clínica tiene su propia lista y nunca ve la de otra. */
 const store = crearStorePorEmpresa<Conector[]>(() => DATOS_INICIALES, {
   persistir: "integraciones",
+  // Una clínica real arranca con los conectores LISTOS PARA CONECTAR (ninguno conectado de
+  // ejemplo) y sin datos cargados: la lista de conectores es la misma, pero limpia.
+  vacio: () =>
+    DATOS_INICIALES.map((c) => ({ ...c, estado: "Desconectado", config: undefined, ultimaPrueba: undefined })),
 });
 
 function setConectoresGlobal(actualizar: Conector[] | ((prev: Conector[]) => Conector[])) {

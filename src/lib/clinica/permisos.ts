@@ -96,6 +96,10 @@ const HABILITADOS = new Set([
   // sucursales, que ahora PERSISTEN en el servidor (módulo «multiempresa»). Sin datos de ejemplo
   // (el feed falso se quitó). Solo Enterprise (minPlan grupo).
   "multiempresa",
+  // Integraciones (punto 10): arranca con los conectores limpios (ninguno conectado de ejemplo).
+  // webhooks/n8n se PRUEBAN de verdad (ping real); el resto guarda la config con estado honesto
+  // «Configurado» (nunca un «conectado» falso). Desde Pro (minPlan profesional).
+  "integraciones",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

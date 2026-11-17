@@ -33,6 +33,7 @@ import {
   type CategoriaConector,
   type Conector,
 } from "@/lib/cloud-esther/integraciones";
+import { probarUrl } from "@/lib/cloud-esther/integraciones-probar";
 import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
 import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
 
@@ -312,6 +313,13 @@ function IntegracionesInner() {
           {filtrados.map((c) => {
             const Icon = ICONOS[c.icon] ?? Plug;
             const on = c.estado === "Conectado";
+            const configurado = c.estado === "Configurado";
+            const badge = on
+              ? "bg-emerald-50 text-emerald-700"
+              : configurado
+                ? "bg-amber-50 text-amber-700"
+                : "bg-muted text-muted-foreground";
+            const punto = on ? "bg-emerald-500" : configurado ? "bg-amber-500" : "bg-muted-foreground/50";
             return (
               <div key={c.id} className="card-grad flex flex-col p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -319,12 +327,10 @@ function IntegracionesInner() {
                     <Icon className="size-5" />
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${on ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${badge}`}
                   >
-                    <span
-                      className={`size-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-muted-foreground/50"}`}
-                    />
-                    {on ? "Conectado" : "Sin conectar"}
+                    <span className={`size-1.5 rounded-full ${punto}`} />
+                    {on ? "Conectado" : configurado ? "Configurado" : "Sin conectar"}
                   </span>
                 </div>
                 <p className="mt-3 font-semibold">{c.nombre}</p>
@@ -343,14 +349,14 @@ function IntegracionesInner() {
                     className="btn-ce flex-1 justify-center"
                     onClick={() => setAbierto(c)}
                   >
-                    <Settings2 className="size-4" /> {on ? "Configuración" : "Conectar"}
+                    <Settings2 className="size-4" /> {on || configurado ? "Configuración" : "Conectar"}
                   </button>
-                  {on && (
+                  {(on || configurado) && (
                     <button
                       type="button"
                       className="btn-ce-outline"
                       onClick={() => {
-                        actualizar(c.id, { estado: "Desconectado" });
+                        actualizar(c.id, { estado: "Desconectado", config: undefined, ultimaPrueba: undefined });
                         aviso(`${c.nombre} desconectado`);
                       }}
                     >
@@ -433,28 +439,45 @@ function ConfigConector({
   const [error, setError] = useState("");
   const faltan = campos.filter((f) => !f.opcional && !valores[f.k]?.trim());
 
-  const probarYConectar = () => {
+  // Conectores basados en URL: se pueden PROBAR de verdad (pingear). El resto no se puede
+  // verificar sin construir la integración completa, así que se guarda la config con un estado
+  // honesto «Configurado» (nunca un «Conectado» que mienta).
+  const esPorUrl = c.id === "webhooks" || c.id === "n8n";
+
+  const probarYConectar = async () => {
     if (faltan.length) {
       setError(`Completá: ${faltan.map((f) => f.l).join(", ")}.`);
       return;
     }
-    if (c.id === "webhooks" || c.id === "n8n") {
-      const url = valores["url"] ?? valores["instancia"] ?? "";
+    setError("");
+
+    if (esPorUrl) {
+      const url = (valores["url"] ?? valores["instancia"] ?? "").trim();
       if (!/^https:\/\/.+\..+/.test(url)) {
         setError("La URL tiene que empezar con https://");
         return;
       }
-    }
-    setError("");
-    setProbando(true);
-    window.setTimeout(() => {
+      setProbando(true);
+      const res = await probarUrl({ data: { url } }).catch(() => ({ ok: false }));
       setProbando(false);
+      if (!res.ok) {
+        setError("La URL no respondió. Revisá que sea correcta y esté accesible desde internet.");
+        return;
+      }
       onGuardar(
         { estado: "Conectado", config: valores, ultimaPrueba: new Date().toISOString() },
-        `${c.nombre}: conexión verificada`,
+        `${c.nombre}: la URL respondió. Conectado.`,
       );
       onClose();
-    }, 900);
+      return;
+    }
+
+    // Sin prueba real posible: se guarda la configuración, sin fingir que está conectado.
+    onGuardar(
+      { estado: "Configurado", config: valores, ultimaPrueba: new Date().toISOString() },
+      `${c.nombre}: configuración guardada. La conexión real se activa cuando esté disponible.`,
+    );
+    onClose();
   };
 
   return (
@@ -544,9 +567,9 @@ function ConfigConector({
               )}
               {probando
                 ? "Probando…"
-                : c.estado === "Conectado"
-                  ? "Guardar y probar"
-                  : "Probar y conectar"}
+                : esPorUrl
+                  ? "Probar y conectar"
+                  : "Guardar configuración"}
             </button>
           </div>
         </div>

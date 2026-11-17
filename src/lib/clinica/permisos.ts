@@ -87,6 +87,11 @@ const HABILITADOS = new Set([
   // (no se finge un envío real). Se habilita con esos avisos visibles hasta conectar un n8n
   // real. Solo Enterprise (minPlan grupo).
   "automatizaciones",
+  // Portal del paciente (punto 10): real. El admin configura el portal e invita pacientes
+  // (código guardado en el módulo «portal»); el paciente entra con DNI/correo + código,
+  // verificado contra ese store. En clínica real el código se envía por correo; en el demo
+  // se muestra. Solo Enterprise (minPlan grupo).
+  "portal-paciente",
 ]);
 export const moduloHabilitado = (id: string) => HABILITADOS.has(id);
 

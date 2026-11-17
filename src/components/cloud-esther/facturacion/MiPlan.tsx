@@ -839,11 +839,14 @@ function MedioForm({
 
 /** Ícono y degradé por nivel de plan (de menor a mayor), para darle jerarquía visual. */
 const TIER_PLAN: Record<PlanId, { Icono: typeof Crown; grad: string }> = {
-  inicial: { Icono: Star, grad: "from-slate-400 to-slate-600" },
-  profesional: { Icono: Zap, grad: "from-sky-500 to-indigo-500" },
+  inicial: { Icono: Star, grad: "from-violet-300 to-violet-400" },
+  profesional: { Icono: Zap, grad: "from-violet-400 to-violet-500" },
   avanzada: { Icono: Rocket, grad: "from-violet-500 to-fuchsia-500" },
-  grupo: { Icono: Crown, grad: "from-amber-400 to-amber-600" },
+  grupo: { Icono: Crown, grad: "from-[#5b21b6] to-[#7c3aed]" },
 };
+
+/** Degradé de marca para el plan actual (siempre violeta, nunca otro color). */
+const GRAD_ACTUAL = "from-[#4c1d95] via-[#6d28d9] to-[#9333ea]";
 
 /** Capacidad incluida (pacientes · usuarios · sucursales) como mini-stats; ∞ cuando no hay tope. */
 function capacidadDe(id: PlanId) {
@@ -914,7 +917,7 @@ function CambiarDePlan({ onToast }: { onToast: (m: string) => void }) {
                 onClick={() => setDestino(elegido ? null : id)}
                 className={`group relative flex w-full flex-col gap-3 overflow-hidden rounded-2xl p-3.5 text-left transition-all duration-200 ${
                   actual
-                    ? `cursor-default bg-gradient-to-br ${grad} text-white shadow-[0_18px_40px_-22px_rgba(76,29,149,0.9)]`
+                    ? `cursor-default bg-gradient-to-br ${GRAD_ACTUAL} text-white shadow-[0_18px_40px_-22px_rgba(76,29,149,0.9)]`
                     : elegido
                       ? "bg-white ring-2 ring-primary/40 shadow-[0_14px_30px_-20px_rgba(124,58,237,0.7)]"
                       : "bg-white ring-1 ring-primary/10 hover:-translate-y-0.5 hover:ring-primary/25 hover:shadow-[0_14px_28px_-20px_rgba(124,58,237,0.6)]"
@@ -948,7 +951,7 @@ function CambiarDePlan({ onToast }: { onToast: (m: string) => void }) {
                       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
                         d > 0
                           ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
-                          : "bg-amber-500/12 text-amber-600 dark:text-amber-400"
+                          : "bg-primary/10 text-primary"
                       }`}
                     >
                       {d > 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}

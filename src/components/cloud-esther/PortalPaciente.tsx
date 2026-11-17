@@ -46,6 +46,7 @@ import { useRegistrosPacientes, type Registros } from "@/components/cloud-esther
 import { CloudEstherProvider } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
@@ -414,6 +415,7 @@ function PortalGate() {
 }
 
 function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void }) {
+  const term = useTerminologia();
   const { clinica: clinicaSesion } = useSesion();
   const { pacientes } = usePacientes();
   const { accesos } = storePortal.usar();
@@ -440,7 +442,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
     setError("");
     setAviso("");
     const p = buscar();
-    if (!p) return setError("No encontramos un paciente con ese DNI o correo en esta clínica.");
+    if (!p) return setError(`No encontramos un paciente con ese ${term.doc} o correo en esta clínica.`);
     const a = accesos[p.id];
     if (!a || a.estado === "Revocado")
       return setError("Todavía no tenés acceso al portal. Pedile a la clínica que te invite.");
@@ -477,7 +479,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
     e.preventDefault();
     setError("");
     const p = buscar();
-    if (!p) return setError("No encontramos un paciente con ese DNI o correo en esta clínica.");
+    if (!p) return setError(`No encontramos un paciente con ese ${term.doc} o correo en esta clínica.`);
     const a = accesos[p.id];
     if (!a || a.estado === "Revocado")
       return setError("Tu acceso al portal no está habilitado. Comunicate con la clínica.");
@@ -540,7 +542,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{clinica}</p>
           <form onSubmit={ingresar} className="mt-6 space-y-3">
-            <Field label="DNI o correo">
+            <Field label={`${term.doc} o correo`}>
               <input
                 autoFocus
                 value={usuario}
@@ -595,7 +597,7 @@ function LoginPortal({ onIngresar }: { onIngresar: (pacienteId: number) => void 
             con la contraseña que creaste en «Mis datos».
           </p>
           <p className="mt-8 rounded-xl border border-dashed border-primary/20 p-3 text-[11px] text-muted-foreground">
-            Ingresá con el DNI o el correo con el que la clínica te registró y el código que te
+            Ingresá con el {term.doc} o el correo con el que la clínica te registró y el código que te
             llega por correo. Los accesos se gestionan en Cloud Esther → Portal del paciente.
           </p>
           <Link
@@ -2625,6 +2627,7 @@ function Mensajes({ ctx }: { ctx: Ctx }) {
 /* ───────────── Mis datos ───────────── */
 
 function Perfil({ ctx }: { ctx: Ctx }) {
+  const term = useTerminologia();
   const { setPacientes } = usePacientes();
   const p = ctx.paciente;
   const [telefono, setTelefono] = useState(p.telefono);
@@ -2681,7 +2684,7 @@ function Perfil({ ctx }: { ctx: Ctx }) {
                 className={`${INPUT} bg-muted/40`}
               />
             </Field>
-            <Field label="DNI">
+            <Field label={term.doc}>
               <input
                 value={p.documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
                 disabled

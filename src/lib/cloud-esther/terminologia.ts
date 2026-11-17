@@ -1,5 +1,6 @@
 import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
 
 /* Ubicación: src/lib/cloud-esther/terminologia.ts
    Terminología por país (pedido de Camilo, nov 2026). Cloud Esther es internacional: cada país
@@ -39,6 +40,10 @@ export function terminologiaDe(pais: string | undefined): Termino {
     (ej. pantallas públicas) devuelve términos neutros, nunca rompe. */
 export function useTerminologia(): Termino {
   const ctx = useCloudEstherOpcional();
-  const settings = useClinicSettings(ctx?.clinic ?? "");
+  // Fuera del proveedor (portal público del paciente) no hay ctx, pero la sesión sí tiene la
+  // clínica: así el portal también muestra el término del país correcto.
+  const { clinica } = useSesion();
+  const clinicId = ctx?.clinic ?? clinica?.id ?? "";
+  const settings = useClinicSettings(clinicId);
   return terminologiaDe(settings.datosClinica?.pais);
 }

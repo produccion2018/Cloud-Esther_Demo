@@ -241,11 +241,11 @@ export type TipoLimite = "pacientes" | "usuarios" | "sucursales";
 
 export const MENSAJE_LIMITE: Record<TipoLimite, string> = {
   pacientes:
-    "Has alcanzado el límite de pacientes activos incluido en tu plan. Contacta con administración para ampliar la capacidad.",
+    "Has alcanzado el límite de pacientes activos incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
   usuarios:
-    "Has alcanzado el límite de usuarios internos incluido en tu plan. Contacta con administración para ampliar la capacidad.",
+    "Has alcanzado el límite de usuarios internos incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
   sucursales:
-    "Has alcanzado el límite de sucursales incluido en tu plan. Contacta con administración para ampliar la capacidad.",
+    "Has alcanzado el límite de sucursales incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
 };
 
 /** ¿Se puede sumar uno más? (no borra nada: solo impide superar el límite). */

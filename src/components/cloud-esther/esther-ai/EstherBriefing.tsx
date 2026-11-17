@@ -23,10 +23,9 @@ import {
 
 const SEGUNDOS_VISIBLE = 14;
 
-/** Voz en español (síntesis del navegador) para que Esther "hable" el mensaje. */
-function vozEspanol(): SpeechSynthesisVoice | null {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  const voces = window.speechSynthesis.getVoices();
+/** Voz en español (síntesis del navegador) para que Esther "hable" el mensaje.
+    Recibe la lista de voces ya cargada (llegan asíncronas: no sirve pedirlas en el momento). */
+function vozEspanol(voces: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   return (
     voces.find((v) => v.lang === "es-AR") ??
     voces.find(
@@ -36,6 +35,9 @@ function vozEspanol(): SpeechSynthesisVoice | null {
     null
   );
 }
+
+/** ¿El navegador puede sintetizar voz? (en SSR y navegadores viejos, no). */
+const AUDIO_SOPORTADO = typeof window !== "undefined" && "speechSynthesis" in window;
 
 export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo: string }) {
   void modulo;
@@ -60,6 +62,18 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
 
   const [visible, setVisible] = useState(true);
   const [hablando, setHablando] = useState(false);
+  const [voces, setVoces] = useState<SpeechSynthesisVoice[]>([]);
+  const [avisoAudio, setAvisoAudio] = useState<string | null>(null);
+
+  // Las voces del navegador llegan asíncronas: hay que escuchar "voiceschanged",
+  // si no, el primer clic las encuentra vacías y el audio se queda mudo.
+  useEffect(() => {
+    if (!AUDIO_SOPORTADO) return;
+    const cargar = () => setVoces(window.speechSynthesis.getVoices());
+    cargar();
+    window.speechSynthesis.addEventListener?.("voiceschanged", cargar);
+    return () => window.speechSynthesis.removeEventListener?.("voiceschanged", cargar);
+  }, []);
 
   // Texto que Esther lee en voz alta: el saludo + lo de la clínica.
   const textoVoz = useMemo(() => {
@@ -85,22 +99,43 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   );
 
   const alternarVoz = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (!AUDIO_SOPORTADO) {
+      setAvisoAudio("Tu navegador no permite reproducir audio.");
+      return;
+    }
     if (hablando) {
       window.speechSynthesis.cancel();
       setHablando(false);
       return;
     }
+    setAvisoAudio(null);
+    // Por si las voces todavía no se cargaron al momento del clic, las volvemos a pedir.
+    const lista = voces.length ? voces : window.speechSynthesis.getVoices();
+    const v = vozEspanol(lista);
     const u = new SpeechSynthesisUtterance(textoVoz.slice(0, 600));
-    const v = vozEspanol();
     if (v) u.voice = v;
     u.lang = v?.lang ?? "es-AR";
     u.rate = 1.02;
+    u.onstart = () => setAvisoAudio(null);
     u.onend = () => setHablando(false);
-    u.onerror = () => setHablando(false);
+    u.onerror = () => {
+      setHablando(false);
+      setAvisoAudio("No pudimos reproducir el audio en este dispositivo.");
+    };
     window.speechSynthesis.cancel();
     setHablando(true);
     window.speechSynthesis.speak(u);
+    // Red de seguridad: si no arrancó (sin voces reales en el equipo), avisamos y soltamos el botón.
+    window.setTimeout(() => {
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+        setHablando(false);
+        setAvisoAudio(
+          v
+            ? "No pudimos reproducir el audio. Probá de nuevo."
+            : "No encontramos una voz en español en este dispositivo para leer el mensaje.",
+        );
+      }
+    }, 1500);
   };
 
   const cerrar = () => {
@@ -157,19 +192,21 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                   · te saluda
                 </span>
               </p>
-              <button
-                type="button"
-                onClick={alternarVoz}
-                aria-label={hablando ? "Detener audio" : "Escuchar el mensaje"}
-                title={hablando ? "Detener" : "Escuchar"}
-                className={`grid size-7 shrink-0 place-items-center rounded-full ring-1 transition ${
-                  hablando
-                    ? "bg-primary text-white ring-primary"
-                    : "bg-card text-primary ring-primary/20 hover:ring-primary/40"
-                }`}
-              >
-                {hablando ? <Square className="size-3" /> : <Volume2 className="size-3.5" />}
-              </button>
+              {AUDIO_SOPORTADO && (
+                <button
+                  type="button"
+                  onClick={alternarVoz}
+                  aria-label={hablando ? "Detener audio" : "Escuchar el mensaje"}
+                  title={hablando ? "Detener" : "Escuchar"}
+                  className={`grid size-7 shrink-0 place-items-center rounded-full ring-1 transition ${
+                    hablando
+                      ? "bg-primary text-white ring-primary"
+                      : "bg-card text-primary ring-primary/20 hover:ring-primary/40"
+                  }`}
+                >
+                  {hablando ? <Square className="size-3" /> : <Volume2 className="size-3.5" />}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={cerrar}
@@ -199,6 +236,13 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                 </span>
               )}
             </div>
+
+            {/* Aviso si el audio no se pudo reproducir (sin voz en el equipo, etc.). */}
+            {avisoAudio && (
+              <p className="mt-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                {avisoAudio}
+              </p>
+            )}
 
             {/* Lo de la clínica (hallazgos reales) */}
             {hallazgos.length > 0 && (

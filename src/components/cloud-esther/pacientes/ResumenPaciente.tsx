@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
+import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import type { Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
@@ -313,6 +314,7 @@ export function ResumenPaciente({
   onEditar: () => void;
   onIr: (s: SeccionCarpeta) => void;
 }) {
+  const term = useTerminologia();
   const nombre = `${paciente.nombre} ${paciente.apellido}`.trim();
   const iniciales = `${paciente.nombre.charAt(0)}${paciente.apellido.charAt(0)}`.toUpperCase();
   const anios = edad(paciente.fechaNacimiento);
@@ -369,7 +371,7 @@ export function ResumenPaciente({
               )}
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-              <span>DNI {documento}</span>
+              <span>{term.doc} {documento}</span>
               {anios !== null && <span>· {anios} años</span>}
               <span className="inline-flex items-center gap-1">
                 · <ShieldCheck className="size-3.5 text-primary" /> {obraSocial}
@@ -469,7 +471,7 @@ export function ResumenPaciente({
             )}
           </div>
           <div className="grid gap-1 sm:grid-cols-2">
-            <Fila icon={FileText} etiqueta="Documento" valor={documento} />
+            <Fila icon={FileText} etiqueta={term.doc} valor={documento} />
             <Fila
               icon={CalendarDays}
               etiqueta="Nacimiento"

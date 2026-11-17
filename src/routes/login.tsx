@@ -390,7 +390,9 @@ function Login() {
 
                     <Input
                       id="email"
+                      name="email"
                       type="email"
+                      autoComplete="username"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -416,6 +418,7 @@ function Login() {
                     <div className="relative">
                       <Input
                         id="pass"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         required
                         value={pass}

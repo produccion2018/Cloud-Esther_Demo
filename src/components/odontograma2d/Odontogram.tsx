@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Download, History, Lock, MousePointerClick, Printer } from "lucide-react";
 import { Tooth } from "./Tooth";
 import { type PlanId } from "@/lib/cloud-esther/data";
+import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { nivelModulo } from "@/lib/cloud-esther/niveles";
 import { cargarTratamientos, guardarTratamiento } from "@/lib/odontogram/historial";
 import {
@@ -59,6 +60,27 @@ const HERRAMIENTAS_BASICAS: Tool[] = [
 ];
 
 type Denticion = "permanente" | "temporal" | "mixta";
+
+/** Dentición sugerida según la edad del paciente (pediatría): hasta 6 años dientes de leche,
+    de 6 a 12 dentición mixta, de 12 en adelante permanente. Sin fecha → permanente. */
+function denticionPorEdad(fechaNacimiento?: string): Denticion {
+  if (!fechaNacimiento) return "permanente";
+  const n = new Date(fechaNacimiento);
+  if (Number.isNaN(n.getTime())) return "permanente";
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - n.getFullYear();
+  const m = hoy.getMonth() - n.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < n.getDate())) edad--;
+  if (edad < 6) return "temporal";
+  if (edad <= 12) return "mixta";
+  return "permanente";
+}
+
+/** Dentición sugerida para un paciente (busca su fecha de nacimiento en el store). */
+function denticionSugerida(patientId: string): Denticion {
+  const p = leerPacientes().find((x) => String(x.id) === String(patientId));
+  return denticionPorEdad(p?.fechaNacimiento);
+}
 
 /* Guardado local por clínica (tenant) y paciente, para que no se crucen datos
    entre empresas. TODO backend: reemplazar por la API de odontogramas. */
@@ -163,6 +185,8 @@ export function Odontogram({
   const [nota, setNota] = useState("");
   const completo = nivelModulo("odontograma", plan) !== "basico";
   const [denticion, setDenticion] = useState<Denticion>("permanente");
+  // Dentición que corresponde por la edad (para avisar que es un paciente pediátrico).
+  const denticionEdad = useMemo(() => denticionSugerida(patientId), [patientId]);
 
   // Carga lo guardado de este paciente al montar o al cambiar de paciente/clínica.
   useEffect(() => {
@@ -173,6 +197,9 @@ export function Odontogram({
     }));
     setHistorial(cargarHistorial2D(tenantId, patientId));
     setSeleccionada(null);
+    // Pediatría: al abrir un paciente menor, preselecciona su dentición (temporal/mixta) según
+    // la edad. El profesional puede cambiarla a mano igual.
+    setDenticion(denticionSugerida(patientId));
   }, [tenantId, patientId]);
 
   // Nota / tratamiento planificado de la pieza seleccionada (compartido con el 3D).
@@ -454,6 +481,11 @@ export function Odontogram({
                     </button>
                   ))}
                 </div>
+                {denticionEdad !== "permanente" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                    Paciente pediátrico · dentición sugerida por edad
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={imprimir}

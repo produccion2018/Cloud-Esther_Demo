@@ -53,6 +53,7 @@ import {
   type Ejecucion,
 } from "@/lib/cloud-esther/n8n-store";
 import { candidatos, ejecutarFlujo } from "@/lib/cloud-esther/n8n-motor";
+import { AgenteIA } from "@/components/cloud-esther/automatizaciones/AgenteIA";
 import {
   Acciones,
   BTN_ICONO,
@@ -78,7 +79,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
   return <ModalBase {...props} modulo="Automatizaciones" />;
 }
 
-type Seccion = "catalogo" | "flujos" | "plantillas" | "ejecuciones" | "conexion";
+type Seccion = "agente" | "catalogo" | "flujos" | "plantillas" | "ejecuciones" | "conexion";
 
 const ICONO: Record<TipoPaso, LucideIcon> = {
   ia: CaraEsther,
@@ -142,7 +143,7 @@ export function Automatizaciones() {
   const { usuario: u } = useSesion();
   const est = storeN8n.usar();
   const [montado, setMontado] = useState(false);
-  const [seccion, setSeccion] = useState<Seccion>("catalogo");
+  const [seccion, setSeccion] = useState<Seccion>("agente");
   const [sel, setSel] = useState<string | null>(null);
   const [editando, setEditando] = useState<Flujo | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -192,6 +193,7 @@ export function Automatizaciones() {
     },
   ];
   const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
+    { id: "agente", label: "Agente IA 24/7", icon: Bot },
     { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
     { id: "flujos", label: "Flujos", icon: Workflow },
     { id: "plantillas", label: "Plantillas", icon: LayoutTemplate },
@@ -358,6 +360,8 @@ export function Automatizaciones() {
         <div className="mt-5">
           {!montado ? (
             <div className="card-grad h-[480px] animate-pulse" />
+          ) : seccion === "agente" ? (
+            <AgenteIA plan={plan} usuario={usuario} onToast={onToast} />
           ) : seccion === "catalogo" ? (
             <CatalogoAutomatizaciones plan={plan} onToast={onToast} />
           ) : seccion === "flujos" ? (

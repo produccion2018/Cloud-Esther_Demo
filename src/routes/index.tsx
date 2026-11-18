@@ -19,10 +19,12 @@ import {
   ReceiptText,
   Rocket,
   Stethoscope,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
+import { useClinicasReales } from "@/lib/cloud-esther/estadisticas-publicas";
 import { Reveal } from "@/components/site/Reveal";
 import { PortalesEnterprise } from "@/components/site/PortalesEnterprise";
 import { LaptopCta } from "@/components/site/LaptopCta";
@@ -781,6 +783,13 @@ function Home() {
   // Sentido de giro de la órbita de módulos (+1 avanza, -1 retrocede).
   const [giroDir, setGiroDir] = useState(1);
 
+  // Contador de clínicas: 320 es el número base; se le suman las clínicas reales
+  // activas (del backend). Cuando hay crecimiento real, el número cambia de color.
+  const clinicasReales = useClinicasReales();
+  const clinicasBase = 320;
+  const totalClinicas = clinicasBase + (clinicasReales ?? 0);
+  const creciendoReal = (clinicasReales ?? 0) > 0;
+
   return (
     <MotionConfig reducedMotion="user">
       <style>{TITLE_CSS}</style>
@@ -978,8 +987,13 @@ function Home() {
                 className="mt-8 flex items-center gap-5 sm:gap-7"
               >
                 <div>
-                  <p className="text-2xl font-bold text-primary">
-                    <CountUp to={320} prefix="+" />
+                  <p
+                    className={`flex items-center gap-1 text-2xl font-bold transition-colors duration-500 ${
+                      creciendoReal ? "text-emerald-500" : "text-primary"
+                    }`}
+                  >
+                    <CountUp to={totalClinicas} prefix="+" />
+                    {creciendoReal && <TrendingUp className="size-4" />}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Clínicas

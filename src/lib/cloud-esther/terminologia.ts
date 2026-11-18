@@ -36,6 +36,49 @@ export function terminologiaDe(pais: string | undefined): Termino {
   return POR_PAIS[(pais ?? "").trim().toUpperCase()] ?? NEUTRO;
 }
 
+// Zonas horarias → país, para los mercados que atendemos. Se usa solo si el navegador
+// no trae el país en el idioma.
+const TZ_PAIS: Record<string, string> = {
+  "America/Argentina": "AR",
+  "America/Buenos_Aires": "AR",
+  "America/Cordoba": "AR",
+  "America/Mendoza": "AR",
+  "America/Santiago": "CL",
+  "America/Punta_Arenas": "CL",
+  "America/Bogota": "CO",
+  "America/Lima": "PE",
+  "America/Guayaquil": "EC",
+  "America/Mexico_City": "MX",
+  "America/Monterrey": "MX",
+  "America/Cancun": "MX",
+  "America/Tijuana": "MX",
+  "Europe/Madrid": "ES",
+  "Atlantic/Canary": "ES",
+};
+
+/** Detecta el país del navegador (idioma y, si no, zona horaria) para los países que atendemos.
+    Sirve para que el DEMO (y cualquier clínica sin país configurado) muestre el término correcto
+    sin que nadie toque la configuración. Devuelve "" si no lo puede determinar. */
+export function detectarPais(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    // 1) Idioma: "es-AR", "es_MX", "es-ES"… el sufijo es el país.
+    const idiomas = [navigator.language, ...(navigator.languages ?? [])];
+    for (const l of idiomas) {
+      const cc = /[-_]([A-Za-z]{2})$/.exec(l ?? "")?.[1]?.toUpperCase();
+      if (cc && POR_PAIS[cc]) return cc;
+    }
+    // 2) Zona horaria: "America/Argentina/Buenos_Aires", "Europe/Madrid"…
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+    for (const prefijo of Object.keys(TZ_PAIS)) {
+      if (tz.startsWith(prefijo)) return TZ_PAIS[prefijo] ?? "";
+    }
+  } catch {
+    /* algún navegador sin estas APIs: términos neutros */
+  }
+  return "";
+}
+
 /** Hook: términos según el país configurado en la clínica actual. Fuera del proveedor
     (ej. pantallas públicas) devuelve términos neutros, nunca rompe. */
 export function useTerminologia(): Termino {
@@ -45,5 +88,8 @@ export function useTerminologia(): Termino {
   const { clinica } = useSesion();
   const clinicId = ctx?.clinic ?? clinica?.id ?? "";
   const settings = useClinicSettings(clinicId);
-  return terminologiaDe(settings.datosClinica?.pais);
+  // Si la clínica configuró su país, manda ese. Si no (típico en el demo), se detecta del
+  // navegador para mostrar igual el término correcto; si no se puede, quedan términos neutros.
+  const pais = settings.datosClinica?.pais || detectarPais();
+  return terminologiaDe(pais);
 }

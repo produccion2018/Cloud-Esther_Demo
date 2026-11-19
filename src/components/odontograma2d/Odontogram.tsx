@@ -61,6 +61,21 @@ const HERRAMIENTAS_BASICAS: Tool[] = [
 
 type Denticion = "permanente" | "temporal" | "mixta";
 
+/* Sugerencias rápidas para la nota/tratamiento de la pieza: el profesional toca y se inserta,
+   así escribe lo mínimo. */
+const SUGERENCIAS_NOTA = [
+  "Obturación con resina",
+  "Endodoncia",
+  "Extracción",
+  "Corona",
+  "Incrustación",
+  "Perno + corona",
+  "Sellador",
+  "Profilaxis",
+  "Restauración provisoria",
+  "Control en 6 meses",
+];
+
 /** Dentición sugerida según la edad del paciente (pediatría): hasta 6 años dientes de leche,
     de 6 a 12 dentición mixta, de 12 en adelante permanente. Sin fecha → permanente. */
 function denticionPorEdad(fechaNacimiento?: string): Denticion {
@@ -749,7 +764,22 @@ function PiezaSeleccionada({
             placeholder="Ej: Obturación con resina en oclusal, control en 6 meses…"
             className="mt-1.5 w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
           />
-        ) : (
+        ) : null}
+        {notasHabilitadas && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {SUGERENCIAS_NOTA.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onNota(nota.trim() ? `${nota.trim()}. ${s}` : s)}
+                className="rounded-full border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-[10.5px] font-medium text-primary transition hover:bg-primary/12"
+              >
+                + {s}
+              </button>
+            ))}
+          </div>
+        )}
+        {!notasHabilitadas && (
           <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3 w-3" />
             Disponible desde el plan {planNecesario}.

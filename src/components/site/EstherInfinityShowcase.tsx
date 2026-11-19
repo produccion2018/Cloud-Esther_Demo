@@ -18,7 +18,7 @@ import {
 import { usePanelCaracteristicas, type TipoHallazgo } from "@/lib/site-contenido";
 
 /* Ubicación: src/components/site/EstherInfinityShowcase.tsx
-   Presentación de Esther Infinity como un NÚCLEO de IA conectado a todos los módulos de la clínica:
+   Presentación de Esther como un NÚCLEO de IA conectado a todos los módulos de la clínica:
    líneas de conexión animadas, procesamiento en tiempo real y los hallazgos reales rotando.
    Comunica que es una asistente de IA integrada (no un chatbot ni una imagen decorativa).
    Usa los datos reales del panel (usePanelCaracteristicas): no inventa capacidades. */
@@ -86,7 +86,7 @@ export function EstherInfinityShowcase() {
             <CaraEsther className="size-4" />
           </span>
           <div className="leading-tight">
-            <p className="font-display text-sm font-bold">Esther Infinity</p>
+            <p className="font-display text-sm font-bold">Esther</p>
             <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
               <span className="relative flex size-2">
                 <motion.span className="absolute inline-flex size-full rounded-full bg-emerald-400" animate={{ scale: [1, 2, 1], opacity: [0.7, 0, 0.7] }} transition={{ duration: 1.8, repeat: Infinity }} />
@@ -205,7 +205,7 @@ export function EstherInfinityShowcase() {
       </div>
 
       <p className="relative border-t border-primary/10 bg-lavender/30 px-5 py-2.5 text-[11px] text-muted-foreground">
-        Esther Infinity está integrada en Cloud Esther y asiste al profesional: no reemplaza su criterio.
+        Esther está integrada en Cloud Esther y asiste al profesional: no reemplaza su criterio.
       </p>
     </motion.div>
   );

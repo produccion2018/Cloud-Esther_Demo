@@ -99,7 +99,7 @@ const ETIQUETA_AJUSTE: Partial<Record<keyof ClinicSettings, string>> = {
   darkModeSidebar: "Menú lateral oscuro",
   sidebarColor: "Color del menú lateral",
   fontSize: "Tamaño de letra",
-  aiEnabled: "Esther Infinity",
+  aiEnabled: "Esther",
   notificationsEnabled: "Notificaciones",
   advancedSecurityEnabled: "Seguridad avanzada",
   auditLogEnabled: "Registrar accesos a módulos",
@@ -489,7 +489,7 @@ function GeneralTab({
   onToast: (msg: string) => void;
   nombreSesion: string;
 }) {
-  // El interruptor de Esther Infinity solo existe en planes con IA (Plus y Enterprise).
+  // El interruptor de Esther solo existe en planes con IA (Plus y Enterprise).
   const conIA = useConIA();
   const { plan } = useCloudEsther();
   // País: solo los que el dueño de Cloud Esther tiene seleccionados para vender.
@@ -594,12 +594,12 @@ function GeneralTab({
           {conIA && (
             <FilaSwitch
               icon={CaraEsther}
-              titulo="Esther Infinity"
+              titulo="Esther"
               descripcion="Asistente inteligente disponible en la plataforma."
               checked={settings.aiEnabled}
               onChange={(value) => {
                 actualizar("aiEnabled", value);
-                onToast(value ? "Esther Infinity activada" : "Esther Infinity desactivada");
+                onToast(value ? "Esther activada" : "Esther desactivada");
               }}
             />
           )}

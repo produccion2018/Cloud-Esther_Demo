@@ -57,7 +57,7 @@ import { Documentos, Gestion } from "./Gestion";
 
 /* Ubicación: src/components/cloud-esther/rrhh/RRHH.tsx
    Recursos Humanos conectado con Equipo (mismas personas y ausencias), el portal del equipo
-   (fichajes, solicitudes, comunicados) y Esther Infinity (análisis y redacción con datos reales). */
+   (fichajes, solicitudes, comunicados) y Esther (análisis y redacción con datos reales). */
 
 const SECCIONES: { id: SeccionRRHH; label: string; icon: LucideIcon }[] = [
   { id: "resumen", label: "Resumen", icon: BarChart3 },
@@ -259,7 +259,7 @@ export function RRHH() {
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200/70 bg-fuchsia-50/80 px-3 py-1.5 text-[11px] font-bold text-fuchsia-700">
                     <CaraEsther className="size-3.5" />
-                    Con Esther Infinity
+                    Con Esther
                   </span>
                   {montado && pendientes > 0 && (
                     <button
@@ -410,7 +410,7 @@ export function RRHH() {
           <AvatarEsther />
           <span className="relative hidden text-left leading-tight sm:block">
             <span className="block bg-gradient-to-r from-foreground to-primary bg-clip-text text-xs font-semibold text-transparent">
-              Esther Infinity
+              Esther
             </span>
             <span className="block text-[10.5px] text-muted-foreground">Recursos humanos</span>
           </span>

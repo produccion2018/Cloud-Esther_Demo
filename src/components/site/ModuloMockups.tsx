@@ -45,7 +45,7 @@ export const MOCKUP_POR_MODULO: Record<string, MockupKind> = {
   "Portal del paciente": "chat",
   Automatizaciones: "automatizacion",
   "Mensajería del equipo": "chat",
-  "Esther Infinity (IA)": "ia",
+  "Esther (IA)": "ia",
   Multiempresa: "multiempresa",
   "Roles y permisos": "seguridad",
   "Equipo profesional": "people",

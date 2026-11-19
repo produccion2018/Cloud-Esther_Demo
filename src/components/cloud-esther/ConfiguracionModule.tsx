@@ -86,12 +86,10 @@ const TABS: {
   icon: typeof Settings;
   /** Nivel de plan mínimo para ver la pestaña (1 Start, 2 Pro, 3 Plus, 4 Enterprise). */
   min?: number;
-  /** Solo se muestra en el plan Start (los demás tienen Facturación para esto). */
-  soloInicial?: boolean;
 }[] = [
   { id: "general", label: "General", icon: Settings },
-  // El plan Start no tiene el módulo Facturación: desde acá suma módulos adicionales.
-  { id: "miplan", label: "Mi plan", icon: Crown, soloInicial: true },
+  // Desde acá cada plan ve su plan actual, cambia el odontograma 2D/3D y suma módulos adicionales.
+  { id: "miplan", label: "Mi plan", icon: Crown },
   { id: "profesionales", label: "Profesionales", icon: Users },
   { id: "directorio", label: "Documentos", icon: FolderOpen, min: 2 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
@@ -208,7 +206,6 @@ export function ConfiguracionModule({ onToast }: Props) {
   useEffect(() => {
     const t = TABS.find((x) => x.id === tab);
     if (t?.min && planLevel(plan) < t.min) setTab("general");
-    if (t?.soloInicial && plan !== "inicial") setTab("general");
   }, [plan, tab]);
 
   const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
@@ -241,9 +238,7 @@ export function ConfiguracionModule({ onToast }: Props) {
   };
 
   const avanzada = planLevel(plan) >= 3;
-  const visibles = TABS.filter(
-    (t) => (!t.min || planLevel(plan) >= t.min) && (!t.soloInicial || plan === "inicial"),
-  );
+  const visibles = TABS.filter((t) => !t.min || planLevel(plan) >= t.min);
 
   return (
     <div>
@@ -341,8 +336,8 @@ export function ConfiguracionModule({ onToast }: Props) {
 /*                     MI PLAN (solo Start) — sumar módulos                    */
 /* -------------------------------------------------------------------------- */
 
-/** Pestaña «Mi plan» del plan Start: como Start no tiene el módulo Facturación, desde acá
-    ve su plan y suma los módulos adicionales (misma tarjeta que usan Pro/Plus en Facturación). */
+/** Pestaña «Mi plan» de Configuración: cada plan ve su plan actual, cambia el odontograma 2D/3D y
+    suma los módulos adicionales (misma tarjeta que Pro/Plus también tienen en Facturación). */
 function MiPlanStartTab({ onToast }: { onToast: (m: string) => void }) {
   const { plan } = useCloudEsther();
   return (
@@ -363,8 +358,8 @@ function MiPlanStartTab({ onToast }: { onToast: (m: string) => void }) {
             </div>
           </div>
           <p className="max-w-sm text-[12px] leading-relaxed text-muted-foreground">
-            Sumá los módulos que tu plan no incluye sin cambiar de plan. Antes de activar vas a ver
-            el aviso de cobro, y el cargo se agrega a tu próxima factura de Cloud Esther.
+            Cambiá el odontograma entre 2D y 3D, y sumá los módulos que tu plan no incluye sin
+            cambiar de plan. El cargo se agrega a tu próxima factura de Cloud Esther.
           </p>
         </div>
       </div>

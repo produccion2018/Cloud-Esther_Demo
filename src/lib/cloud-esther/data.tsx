@@ -419,6 +419,17 @@ export function availableIn(module: AppModule, plan: PlanId) {
   return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));
 }
 
+/** ¿La clínica usa el odontograma y el periodontograma en 3D? (por plan o porque contrató el 3D). */
+export function usa3D(plan: PlanId) {
+  return tiene3D(plan, modulosExtra());
+}
+
+/** ¿El 3D viene incluido por el plan (Plus/Enterprise)? Si es así, no se puede cambiar a 2D. */
+export function tres3DPorPlan(plan: PlanId) {
+  const tres = MODULES.find((m) => m.id === "odontograma3d");
+  return !!tres && incluidoEnPlan(tres, plan);
+}
+
 export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   inicial: [
     "Agenda y turnos",

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useSesion } from "@/lib/cloud-esther/auth-store";
-import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { useEquipo, asegurarAdminEnEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { PersonaEquipo, RolClinica } from "@/lib/clinica/api";
 import { verEquipo } from "@/lib/clinica/api";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -90,7 +90,16 @@ function miembroDesdeAcceso(p: PersonaEquipo): TeamMember {
 export function useSincronizarEquipo(): void {
   const real = useClinicaReal();
   const { miembros, setMiembros } = useEquipo();
+  const { usuario } = useSesion();
   const hecho = useRef<string | null>(null);
+
+  // Demo: el administrador/dueño de la cuenta queda en el equipo (si no está), igual que en
+  // producción al registrarse. Así su nombre aparece en «Agendas y horarios» y puede cargar sus
+  // horarios (el admin también puede atender). En clínica real lo trae el backend.
+  useEffect(() => {
+    if (real || !usuario?.email || !usuario?.nombre) return;
+    asegurarAdminEnEquipo({ id: usuario.id, nombre: usuario.nombre, email: usuario.email });
+  }, [real, usuario?.id, usuario?.email, usuario?.nombre]);
 
   useEffect(() => {
     const slug = real?.slug;

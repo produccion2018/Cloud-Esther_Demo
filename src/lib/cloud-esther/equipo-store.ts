@@ -1,5 +1,5 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
-import { ESPECIALIDADES, type TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
+import { ESPECIALIDADES, emptyMember, permsFor, type TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
 
 /* Ubicación: src/lib/cloud-esther/equipo-store.ts
 
@@ -98,3 +98,29 @@ export function usuariosInternos(miembros: TeamMember[]) {
 
 /** Acceso directo al store (lectura/escritura fuera de componentes, ej. RRHH o Esther). */
 export const storeEquipo = store;
+
+/** El administrador/dueño de la cuenta se agrega solo al equipo (si todavía no está), para que su
+    nombre aparezca en «Agendas y horarios» y pueda cargar sus días y horarios —el admin también
+    puede ser odontólogo/dueño que atiende—. Igual que en producción, donde queda al registrarse.
+    Es idempotente: si ya hay un integrante con ese correo, no hace nada. */
+export function asegurarAdminEnEquipo(usuario: { id?: string; nombre: string; email: string }) {
+  const correo = usuario.email.trim().toLowerCase();
+  if (!correo || !usuario.nombre.trim()) return;
+  const actual = store.leer();
+  const yaEsta = actual.miembros.some((m) => (m.email ?? "").trim().toLowerCase() === correo);
+  if (yaEsta) return;
+  const partes = usuario.nombre.trim().split(/\s+/);
+  const firstName = partes[0] ?? usuario.nombre.trim();
+  const lastName = partes.slice(1).join(" ");
+  const admin: TeamMember = {
+    ...emptyMember(),
+    id: usuario.id || crypto.randomUUID(),
+    firstName,
+    lastName,
+    role: "administrador",
+    email: correo,
+    status: "activo",
+    permissions: permsFor("administrador"),
+  };
+  store.poner({ ...actual, miembros: [admin, ...actual.miembros] });
+}

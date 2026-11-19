@@ -3,7 +3,8 @@ import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus } from "lucide-react";
 
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
-import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { useCloudEsther, usa3D } from "@/lib/cloud-esther/data";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 
 // La boca 3D realista se descarga solo en el cliente, cuando se muestra (igual que el odontograma):
 // así three.js no entra al paquete del servidor (SSR).
@@ -191,8 +192,10 @@ export function PeriodontogramaSec({
   contexto?: ContextoPaciente | undefined;
 }) {
   const { plan } = useCloudEsther();
-  // La boca 3D es solo de Plus y Enterprise. Start y Pro usan el periodontograma 2D.
-  const con3D = plan === "avanzada" || plan === "grupo";
+  // El 3D viene por plan (Plus/Enterprise) o porque la clínica contrató el odontograma 3D
+  // como adicional (Start/Pro). `usar()` hace que reaccione al instante si se contrata/quita.
+  storeModulosExtra.usar();
+  const con3D = usa3D(plan);
   const evaluaciones = useMemo(
     () => [...(datos.periodontograma ?? [])].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
     [datos.periodontograma],

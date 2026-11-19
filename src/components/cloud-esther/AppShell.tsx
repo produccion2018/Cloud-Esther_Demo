@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, Eye, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMarca } from "@/lib/cloud-esther/marca";
 import {
@@ -18,6 +18,7 @@ import {
   type PlanId,
 } from "@/lib/cloud-esther/data";
 import { nivelModulo } from "@/lib/cloud-esther/niveles";
+import { ROLES_VISTA, setRolVista, useRolVista, useVistaDemo } from "@/lib/cloud-esther/vista-demo-store";
 import { useClinicSettings, SIDEBAR_COLORS, FONT_SIZE_PX } from "@/lib/cloud-esther/settings-store";
 import { cerrarSesion, useSesion } from "@/lib/cloud-esther/auth-store";
 import { registrarModuloDemo } from "@/lib/cloud-esther/demo-seguimiento";
@@ -201,6 +202,8 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   // Módulos adicionales comprados: al agregarlos aparecen en el menú sin recargar.
   const extras = storeModulosExtra.usar().activos.map((x) => x.id);
+  // Demo: «Ver como» un rol (aplica los permisos que configuró el dueño). Con Dueño, ve todo.
+  const { ve: veDemo } = useVistaDemo();
   const toggle = (key: string, current: boolean) =>
     setOpenMap((prev) => ({ ...prev, [key]: !current }));
   // Contador de avisos sin leer (solo en el cliente, para no generar diferencias de hidratación).
@@ -216,7 +219,9 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
         const items = MODULES.filter((m) => m.group === group);
         // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
         const visible = items.filter(
-          (m) => availableIn(m, plan) && (!real || puedeVer(real.rol, m.id, real.sesion.usuario.modulos)),
+          (m) =>
+            availableIn(m, plan) &&
+            (real ? puedeVer(real.rol, m.id, real.sesion.usuario.modulos) : veDemo(m.id)),
         );
         if (!visible.length) return null;
 
@@ -862,9 +867,82 @@ function UsuarioMovil() {
 
 /* Barra inferior en el celular: navegación tipo aplicación con los accesos más usados.
    «Más» abre el menú completo con todos los módulos del plan. */
+/* ─────────────────────────────────────────────────────────────
+   «Ver como» (solo demo): el dueño mira el menú tal como lo ve cada rol, aplicando los permisos
+   que configuró en Accesos → «Qué ve cada rol». Es una previsualización: no cambia ningún dato.
+   En una clínica real no aparece (cada persona entra con su cuenta y el menú ya se filtra solo).
+   ───────────────────────────────────────────────────────────── */
+function PillVista({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-all ${
+        activo
+          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
+          : "bg-card text-muted-foreground ring-1 ring-primary/15 hover:-translate-y-0.5 hover:text-foreground hover:ring-primary/30"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BarraVistaDemo() {
+  const rolVista = useRolVista();
+  const activo = ROLES_VISTA.find((r) => r.id === rolVista);
+  return (
+    <div className="mx-auto w-full max-w-[1400px] px-4 pt-4 md:px-6 lg:px-8">
+      <div
+        className={`relative overflow-hidden rounded-2xl border p-2.5 shadow-[0_14px_40px_-30px_rgba(124,58,237,0.65)] transition-colors ${
+          activo
+            ? "border-primary/30 bg-gradient-to-br from-primary/[0.1] via-card to-fuchsia-500/[0.06]"
+            : "border-primary/15 bg-gradient-to-br from-card to-primary/[0.03]"
+        }`}
+      >
+        <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-fuchsia-400/10 blur-2xl" />
+        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary/80">
+            <span className="grid size-6 place-items-center rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+              <Eye className="size-3.5" />
+            </span>
+            Ver como
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PillVista activo={!rolVista} onClick={() => setRolVista(null)}>
+              Dueño
+            </PillVista>
+            {ROLES_VISTA.map((r) => (
+              <PillVista key={r.id} activo={rolVista === r.id} onClick={() => setRolVista(r.id)}>
+                {r.label}
+              </PillVista>
+            ))}
+          </div>
+          {activo && (
+            <span className="ml-auto inline-flex items-center gap-1.5 text-[11.5px] leading-snug text-muted-foreground">
+              Así ve el menú <b className="text-foreground">{activo.label}</b> con los permisos que
+              configuraste.
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BarraInferior({ onMas }: { onMas: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const real = useClinicaReal();
+  const { ve: veDemo } = useVistaDemo();
   const { sinLeer } = useNotificaciones();
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
@@ -873,10 +951,10 @@ function BarraInferior({ onMas }: { onMas: () => void }) {
     { to: "/demo/agenda", label: "Agenda", icon: CalendarDays },
     { to: "/demo/pacientes", label: "Pacientes", icon: Users },
     { to: "/demo/notificaciones", label: "Avisos", icon: Bell },
-  ].filter(
-    (it) =>
-      !real || puedeVer(real.rol, MODULES.find((m) => m.path === it.to)?.id ?? "dashboard", real.sesion.usuario.modulos),
-  );
+  ].filter((it) => {
+    const id = MODULES.find((m) => m.path === it.to)?.id ?? "dashboard";
+    return real ? puedeVer(real.rol, id, real.sesion.usuario.modulos) : veDemo(id);
+  });
   return (
     <nav
       aria-label="Accesos rápidos"
@@ -1196,6 +1274,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="panel-clinica relative min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
           style={montadoShell ? undefined : { visibility: "hidden" }}
         >
+          {!real && <BarraVistaDemo />}
           {irAl3D ? (
             <Navigate to={"/demo/odontograma-3d" as never} replace />
           ) : irAl2D ? (

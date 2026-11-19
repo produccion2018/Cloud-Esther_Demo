@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
-import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,6 +11,7 @@ import {
   etiquetaModulo,
   incluidoEnPlan,
   planLevel,
+  usa3D,
   ModuleIcon,
   PLANS,
   useCloudEsther,
@@ -1097,10 +1097,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       planLevel(x.minPlan) > planLevel(plan),
   );
   const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
-  /* El plan define el odontograma: si se entra a la página del otro (por ejemplo, después de
-     cambiar de plan), se lleva directo al que corresponde. Nunca se muestran los dos. */
-  const irAl3D = bloqueado?.id === "odontograma" && odontogramaDelPlan(plan) === "3d";
-  const irAl2D = bloqueado?.id === "odontograma3d" && odontogramaDelPlan(plan) === "2d";
+  /* La clínica usa un solo odontograma: si entra a la página del otro (por cambiar de plan o por
+     contratar/quitar el 3D), se lleva directo al que corresponde. Nunca se muestran los dos. */
+  const irAl3D = bloqueado?.id === "odontograma" && usa3D(plan);
+  const irAl2D = bloqueado?.id === "odontograma3d" && !usa3D(plan);
   const moduloIA = MODULES.find((m) => m.id === "ia");
   // Módulos que recorre una cuenta de demo (para medir el interés desde el panel admin).
   const nombreModulo = modulo?.label ?? (pathname === "/demo" ? "Dashboard" : null);
@@ -1118,7 +1118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // El motor 3D pesa: en los planes con Odontograma 3D se descarga en segundo plano apenas
   // el navegador está libre, así el odontograma aparece rápido cuando se abre.
   useEffect(() => {
-    if (odontogramaDelPlan(plan) !== "3d") return;
+    if (!usa3D(plan)) return;
     const precargar = () => void import("@/components/odontogram/Odontogram3D").catch(() => {});
     const w = window as unknown as {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;

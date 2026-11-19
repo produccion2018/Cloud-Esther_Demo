@@ -92,10 +92,10 @@ export function AgenteIA({
               Nuevo · Enterprise
             </span>
             <h2 className="mt-3 flex items-center gap-2 text-[30px] font-bold leading-none tracking-[-0.03em] md:text-[38px]">
-              <Bot className="size-8 shrink-0" /> Agente 24/7
+              <Bot className="size-8 shrink-0" /> Agente de IA 24/7
             </h2>
             <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/85">
-              Atención automática por WhatsApp, incluso cuando tu clínica está cerrada. Recibe mensajes
+              Atención inteligente por WhatsApp, incluso cuando tu clínica está cerrada. Recibe mensajes
               y audios, entiende qué necesita el paciente, agenda turnos reales y deriva las urgencias.
             </p>
           </div>
@@ -191,7 +191,7 @@ export function AgenteIA({
             {[
               { t: "WhatsApp Business API", d: "Número y credenciales de la clínica." },
               { t: "n8n (motor de flujos)", d: "Orquesta el ida y vuelta de los mensajes." },
-              { t: "Motor de respuestas + transcripción", d: "Entiende el texto y los audios." },
+              { t: "IA + transcripción", d: "Entiende el texto y los audios." },
             ].map((x) => (
               <div key={x.t} className="rounded-xl border border-amber-200/60 bg-white/70 p-3 dark:bg-white/5">
                 <p className="flex items-center gap-1.5 text-[12px] font-semibold">

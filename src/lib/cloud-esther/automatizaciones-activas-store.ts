@@ -4,8 +4,8 @@ import { TOTAL_AUTOMATIZACIONES } from "@/lib/cloud-esther/automatizaciones-126"
 /* Ubicación: src/lib/cloud-esther/automatizaciones-activas-store.ts
    Qué automatizaciones (de las 126) tiene activas la empresa. Guardado por empresa y aislado.
    - Plan 4 (grupo): vienen todas activas por defecto.
-   - Plan 3 (avanzada): puede activarlas/desactivarlas (están incluidas en Esther).
-   - Plan 1 y 2: no las activan (es una capacidad de Esther completo). */
+   - Plan 3 (avanzada): puede activarlas/desactivarlas (están incluidas en Esther Infinity).
+   - Plan 1 y 2: no las activan (es una capacidad de Esther Infinity completo). */
 
 export type EstadoAutoActivas = { activas: number[]; inicializado: boolean };
 

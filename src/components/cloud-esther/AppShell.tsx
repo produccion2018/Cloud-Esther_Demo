@@ -54,7 +54,7 @@ const GROUPS = [
   "Clínico",
   "Operación",
   "Administración",
-  "Asistente",
+  "Inteligencia",
   "Organización",
   "Sistema",
 ] as const;
@@ -1244,7 +1244,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         )}
       {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
-          Donde ya está Esther (Plus y Enterprise en el demo) no se duplica el botón. */}
+          Donde ya está Esther Infinity (Plus y Enterprise en el demo) no se duplica el botón. */}
       {planListo &&
         !iaDisponible &&
         !bloqueado &&

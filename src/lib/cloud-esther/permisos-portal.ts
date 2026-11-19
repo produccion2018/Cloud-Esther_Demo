@@ -85,7 +85,7 @@ export function permisosSugeridos(rol: TeamRole): MapaPermisos {
         tratamientos: VCE,
         recetas: VC,
         estudios: VC,
-        // Esther asistencial (solo en planes con IA: Plus y Enterprise). Nunca decide sola.
+        // Esther Infinity asistencial (solo en planes con IA: Plus y Enterprise). Nunca decide sola.
         ia: VC,
       };
     case "asistente":

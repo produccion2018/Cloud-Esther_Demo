@@ -146,7 +146,7 @@ export function SimuladorSonrisa({
   pacienteFijo,
   compacto = false,
 }: {
-  /** Paciente ya elegido (pestaña dentro del Odontograma 3D o ventana de Esther). */
+  /** Paciente ya elegido (pestaña dentro del Odontograma 3D o ventana de Esther Infinity). */
   pacienteFijo?: number | undefined;
   compacto?: boolean;
 } = {}) {
@@ -431,7 +431,7 @@ export function SimuladorSonrisa({
                   >
                     <PlugZap className="size-3.5" />
                     {SERVICIO_IA_CONECTADO
-                      ? "Asistente Esther conectada"
+                      ? "IA Esther conectada"
                       : "IA de simulación: próximamente"}
                   </span>
                 </div>
@@ -646,7 +646,7 @@ export function SimuladorSonrisa({
                         {omitidos.length > 0 && (
                           <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800">
                             {omitidos.map((t) => TRATAMIENTOS_ESTETICOS[t].nombre).join(", ")}: se
-                            generan con el servicio de Asistente Esther cuando esté conectado.
+                            generan con el servicio de IA Esther cuando esté conectado.
                           </p>
                         )}
                       </>
@@ -863,7 +863,7 @@ export function SimuladorSonrisa({
               {foto && origen === "paciente" && !SERVICIO_IA_CONECTADO && (
                 <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
                   Con fotos reales, la generación por IA se activa cuando se conecte el servicio de
-                  Asistente Esther. Ya podés guardar la foto en la historia del paciente.
+                  IA Esther. Ya podés guardar la foto en la historia del paciente.
                 </p>
               )}
             </div>

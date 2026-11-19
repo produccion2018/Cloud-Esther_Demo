@@ -61,7 +61,7 @@ type Props = {
 
 /** "Odontograma 3D avanzado" (Enterprise): exportar el informe del odontograma. */
 const PLAN_INFORME_3D: PlanId = "grupo";
-/** Esther (chat clínico) está incluida desde Plus, igual que el módulo Asistente Esther. */
+/** Esther Infinity (chat clínico) está incluida desde Plus, igual que el módulo IA Esther. */
 const PLAN_MINIMO_IA: PlanId = "avanzada";
 
 /* Todo lo del odontograma se guarda por clínica (tenant) + paciente,
@@ -329,7 +329,7 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
         !tieneIA ? (
           <PanelBloqueado
             titulo={herramienta === "rayosx" ? "Rayos X con IA" : "Simulador de sonrisa"}
-            texto={`Usa Esther, incluida desde el plan ${PLANS[PLAN_MINIMO_IA].name}. También podés sumar IA como módulo adicional.`}
+            texto={`Usa Esther Infinity, incluida desde el plan ${PLANS[PLAN_MINIMO_IA].name}. También podés sumar IA como módulo adicional.`}
           />
         ) : herramienta === "rayosx" ? (
           <RayosXIA
@@ -462,7 +462,7 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
             />
           ) : (
             <PanelBloqueado
-              titulo="Esther"
+              titulo="Esther Infinity"
               texto={`El asistente clínico con IA está disponible desde el plan ${PLANS[PLAN_MINIMO_IA].name}.`}
             />
           )}

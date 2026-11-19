@@ -166,8 +166,8 @@ const faqs = [
     a: "Trabajamos con cifrado, control de accesos por rol y registros de auditoría de cada acción.",
   },
   {
-    q: "¿Cloud Esther tiene un asistente que me ayude?",
-    a: "Sí. Esther te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
+    q: "¿Cloud Esther tiene inteligencia artificial?",
+    a: "Esther Infinity te ayuda con resúmenes clínicos, sugerencias de agenda y análisis del rendimiento de la clínica.",
   },
 ];
 

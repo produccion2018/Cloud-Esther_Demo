@@ -389,7 +389,7 @@ const REGLAS_AISLAMIENTO = [
   },
   {
     titulo: "Búsquedas y reportes por clínica",
-    detalle: "Los listados, reportes y Esther muestran solo la clínica activa.",
+    detalle: "Los listados, reportes y Esther Infinity muestran solo la clínica activa.",
     listo: true,
   },
   {

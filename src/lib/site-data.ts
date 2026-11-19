@@ -125,7 +125,7 @@ export const plans: Plan[] = [
       "Inventario",
       "Recursos Humanos",
       "Permisos y accesos",
-      "Esther",
+      "Esther Infinity",
       "Analítica avanzada",
       "Auditoría",
       "Integraciones avanzadas",
@@ -155,7 +155,7 @@ export const plans: Plan[] = [
       "Marketing y captación avanzada",
       "Recursos Humanos avanzado",
       "Automatizaciones y workflows inteligentes",
-      "Esther avanzada",
+      "Esther Infinity avanzada",
       "Analítica avanzada",
       "Auditoría completa",
       "Integraciones personalizadas",
@@ -289,7 +289,7 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Esther",
+    feature: "Esther Infinity",
     values: ["—", "—", "✓", "Avanzada"],
   },
 
@@ -299,7 +299,7 @@ export const comparison: { feature: string; values: string[] }[] = [
   },
 
   {
-    feature: "Rayos X avanzados y simulador de sonrisa",
+    feature: "Rayos X con IA y simulador de sonrisa",
     values: ["—", "—", "✓", "✓"],
   },
 
@@ -379,7 +379,7 @@ export type AdditionalModule = {
 export const additionalModules: AdditionalModule[] = [
   {
     id: "esther-ia",
-    name: "Esther",
+    name: "Esther Infinity",
     description:
       "Asistente inteligente para resúmenes clínicos, análisis de información y apoyo en la gestión de la clínica.",
   },
@@ -470,7 +470,7 @@ export const modulesOfInterest = [
   "Configuración",
   "Equipo profesional",
   "Administración multiempresa",
-  "Asistente Esther",
+  "IA Esther",
   "Documentos",
   "Integraciones",
 ];
@@ -524,7 +524,7 @@ export const faqs = [
     a: "Cloud Esther contempla aislamiento entre tenants, control de accesos por roles y permisos, y registros de auditoría según el plan contratado.",
   },
   {
-    q: "¿Cloud Esther tiene un asistente que me ayude?",
-    a: "Sí. Esther forma parte de los planes superiores y está orientada al apoyo de la gestión, análisis y procesos clínicos definidos por la plataforma.",
+    q: "¿Cloud Esther tiene inteligencia artificial?",
+    a: "Sí. Esther Infinity forma parte de los planes superiores y está orientada al apoyo de la gestión, análisis y procesos clínicos definidos por la plataforma.",
   },
 ];

@@ -11,7 +11,6 @@ import {
   Plus,
   ShieldAlert,
   Siren,
-  Sparkles,
   Trash2,
   UserPlus,
   Users,
@@ -90,7 +89,7 @@ export function AgenteIA({
         <div className="relative flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between md:p-8">
           <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">
-              <Sparkles className="size-3.5" /> Lo nuevo · Enterprise
+              Nuevo · Enterprise
             </span>
             <h2 className="mt-3 flex items-center gap-2 text-[30px] font-bold leading-none tracking-[-0.03em] md:text-[38px]">
               <Bot className="size-8 shrink-0" /> Agente de IA 24/7

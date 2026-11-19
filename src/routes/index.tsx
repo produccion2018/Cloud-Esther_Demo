@@ -27,6 +27,7 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { useClinicasReales } from "@/lib/cloud-esther/estadisticas-publicas";
 import { Reveal } from "@/components/site/Reveal";
 import { PortalesEnterprise } from "@/components/site/PortalesEnterprise";
+import { AgenteSection } from "@/components/site/AgenteSection";
 import { LaptopCta } from "@/components/site/LaptopCta";
 
 export const Route = createFileRoute("/")({
@@ -1157,6 +1158,11 @@ function Home() {
             </div>
           </div>
         </section>
+
+        {/* =========================================================
+            AGENTE 24/7 (atención por WhatsApp) — diferencial destacado
+        ========================================================= */}
+        <AgenteSection />
 
         {/* =========================================================
             PORTALES (exclusivo Enterprise)

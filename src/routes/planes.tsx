@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PlanGrid } from "@/components/site/PlanCards";
+import { ModulosMarquee } from "@/components/site/ModulosMarquee";
 import { Reveal } from "@/components/site/Reveal";
 import {
   additionalModules,
@@ -1371,86 +1372,13 @@ function Planes() {
           </Reveal>
 
           <Reveal delay={0.08}>
-            <motion.div
-              whileHover={{ y: -4 }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 22,
-              }}
-              className="group relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-primary/15 bg-card/80 p-5 shadow-[0_18px_50px_rgba(88,28,135,0.08)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_22px_60px_rgba(88,28,135,0.14)] sm:p-6"
-            >
-              <motion.div
-                animate={{
-                  opacity: [0.12, 0.28, 0.12],
-                  scale: [0.9, 1.08, 0.9],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/20 blur-[70px]"
-              />
-
-              <div className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-
-              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <motion.span
-                    animate={{ rotate: [0, 8, -8, 0] }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"
-                  >
-                    <Plus className="size-5 text-primary" />
-                  </motion.span>
-
-                  <div>
-                    <p className="text-sm font-semibold">
-                      Ejemplo de ampliación
-                    </p>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Plan Start + módulo adicional disponible
-                    </p>
-                  </div>
-                </div>
-
-                <motion.span
-                  animate={{
-                    boxShadow: [
-                      "0 0 0px rgba(124,58,237,0.25)",
-                      "0 0 14px rgba(124,58,237,0.4)",
-                      "0 0 0px rgba(124,58,237,0.25)",
-                    ],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="shrink-0 rounded-full bg-lavender px-3 py-1.5 text-xs font-semibold text-lavender-foreground"
-                >
-                  Según disponibilidad del plan
-                </motion.span>
-              </div>
-            </motion.div>
+            <ModulosMarquee modules={additionalModules} />
           </Reveal>
-
-          <AdditionalModulesTeeth
-            modules={additionalModules}
-            onConsult={() => navigate({ to: "/demostracion" })}
-          />
 
           <Reveal delay={0.15}>
             <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-              Los módulos adicionales se agregan al plan contratado cuando
-              estén disponibles para ese nivel. Para conocer las condiciones
-              comerciales, escribinos y te asesoramos.
+              Los activás desde tu panel cuando los necesités, sin cambiar de plan. Para conocer
+              las condiciones comerciales, escribinos y te asesoramos.
             </p>
           </Reveal>
         </div>

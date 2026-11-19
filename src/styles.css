@@ -2080,3 +2080,19 @@ label {
 .dark .card-grad {
   box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.6);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Carrusel infinito de «Módulos adicionales» (/planes): dos filas
+   que se deslizan solas en sentidos opuestos, en loop sin corte.
+   Se pausa al pasar el mouse. El contenido se renderiza DUPLICADO
+   y el track viaja -50%, así el salto es invisible.
+   ───────────────────────────────────────────────────────────── */
+@keyframes ce-marquee { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
+@keyframes ce-marquee-rev { from { transform: translate3d(-50%,0,0); } to { transform: translate3d(0,0,0); } }
+.ce-marquee-track { animation: ce-marquee var(--ce-marquee-dur, 42s) linear infinite; will-change: transform; }
+.ce-marquee-track--rev { animation-name: ce-marquee-rev; animation-duration: var(--ce-marquee-dur, 52s); }
+.ce-marquee:hover .ce-marquee-track { animation-play-state: paused; }
+.ce-marquee:focus-within .ce-marquee-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-marquee-track { animation: none; }
+}

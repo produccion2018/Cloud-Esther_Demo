@@ -97,23 +97,37 @@ function Agenda() {
   );
 }
 
+const PACIENTES_DEMO = [
+  { ini: "MR", nombre: "María Rodríguez", sub: "DNI 32.456.789 · Última visita 12 nov", pill: "Activo", tono: "ok", grad: "from-primary to-fuchsia-500" },
+  { ini: "JG", nombre: "Julián Gómez", sub: "DNI 28.113.904 · Turno mañana 9:30", pill: "Control", tono: "pend", grad: "from-sky-500 to-indigo-500" },
+  { ini: "LF", nombre: "Lucía Fernández", sub: "DNI 40.221.775 · Tratamiento en curso", pill: "Activo", tono: "ok", grad: "from-amber-500 to-rose-500" },
+];
+
 function People() {
   return (
     <Marco>
-      <div className="flex h-full flex-col justify-center gap-2">
-        {[0, 1, 2].map((i) => (
+      <div className="flex h-full flex-col justify-center gap-1.5">
+        {PACIENTES_DEMO.map((p, i) => (
           <motion.div
-            key={i}
-            className="flex items-center gap-2 rounded-xl border border-primary/10 bg-background/70 px-2 py-1.5"
-            animate={{ backgroundColor: ["rgba(124,58,237,0)", "rgba(124,58,237,0.08)", "rgba(124,58,237,0)"] }}
+            key={p.ini}
+            className="flex items-center gap-2 rounded-xl border border-primary/10 bg-background/80 px-2 py-1.5"
+            animate={{ backgroundColor: ["rgba(124,58,237,0)", "rgba(124,58,237,0.06)", "rgba(124,58,237,0)"] }}
             transition={{ duration: 3, ...REPEAT, delay: i * 1 }}
           >
-            <span className="size-6 shrink-0 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" />
-            <div className="flex-1">
-              <div className="h-1.5 w-1/2 rounded bg-foreground/25" />
-              <div className="mt-1 h-1.5 w-1/3 rounded bg-foreground/10" />
+            <span className={`grid size-6 shrink-0 place-items-center rounded-full bg-gradient-to-br ${p.grad} text-[8px] font-bold text-white`}>
+              {p.ini}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[10px] font-semibold leading-none text-foreground">{p.nombre}</div>
+              <div className="mt-0.5 truncate text-[8px] leading-none text-muted-foreground">{p.sub}</div>
             </div>
-            <span className="size-2 rounded-full bg-emerald-400" />
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[7.5px] font-bold ${
+                p.tono === "ok" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {p.pill}
+            </span>
           </motion.div>
         ))}
       </div>

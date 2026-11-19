@@ -18,22 +18,25 @@ const avisar = () => oyentes.forEach((o) => o());
 
 export function registrarServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-  // Service worker DESACTIVADO: ya no se cachea la app (causaba versiones viejas pegadas y
-  // pantallas en blanco). En cada carga se quita cualquier service worker viejo y se borran
-  // sus cachés, para que la app se sirva siempre fresca desde el CDN.
-  const limpiar = () => {
+  // Solo en producción (o en desarrollo con VITE_PWA_DEV=1). En desarrollo normal no se registra,
+  // para no interferir con el hot-reload.
+  const prod =
+    import.meta.env.PROD || import.meta.env["VITE_PWA_DEV"] === "1";
+  if (!prod) {
+    // Dev: limpia cualquier SW viejo para que no queden versiones pegadas mientras se trabaja.
     void navigator.serviceWorker
       .getRegistrations()
       .then((rs) => Promise.all(rs.map((r) => r.unregister())))
       .catch(() => {});
-    if ("caches" in window)
-      void caches
-        .keys()
-        .then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
-        .catch(() => {});
+    return;
+  }
+  // Service worker SEGURO (sw.js): NO cachea la app (siempre fresca desde el CDN); solo habilita
+  // la instalación (Android/Chrome) y una pantalla «sin conexión». Ver public/sw.js.
+  const registrar = () => {
+    void navigator.serviceWorker.register("/sw.js").catch(() => {});
   };
-  if (document.readyState === "complete") limpiar();
-  else window.addEventListener("load", limpiar, { once: true });
+  if (document.readyState === "complete") registrar();
+  else window.addEventListener("load", registrar, { once: true });
 }
 
 /** Se llama una vez al iniciar: guarda el aviso de instalación del navegador para usarlo luego. */

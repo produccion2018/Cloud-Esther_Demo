@@ -87,7 +87,7 @@ const ORIGEN: Item[] = [
   },
   {
     icon: CaraEsther,
-    title: "Esther",
+    title: "Esther Infinity",
     text: "Sumamos inteligencia artificial que asiste al profesional: resúmenes clínicos, sugerencias de agenda y lectura del rendimiento de la clínica.",
   },
   {

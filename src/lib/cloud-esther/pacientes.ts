@@ -66,7 +66,7 @@ const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: [], activoId: nul
   },
 });
 
-/** Lectura sin hooks (Esther). */
+/** Lectura sin hooks (Esther Infinity). */
 export function leerPacientes(): Paciente[] {
   return store.leer().pacientes;
 }

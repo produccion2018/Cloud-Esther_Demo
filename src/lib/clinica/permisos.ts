@@ -77,7 +77,7 @@ const HABILITADOS = new Set([
   // Marketing (punto 10): CRUD real (leads, campañas, cupones, referidos, reseñas) que
   // guarda en el servidor (módulo «marketing», admin/secretaría) y arranca vacío.
   "marketing",
-  // Asistente Esther (punto 12): asistente real. askEsther llama a un endpoint de servidor
+  // IA Esther (punto 12): asistente real. askEsther llama a un endpoint de servidor
   // (preguntarIA → proveedor OpenAI/Groq por variables en Vercel) con el contexto real de
   // la clínica, y si no hay clave cae al motor de reglas. El historial guarda en «ia».
   // Solo Plus y Enterprise (minPlan avanzada), como piden las reglas comerciales.

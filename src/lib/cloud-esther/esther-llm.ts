@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 /* Ubicación: src/lib/cloud-esther/esther-llm.ts
-   Cerebro real de Esther: un endpoint de SERVIDOR (solo planes con IA) que le pasa a
+   Cerebro real de Esther Infinity: un endpoint de SERVIDOR (solo planes con IA) que le pasa a
    OpenAI la pregunta + un contexto corto con los datos REALES de la clínica, y devuelve una
    respuesta natural. La clave (OPENAI_API_KEY) vive solo en el servidor (Vercel), nunca llega al
    navegador. Si no hay clave o falla, devuelve null y la pantalla usa el motor interno de reglas.
@@ -14,7 +14,7 @@ type EntradaIA = {
 };
 
 const SISTEMA =
-  "Sos Esther, la asistente de IA de una clínica odontológica (software Cloud Esther). " +
+  "Sos Esther Infinity, la asistente de IA de una clínica odontológica (software Cloud Esther). " +
   "Respondé en español rioplatense, con calidez, de forma breve y clara. " +
   "Usá ÚNICAMENTE la información del bloque CONTEXTO para dar datos concretos (números, nombres, montos, fechas): " +
   "si un dato no está en el CONTEXTO, decí con naturalidad que no lo tenés a mano y sugerí en qué módulo verlo; " +

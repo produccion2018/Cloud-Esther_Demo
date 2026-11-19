@@ -116,7 +116,7 @@ export function EstherAI({
   const clima = useClima();
   const esther = useEstherAI({
     context: { ...context, plan, rol, sede, usuario: nombreUsuario, pacienteId, n8n: conN8n },
-    saludo: `${saludoHora()}${primerNombre ? `, ${primerNombre}` : ""}. Soy Esther, tu asistente. Puedo consultar pacientes, agenda, historia clínica, odontograma, presupuestos, facturación y más, siempre con los datos de esta clínica. ¿En qué te ayudo?`,
+    saludo: `${saludoHora()}${primerNombre ? `, ${primerNombre}` : ""}. Soy Esther Infinity, tu asistente. Puedo consultar pacientes, agenda, historia clínica, odontograma, presupuestos, facturación y más, siempre con los datos de esta clínica. ¿En qué te ayudo?`,
   });
   const microfono = useMicrofono({
     onTexto: (t) => void esther.send(t),
@@ -175,7 +175,7 @@ export function EstherAI({
   return (
     <section
       className="esther-ai relative min-h-full overflow-clip bg-[#faf9ff]"
-      aria-label="Cloud Esther"
+      aria-label="Cloud Esther Infinity"
     >
       <div
         aria-hidden
@@ -214,7 +214,7 @@ export function EstherAI({
                   )}
                 </div>
                 <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">
-                  Esther
+                  Esther Infinity
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                   Preguntale por escrito o por voz. Esther consulta los módulos de tu plan, analiza
@@ -545,7 +545,7 @@ export function EstherAI({
       {herramienta &&
         createPortal(
           <Modal
-            modulo="Cloud Esther"
+            modulo="Cloud Esther Infinity"
             titulo={
               herramienta === "imagen"
                 ? "Rayos X con IA"

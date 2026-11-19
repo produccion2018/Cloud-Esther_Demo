@@ -40,7 +40,7 @@ const SCREENS = [
   { key: "odontograma", label: "Odontograma 3D", icon: Stethoscope },
   { key: "automatizaciones", label: "Automatizaciones", icon: Workflow },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
-  { key: "infinity", label: "Esther", icon: Bot },
+  { key: "infinity", label: "Esther Infinity", icon: Bot },
 ] as const;
 
 const SPARKS = [
@@ -366,7 +366,7 @@ const FLOW = [
   { icon: CalendarDays, t: "Turno agendado", s: "Dispara el flujo" },
   { icon: MessageCircle, t: "Aviso por WhatsApp", s: "Recordatorio automático" },
   { icon: CheckCircle2, t: "Confirmación", s: "El paciente responde" },
-  { icon: Bot, t: "Esther", s: "Reprograma y avisa" },
+  { icon: Bot, t: "Esther Infinity", s: "Reprograma y avisa" },
 ];
 const RULES = ["Recordatorios de turnos", "Seguimiento post-tratamiento", "Reactivación de pacientes"];
 
@@ -494,7 +494,7 @@ function InfinityPanel() {
             <Bot className="size-4" />
           </motion.div>
           <div>
-            <p className="text-[11px] font-bold text-violet-950">Esther</p>
+            <p className="text-[11px] font-bold text-violet-950">Esther Infinity</p>
             <p className="text-[8px] text-violet-500">Tu asistente con inteligencia artificial</p>
           </div>
         </div>
@@ -552,7 +552,7 @@ function InfinityPanel() {
         </div>
 
         <div className="flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5">
-          <span className="flex-1 text-[9px] text-violet-400">Preguntale a Esther…</span>
+          <span className="flex-1 text-[9px] text-violet-400">Preguntale a Esther Infinity…</span>
           <span className="grid size-5 place-items-center rounded-full bg-violet-600 text-white">
             <Send className="size-2.5" />
           </span>
@@ -621,7 +621,7 @@ function DemoScreen() {
                 transition={{ duration: 1.6, repeat: Infinity }}
                 className="size-1.5 rounded-full bg-white"
               />
-              Esther
+              Esther Infinity
             </span>
           </div>
         </div>
@@ -742,7 +742,7 @@ export function LaptopCta() {
             <FloatChip icon={CalendarDays} text="Nuevo turno agendado" className="-left-6 top-[10%]" delay={0} opacity={chipOpacity} />
             <FloatChip icon={MessageCircle} text="Recordatorio enviado" className="-left-10 bottom-[18%]" delay={0.8} opacity={chipOpacity} />
             <FloatChip icon={Stethoscope} text="Odontograma actualizado" className="-right-6 top-[18%]" delay={1.4} opacity={chipOpacity} />
-            <FloatChip icon={Bot} text="Esther activa" className="-right-10 bottom-[12%]" delay={0.4} opacity={chipOpacity} />
+            <FloatChip icon={Bot} text="Esther Infinity activa" className="-right-10 bottom-[12%]" delay={0.4} opacity={chipOpacity} />
 
             <div
               style={{

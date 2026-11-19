@@ -46,7 +46,7 @@ function AiPage() {
   return (
     <AdminShell
       title="Consumo de IA"
-      description="Cuánto usa cada clínica a Esther (rayos X, simulador de sonrisa, asistente clínico y reportes) y la evolución en toda la plataforma. La IA está incluida desde el plan Plus."
+      description="Cuánto usa cada clínica a Esther Infinity (rayos X, simulador de sonrisa, asistente clínico y reportes) y la evolución en toda la plataforma. La IA está incluida desde el plan Plus."
     >
       {isLoading ? (
         <Cargando />

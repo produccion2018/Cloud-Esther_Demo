@@ -82,7 +82,7 @@ const AREAS_OCLU = [
     icon: Building2,
     titulo: "Plataforma",
     items: [
-      { icon: Bot, n: "Esther (IA)", tag: "La asistente de IA de tu clínica.", bullets: ["Resúmenes clínicos", "Sugerencias de agenda", "Lectura del rendimiento"] },
+      { icon: Bot, n: "Esther Infinity (IA)", tag: "La asistente de IA de tu clínica.", bullets: ["Resúmenes clínicos", "Sugerencias de agenda", "Lectura del rendimiento"] },
       { icon: Building2, n: "Multiempresa", tag: "Varias sedes desde un panel.", bullets: ["Datos aislados por clínica", "Una o varias sucursales", "Vista consolidada"] },
       { icon: UserCog, n: "Roles y permisos", tag: "Cada uno ve lo que le toca.", bullets: ["Roles propios", "Permisos por persona", "Solo el admin los maneja"] },
       { icon: Users, n: "Equipo profesional", tag: "Tu equipo y sus agendas.", bullets: ["Altas y bajas", "Horarios y bloqueos", "Especialidades"] },

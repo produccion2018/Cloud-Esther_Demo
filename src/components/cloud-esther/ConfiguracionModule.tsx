@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   Settings,
   Crown,
+  Eye,
   Palette,
   ShieldCheck,
   Bell,
@@ -40,9 +41,12 @@ import {
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
 import { nivelModulo, useConIA, type NivelModulo } from "@/lib/cloud-esther/niveles";
 
-import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import { MODULES, ModuleIcon, PLANS, availableIn, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { LIMITE_SUCURSALES } from "@/lib/cloud-esther/inventario-store";
 import { ModulosAdicionales } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
+import { ROLES_VISTA, useVistaRol, type RolVista } from "@/lib/cloud-esther/vista-demo-store";
 
 import {
   cargarSettings,
@@ -73,6 +77,7 @@ const INNER_CARD = "rounded-xl border border-border/60 bg-background/70";
 type TabId =
   | "general"
   | "miplan"
+  | "vercomo"
   | "profesionales"
   | "directorio"
   | "apariencia"
@@ -90,6 +95,8 @@ const TABS: {
   { id: "general", label: "General", icon: Settings },
   // Desde acá cada plan ve su plan actual, cambia el odontograma 2D/3D y suma módulos adicionales.
   { id: "miplan", label: "Mi plan", icon: Crown },
+  // Previsualizar cómo le queda el menú a cada rol (según los permisos configurados).
+  { id: "vercomo", label: "Ver como", icon: Eye },
   { id: "profesionales", label: "Profesionales", icon: Users },
   { id: "directorio", label: "Documentos", icon: FolderOpen, min: 2 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
@@ -292,6 +299,8 @@ export function ConfiguracionModule({ onToast }: Props) {
 
           {tab === "miplan" && <MiPlanStartTab onToast={onToast} />}
 
+          {tab === "vercomo" && <VistaComoTab />}
+
           {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
 
           {tab === "directorio" && <DirectorioTab />}
@@ -365,6 +374,113 @@ function MiPlanStartTab({ onToast }: { onToast: (m: string) => void }) {
       </div>
 
       <ModulosAdicionales onToast={onToast} />
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                 VER COMO — preview del menú por rol                        */
+/* -------------------------------------------------------------------------- */
+
+/** Apartado «Ver como»: el dueño elige un rol y ve un PREVIEW de cómo le quedaría el menú a esa
+    persona, según los permisos que configuró en Accesos. No cambia el menú real ni ningún dato. */
+function VistaComoTab() {
+  const { plan } = useCloudEsther();
+  const real = useClinicaReal();
+  const slug = real?.slug ?? SLUG_DEMO;
+  const [rol, setRol] = useState<RolVista | null>(null);
+  const { ve } = useVistaRol(rol, slug);
+  const activo = ROLES_VISTA.find((r) => r.id === rol);
+
+  const delPlan = MODULES.filter((m) => availableIn(m, plan) && m.id !== "admin");
+  const visibles = delPlan.filter((m) => ve(m.id));
+  const grupos = [...new Set(delPlan.map((m) => m.group))];
+
+  const Pill = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-all ${
+        on
+          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
+          : "bg-card text-muted-foreground ring-1 ring-primary/15 hover:-translate-y-0.5 hover:text-foreground hover:ring-primary/30"
+      }`}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className={`${CARD} p-5`}>
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
+            <Eye className="size-5" />
+          </span>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary/75">Ver como</p>
+            <p className="font-display text-lg font-bold tracking-tight">Previsualizá el menú por rol</p>
+          </div>
+        </div>
+        <p className="mt-2 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
+          Elegí un rol y mirá acá abajo cómo le queda el menú a esa persona, según los permisos que
+          configuraste en Accesos → «Qué ve cada rol». Es solo una vista previa: no cambia el menú
+          real ni ningún dato.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Pill on={!rol} onClick={() => setRol(null)}>Dueño</Pill>
+          {ROLES_VISTA.map((r) => (
+            <Pill key={r.id} on={rol === r.id} onClick={() => setRol(r.id)}>
+              {r.label}
+            </Pill>
+          ))}
+        </div>
+      </div>
+
+      {/* Preview del menú */}
+      <div className={`${CARD} overflow-hidden p-0`}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-br from-primary/[0.05] to-transparent px-5 py-3">
+          <p className="text-sm font-semibold">
+            {activo ? `Así ve el menú ${activo.label}` : "Tu menú completo (Dueño)"}
+          </p>
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+            Ve {visibles.length} de {delPlan.length} módulos
+          </span>
+        </div>
+        <div className="space-y-4 p-5">
+          {grupos.map((g) => {
+            const items = visibles.filter((m) => m.group === g);
+            if (!items.length) return null;
+            return (
+              <div key={g}>
+                <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="h-1 w-3 rounded-full bg-gradient-to-r from-primary to-fuchsia-500" />
+                  {g}
+                </p>
+                <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {items.map((m) => (
+                    <li
+                      key={m.id}
+                      className="flex items-center gap-2.5 rounded-xl border border-primary/10 bg-background/70 px-3 py-2"
+                    >
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                        <ModuleIcon name={m.icon} className="size-4" />
+                      </span>
+                      <span className="truncate text-[13px] font-semibold">{m.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+          {rol && visibles.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Con los permisos actuales, este rol no ve ningún módulo del menú.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

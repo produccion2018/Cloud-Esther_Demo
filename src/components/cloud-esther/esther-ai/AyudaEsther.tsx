@@ -312,13 +312,19 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
         }}
         aria-label={abierto ? "Cerrar ayuda" : "Ayuda de Esther"}
         title={abierto ? "Cerrar ayuda" : "¿Necesitás ayuda?"}
-        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-40 flex items-center gap-2.5 overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 lg:right-5 ${chat ? "" : "sm:pr-4"}`}
+        className={`group fixed ${chat ? POS_FLOTANTE_CHAT : POS_FLOTANTE} right-4 z-40 flex items-center overflow-hidden rounded-full border border-primary/20 bg-card/95 p-1.5 shadow-[0_14px_34px_-14px_rgba(124,58,237,0.75)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/40 lg:right-5`}
       >
         {!abierto && <span aria-hidden className="ce-esther-brillo pointer-events-none absolute inset-0" />}
         <AvatarEsther tam="md" enLinea={!abierto} />
-        <span className={chat ? "hidden" : "hidden text-left sm:block"}>
-          <span className="block text-[13px] font-bold leading-tight">¿Necesitás ayuda?</span>
-          <span className="block text-[11px] text-muted-foreground">Preguntale a Esther</span>
+        {/* Por defecto es solo el círculo (no tapa lo de atrás); el texto se despliega al pasar el
+            mouse o al enfocarlo con el teclado. En el celular queda siempre como círculo. */}
+        <span
+          className={`${chat ? "hidden" : "hidden sm:grid"} grid-cols-[0fr] overflow-hidden text-left transition-[grid-template-columns] duration-300 ease-out group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr]`}
+        >
+          <span className="overflow-hidden whitespace-nowrap pl-2 pr-1.5">
+            <span className="block text-[13px] font-bold leading-tight">¿Necesitás ayuda?</span>
+            <span className="block text-[11px] text-muted-foreground">Preguntale a Esther</span>
+          </span>
         </span>
       </button>
     </>

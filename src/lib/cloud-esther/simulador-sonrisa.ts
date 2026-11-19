@@ -74,7 +74,7 @@ export type OrigenFoto = "demo" | "paciente";
 export class ServicioIANoDisponible extends Error {
   constructor() {
     super(
-      "Alineación, forma y restauraciones necesitan el servicio de IA Esther, que todavía no está conectado. Sobre fotos reales ya podés previsualizar blanqueamiento, carillas o diseño de sonrisa (color), o guardar la foto en la historia.",
+      "Alineación, forma y restauraciones necesitan el servicio de Asistente Esther, que todavía no está conectado. Sobre fotos reales ya podés previsualizar blanqueamiento, carillas o diseño de sonrisa (color), o guardar la foto en la historia.",
     );
     this.name = "ServicioIANoDisponible";
   }

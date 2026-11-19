@@ -72,7 +72,7 @@ import {
 
 /* Ubicación: src/components/cloud-esther/automatizaciones/Automatizaciones.tsx
    Automatizaciones con n8n (plan Enterprise). Cloud Esther emite eventos, n8n orquesta el
-   flujo, Esther Infinity analiza y redacta, y el resultado vuelve a Cloud Esther. n8n no reemplaza
+   flujo, Esther analiza y redacta, y el resultado vuelve a Cloud Esther. n8n no reemplaza
    a la IA: la usa como un paso más. Todo queda separado por empresa y registrado. */
 
 function M(props: Parameters<typeof ModalBase>[0]) {
@@ -94,7 +94,7 @@ const ICONO: Record<TipoPaso, LucideIcon> = {
 };
 /** Color por responsable: la IA con el degradé de marca, n8n y Cloud Esther con tonos suaves. */
 const QUIEN: Record<string, { nodo: string; pill: string }> = {
-  "Esther Infinity": {
+  "Esther": {
     nodo: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
     pill: "bg-primary/10 text-primary",
   },
@@ -181,7 +181,7 @@ export function Automatizaciones() {
       l: "Acciones realizadas",
       v: String(acciones.length),
       s1: `${acciones.filter((p) => p.tipo === "ia").length}`,
-      s2: "con Esther Infinity",
+      s2: "con Esther",
       i: Zap,
     },
     {
@@ -193,7 +193,7 @@ export function Automatizaciones() {
     },
   ];
   const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
-    { id: "agente", label: "Agente IA 24/7", icon: Bot },
+    { id: "agente", label: "Agente 24/7", icon: Bot },
     { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
     { id: "flujos", label: "Flujos", icon: Workflow },
     { id: "plantillas", label: "Plantillas", icon: LayoutTemplate },
@@ -272,7 +272,7 @@ export function Automatizaciones() {
                   Automatizaciones
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                  Las 126 automatizaciones de Esther Infinity: cuando pasa algo en tu clínica, Esther
+                  Las 126 automatizaciones de Esther: cuando pasa algo en tu clínica, Esther
                   Infinity actúa sola —avisa, recuerda, hace el seguimiento y prepara informes— y el
                   resultado vuelve a la ficha del paciente, la Agenda o Notificaciones.
                 </p>
@@ -438,8 +438,8 @@ function Nodo({ paso, ultimo }: { paso: Paso; ultimo: boolean }) {
 /* ───────────── Catálogo de las 126 automatizaciones ─────────────
    Lo que el cliente ve: 126 automatizaciones agrupadas (A–G), sin jerga técnica.
    - Plan 4 (grupo): vienen todas incluidas y activas.
-   - Plan 3 (avanzada): puede activarlas/desactivarlas (están en Esther Infinity completo).
-   - Plan 1 y 2: las ven pero no las activan (capacidad de Esther Infinity completo). */
+   - Plan 3 (avanzada): puede activarlas/desactivarlas (están en Esther completo).
+   - Plan 1 y 2: las ven pero no las activan (capacidad de Esther completo). */
 function CatalogoAutomatizaciones({
   plan,
   onToast,
@@ -464,13 +464,13 @@ function CatalogoAutomatizaciones({
             <ListChecks className="size-5" />
           </span>
           <div>
-            <p className="font-display text-base font-bold">Las {TOTAL_AUTOMATIZACIONES} automatizaciones de Esther Infinity</p>
+            <p className="font-display text-base font-bold">Las {TOTAL_AUTOMATIZACIONES} automatizaciones de Esther</p>
             <p className="text-xs text-muted-foreground">
               {grupo4
-                ? "Incluidas en tu plan: Esther Infinity las ejecuta sola cuando corresponde."
+                ? "Incluidas en tu plan: Esther las ejecuta sola cuando corresponde."
                 : puedeActivar
-                  ? "Incluidas en Esther Infinity completo. Activá las que quieras usar."
-                  : "Son parte de Esther Infinity completo (plan avanzado o grupo)."}
+                  ? "Incluidas en Esther completo. Activá las que quieras usar."
+                  : "Son parte de Esther completo (plan avanzado o grupo)."}
             </p>
           </div>
         </div>
@@ -659,7 +659,7 @@ function Flujos({
           <ul className="mt-2 space-y-2">
             {(
               [
-                ["Esther Infinity", CaraEsther, "Analiza, prioriza y redacta"],
+                ["Esther", CaraEsther, "Analiza, prioriza y redacta"],
                 ["Automatización", Workflow, "Esperas, condiciones y canales externos"],
                 ["Cloud Esther", RefreshCw, "Tareas, avisos y registros internos"],
               ] as const
@@ -874,7 +874,7 @@ function ConfigPaso({ paso, onChange }: { paso: Paso; onChange: (p: Paso) => voi
     case "ia":
       return (
         <Sel
-          etiqueta="Tarea de Esther Infinity"
+          etiqueta="Tarea de Esther"
           value={c.tarea ?? TAREAS_IA[0]}
           onChange={(v) => set("tarea", v)}
           opciones={TAREAS_IA}
@@ -986,7 +986,7 @@ function Editor({
     const mensaje = f.pasos.findIndex((p) => p.tipo === "whatsapp" || p.tipo === "email");
     const ia = f.pasos.findIndex((p) => p.tipo === "ia" && p.config.tarea === "Redactar mensaje");
     if (mensaje >= 0 && (ia < 0 || ia > mensaje))
-      return setError("Antes de enviar un mensaje agregá un paso de Esther Infinity que lo redacte.");
+      return setError("Antes de enviar un mensaje agregá un paso de Esther que lo redacte.");
     onGuardar({ ...f, nombre: f.nombre.trim() });
   };
 
@@ -1293,7 +1293,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
       c: "bg-rose-100 text-rose-600",
     },
     {
-      t: "Esther Infinity",
+      t: "Esther",
       d: "Analiza, prioriza o redacta con el contexto permitido",
       i: Bot,
       c: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
@@ -1355,7 +1355,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
         </Field>
         <p className="text-[11px] leading-5 text-muted-foreground">
           Cada empresa tiene su propio webhook firmado: el motor de automatización nunca recibe datos de otra clínica. Las
-          llamadas a Esther Infinity usan el token de la empresa y respetan plan, rol y sede.
+          llamadas a Esther usan el token de la empresa y respetan plan, rol y sede.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
@@ -1424,7 +1424,7 @@ function Conexion({ onToast }: { onToast: (m: string) => void }) {
           </ol>
           <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
             El motor de automatización no reemplaza a la IA: se encarga de los tiempos, las condiciones y los canales
-            externos. Esther Infinity decide qué decir y a quién priorizar.
+            externos. Esther decide qué decir y a quién priorizar.
           </p>
         </div>
       </div>

@@ -345,10 +345,10 @@ export const MODULES: AppModule[] = [
   },
   {
     id: "ia",
-    label: "IA Esther",
+    label: "Asistente Esther",
     icon: "sparkles",
     path: "/demo/ia",
-    group: "Inteligencia",
+    group: "Asistente",
     minPlan: "avanzada",
   },
   {
@@ -444,7 +444,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
     "Marketing y captación",
     "Inventario",
     "Equipo y RRHH",
-    "IA Esther",
+    "Asistente Esther",
   ],
   grupo: [
     "Todo lo anterior",

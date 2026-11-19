@@ -1,8 +1,8 @@
 /* Ubicación: src/lib/cloud-esther/automatizaciones-126.ts
-   Las 126 automatizaciones de Esther Infinity, agrupadas como las ve el cliente (sin jerga
+   Las 126 automatizaciones de Esther, agrupadas como las ve el cliente (sin jerga
    técnica ni mención de n8n). Cada una tiene un número, un grupo y un nombre claro.
    La disponibilidad por plan se decide en la pantalla: Plan 4 las incluye todas; Plan 3 puede
-   activarlas; Plan 1 y 2 las ven pero no las activan (es una capacidad de Esther Infinity). */
+   activarlas; Plan 1 y 2 las ven pero no las activan (es una capacidad de Esther). */
 
 export type GrupoAuto = {
   id: string;

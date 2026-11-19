@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   Clock,
   KeyRound,
@@ -11,6 +12,7 @@ import {
   RotateCcw,
   Stethoscope,
   Trash2,
+  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -96,6 +98,44 @@ function useToast() {
     [],
   );
   return { mensaje, mostrar };
+}
+
+/** Estado vacío guiado: el demo arranca sin equipo (igual que una clínica nueva real), así que
+    estas pantallas explican en 3 pasos cómo cargarlo y llevan de un clic a «Integrantes». */
+function VacioEquipo({ accion }: { accion: string }) {
+  return (
+    <div className="rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-card to-primary/[0.04] px-6 py-10 text-center shadow-[0_14px_36px_-30px_rgba(124,58,237,0.6)]">
+      <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
+        <UserPlus className="size-6" />
+      </span>
+      <p className="mt-3 font-display text-base font-bold">Todavía no cargaste tu equipo</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+        Tu clínica arranca vacía, como una clínica nueva. En cuanto sumes a tu equipo vas a poder {accion}.
+      </p>
+      <ol className="mx-auto mt-4 grid max-w-md gap-2 text-left">
+        {[
+          "Entrá a Equipo → Integrantes.",
+          "Sumá a los odontólogos, la secretaría y los asistentes.",
+          "Volvé acá para cargar sus días, horarios y permisos.",
+        ].map((paso, i) => (
+          <li key={i} className="flex items-start gap-2.5 rounded-xl border border-primary/10 bg-background/70 px-3 py-2 text-[13px]">
+            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/12 text-[11px] font-bold text-primary">
+              {i + 1}
+            </span>
+            <span>{paso}</span>
+          </li>
+        ))}
+      </ol>
+      <Link
+        to={"/demo/equipo-profesional" as never}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_-12px_rgba(124,58,237,0.9)] transition hover:brightness-110"
+      >
+        <UserPlus className="size-4" />
+        Agregar integrantes
+        <ArrowRight className="size-4" />
+      </Link>
+    </div>
+  );
 }
 
 /** `embebido`: dentro del portal de Administración (el portal ya muestra el título). */
@@ -489,15 +529,7 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
     onToast("Horario del lunes copiado a los días que atiende");
   };
 
-  if (!miembro)
-    return (
-      <div className="rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-card to-primary/[0.04] px-6 py-12 text-center shadow-[0_14px_36px_-30px_rgba(124,58,237,0.6)]">
-        <p className="font-display text-base font-bold">Todavía no hay integrantes en el equipo</p>
-        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
-          Sumá a los odontólogos, la secretaría y los asistentes en Equipo → Integrantes. Después vas a poder cargar acá sus días y horarios.
-        </p>
-      </div>
-    );
+  if (!miembro) return <VacioEquipo accion="cargar acá sus días y horarios" />;
 
   const totalSemana = miembro.schedule.reduce((t, d) => t + minutosDia(d), 0);
 
@@ -1154,15 +1186,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
   const [seleccionado, setSeleccionado] = useState<string | null>(miembros[0]?.id ?? null);
   const miembro = miembros.find((m) => m.id === seleccionado) ?? miembros[0];
 
-  if (!miembro)
-    return (
-      <div className="rounded-3xl border border-dashed border-primary/25 bg-gradient-to-br from-card to-primary/[0.04] px-6 py-12 text-center shadow-[0_14px_36px_-30px_rgba(124,58,237,0.6)]">
-        <p className="font-display text-base font-bold">Todavía no hay integrantes en el equipo</p>
-        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
-          Sumá a los odontólogos, la secretaría y los asistentes en Equipo → Integrantes. Después vas a poder cargar acá sus días y horarios.
-        </p>
-      </div>
-    );
+  if (!miembro) return <VacioEquipo accion="gestionar sus permisos y accesos" />;
 
   const activos = miembro.permissions.filter((p) => p.enabled).length;
 

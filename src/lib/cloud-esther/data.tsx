@@ -397,14 +397,25 @@ export function incluidoEnPlan(module: AppModule, plan: PlanId) {
 /* Automatizaciones (n8n), Portal del paciente y Multiempresa vienen por defecto en Enterprise y
    también se pueden comprar como adicionales en Start, Pro y Plus. */
 export function comprableEn(module: AppModule, plan: PlanId) {
-  // Los odontogramas no se compran: el plan define cuál se usa (2D en Start/Pro, 3D en Plus/Enterprise).
-  if (module.id === "odontograma" || module.id === "odontograma3d") return false;
+  // El odontograma 2D no se compra: el plan lo define (2D en Start/Pro).
+  // El 3D SÍ se puede sumar como adicional en Start/Pro (su plan trae 2D y contratan el 3D).
+  if (module.id === "odontograma") return false;
   return planLevel(module.minPlan) > planLevel(plan);
+}
+
+/** ¿El 3D está disponible (por plan o porque se contrató como adicional)? */
+function tiene3D(plan: PlanId, extras: string[]) {
+  const tres = MODULES.find((m) => m.id === "odontograma3d");
+  if (!tres) return false;
+  return incluidoEnPlan(tres, plan) || (comprableEn(tres, plan) && extras.includes("odontograma3d"));
 }
 
 /** ¿Está disponible para la empresa? Plan contratado + módulos adicionales comprados. */
 export function availableIn(module: AppModule, plan: PlanId) {
   const extras = modulosExtra();
+  // Regla: nunca se muestran los dos odontogramas juntos. Si el 3D está disponible
+  // (por plan o contratado), el 2D deja de aparecer; solo queda el 3D.
+  if (module.id === "odontograma" && tiene3D(plan, extras)) return false;
   return incluidoEnPlan(module, plan) || (comprableEn(module, plan) && extras.includes(module.id));
 }
 

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { guardarPlan } from "@/lib/admin/api";
+import { MODULES, PLANS, comprableEn } from "@/lib/cloud-esther/data";
+import { guardarPrecioModulo, usePreciosModulos } from "@/lib/cloud-esther/precios-modulos";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import { limiteTexto, precio, precioAnual } from "@/lib/admin/formato";
 import type { CambiosPlan, PlanConfig } from "@/lib/admin/tipos";
@@ -64,7 +66,80 @@ function PlanesPage() {
           ))}
         </div>
       )}
+
+      <PreciosModulosAdicionales editable={editable} />
     </AdminShell>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*            PRECIOS DE MÓDULOS ADICIONALES (los fija el Dueño)              */
+/* -------------------------------------------------------------------------- */
+
+/** El Dueño pone el precio mensual de cada módulo que una clínica puede sumar a su plan.
+    Ese precio es el que la clínica ve antes de contratar (en Facturación › Mi plan, o en
+    Configuración › Mi plan si es plan Start). */
+function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
+  const precios = usePreciosModulos();
+  // Módulos que se pueden sumar como adicional en algún plan (superset = los comprables desde Start).
+  const vendibles = MODULES.filter((m) => comprableEn(m, "inicial") && !m.maxPlan);
+  const [f, setF] = useState<Record<string, string>>(() =>
+    Object.fromEntries(vendibles.map((m) => [m.id, precios[m.id] !== undefined ? String(precios[m.id]) : ""])),
+  );
+
+  const guardarUno = (id: string) => {
+    const t = (f[id] ?? "").trim().replace(",", ".");
+    if (t === "") {
+      guardarPrecioModulo(id, null);
+      return;
+    }
+    const n = Number(t);
+    if (Number.isFinite(n) && n >= 0) guardarPrecioModulo(id, n);
+  };
+
+  return (
+    <div className="mt-6">
+      <Seccion
+        titulo="Precios de módulos adicionales"
+        descripcion="Precio mensual (USD, sin impuestos) de cada módulo que una clínica puede sumar sin cambiar de plan. Es lo que ve el cliente antes de contratar. Dejar vacío = sin precio (no se muestra monto)."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          {vendibles.map((m) => (
+            <div key={m.id} className="rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/[0.05] to-transparent p-3">
+              <Label htmlFor={`precio-${m.id}`} className="flex items-center justify-between gap-2 text-xs">
+                <span className="truncate font-semibold" title={m.label}>{m.label}</span>
+                <span className="shrink-0 text-[10.5px] font-medium text-muted-foreground">
+                  Desde {PLANS[m.minPlan].name}
+                </span>
+              </Label>
+              <div className="relative mt-1.5">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">
+                  USD
+                </span>
+                <Input
+                  id={`precio-${m.id}`}
+                  inputMode="decimal"
+                  value={f[m.id] ?? ""}
+                  disabled={!editable}
+                  placeholder="Sin precio"
+                  onChange={(e) => setF((x) => ({ ...x, [m.id]: e.target.value.replace(/[^0-9.,]/g, "") }))}
+                  onBlur={() => editable && guardarUno(m.id)}
+                  className="h-10 rounded-xl pl-12 pr-16"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  / mes
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!editable && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tu perfil puede ver los precios; los cambia el Dueño.
+          </p>
+        )}
+      </Seccion>
+    </div>
   );
 }
 

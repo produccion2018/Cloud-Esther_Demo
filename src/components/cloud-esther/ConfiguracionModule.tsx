@@ -4,6 +4,7 @@ import { useTenantActual } from "@/lib/cloud-esther/tenant-store";
 import { useEffect, useState } from "react";
 import {
   Settings,
+  Crown,
   Palette,
   ShieldCheck,
   Bell,
@@ -41,6 +42,7 @@ import { nivelModulo, useConIA, type NivelModulo } from "@/lib/cloud-esther/nive
 
 import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { LIMITE_SUCURSALES } from "@/lib/cloud-esther/inventario-store";
+import { ModulosAdicionales } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
 
 import {
   cargarSettings,
@@ -70,6 +72,7 @@ const INNER_CARD = "rounded-xl border border-border/60 bg-background/70";
 
 type TabId =
   | "general"
+  | "miplan"
   | "profesionales"
   | "directorio"
   | "apariencia"
@@ -83,8 +86,12 @@ const TABS: {
   icon: typeof Settings;
   /** Nivel de plan mínimo para ver la pestaña (1 Start, 2 Pro, 3 Plus, 4 Enterprise). */
   min?: number;
+  /** Solo se muestra en el plan Start (los demás tienen Facturación para esto). */
+  soloInicial?: boolean;
 }[] = [
   { id: "general", label: "General", icon: Settings },
+  // El plan Start no tiene el módulo Facturación: desde acá suma módulos adicionales.
+  { id: "miplan", label: "Mi plan", icon: Crown, soloInicial: true },
   { id: "profesionales", label: "Profesionales", icon: Users },
   { id: "directorio", label: "Documentos", icon: FolderOpen, min: 2 },
   { id: "apariencia", label: "Apariencia", icon: Palette },
@@ -201,6 +208,7 @@ export function ConfiguracionModule({ onToast }: Props) {
   useEffect(() => {
     const t = TABS.find((x) => x.id === tab);
     if (t?.min && planLevel(plan) < t.min) setTab("general");
+    if (t?.soloInicial && plan !== "inicial") setTab("general");
   }, [plan, tab]);
 
   const [settings, setSettings] = useState<ClinicSettings>(DEFAULT_SETTINGS);
@@ -233,7 +241,9 @@ export function ConfiguracionModule({ onToast }: Props) {
   };
 
   const avanzada = planLevel(plan) >= 3;
-  const visibles = TABS.filter((t) => !t.min || planLevel(plan) >= t.min);
+  const visibles = TABS.filter(
+    (t) => (!t.min || planLevel(plan) >= t.min) && (!t.soloInicial || plan === "inicial"),
+  );
 
   return (
     <div>
@@ -285,6 +295,8 @@ export function ConfiguracionModule({ onToast }: Props) {
             />
           )}
 
+          {tab === "miplan" && <MiPlanStartTab onToast={onToast} />}
+
           {tab === "profesionales" && <ProfesionalesTab onToast={onToast} />}
 
           {tab === "directorio" && <DirectorioTab />}
@@ -321,6 +333,43 @@ export function ConfiguracionModule({ onToast }: Props) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                     MI PLAN (solo Start) — sumar módulos                    */
+/* -------------------------------------------------------------------------- */
+
+/** Pestaña «Mi plan» del plan Start: como Start no tiene el módulo Facturación, desde acá
+    ve su plan y suma los módulos adicionales (misma tarjeta que usan Pro/Plus en Facturación). */
+function MiPlanStartTab({ onToast }: { onToast: (m: string) => void }) {
+  const { plan } = useCloudEsther();
+  return (
+    <div className="space-y-4">
+      <div className={`${CARD} p-5`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]">
+              <Crown className="size-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary/75">
+                Tu plan
+              </p>
+              <p className="font-display text-lg font-bold tracking-tight">
+                Plan {PLANS[plan].name}
+              </p>
+            </div>
+          </div>
+          <p className="max-w-sm text-[12px] leading-relaxed text-muted-foreground">
+            Sumá los módulos que tu plan no incluye sin cambiar de plan. Antes de activar vas a ver
+            el aviso de cobro, y el cargo se agrega a tu próxima factura de Cloud Esther.
+          </p>
+        </div>
+      </div>
+
+      <ModulosAdicionales onToast={onToast} />
     </div>
   );
 }

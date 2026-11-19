@@ -94,19 +94,23 @@ import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 
 const SUCURSALES = SUCURSALES_AGENDA;
 const PRACTICAS = TRATAMIENTOS_AGENDA;
-const MEDICAMENTOS = [
-  "Amoxicilina 500 mg",
-  "Amoxicilina + ácido clavulánico 875/125 mg",
-  "Ibuprofeno 400 mg",
-  "Ibuprofeno 600 mg",
-  "Ketorolac 10 mg",
-  "Paracetamol 500 mg",
-  "Diclofenac 50 mg",
-  "Metronidazol 500 mg",
-  "Clindamicina 300 mg",
-  "Dexametasona 4 mg",
-  "Clorhexidina 0,12 % (colutorio)",
+/* Vademécum odontológico: al elegir el medicamento, se completan solos la presentación, la vía y
+   la posología sugerida (así el profesional escribe lo mínimo). Son valores orientativos: el
+   profesional puede editarlos. */
+const VADEMECUM: { nombre: string; presentacion: string; via: string; posologia: string }[] = [
+  { nombre: "Amoxicilina 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 7 días" },
+  { nombre: "Amoxicilina + ácido clavulánico 875/125 mg", presentacion: "875/125 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 12 horas por 7 días" },
+  { nombre: "Ibuprofeno 400 mg", presentacion: "400 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
+  { nombre: "Ibuprofeno 600 mg", presentacion: "600 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
+  { nombre: "Ketorolac 10 mg", presentacion: "10 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas (máximo 5 días)" },
+  { nombre: "Paracetamol 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 6 a 8 horas si hay dolor" },
+  { nombre: "Diclofenac 50 mg", presentacion: "50 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
+  { nombre: "Metronidazol 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 7 días" },
+  { nombre: "Clindamicina 300 mg", presentacion: "300 mg cápsulas", via: "Oral", posologia: "1 cápsula cada 8 horas por 7 días" },
+  { nombre: "Dexametasona 4 mg", presentacion: "4 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 12 horas por 2 días" },
+  { nombre: "Clorhexidina 0,12 % (colutorio)", presentacion: "0,12 % solución", via: "Enjuague bucal", posologia: "Enjuagar 15 ml durante 30 segundos, 2 veces al día por 7 días" },
 ];
+const MEDICAMENTOS = VADEMECUM.map((m) => m.nombre);
 /* ───────────── Opciones fijas del producto ───────────── */
 
 const TIPOS_DOCUMENTO = [
@@ -4342,6 +4346,26 @@ function RecetaForm({
     setError("");
   };
 
+  // Al elegir un medicamento conocido, completa solo presentación, vía y posología (si están
+  // vacías, para no pisar lo que el profesional ya escribió). Así escribe lo mínimo.
+  const elegirMedicamento = (i: number, nombre: string) => {
+    const vace = VADEMECUM.find((v) => v.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    setMedicamentos((prev) =>
+      prev.map((m, idx) => {
+        if (idx !== i) return m;
+        const base = { ...m, nombre };
+        if (!vace) return base;
+        return {
+          ...base,
+          presentacion: m.presentacion.trim() ? m.presentacion : vace.presentacion,
+          via: m.via && m.via !== VIAS_ADMINISTRACION[0] ? m.via : vace.via,
+          posologia: m.posologia.trim() ? m.posologia : vace.posologia,
+        };
+      }),
+    );
+    setError("");
+  };
+
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     const validos = medicamentos.filter((m) => m.nombre.trim() && m.posologia.trim());
@@ -4484,7 +4508,7 @@ function RecetaForm({
                 <input
                   list="dl-medicamentos"
                   value={m.nombre}
-                  onChange={(e) => cambiarMedicamento(i, "nombre", e.target.value)}
+                  onChange={(e) => elegirMedicamento(i, e.target.value)}
                   className={INPUT}
                   placeholder="Medicamento (droga o marca)"
                 />

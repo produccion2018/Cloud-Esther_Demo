@@ -93,27 +93,43 @@ const AREAS_OCLU = [
 ];
 const TOTAL_OCLU = AREAS_OCLU.reduce((a, x) => a + x.items.length, 0);
 
-/* Diente mascota (amigable) para la vista de detalle del módulo. */
+/* Diente mascota (amigable y con sombreado) para la vista de detalle del módulo. */
 function DienteMascota({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 72" className={className} aria-hidden>
+    <svg viewBox="0 0 88 94" className={className} aria-hidden style={{ filter: "drop-shadow(0 8px 12px rgba(76,29,149,0.22))" }}>
       <defs>
-        <linearGradient id="dm-grad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="dm-tooth" x1="0" y1="0" x2="0.3" y2="1">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="1" stopColor="#ede9fe" />
+          <stop offset="1" stopColor="#e4defa" />
         </linearGradient>
+        <radialGradient id="dm-gloss" cx="0.35" cy="0.3" r="0.5">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
       </defs>
+      {/* mano con pulgar arriba */}
+      <g transform="rotate(8 70 60)">
+        <rect x="63" y="52" width="15" height="13" rx="5.5" fill="#efe6ff" stroke="#c4b5fd" strokeWidth="1.8" />
+        <rect x="64.5" y="43" width="6.5" height="12" rx="3.2" fill="#efe6ff" stroke="#c4b5fd" strokeWidth="1.8" />
+      </g>
+      {/* cuerpo */}
       <path
-        d="M32 4C18 4 8 10 8 24c0 10 3 16 6 28 2 8 10 8 11-2l3-14c1-4 7-4 8 0l3 14c1 10 9 10 11 2 3-12 6-18 6-28C56 10 46 4 32 4Z"
-        fill="url(#dm-grad)"
-        stroke="#c4b5fd"
-        strokeWidth="2"
+        d="M44 8 C24 8 13 17 13 34 c0 13 3.2 20 7 33 2.6 8.4 12.4 8.4 13.4 -1.6 l2.3 -15.2 c0.9 -5.8 8.8 -5.8 9.7 0 l2.3 15.2 c1 10 10.8 10 13.4 1.6 3.8 -13 7 -20 7 -33 C71 17 60 8 44 8 Z"
+        fill="url(#dm-tooth)"
+        stroke="#bfa8f5"
+        strokeWidth="2.4"
       />
-      <circle cx="24" cy="27" r="2.6" fill="#6d28d9" />
-      <circle cx="40" cy="27" r="2.6" fill="#6d28d9" />
-      <path d="M24 35c3 4 13 4 16 0" fill="none" stroke="#6d28d9" strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="18.5" cy="32" r="2.6" fill="#f9a8d4" opacity="0.6" />
-      <circle cx="45.5" cy="32" r="2.6" fill="#f9a8d4" opacity="0.6" />
+      <ellipse cx="34" cy="24" rx="12" ry="8" fill="url(#dm-gloss)" />
+      {/* ojos */}
+      <ellipse cx="36" cy="39" rx="3.3" ry="4.1" fill="#4c1d95" />
+      <ellipse cx="54" cy="39" rx="3.3" ry="4.1" fill="#4c1d95" />
+      <circle cx="37.3" cy="37.4" r="1.2" fill="#ffffff" />
+      <circle cx="55.3" cy="37.4" r="1.2" fill="#ffffff" />
+      {/* cachetes */}
+      <circle cx="27.5" cy="45" r="3.4" fill="#f9a8d4" opacity="0.6" />
+      <circle cx="62.5" cy="45" r="3.4" fill="#f9a8d4" opacity="0.6" />
+      {/* sonrisa */}
+      <path d="M34 46 Q45 57 56 46" fill="none" stroke="#6d28d9" strokeWidth="3.2" strokeLinecap="round" />
     </svg>
   );
 }

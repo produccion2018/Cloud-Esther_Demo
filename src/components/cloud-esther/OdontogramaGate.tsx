@@ -15,10 +15,9 @@ import {
 import { RayosXIA } from "@/components/cloud-esther/odontograma3d/RayosXIA";
 import { InformeIntegral } from "@/components/cloud-esther/odontograma3d/InformeIntegral";
 import { SimuladorSonrisa } from "@/components/cloud-esther/simulador/SimuladorSonrisa";
-import { PLANS, planLevel, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
+import { PLANS, planLevel, usa3D, useCloudEsther, type PlanId } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
-import { odontogramaDelPlan } from "@/lib/cloud-esther/planes-config";
 import { Odontogram as Odontograma2D } from "@/components/odontograma2d/Odontogram";
 // El motor 3D (three.js) pesa mucho: se descarga solo cuando se muestra el odontograma 3D,
 // así Pacientes e Historia cargan rápido en los planes con 2D.
@@ -129,12 +128,13 @@ const TAB_INACTIVO =
 const BTN_ICONO =
   "inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive";
 
-/** El plan decide el módulo: START y PRO → Odontograma 2D · PLUS y ENTERPRISE → Odontograma 3D.
-    Son dos módulos independientes: no hay selector, pestañas ni botón para cambiar entre ellos,
-    y al cambiar de plan se muestra solo el que corresponde. */
+/** Muestra el odontograma 2D o 3D según lo que USE la clínica: Plus/Enterprise traen el 3D por
+    plan; Start/Pro usan el 2D y, si contratan el 3D como adicional, pasan al 3D. Al pasar a 3D se
+    va el 2D y queda solo el 3D (igual que el periodontograma). `usar()` hace que cambie al instante. */
 export function OdontogramaGate(props: Props) {
   const { plan } = useCloudEsther();
-  return odontogramaDelPlan(plan) === "3d" ? (
+  storeModulosExtra.usar(); // reacciona al contratar/quitar el odontograma 3D
+  return usa3D(plan) ? (
     <Odontograma3DModulo {...props} />
   ) : (
     <Odontograma2DModulo {...props} />

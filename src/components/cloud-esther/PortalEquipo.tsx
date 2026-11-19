@@ -53,7 +53,8 @@ import {
   useTodosLosRegistros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
-import { CloudEstherProvider, MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
+import { CloudEstherProvider, MODULES, availableIn, usa3D, useCloudEsther } from "@/lib/cloud-esther/data";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import type { TeamMember, TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
@@ -959,7 +960,9 @@ function AppEquipo({
   ).length;
   const item = (id: Seccion, label: string, icon: LucideIcon, mostrar = true, badge?: number) =>
     mostrar ? [{ id, label, icon, ...(badge ? { badge } : {}) }] : [];
-  const es3D = plan === "avanzada" || plan === "grupo";
+  // El 3D viene por plan (Plus/Enterprise) o porque la clínica contrató el odontograma 3D.
+  storeModulosExtra.usar(); // reacciona al contratar/quitar el 3D
+  const es3D = usa3D(plan);
   // Esther Infinity asistencial: planes con IA (Plus y Enterprise), con el permiso del propietario.
   const conIA = plan === "avanzada" || plan === "grupo";
   const grupos: GrupoPortal[] = (

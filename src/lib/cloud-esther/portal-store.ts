@@ -120,6 +120,17 @@ export type ConfigPortal = {
   mensajes: boolean;
   horasMinimasCancelar: number;
   bienvenida: string;
+  /* Políticas de turnos (opcionales: los datos guardados antes no las traen; se aplican defaults). */
+  /** Horas mínimas de anticipación para REPROGRAMAR (si falta menos, lo manda a la clínica). */
+  horasMinimasReprogramar?: number;
+  /** Máximo de reprogramaciones por turno (0 = sin límite). */
+  maxReprogramaciones?: number;
+  /** Si está activo, una cancelación tardía (dentro de la ventana) queda bloqueada del todo. */
+  bloquearTardias?: boolean;
+  /** Recuperación automática: al cancelar, ofrecer el horario a la lista de espera. */
+  recuperacionAutomatica?: boolean;
+  /** Minutos de vigencia de una oferta de turno liberado antes de vencer. */
+  minutosVigenciaOferta?: number;
   /** Qué secciones ve el paciente (las que faltan se consideran visibles) */
   secciones?: Partial<Record<SeccionPortalPaciente, boolean>>;
   /** «automatico»: lo que carga la clínica aparece solo; «aprobacion»: hay que enviarlo al portal */
@@ -184,6 +195,11 @@ function estadoVacioPortal(): EstadoPortal {
       presupuestosOnline: true,
       mensajes: true,
       horasMinimasCancelar: 24,
+      horasMinimasReprogramar: 24,
+      maxReprogramaciones: 2,
+      bloquearTardias: false,
+      recuperacionAutomatica: true,
+      minutosVigenciaOferta: 120,
       bienvenida: "",
       envio: "aprobacion",
     },

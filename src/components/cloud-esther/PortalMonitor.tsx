@@ -957,6 +957,83 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
             ))}
           </select>
         </label>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Reprogramación online hasta
+            </span>
+            <select
+              value={config.horasMinimasReprogramar ?? 24}
+              onChange={(e) => set({ horasMinimasReprogramar: Number(e.target.value) })}
+              className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
+            >
+              {[2, 12, 24, 48].map((h) => (
+                <option key={h} value={h}>
+                  {h} horas antes
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Máximo de reprogramaciones
+            </span>
+            <select
+              value={config.maxReprogramaciones ?? 2}
+              onChange={(e) => set({ maxReprogramaciones: Number(e.target.value) })}
+              className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
+            >
+              <option value={0}>Sin límite</option>
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} por turno
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="flex items-center gap-3 rounded-xl bg-white/80 p-3">
+          <span className="grid size-9 place-items-center rounded-full bg-primary/10 text-primary">
+            <CalendarCheck2 className="size-4" />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Recuperación automática de turnos</span>
+            <span className="block text-[11px] text-muted-foreground">
+              Cuando se cancela un turno, se ofrece a la lista de espera. Requiere Automatizaciones.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={config.recuperacionAutomatica !== false}
+            onChange={(e) => {
+              set({ recuperacionAutomatica: e.target.checked });
+              onToast(`Recuperación automática: ${e.target.checked ? "activada" : "desactivada"}`);
+            }}
+            className="size-4 accent-[var(--color-primary)]"
+          />
+        </label>
+
+        {config.recuperacionAutomatica !== false && (
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              La oferta del turno liberado vence en
+            </span>
+            <select
+              value={config.minutosVigenciaOferta ?? 120}
+              onChange={(e) => set({ minutosVigenciaOferta: Number(e.target.value) })}
+              className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
+            >
+              <option value={30}>30 minutos</option>
+              <option value={60}>1 hora</option>
+              <option value={120}>2 horas</option>
+              <option value={240}>4 horas</option>
+              <option value={720}>12 horas</option>
+            </select>
+          </label>
+        )}
+
         <label className="block">
           <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Mensaje de bienvenida

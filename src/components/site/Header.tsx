@@ -336,88 +336,109 @@ export function Header() {
         </div>
 
         {/* =======================================================
-            MOBILE MENU
+            MOBILE MENU — drawer premium (panel lateral + fondo difuminado)
         ======================================================= */}
         <AnimatePresence>
           {open && (
-            <motion.div
-              id="mobile-menu"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{
-                duration: 0.28,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="overflow-hidden border-t border-border/60 xl:hidden"
-            >
-              <div className="flex max-h-[calc(100dvh-7rem)] flex-col gap-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6">
-                <Link
-                  to="/"
-                  onClick={closeMenu}
-                  activeOptions={{ exact: true }}
-                  className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
-                >
-                  Inicio
-                </Link>
-
-                <button
-                  type="button"
-                  aria-expanded={mobileFeaturesOpen}
-                  onClick={() => setMobileFeaturesOpen((v) => !v)}
-                  className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
-                    mobileFeaturesOpen ? "bg-lavender text-foreground" : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
-                  }`}
-                >
-                  <span>Características</span>
-                  <ChevronDown className={`size-4 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />
-                </button>
-
-                <AnimatePresence>
-                  {mobileFeaturesOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-1 py-2">
-                        <ModulosPanel onLinkClick={closeMenu} />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {nav.slice(1).map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to as never}
+            <motion.button
+              key="backdrop"
+                type="button"
+                aria-label="Cerrar menú"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              onClick={closeMenu}
+              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm xl:hidden"
+            />
+          )}
+          {open && (
+              <motion.div
+                key="panel"
+                id="mobile-menu"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 320, damping: 34 }}
+                className="fixed right-0 top-0 z-50 flex h-[100dvh] w-[86%] max-w-sm flex-col overflow-hidden border-l border-primary/15 bg-gradient-to-b from-background via-background to-lavender/40 shadow-[-24px_0_60px_-20px_rgba(76,29,149,0.45)] xl:hidden"
+              >
+                <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-fuchsia-400/10 blur-3xl" />
+                {/* Encabezado del panel */}
+                <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="grid size-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.9)]">
+                      <ToothIcon className="size-4" />
+                    </span>
+                    <span className="font-display text-[15px] font-bold tracking-tight">Cloud Esther</span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Cerrar menú"
                     onClick={closeMenu}
+                    className="grid size-9 place-items-center rounded-xl border border-border/70 bg-background/70 text-foreground transition hover:border-primary/25 hover:bg-lavender"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+
+                {/* Navegación */}
+                <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-4">
+                  <Link
+                    to="/"
+                    onClick={closeMenu}
+                    activeOptions={{ exact: true }}
                     className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                   >
-                    {item.label}
+                    Inicio
                   </Link>
-                ))}
 
-                <div className="mt-3 grid gap-2 border-t border-border/60 pt-4">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    onClick={closeMenu}
-                    className="w-full rounded-xl"
+                  <button
+                    type="button"
+                    aria-expanded={mobileFeaturesOpen}
+                    onClick={() => setMobileFeaturesOpen((v) => !v)}
+                    className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
+                      mobileFeaturesOpen ? "bg-lavender text-foreground" : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                    }`}
                   >
+                    <span>Características</span>
+                    <ChevronDown className={`size-4 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {mobileFeaturesOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-1 py-2">
+                          <ModulosPanel onLinkClick={closeMenu} />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {nav.slice(1).map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to as never}
+                      onClick={closeMenu}
+                      className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Acciones (fijas abajo) */}
+                <div className="grid gap-2 border-t border-border/60 bg-background/80 px-4 py-4 backdrop-blur">
+                  <Button asChild variant="ghost" onClick={closeMenu} className="w-full rounded-xl">
                     <Link to="/login">Iniciar sesión</Link>
                   </Button>
-
-                  <Button
-                    asChild
-                    variant="outlineBrand"
-                    onClick={closeMenu}
-                    className="w-full rounded-xl"
-                  >
+                  <Button asChild variant="outlineBrand" onClick={closeMenu} className="w-full rounded-xl">
                     <Link to="/demostracion">Contratar servicio</Link>
                   </Button>
-
                   <Button
                     asChild
                     variant="hero"
@@ -427,8 +448,7 @@ export function Header() {
                     <Link to="/registro">Probar demo</Link>
                   </Button>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
           )}
         </AnimatePresence>
       </div>

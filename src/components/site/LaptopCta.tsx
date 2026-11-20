@@ -818,15 +818,28 @@ export function LaptopCta() {
               <Link to="/demostracion">Contratar servicio</Link>
             </Button>
           </div>
-          <motion.p
+          {/* Pista de scroll: ahora es un botón. En el celular, al tocarla (o deslizar) baja y
+              abre el resto de la página; antes era solo decorativa y no respondía al toque. */}
+          <motion.button
+            type="button"
             style={{ opacity: hint }}
-            className="mt-2 flex items-center justify-center gap-1 text-[11px] text-white/60"
+            onClick={() => {
+              const el = sectionRef.current;
+              if (el)
+                window.scrollTo({ top: el.offsetTop + el.offsetHeight, behavior: "smooth" });
+            }}
+            aria-label="Deslizá para ver más"
+            className="group mx-auto mt-2 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
-            Seguí bajando y la compu se cierra
-            <motion.span animate={{ y: [0, 3, 0] }} transition={{ duration: 1.3, repeat: Infinity }}>
+            Deslizá para ver más
+            <motion.span
+              animate={{ y: [0, 4, 0] }}
+              transition={{ duration: 1.3, repeat: Infinity }}
+              className="grid size-5 place-items-center rounded-full bg-white/15 transition-colors group-hover:bg-white/25"
+            >
               <ChevronDown className="size-3.5" />
             </motion.span>
-          </motion.p>
+          </motion.button>
         </div>
       </div>
     </section>

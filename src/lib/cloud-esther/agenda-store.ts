@@ -36,6 +36,43 @@ export type Espera = {
   motivo: string;
   franja: string;
   sucursal: string;
+  /* Preferencias para la recuperación inteligente. Opcionales: los registros guardados antes
+     no las traen, y "" / vacío significa "cualquiera". */
+  /** Profesional preferido ("" = cualquiera). */
+  odontologo?: string;
+  /** Especialidad preferida ("" = cualquiera). */
+  especialidad?: string;
+  /** Días de la semana preferidos (0=Dom … 6=Sáb). Vacío = cualquiera. */
+  dias?: number[];
+  /** Prioridad para ordenar a quién se le ofrece primero. */
+  prioridad?: "normal" | "urgente";
+  /** Teléfono/contacto para el aviso (WhatsApp cuando se conecte el canal). */
+  telefono?: string;
+  /** Alta en la lista (ISO). */
+  creada?: string;
+};
+
+/** Oferta de un turno liberado (por una cancelación) a un paciente de la lista de espera.
+    Es el corazón de la recuperación automática de turnos. */
+export type EstadoOferta = "ofrecida" | "aceptada" | "vencida" | "rechazada" | "cancelada";
+export type Oferta = {
+  id: number;
+  // Datos del turno liberado
+  fecha: string;
+  hora: string;
+  odontologo: string;
+  sucursal: string;
+  tratamiento: string;
+  // A quién se le ofrece
+  candidato: string;
+  esperaId?: number;
+  telefono?: string;
+  // Estado del ofrecimiento
+  estado: EstadoOferta;
+  /** Canal por el que se avisó ("Aviso interno" siempre; WhatsApp/Email cuando se conecten). */
+  canal: string;
+  creada: string; // ISO
+  vence: string; // ISO
 };
 export type Recordatorio = {
   id: number;
@@ -107,6 +144,8 @@ export type EstadoAgenda = {
   tareas: Tarea[];
   /** Feriados y cierres de la clínica (opcional: los datos guardados antes no lo traen). */
   feriados?: Feriado[];
+  /** Ofertas de recuperación de turnos liberados (opcional en datos viejos). */
+  ofertas?: Oferta[];
 };
 
 /* Arranca vacío (sin turnos, lista de espera ni tareas de ejemplo), igual que producción. */
@@ -117,6 +156,7 @@ export const storeAgenda = crearStorePorEmpresa<EstadoAgenda>(
     espera: [],
     recordatorios: RECORDATORIOS_INICIAL,
     tareas: [],
+    ofertas: [],
   }),
   { persistir: "agenda", normalizar: nombresProlijosAgenda },
 );
@@ -158,6 +198,7 @@ export const setEsperaStore = setterAgenda("espera");
 export const setRecordatoriosStore = setterAgenda("recordatorios");
 export const setTareasStore = setterAgenda("tareas");
 export const setFeriadosStore = setterAgenda("feriados");
+export const setOfertasStore = setterAgenda("ofertas");
 
 const RECORDATORIOS_INICIAL: Recordatorio[] = [
   { id: 1, canal: "WhatsApp", cuando: "24 h antes del turno", activo: true },

@@ -56,6 +56,13 @@ import {
   storeAgenda,
   type Turno,
 } from "@/lib/cloud-esther/agenda-store";
+import {
+  aceptarOferta,
+  ofertasPara,
+  rechazarOferta,
+  recuperarTurno,
+  vencerOfertas,
+} from "@/lib/cloud-esther/recuperacion-turnos";
 import { setComunicacion, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import {
   DOCS_BASE,
@@ -1308,6 +1315,14 @@ function FilaTurno({ t, ctx, compacta = false }: { t: Turno; ctx: Ctx; compacta?
       tipo,
       `${t.tratamiento} · ${formatearFecha(extra.fecha ?? t.fecha)} ${extra.hora ?? t.hora}`,
     );
+    // Al cancelar (no al reprogramar): si la clínica tiene activa la recuperación automática,
+    // el horario liberado se ofrece a la lista de espera.
+    if (estado === "Cancelada" && !extra.fecha) {
+      const cfg = storePortal.leer().config;
+      if (cfg.recuperacionAutomatica !== false) {
+        recuperarTurno(t, { vigenciaMin: cfg.minutosVigenciaOferta ?? 120 });
+      }
+    }
     ctx.onToast(msg);
   };
 
@@ -1358,7 +1373,19 @@ function FilaTurno({ t, ctx, compacta = false }: { t: Turno; ctx: Ctx; compacta?
                 <CalendarPlus className="size-3.5" />
                 Agendar
               </button>
-              <button className={BTN_SECUNDARIO} onClick={() => setReprogramar(true)}>
+              <button
+                className={BTN_SECUNDARIO}
+                onClick={() => {
+                  const horas =
+                    (new Date(`${t.fecha}T${t.hora}:00`).getTime() - Date.now()) / 3_600_000;
+                  const minimo = storePortal.leer().config.horasMinimasReprogramar ?? 24;
+                  if (horas < minimo)
+                    return ctx.onToast(
+                      `Faltan menos de ${minimo} h: para reprogramar, escribile a la clínica.`,
+                    );
+                  setReprogramar(true);
+                }}
+              >
                 <RefreshCcw className="size-3.5" />
                 Cambiar
               </button>
@@ -1607,6 +1634,64 @@ function SolicitudForm({
   );
 }
 
+/** Ofertas de turnos liberados para este paciente (recuperación automática). El primero que
+    acepta se queda con el turno; si ya lo tomaron, se avisa y no se duplica. */
+function OfertasPaciente({ ctx }: { ctx: Ctx }) {
+  const { ofertas } = storeAgenda.usar();
+  useEffect(() => {
+    vencerOfertas();
+  }, []);
+  const mias = ofertasPara(ctx.nombre, ofertas);
+  if (!mias.length) return null;
+  return (
+    <div className="space-y-2">
+      {mias.map((o) => (
+        <div
+          key={o.id}
+          className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.09] via-white to-fuchsia-500/[0.05] p-4 shadow-[0_16px_40px_-26px_rgba(124,58,237,0.6)]"
+        >
+          <span className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-fuchsia-400/15 blur-2xl" />
+          <span className="relative inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary">
+            <CalendarPlus className="size-3.5" />
+            Se liberó un turno para vos
+          </span>
+          <p className="relative mt-2 font-display text-base font-bold">
+            {o.tratamiento} · {formatearFecha(o.fecha)} a las {o.hora}
+          </p>
+          <p className="relative text-[12px] text-muted-foreground">
+            Con {o.odontologo} · {o.sucursal}. Si lo querés, lo reservamos a tu nombre al instante.
+          </p>
+          <div className="relative mt-3 flex flex-wrap gap-2">
+            <button
+              className={BTN_PRIMARIO}
+              onClick={() => {
+                const r = aceptarOferta(o.id);
+                ctx.onToast(
+                  r.ok
+                    ? "¡Listo! Reservamos ese turno a tu nombre."
+                    : (r.motivo ?? "No se pudo reservar."),
+                );
+              }}
+            >
+              <Check className="size-4" />
+              Aceptar este turno
+            </button>
+            <button
+              className={BTN_SECUNDARIO}
+              onClick={() => {
+                rechazarOferta(o.id);
+                ctx.onToast("Listo, no te anotamos en ese turno.");
+              }}
+            >
+              No, gracias
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Turnos({ ctx }: { ctx: Ctx }) {
   const { config } = storePortal.usar();
   const [pedir, setPedir] = useState(false);
@@ -1635,6 +1720,9 @@ function Turnos({ ctx }: { ctx: Ctx }) {
           </span>
         )}
       </TituloSeccion>
+
+      <OfertasPaciente ctx={ctx} />
+
       <div className="grid grid-cols-3 gap-3">
         {[
           ["Próximos", lista.length],

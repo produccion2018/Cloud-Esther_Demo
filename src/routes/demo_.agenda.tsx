@@ -38,7 +38,9 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { toast as avisoWhatsApp } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/cloud-esther/AppShell";
-import { CloudEstherProvider } from "@/lib/cloud-esther/data";
+import { CloudEstherProvider, MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
+import { storePortal } from "@/lib/cloud-esther/portal-store";
+import { recuperarTurno, vencerOfertas } from "@/lib/cloud-esther/recuperacion-turnos";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import {
@@ -749,28 +751,43 @@ function BloqueoForm({
   );
 }
 
+const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
 function EsperaForm({
   pacientes,
+  odontologos,
   onSubmit,
   onCancel,
 }: {
   pacientes: string[];
+  odontologos: string[];
   onSubmit: (e: Omit<Espera, "id">) => void;
   onCancel: () => void;
 }) {
   const [nombre, setNombre] = useState("");
   const [motivo, setMotivo] = useState(TRATAMIENTOS[0]);
-  const [franja, setFranja] = useState(FRANJAS[0]);
+  const [franja, setFranja] = useState("Cualquiera");
   const [sucursal, setSucursal] = useState(SUCURSALES[0]);
+  const [odontologo, setOdontologo] = useState("Cualquiera");
+  const [prioridad, setPrioridad] = useState("Normal");
+  const [dias, setDias] = useState<number[]>([]);
+  const [telefono, setTelefono] = useState("");
+
+  const toggleDia = (d: number) =>
+    setDias((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
-
     onSubmit({
       nombre: nombre.trim(),
       motivo,
       franja,
       sucursal,
+      odontologo: odontologo === "Cualquiera" ? "" : odontologo,
+      dias,
+      prioridad: prioridad === "Urgente" ? "urgente" : "normal",
+      telefono: telefono.trim(),
+      creada: new Date().toISOString(),
     });
   };
 
@@ -799,14 +816,55 @@ function EsperaForm({
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Franja horaria">
-          <SelectField value={franja} onChange={setFranja} options={FRANJAS} />
+        <Field label="Profesional preferido">
+          <SelectField value={odontologo} onChange={setOdontologo} options={["Cualquiera", ...odontologos]} />
         </Field>
+        <Field label="Franja preferida">
+          <SelectField value={franja} onChange={setFranja} options={["Cualquiera", "Mañanas", "Tardes"]} />
+        </Field>
+      </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Sucursal">
           <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
         </Field>
+        <Field label="Prioridad">
+          <SelectField value={prioridad} onChange={setPrioridad} options={["Normal", "Urgente"]} />
+        </Field>
       </div>
+
+      <Field label="Días preferidos (opcional)">
+        <div className="flex flex-wrap gap-1.5">
+          {DIAS_SEMANA.map((etq, d) => {
+            const on = dias.includes(d);
+            return (
+              <button
+                type="button"
+                key={d}
+                onClick={() => toggleDia(d)}
+                aria-pressed={on}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  on
+                    ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {etq}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+
+      <Field label="Teléfono para avisarle (opcional)">
+        <input
+          value={telefono}
+          onChange={(e) => setTelefono(e.target.value)}
+          className={INPUT}
+          placeholder="Para el aviso por WhatsApp cuando se conecte el canal"
+          inputMode="tel"
+        />
+      </Field>
 
       <FormActions submitLabel="Agregar a la lista" onCancel={onCancel} />
     </form>
@@ -2002,6 +2060,16 @@ function AgendaInner() {
   const setRecordatorios = setRecordatoriosStore;
   const setTareas = setTareasStore;
 
+  // Recuperación automática de turnos: disponible si la clínica tiene el módulo de Automatizaciones
+  // (plan 4, o plan 1/2/3 que lo contrataron como adicional).
+  const { plan } = useCloudEsther();
+  const moduloAuto = MODULES.find((m) => m.id === "automatizaciones");
+  const autoDisponible = !!moduloAuto && availableIn(moduloAuto, plan);
+  // Al abrir la agenda, se vencen las ofertas que pasaron su plazo.
+  useEffect(() => {
+    vencerOfertas();
+  }, []);
+
   // Odontólogos del equipo de la empresa y pacientes de su listado.
   const { miembros } = useEquipo();
   const { pacientes: listaPacientes } = usePacientes();
@@ -2151,6 +2219,20 @@ function AgendaInner() {
   const cambiarEstado = (t: Turno, estado: EstadoTurno) => {
     setTurnos((prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
 
+    // Al cancelar: si la recuperación automática está activa y la clínica tiene Automatizaciones,
+    // el horario liberado se ofrece a los compatibles de la lista de espera.
+    if (estado === "Cancelada") {
+      const cfg = storePortal.leer().config;
+      if (cfg.recuperacionAutomatica !== false && autoDisponible) {
+        const n = recuperarTurno(t, { vigenciaMin: cfg.minutosVigenciaOferta ?? 120 });
+        show(
+          n > 0
+            ? `${t.paciente}: cancelado. Se ofreció el horario a ${n} paciente${n === 1 ? "" : "s"} de la lista de espera.`
+            : `${t.paciente}: cancelado. Horario liberado (nadie compatible en la lista de espera).`,
+        );
+        return;
+      }
+    }
     show(`${t.paciente}: ${estado.toLowerCase()}`);
   };
 
@@ -3009,6 +3091,7 @@ function AgendaInner() {
           >
             <EsperaForm
               pacientes={nombresPacientes}
+              odontologos={odontologosConAdmin}
               onSubmit={agregarEspera}
               onCancel={cerrarModal}
             />

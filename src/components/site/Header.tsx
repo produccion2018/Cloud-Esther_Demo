@@ -8,7 +8,7 @@ import {
   Home,
   Menu,
   ReceiptText,
-  Sparkles,
+  LayoutGrid,
   Stethoscope,
   Tag,
   Users,
@@ -448,7 +448,7 @@ export function Header() {
                     }`}
                   >
                     <span className={`grid size-10 place-items-center rounded-xl text-primary transition-colors ${mobileFeaturesOpen ? "bg-white" : "bg-lavender group-hover:bg-white"}`}>
-                      <Sparkles className="size-[18px]" />
+                      <LayoutGrid className="size-[18px]" />
                     </span>
                     <span className="flex-1 text-left">Características</span>
                     <ChevronDown className={`size-4 text-foreground/40 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />

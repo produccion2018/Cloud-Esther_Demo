@@ -4,20 +4,32 @@ import {
   BarChart3,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
+  Home,
   Menu,
   ReceiptText,
+  Sparkles,
   Stethoscope,
+  Tag,
   Users,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModulosPanel } from "@/components/site/ModulosPanel";
+import { SlideToDemo } from "@/components/site/SlideToDemo";
 
 const nav = [
   { label: "Inicio", to: "/" },
   { label: "Planes", to: "/planes" },
   { label: "Nosotros", to: "/nosotros" },
+];
+
+/* Ítems del menú móvil con su ícono (para el panel rediseñado). */
+const navMovil = [
+  { label: "Inicio", to: "/", icon: Home, exact: true },
+  { label: "Planes", to: "/planes", icon: Tag, exact: false },
+  { label: "Nosotros", to: "/nosotros", icon: Users, exact: false },
 ];
 
 const featureItems = [
@@ -301,6 +313,14 @@ export function Header() {
           </div>
 
           {/* =====================================================
+              DERECHA EN TABLET/CELULAR: deslizable + hamburguesa
+          ===================================================== */}
+          <div className="flex items-center gap-2.5 xl:hidden">
+            {/* TABLET: botón deslizable "Probar demo" siempre visible (sin abrir el menú).
+                En celular va en el hero y dentro del menú. */}
+            <SlideToDemo className="hidden w-[228px] md:flex" />
+
+          {/* =====================================================
               MOBILE / TABLET BUTTON (hamburguesa)
           ===================================================== */}
           <button
@@ -333,77 +353,106 @@ export function Header() {
               )}
             </AnimatePresence>
           </button>
+          </div>
         </div>
 
         {/* =======================================================
-            MOBILE MENU — drawer premium (panel lateral + fondo difuminado)
+            MENÚ MÓVIL — rediseño completo (panel con cabecera en gradiente,
+            filas con ícono que entran escalonadas y CTA deslizable abajo)
         ======================================================= */}
         <AnimatePresence>
           {open && (
             <motion.button
               key="backdrop"
-                type="button"
-                aria-label="Cerrar menú"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+              type="button"
+              aria-label="Cerrar menú"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
               onClick={closeMenu}
-              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm xl:hidden"
+              className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-md xl:hidden"
             />
           )}
           {open && (
-              <motion.div
-                key="panel"
-                id="mobile-menu"
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 320, damping: 34 }}
-                className="fixed right-0 top-0 z-50 flex h-[100dvh] w-[86%] max-w-sm flex-col overflow-hidden border-l border-primary/15 bg-gradient-to-b from-background via-background to-lavender/40 shadow-[-24px_0_60px_-20px_rgba(76,29,149,0.45)] xl:hidden"
-              >
-                <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-fuchsia-400/10 blur-3xl" />
-                {/* Encabezado del panel */}
-                <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="grid size-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-10px_rgba(124,58,237,0.9)]">
-                      <ToothIcon className="size-4" />
+            <motion.div
+              key="panel"
+              id="mobile-menu"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 32 }}
+              className="fixed right-0 top-0 z-50 flex h-[100dvh] w-[90%] max-w-[390px] flex-col overflow-hidden rounded-l-[30px] border-l border-primary/10 bg-background shadow-[-30px_0_80px_-24px_rgba(76,29,149,0.5)] xl:hidden"
+            >
+              {/* Cabecera en gradiente */}
+              <div className="relative overflow-hidden bg-[linear-gradient(135deg,#7c3aed_0%,#b43ae6_55%,#f138df_100%)] px-5 pb-7 pt-5 text-white">
+                <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/15 blur-2xl" />
+                <span aria-hidden className="pointer-events-none absolute -bottom-20 -left-8 size-44 rounded-full bg-fuchsia-300/25 blur-2xl" />
+                <div className="relative flex items-center justify-between">
+                  <span className="inline-flex items-center gap-2.5">
+                    <span className="grid size-9 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
+                      <ToothIcon className="size-5 text-white" />
                     </span>
-                    <span className="font-display text-[15px] font-bold tracking-tight">Cloud Esther</span>
+                    <span className="font-display text-[17px] font-extrabold tracking-tight">Cloud Esther</span>
                   </span>
                   <button
                     type="button"
                     aria-label="Cerrar menú"
                     onClick={closeMenu}
-                    className="grid size-9 place-items-center rounded-xl border border-border/70 bg-background/70 text-foreground transition hover:border-primary/25 hover:bg-lavender"
+                    className="grid size-9 place-items-center rounded-full bg-white/15 text-white ring-1 ring-white/25 transition hover:bg-white/25"
                   >
                     <X className="size-4" />
                   </button>
                 </div>
+                <p className="relative mt-4 text-[13px] font-medium text-white/85">
+                  Gestioná tu clínica y hacela crecer, todo en un solo lugar.
+                </p>
+              </div>
 
-                {/* Navegación */}
-                <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-4">
+              {/* Navegación: filas con ícono, entran escalonadas */}
+              <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-5">
+                {/* Inicio */}
+                <motion.div
+                  initial={{ opacity: 0, x: 26 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.06, type: "spring", stiffness: 300, damping: 30 }}
+                >
                   <Link
                     to="/"
                     onClick={closeMenu}
                     activeOptions={{ exact: true }}
-                    className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
+                    className="group flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-[15px] font-semibold text-foreground/80 transition-all hover:border-primary/15 hover:bg-lavender/60 hover:text-foreground data-[status=active]:border-primary/20 data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                   >
-                    Inicio
+                    <span className="grid size-10 place-items-center rounded-xl bg-lavender text-primary transition-colors group-hover:bg-white group-data-[status=active]:bg-white">
+                      <Home className="size-[18px]" />
+                    </span>
+                    <span className="flex-1">Inicio</span>
+                    <ChevronRight className="size-4 text-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   </Link>
+                </motion.div>
 
+                {/* Características (desplegable) */}
+                <motion.div
+                  initial={{ opacity: 0, x: 26 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.11, type: "spring", stiffness: 300, damping: 30 }}
+                >
                   <button
                     type="button"
                     aria-expanded={mobileFeaturesOpen}
                     onClick={() => setMobileFeaturesOpen((v) => !v)}
-                    className={`relative flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
-                      mobileFeaturesOpen ? "bg-lavender text-foreground" : "text-foreground/70 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground"
+                    className={`group flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-[15px] font-semibold transition-all ${
+                      mobileFeaturesOpen
+                        ? "border-primary/20 bg-lavender text-foreground"
+                        : "border-transparent text-foreground/80 hover:border-primary/15 hover:bg-lavender/60 hover:text-foreground"
                     }`}
                   >
-                    <span>Características</span>
-                    <ChevronDown className={`size-4 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />
+                    <span className={`grid size-10 place-items-center rounded-xl text-primary transition-colors ${mobileFeaturesOpen ? "bg-white" : "bg-lavender group-hover:bg-white"}`}>
+                      <Sparkles className="size-[18px]" />
+                    </span>
+                    <span className="flex-1 text-left">Características</span>
+                    <ChevronDown className={`size-4 text-foreground/40 transition-transform duration-300 ${mobileFeaturesOpen ? "rotate-180 text-primary" : ""}`} />
                   </button>
-
                   <AnimatePresence>
                     {mobileFeaturesOpen && (
                       <motion.div
@@ -418,37 +467,45 @@ export function Header() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </motion.div>
 
-                  {nav.slice(1).map((item) => (
+                {/* Planes + Nosotros */}
+                {navMovil.slice(1).map((item, i) => (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: 26 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.16 + i * 0.05, type: "spring", stiffness: 300, damping: 30 }}
+                  >
                     <Link
-                      key={item.to}
                       to={item.to as never}
                       onClick={closeMenu}
-                      className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-lavender/70 hover:text-foreground data-[status=active]:bg-lavender data-[status=active]:text-foreground"
+                      activeOptions={{ exact: item.exact }}
+                      className="group flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-[15px] font-semibold text-foreground/80 transition-all hover:border-primary/15 hover:bg-lavender/60 hover:text-foreground data-[status=active]:border-primary/20 data-[status=active]:bg-lavender data-[status=active]:text-foreground"
                     >
-                      {item.label}
+                      <span className="grid size-10 place-items-center rounded-xl bg-lavender text-primary transition-colors group-hover:bg-white group-data-[status=active]:bg-white">
+                        <item.icon className="size-[18px]" />
+                      </span>
+                      <span className="flex-1">{item.label}</span>
+                      <ChevronRight className="size-4 text-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                     </Link>
-                  ))}
-                </div>
+                  </motion.div>
+                ))}
+              </div>
 
-                {/* Acciones (fijas abajo) */}
-                <div className="grid gap-2 border-t border-border/60 bg-background/80 px-4 py-4 backdrop-blur">
-                  <Button asChild variant="ghost" onClick={closeMenu} className="w-full rounded-xl">
+              {/* Acciones (fijas abajo) — CTA deslizable arriba del todo */}
+              <div className="space-y-2.5 border-t border-border/60 bg-background/90 px-4 py-4 backdrop-blur">
+                <SlideToDemo tono="claro" onAbrir={closeMenu} />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button asChild variant="ghost" onClick={closeMenu} className="rounded-xl">
                     <Link to="/login">Iniciar sesión</Link>
                   </Button>
-                  <Button asChild variant="outlineBrand" onClick={closeMenu} className="w-full rounded-xl">
-                    <Link to="/demostracion">Contratar servicio</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="hero"
-                    onClick={closeMenu}
-                    className="w-full rounded-xl shadow-[0_8px_24px_rgba(124,58,237,0.25)]"
-                  >
-                    <Link to="/registro">Probar demo</Link>
+                  <Button asChild variant="outlineBrand" onClick={closeMenu} className="rounded-xl">
+                    <Link to="/demostracion">Contratar</Link>
                   </Button>
                 </div>
-              </motion.div>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

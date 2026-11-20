@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SlideToDemo } from "@/components/site/SlideToDemo";
 
 /* =========================================================
    CONSTANTES
@@ -790,7 +791,21 @@ export function LaptopCta() {
 
         {/* Botones + pista de scroll */}
         <div className="relative z-20">
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+          {/* Celular y tablet: "Probar demo" DESLIZABLE (deslizá a la derecha para abrir). */}
+          <div className="mx-auto w-full max-w-sm space-y-3 lg:hidden">
+            <SlideToDemo tono="sobreOscuro" />
+            <Button
+              asChild
+              size="xl"
+              variant="outline"
+              className="w-full rounded-xl border-white/35 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+            >
+              <Link to="/demostracion">Contratar servicio</Link>
+            </Button>
+          </div>
+
+          {/* Desktop: botones normales. */}
+          <div className="hidden flex-col justify-center gap-3 sm:flex-row lg:flex">
             <div className="lc-btn-glow rounded-xl">
               <Button
                 asChild

@@ -29,6 +29,7 @@ export function InstalarPortal({
   manifest,
   titulo,
   nombre,
+  sobreBarraInferior = false,
 }: {
   /** Ruta del manifest del portal, ej. "/portal-paciente.webmanifest". */
   manifest: string;
@@ -36,6 +37,8 @@ export function InstalarPortal({
   titulo: string;
   /** Nombre del portal para el texto del botón. */
   nombre: string;
+  /** En el celular, sube el aviso para no tapar una barra inferior fija (ej. el panel /admin). */
+  sobreBarraInferior?: boolean;
 }) {
   const app = useInstalarApp();
   const [cerrado, setCerrado] = useState(false);
@@ -69,7 +72,13 @@ export function InstalarPortal({
   if (cerrado || app.instalada || (!app.puedeInstalar && !app.ios)) return null;
 
   return (
-    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 z-[60] max-w-[min(340px,calc(100vw-2rem))]">
+    <div
+      className={`fixed left-4 z-[60] max-w-[min(340px,calc(100vw-2rem))] ${
+        sobreBarraInferior
+          ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-4"
+          : "bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+      }`}
+    >
       <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card/95 p-3 shadow-[0_20px_50px_-20px_rgba(76,29,149,0.65)] backdrop-blur-md">
         <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-28 rounded-full bg-fuchsia-400/15 blur-2xl" />
         <button

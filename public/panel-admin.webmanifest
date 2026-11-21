@@ -1,0 +1,22 @@
+{
+  "name": "Panel de Cloud Esther",
+  "short_name": "Panel Esther",
+  "description": "Panel de administración de Cloud Esther: demos, clínicas, planes, pagos y equipo.",
+  "id": "/admin",
+  "start_url": "/admin?origen=app",
+  "scope": "/admin",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "any",
+  "background_color": "#faf9ff",
+  "theme_color": "#6d28d9",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

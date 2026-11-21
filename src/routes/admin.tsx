@@ -2,6 +2,7 @@ import { Navigate, Outlet, createFileRoute, useRouterState } from "@tanstack/rea
 import { useEffect, useState } from "react";
 
 import { RoleProvider } from "@/components/admin/role";
+import { InstalarPortal } from "@/components/site/InstalarPortal";
 import { Toaster } from "@/components/ui/sonner";
 import {
   ErrorApi,
@@ -117,6 +118,13 @@ function AdminLayout() {
   return (
     <RoleProvider>
       <Outlet />
+      {/* PWA: el panel se instala como su propia app (el dueño y todo su equipo, desde el login). */}
+      <InstalarPortal
+        manifest="/panel-admin.webmanifest"
+        titulo="Panel Esther"
+        nombre="el Panel de Cloud Esther"
+        sobreBarraInferior={!!sesion && !publica}
+      />
       <Toaster position="top-right" richColors closeButton />
     </RoleProvider>
   );

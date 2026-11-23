@@ -335,7 +335,7 @@ export function AdminShell({
   useTablasApilables(contenido);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="ce-premium flex min-h-screen w-full bg-background">
       {/* La columna ocupa todo el alto de la página y el menú queda fijo al hacer scroll. */}
       <aside className="hidden w-[264px] shrink-0 self-stretch bg-sidebar lg:block">
         <div className="sticky top-0 h-screen">

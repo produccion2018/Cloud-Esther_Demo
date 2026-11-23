@@ -1663,7 +1663,7 @@ label {
    hora, estado, importe) que en media pantalla se apilaban letra por letra. */
 @media (max-width: 639.98px) {
   .panel-clinica
-    .grid:not([data-ficha] .grid):is([class*="sm:grid-cols-"], [class*="md:grid-cols-"]):not(
+    .grid:not([data-ficha] .grid, .fixed):is([class*="sm:grid-cols-"], [class*="md:grid-cols-"]):not(
       [class~="grid-cols-2"],
       [class~="grid-cols-3"],
       [class~="grid-cols-4"],
@@ -1675,49 +1675,49 @@ label {
     gap: 0.625rem;
   }
   /* Dentro de esas tarjetas: nada se sale ni se corta. */
-  .panel-clinica .grid:not([data-ficha] .grid) > *,
-  .panel-clinica .grid:not([data-ficha] .grid) > li > * {
+  .panel-clinica .grid:not([data-ficha] .grid, .fixed) > *,
+  .panel-clinica .grid:not([data-ficha] .grid, .fixed) > li > * {
     min-width: 0;
   }
   .panel-clinica
     :is(
-      .grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad),
-      .grid:not([data-ficha] .grid) > li > :is([class*="rounded-"], .card-grad)
+      .grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad),
+      .grid:not([data-ficha] .grid, .fixed) > li > :is([class*="rounded-"], .card-grad)
     ) {
     overflow-wrap: break-word;
     hyphens: auto;
   }
   /* Títulos en mayúscula de las tarjetas: menos separación entre letras para que no se corten. */
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     .uppercase {
     letter-spacing: 0.04em;
   }
   /* Filas de acciones dentro de tarjetas angostas: bajan de renglón en vez de salirse. */
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     .flex:has(> button, > a) {
     flex-wrap: wrap;
   }
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     :is(button, a) {
     max-width: 100%;
   }
   /* Cifras grandes más compactas para que entren completas en media pantalla. */
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     :is(.text-3xl, .text-2xl) {
     font-size: clamp(1rem, 4.6vw, 1.5rem);
     line-height: 1.2;
   }
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     .text-xl {
     font-size: clamp(1rem, 4.6vw, 1.25rem);
   }
   .panel-clinica
-    :is(.grid:not([data-ficha] .grid) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid) > li > [class*="rounded-"])
+    :is(.grid:not([data-ficha] .grid, .fixed) > :is([class*="rounded-"], .card-grad), .grid:not([data-ficha] .grid, .fixed) > li > [class*="rounded-"])
     :is(
       [class*="text-[24px]"],
       [class*="text-[26px]"],
@@ -1732,18 +1732,18 @@ label {
   /* Tarjeta de indicador (título + ícono + cifra): el ícono pasa a la esquina y la cifra usa
      todo el ancho, así el importe se ve completo ($ 1.284.000) en media pantalla. */
   .panel-clinica
-    .grid:not([data-ficha] .grid)
+    .grid:not([data-ficha] .grid, .fixed)
     > :is([class*="rounded-"], .card-grad)
     > .relative.flex.items-start.justify-between {
     display: block;
   }
   .panel-clinica
-    .grid:not([data-ficha] .grid)
+    .grid:not([data-ficha] .grid, .fixed)
     > :is([class*="rounded-"], .card-grad):has(> .relative.flex.items-start.justify-between) {
     padding: 0.875rem;
   }
   .panel-clinica
-    .grid:not([data-ficha] .grid)
+    .grid:not([data-ficha] .grid, .fixed)
     > :is([class*="rounded-"], .card-grad)
     > .relative.flex.items-start.justify-between
     > :is(span, div).shrink-0:last-child {
@@ -1754,7 +1754,7 @@ label {
     height: 1.875rem;
   }
   .panel-clinica
-    .grid:not([data-ficha] .grid)
+    .grid:not([data-ficha] .grid, .fixed)
     > :is([class*="rounded-"], .card-grad)
     > .relative.flex.items-start.justify-between
     > .min-w-0
@@ -2099,4 +2099,144 @@ label {
 .ce-marquee:focus-within .ce-marquee-track { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .ce-marquee-track { animation: none; }
+}
+
+/* ───────── Formularios premium (panel de la clínica, demo y panel de Cloud Esther) ─────────
+   Un mismo acabado para todos los campos y ventanas, sin tocar tamaños ni la lógica:
+   · Campos: fondo con un velo violeta muy suave, borde lila, sombra interior y un halo al
+     escribir. Solo se aplica a campos que dibujan su propio borde (los que van dentro de una
+     caja con ícono, sin borde o transparentes quedan como están), y nunca pisa un campo en error.
+   · Ventanas (nuevo paciente, nuevo aviso, etc.): fondo con brillo violeta, filo de color arriba,
+     sombra profunda, encabezado separado y fondo oscuro difuminado detrás. */
+:is(.panel-clinica, .ce-premium, .ce-dialogo, [role="dialog"])
+  :is(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="submit"], [type="button"]),
+    textarea,
+    [data-seleccion]
+  ):is([class*="border"]):not(
+    [class*="border-0"],
+    [class*="border-none"],
+    [class*="bg-transparent"],
+    [class*="border-destructive"],
+    [class*="border-red"],
+    [class*="border-rose"],
+    [class*="text-white"],
+    [aria-invalid="true"]
+  ) {
+  background-color: var(--card);
+  background-image: linear-gradient(
+    180deg,
+    var(--card) 0%,
+    color-mix(in oklab, var(--card) 95%, var(--primary)) 100%
+  );
+  border-color: color-mix(in oklab, var(--primary) 17%, var(--border));
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklab, var(--primary) 8%, transparent),
+    0 8px 20px -18px color-mix(in oklab, var(--primary) 70%, transparent);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  &::placeholder {
+    color: color-mix(in oklab, var(--muted-foreground) 78%, transparent);
+  }
+  &:hover:not(:disabled):not(:focus-visible) {
+    border-color: color-mix(in oklab, var(--primary) 32%, var(--border));
+  }
+  &:focus-visible,
+  &:focus,
+  &[aria-expanded="true"] {
+    outline: none;
+    background-image: none;
+    border-color: color-mix(in oklab, var(--primary) 62%, var(--border));
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--primary) 13%, transparent),
+      0 12px 26px -20px color-mix(in oklab, var(--primary) 80%, transparent);
+  }
+}
+:is(.panel-clinica, .ce-premium, .ce-dialogo, [role="dialog"]) :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--primary);
+}
+/* Ventanas emergentes */
+:is(
+    .ce-dialogo,
+    [role="dialog"][aria-modal="true"],
+    .fixed.inset-0[class*="bg-black/"] > [class*="rounded-"]
+  ):is([class*="bg-card"], [class*="bg-background"], [class*="bg-white"], .ce-dialogo) {
+  background-color: var(--card);
+  background-image:
+    radial-gradient(85% 50% at 100% 0%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 70%),
+    radial-gradient(60% 35% at 0% 100%, color-mix(in oklab, #d946ef 7%, transparent), transparent 70%);
+  border-color: color-mix(in oklab, var(--primary) 16%, transparent);
+  box-shadow:
+    inset 0 3px 0 0 color-mix(in oklab, var(--primary) 85%, #d946ef),
+    0 0 0 1px color-mix(in oklab, var(--primary) 10%, transparent),
+    0 40px 100px -32px rgb(46 16 101 / 0.55);
+  & h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  /* Encabezado (título + botón cerrar) separado del formulario */
+  & > div:first-child:has(h2):has(> button) {
+    flex-wrap: nowrap;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid color-mix(in oklab, var(--primary) 11%, transparent);
+  }
+  & > div:first-child:has(h2) > button:last-child {
+    background: color-mix(in oklab, var(--primary) 7%, transparent);
+    border-radius: 9999px;
+    color: var(--primary);
+  }
+  & > div:first-child:has(h2):has(> button) > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  & > div:first-child:has(h2) h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  & > div:first-child:has(h2) > div > p:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    padding: 0.2rem 0.65rem;
+    background: color-mix(in oklab, var(--primary) 8%, transparent);
+  }
+  & > div:first-child:has(h2) > div > p:first-child::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, var(--primary), #d946ef);
+  }
+  /* Títulos de sección dentro del formulario con una marca de color */
+  & h3:not([class*="text-center"], [class*="flex"], [class*="truncate"]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  & h3:not([class*="text-center"], [class*="flex"], [class*="truncate"])::before {
+    content: "";
+    width: 0.25rem;
+    height: 1rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, var(--primary), #d946ef);
+  }
+  & > div:first-child:has(h2) > button:last-child:hover {
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+}
+.fixed.inset-0[class*="bg-black/"]:has(> :is([role="dialog"], [class*="rounded-"])) {
+  background-color: rgb(24 10 48 / 0.5);
+  backdrop-filter: blur(6px);
+}
+/* En el celular, los campos de las ventanas tienen altura cómoda para el dedo */
+@media (max-width: 639.98px) {
+  :is(.ce-dialogo, [role="dialog"][aria-modal="true"], .fixed.inset-0[class*="bg-black/"] > [class*="rounded-"])
+    :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"]), [data-seleccion]) {
+    min-height: 2.75rem;
+  }
 }

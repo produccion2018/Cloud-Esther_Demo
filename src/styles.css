@@ -1686,6 +1686,14 @@ label {
     ) {
     overflow-wrap: break-word;
     hyphens: manual;
+  }
+  /* Solo las tarjetas que ocupan su columna entera miden su ancho (para acomodar ícono y título).
+     Nunca botones, enlaces ni cajas centradas: con eso se achicarían a cero. */
+  .panel-clinica
+    :is(
+      .grid:not([data-ficha] .grid, .fixed, [class*="place-items"], [class*="justify-items"]) > :is(div, article, section),
+      .grid:not([data-ficha] .grid, .fixed, [class*="place-items"], [class*="justify-items"]) > li > :is(div, article, section)
+    ):is([class*="rounded-"], .card-grad):not([class*="justify-self"], [class*="mx-auto"], [class*="w-fit"], [class*="w-max"], [class*="inline-"]) {
     container-type: inline-size;
   }
   /* Las palabras nunca se parten (nada de «RECORDATO-RIOS»): los títulos en mayúscula

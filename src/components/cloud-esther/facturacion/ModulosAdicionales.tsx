@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Box, Grid2x2 } from "lucide-react";
 
 import {
@@ -19,7 +19,13 @@ import { usePreciosModulos, formatearPrecioModulo } from "@/lib/cloud-esther/pre
 import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { avisarModuloAdicional } from "@/lib/clinica/api";
+import {
+  avisarModuloAdicional,
+  verModulosDeMiClinica,
+  vistaPreviaModulo,
+  type ModulosDeMiClinica,
+  type VistaPreviaModulo,
+} from "@/lib/clinica/api";
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from "@/components/cloud-esther/rrhh/ui";
 
 /* Ubicación: src/components/cloud-esther/facturacion/ModulosAdicionales.tsx
@@ -31,6 +37,48 @@ import { BTN_PRIMARIO, BTN_SECUNDARIO } from "@/components/cloud-esther/rrhh/ui"
    odontograma y en el periodontograma); el resto de los módulos van con botón «Agregar».
    El precio de cada módulo lo fija el Dueño en el panel administrativo (precios-modulos). */
 
+/* ───────────── Precios para MI clínica (clínica real) ─────────────
+   El servidor dice el ciclo de la clínica (mensual/anual) y el precio de cada módulo para ella
+   (anual = mensual × 12 con el descuento anual de su plan). En el demo se usa el precio mensual. */
+let cacheMios: { slug: string; datos: ModulosDeMiClinica } | null = null;
+const oyentesMios = new Set<() => void>();
+function useModulosDeMiClinica(slug: string | null) {
+  const [datos, setDatos] = useState<ModulosDeMiClinica | null>(
+    slug && cacheMios?.slug === slug ? cacheMios.datos : null,
+  );
+  const recargar = useCallback(async () => {
+    if (!slug) return;
+    try {
+      const d = await verModulosDeMiClinica(slug);
+      cacheMios = { slug, datos: d };
+      oyentesMios.forEach((o) => o());
+    } catch {
+      /* sin conexión: se muestran los precios mensuales */
+    }
+  }, [slug]);
+  useEffect(() => {
+    if (!slug) return;
+    const o = () => setDatos(cacheMios?.slug === slug ? cacheMios.datos : null);
+    oyentesMios.add(o);
+    if (!cacheMios || cacheMios.slug !== slug) void recargar();
+    return () => {
+      oyentesMios.delete(o);
+    };
+  }, [slug, recargar]);
+  return { datos, recargar };
+}
+
+/** Texto del precio para esta clínica: «USD 204 / año» o «USD 20 / mes». */
+function usePrecioTexto(slug: string | null) {
+  const precios = usePreciosModulos();
+  const { datos, recargar } = useModulosDeMiClinica(slug);
+  const texto = (id: string) =>
+    datos
+      ? formatearPrecioModulo(datos.precios[id]?.porPeriodo ?? null, datos.ciclo)
+      : formatearPrecioModulo(precios[id] ?? null);
+  return { texto, datos, recargar };
+}
+
 /* ───────────── Interruptor Odontograma 2D ⇄ 3D ───────────── */
 
 /** Start/Pro: pasar del odontograma 2D al 3D (y volver). Al pasar a 3D se va el 2D y queda el 3D
@@ -40,19 +88,26 @@ function OdontogramaSwitch({ onToast }: { onToast: (m: string) => void }) {
   const { plan, planContratado } = useCloudEsther();
   const { usuario } = useSesion();
   const real = useClinicaReal();
-  const precios = usePreciosModulos();
+  const { texto: precioDe, recargar } = usePrecioTexto(real?.slug ?? null);
   storeModulosExtra.usar(); // reacciona al instante al contratar/quitar el 3D
   const [cambiando, setCambiando] = useState(false);
   if (real && real.rol !== "admin") return null;
   if (tres3DPorPlan(plan)) return null; // Plus/Enterprise: el 3D viene por plan
   const es3D = usa3D(plan);
-  const precio = formatearPrecioModulo(precios["odontograma3d"] ?? null);
+  const precio = precioDe("odontograma3d");
 
   const pasarA3D = async () => {
     if (es3D || cambiando) return;
     setCambiando(true);
     try {
-      if (real) await avisarModuloAdicional(real.slug, "odontograma3d", "agregar");
+      if (real) {
+        if (!precio) {
+          onToast("El Odontograma 3D todavía no tiene precio publicado. Escribinos y un asesor te pasa la propuesta.");
+          return;
+        }
+        await avisarModuloAdicional(real.slug, "odontograma3d", "agregar");
+        void recargar();
+      }
       contratarModuloExtra("odontograma3d", "Odontograma 3D", usuario?.nombre ?? "Administración");
       onToast(
         real
@@ -70,7 +125,10 @@ function OdontogramaSwitch({ onToast }: { onToast: (m: string) => void }) {
     if (!es3D || cambiando) return;
     setCambiando(true);
     try {
-      if (real) await avisarModuloAdicional(real.slug, "odontograma3d", "quitar");
+      if (real) {
+        await avisarModuloAdicional(real.slug, "odontograma3d", "quitar");
+        void recargar();
+      }
       quitarModuloExtra("odontograma3d");
       onToast(
         real
@@ -158,9 +216,27 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
   const { usuario } = useSesion();
   // Clínica real: solo el Administrador suma módulos (y el panel recibe el aviso para facturarlo)
   const real = useClinicaReal();
-  const precios = usePreciosModulos();
+  const { texto: precioDe, datos: mios, recargar } = usePrecioTexto(real?.slug ?? null);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [comprar, setComprar] = useState<(typeof MODULES)[number] | null>(null);
+  const [detalle, setDetalle] = useState<VistaPreviaModulo | null>(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
+  // Al abrir la compra en la clínica real: el servidor calcula el precio para su ciclo y lo de hoy
+  useEffect(() => {
+    setDetalle(null);
+    setErrorDetalle(null);
+    if (!comprar || !real) return;
+    let vivo = true;
+    setCargandoDetalle(true);
+    vistaPreviaModulo(real.slug, comprar.id)
+      .then((d) => vivo && setDetalle(d))
+      .catch((e: unknown) => vivo && setErrorDetalle(e instanceof Error ? e.message : "No se pudo calcular el precio."))
+      .finally(() => vivo && setCargandoDetalle(false));
+    return () => {
+      vivo = false;
+    };
+  }, [comprar, real?.slug]);
   const activos = storeModulosExtra.usar().activos;
   if (real && real.rol !== "admin") return null;
   // El odontograma 3D NO va en la grilla: tiene su propio interruptor 2D/3D arriba.
@@ -169,7 +245,9 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
   );
   const haySwitch = !tres3DPorPlan(plan);
   if (!comprables.length && !haySwitch) return null;
-  const precioTexto = (id: string) => formatearPrecioModulo(precios[id] ?? null);
+  const precioTexto = precioDe;
+  const cadaTexto = mios?.ciclo === "anual" ? "por año" : "por mes";
+  const totalModulos = mios?.activos.reduce((t, a) => t + a.importe, 0) ?? 0;
   return (
     <div className="space-y-4">
       <OdontogramaSwitch onToast={onToast} />
@@ -181,10 +259,27 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
               <p className="text-sm font-semibold">Módulos adicionales</p>
               <p className="text-[12px] text-muted-foreground">
                 Sumá a tu plan {PLANS[plan].name} los módulos que necesites, sin cambiar de plan.
-                {planContratado
-                  ? " El cargo se agrega a tu próxima factura de Cloud Esther."
-                  : " En el demo se activan al instante."}
+                {!planContratado
+                  ? " En el demo se activan al instante."
+                  : mios?.cobroAutomatico
+                    ? " Se suman a tu suscripción: hoy se cobra lo proporcional y después se renuevan con tu plan."
+                    : " El cargo se agrega a tu próxima factura de Cloud Esther."}
+                {mios && (
+                  <>
+                    {" "}
+                    Tu plan es <b>{mios.ciclo === "anual" ? "anual" : "mensual"}</b>, así que los precios son {cadaTexto}
+                    {mios.ciclo === "anual" && mios.descuentoAnual > 0
+                      ? ` (con ${Math.round(mios.descuentoAnual * 100)} % de descuento anual)`
+                      : ""}
+                    . Precios sin impuestos.
+                  </>
+                )}
               </p>
+              {mios && mios.activos.length > 0 && (
+                <p className="mt-1 text-[12px] font-semibold text-primary">
+                  Hoy pagás por módulos adicionales: USD {totalModulos.toFixed(totalModulos % 1 ? 2 : 0)} {cadaTexto}
+                </p>
+              )}
             </div>
             <span className="text-[11px] text-muted-foreground">
               {activos.filter((a) => comprables.some((m) => m.id === a.id)).length} activos
@@ -210,6 +305,9 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
                     {!activo && precio && (
                       <span className="mt-0.5 block text-[11px] font-semibold text-primary">{precio}</span>
                     )}
+                    {!activo && !precio && real && (
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">Precio a consultar</span>
+                    )}
                   </span>
                   <button
                     type="button"
@@ -226,6 +324,7 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
                         setGuardando(m.id);
                         try {
                           await avisarModuloAdicional(real.slug, m.id, "quitar");
+                          void recargar();
                         } catch (e) {
                           onToast(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
                           return;
@@ -251,14 +350,19 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
         modulo={comprar}
         precio={comprar ? precioTexto(comprar.id) : undefined}
         planContratado={planContratado}
+        detalle={detalle}
+        cargandoDetalle={cargandoDetalle}
+        errorDetalle={errorDetalle}
         onCerrar={() => setComprar(null)}
         onConfirmar={async () => {
           const m = comprar;
           if (!m) return;
           // Clínica real: primero se avisa al panel de Cloud Esther (para facturarlo)
+          let cobro: "paddle" | "manual" | undefined;
           if (real) {
             try {
-              await avisarModuloAdicional(real.slug, m.id, "agregar");
+              cobro = (await avisarModuloAdicional(real.slug, m.id, "agregar"))?.cobro;
+              void recargar();
             } catch (e) {
               onToast(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
               return;
@@ -268,9 +372,11 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
           contratarModuloExtra(m.id, m.label, usuario?.nombre ?? "Administración");
           setComprar(null);
           onToast(
-            real
-              ? `${m.label} contratado: se suma a tu próxima factura de Cloud Esther`
-              : `${m.label} contratado y activado en tu plan ${PLANS[plan].name}`,
+            !real
+              ? `${m.label} contratado y activado en tu plan ${PLANS[plan].name}`
+              : cobro === "paddle"
+                ? `${m.label} contratado: se sumó a tu suscripción`
+                : `${m.label} contratado: se suma a tu próxima factura de Cloud Esther`,
           );
         }}
       />

@@ -1,5 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Info, Mail, Pencil, Phone, Search, UserRound, Users } from "lucide-react";
+import {
+  Building2,
+  Eye,
+  Info,
+  LifeBuoy,
+  Mail,
+  Pencil,
+  Phone,
+  Search,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -14,13 +25,13 @@ import {
 } from "@/components/admin/bits";
 import { RegistroEmpresasBorradas, ZonaBorrarPrueba } from "@/components/admin/borrar-empresa-prueba";
 import { SolicitudesContratacion } from "@/components/admin/contrataciones";
-import { Campo, INPUT } from "@/components/admin/formularios";
-import { permisos, useRole } from "@/components/admin/role";
+import { Campo, DialogoFormulario, INPUT } from "@/components/admin/formularios";
+import { permisos, puede, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { guardarMontosClinica } from "@/lib/admin/api";
+import { CON_BACKEND, entrarComoSoporte, guardarMontosClinica, ponerCapacidadExtra } from "@/lib/admin/api";
 import { RECORDATORIO_ASESOR } from "@/lib/cloud-esther/cambio-plan";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import {
@@ -242,6 +253,8 @@ function ClinicsPage() {
               plan={limite(seleccionada.plan)}
               importes={permisos.verImportes(role)}
               editarMontos={permisos.editarPlanes(role)}
+              soporte={puede(role, "soporte")}
+              editarCapacidad={role === "owner" || role === "partner"}
               onBorrada={() => setAbierta(null)}
             />
           )}
@@ -256,14 +269,19 @@ function DetalleClinica({
   plan,
   importes,
   editarMontos,
+  soporte,
+  editarCapacidad,
   onBorrada,
 }: {
   clinica: Clinica;
   plan: PlanConfig | undefined;
   importes: boolean;
   editarMontos: boolean;
+  soporte: boolean;
+  editarCapacidad: boolean;
   onBorrada: () => void;
 }) {
+  const ex = c.capacidadExtra ?? { pacientes: 0, usuarios: 0, sucursales: 0, nota: "" };
   const filas: [string, string][] = [
     ["Plan", `${NOMBRE_PLAN[c.plan]} · ${c.ciclo}`],
     ["Odontograma", plan ? plan.odontograma : "—"],
@@ -317,14 +335,15 @@ function DetalleClinica({
             )}
           </div>
         </div>
+        {soporte && <EntrarComoSoporte clinica={c} />}
         {plan && (
           <div className="grid gap-3 rounded-2xl border border-border p-4">
             <p className="text-sm font-bold">Uso del plan</p>
             {(
               [
-                ["Usuarios internos", c.uso.usuariosInternos, plan.usuariosInternos],
-                ["Pacientes activos", c.uso.pacientesActivos, plan.pacientesActivos],
-                ["Sucursales", c.uso.sucursales, plan.sucursales],
+                ["Usuarios internos", c.uso.usuariosInternos, plan.usuariosInternos + ex.usuarios],
+                ["Pacientes activos", c.uso.pacientesActivos, plan.pacientesActivos + ex.pacientes],
+                ["Sucursales", c.uso.sucursales, plan.sucursales + ex.sucursales],
               ] as const
             ).map(([l, u, m]) => (
               <div
@@ -345,6 +364,8 @@ function DetalleClinica({
           </span>
         </div>
         {importes && <MontosClinica clinica={c} plan={plan} editable={editarMontos} />}
+        {importes && <AdicionalesClinica clinica={c} />}
+        <CapacidadExtraClinica clinica={c} editable={editarCapacidad} />
         <dl className="divide-y divide-border/60 rounded-2xl border border-border">
           {filas.map(([k, v]) => (
             <div key={k} className={cn("flex justify-between gap-3 px-4 py-2.5 text-sm")}>
@@ -355,6 +376,246 @@ function DetalleClinica({
         </dl>
         <ZonaBorrarPrueba clinica={c} onBorrada={onBorrada} />
       </div>
+    </div>
+  );
+}
+
+/** CAPACIDAD EXTRA: cuando la clínica pide más pacientes, personas o sucursales que su plan,
+ *  el Dueño o el Socio se la suman acá (con el precio por mes que quieran; se cobra como adicional). */
+function CapacidadExtraClinica({ clinica: c, editable }: { clinica: Clinica; editable: boolean }) {
+  const ex = c.capacidadExtra ?? { pacientes: 0, usuarios: 0, sucursales: 0, nota: "" };
+  const precioActual = (c.adicionales ?? []).find((a) => a.modulo === "capacidad-extra");
+  const [editando, setEditando] = useState(false);
+  const [f, setF] = useState({
+    pacientes: String(ex.pacientes || ""),
+    usuarios: String(ex.usuarios || ""),
+    sucursales: String(ex.sucursales || ""),
+    precio: precioActual ? String(/anual/i.test(precioActual.ciclo) ? "" : precioActual.importe) : "",
+    nota: ex.nota,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const guardar = useAccion(ponerCapacidadExtra, ["clinicas"], "Capacidad extra guardada");
+  const n = (v: string) => Number(v.replace(/\D/g, "") || 0);
+  const tieneExtra = ex.pacientes + ex.usuarios + ex.sucursales > 0;
+  return (
+    <div className="rounded-2xl border border-border p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold">Capacidad extra</p>
+        {editable && !editando && (
+          <Button variant="outline" size="sm" onClick={() => setEditando(true)}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tieneExtra ? "Cambiar" : "Sumar capacidad"}
+          </Button>
+        )}
+      </div>
+      {!editando ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {tieneExtra
+            ? `Tiene +${miles(ex.pacientes)} pacientes, +${ex.usuarios} personas y +${ex.sucursales} sucursales además de su plan${
+                precioActual ? ` · ${precio(precioActual.importe)} ${/anual/i.test(precioActual.ciclo) ? "por año" : "por mes"}` : " · sin cargo"
+              }.${ex.nota ? ` Nota: ${ex.nota}` : ""}`
+            : "Usa solo lo que trae su plan. Si pide más (te llega el aviso «pide más capacidad»), sumásela acá."}
+        </p>
+      ) : (
+        <form
+          className="mt-3 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError(null);
+            const precioMensual = f.precio.trim() ? Number(f.precio.replace(",", ".")) : null;
+            if (precioMensual !== null && (!Number.isFinite(precioMensual) || precioMensual < 0))
+              return setError("El precio no es válido.");
+            guardar.mutate(
+              {
+                id: c.id,
+                pacientes: n(f.pacientes),
+                usuarios: n(f.usuarios),
+                sucursales: n(f.sucursales),
+                precioMensual,
+                nota: f.nota.trim(),
+              },
+              {
+                onSuccess: () => setEditando(false),
+                onError: (e2) => setError(e2 instanceof Error ? e2.message : "No se pudo guardar."),
+              },
+            );
+          }}
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                ["pacientes", "+ Pacientes"],
+                ["usuarios", "+ Personas"],
+                ["sucursales", "+ Sucursales"],
+              ] as const
+            ).map(([k, l]) => (
+              <Campo key={k} label={l}>
+                <input
+                  className={INPUT}
+                  inputMode="numeric"
+                  value={f[k]}
+                  placeholder="0"
+                  onChange={(e) => setF({ ...f, [k]: e.target.value.replace(/\D/g, "") })}
+                />
+              </Campo>
+            ))}
+          </div>
+          <Campo
+            label="Precio por mes (USD, opcional)"
+            ayuda="Se cobra como un adicional (si paga anual: × 12 con su descuento). Vacío = sin cargo."
+          >
+            <input
+              className={INPUT}
+              inputMode="decimal"
+              value={f.precio}
+              placeholder="Ej.: 30"
+              onChange={(e) => setF({ ...f, precio: e.target.value.replace(/[^0-9.,]/g, "") })}
+            />
+          </Campo>
+          <Campo label="Nota (opcional)">
+            <input className={INPUT} value={f.nota} maxLength={500} onChange={(e) => setF({ ...f, nota: e.target.value })} />
+          </Campo>
+          {error && <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditando(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" size="sm" disabled={guardar.isPending}>
+              Guardar
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/** Módulos adicionales que contrató la clínica, con lo que se le cobra por período. */
+function AdicionalesClinica({ clinica: c }: { clinica: Clinica }) {
+  const lista = c.adicionales ?? [];
+  const porMes = lista.reduce((t, a) => t + (/anual/i.test(a.ciclo) ? a.importe / 12 : a.importe), 0);
+  return (
+    <div className="rounded-2xl border border-border p-4">
+      <p className="text-sm font-bold">Módulos adicionales</p>
+      {lista.length === 0 ? (
+        <p className="mt-1 text-xs text-muted-foreground">No contrató módulos adicionales.</p>
+      ) : (
+        <>
+          <ul className="mt-2 divide-y divide-border/60">
+            {lista.map((a) => (
+              <li key={a.modulo} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block font-semibold">{a.nombre}</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Desde {fecha(a.desde)} ·{" "}
+                    {a.cobro === "paddle" ? "se cobra solo (Paddle)" : "facturar a mano"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-right font-semibold">
+                  {precio(a.importe)}
+                  <span className="block text-[11px] font-normal text-muted-foreground">
+                    {/anual/i.test(a.ciclo) ? "por año" : "por mes"}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+            Equivale a <b className="text-foreground">{precio(Math.round(porMes * 100) / 100)}</b> por mes (sin
+            impuestos).
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** «Entrar como» la clínica en modo SOPORTE: ve lo mismo que su Administrador, pero no puede
+ *  cambiar nada, no ve el chat interno y dura 30 minutos. Se abre en otra pestaña y queda en
+ *  la auditoría (quién, cuándo, motivo y qué módulos miró). */
+function EntrarComoSoporte({ clinica: c }: { clinica: Clinica }) {
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const entrar = useAccion(entrarComoSoporte, ["actividad"]);
+  const suspendida = c.estadoPago === "suspendida";
+  const sinDireccion = !c.slug;
+
+  const confirmarEntrada = () => {
+    setError(null);
+    if (motivo.trim().length < 5) return setError("Escribí el motivo (al menos 5 letras).");
+    // La pestaña se abre YA (si no, el navegador la bloquea) y después se le pone la dirección
+    const pestana = window.open("about:blank", "_blank");
+    entrar.mutate(
+      { id: c.id, motivo: motivo.trim() },
+      {
+        onSuccess: (a) => {
+          const url = `/c/${a.slug}#soporte=${a.token}`;
+          if (pestana) {
+            pestana.opener = null;
+            pestana.location.href = url;
+          } else window.location.assign(url);
+          setAbierto(false);
+          setMotivo("");
+        },
+        onError: (e) => {
+          pestana?.close();
+          setError(e instanceof Error ? e.message : "No se pudo abrir el acceso de soporte.");
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
+      <p className="flex items-center gap-2 text-sm font-bold">
+        <LifeBuoy className="h-4 w-4 text-primary" /> Soporte
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Mirá el sistema como lo ve el Administrador de la clínica, para ayudarla. Es{" "}
+        <b>solo lectura</b> (no se puede cambiar nada), no muestra el chat interno y dura 30
+        minutos. Queda registrado en la auditoría con el motivo.
+      </p>
+      <Button
+        className="mt-3"
+        size="sm"
+        disabled={!CON_BACKEND || suspendida || sinDireccion}
+        onClick={() => {
+          setError(null);
+          setAbierto(true);
+        }}
+      >
+        <Eye className="mr-1.5 h-4 w-4" /> Entrar como la clínica (solo lectura)
+      </Button>
+      {(!CON_BACKEND || suspendida || sinDireccion) && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {!CON_BACKEND
+            ? "Disponible con el servidor conectado."
+            : suspendida
+              ? "La clínica está suspendida: no se puede entrar."
+              : "La clínica todavía no tiene dirección web."}
+        </p>
+      )}
+
+      <DialogoFormulario
+        abierto={abierto}
+        titulo={`Entrar como ${c.nombre}`}
+        descripcion="Solo lectura · 30 minutos · se abre en otra pestaña. El motivo queda en la auditoría."
+        onCerrar={() => setAbierto(false)}
+        onGuardar={confirmarEntrada}
+        guardando={entrar.isPending}
+        error={error}
+        textoGuardar="Entrar (solo lectura)"
+      >
+        <Campo label="Motivo" ayuda="Ej.: La clínica dice que no ve los turnos de mañana (ticket #123)">
+          <textarea
+            className={`${INPUT} h-24 resize-none py-2`}
+            value={motivo}
+            maxLength={300}
+            autoFocus
+            onChange={(e) => setMotivo(e.target.value)}
+          />
+        </Campo>
+      </DialogoFormulario>
     </div>
   );
 }

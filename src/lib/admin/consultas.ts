@@ -10,6 +10,19 @@ import * as api from "./api";
 
 export const useEquipo = () => useQuery({ queryKey: ["equipo"], queryFn: api.obtenerEquipo });
 export const usePlanes = () => useQuery({ queryKey: ["planes"], queryFn: api.obtenerPlanes });
+export const useEstadoSistema = (habilitado = true) =>
+  useQuery({
+    queryKey: ["estadoSistema"],
+    queryFn: () => api.obtenerEstadoSistema(),
+    enabled: habilitado,
+    refetchInterval: 60_000,
+  });
+export const useRespaldos = (habilitado = true) =>
+  useQuery({ queryKey: ["respaldos"], queryFn: api.obtenerRespaldos, enabled: habilitado });
+export const useAvisosClinicas = (habilitado = true) =>
+  useQuery({ queryKey: ["avisosClinicas"], queryFn: api.obtenerAvisosClinicas, enabled: habilitado });
+export const useCupones = (habilitado = true) =>
+  useQuery({ queryKey: ["cupones"], queryFn: api.obtenerCupones, enabled: habilitado });
 export const useClinicas = () => useQuery({ queryKey: ["clinicas"], queryFn: api.obtenerClinicas });
 export const useFacturacion = (habilitado = true) =>
   useQuery({ queryKey: ["facturacion"], queryFn: api.obtenerFacturacion, enabled: habilitado, refetchInterval: 60_000 });

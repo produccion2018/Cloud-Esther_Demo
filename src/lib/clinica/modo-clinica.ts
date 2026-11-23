@@ -40,6 +40,9 @@ export function clinicaReal(): { slug: string; sesion: SesionClinica } | null {
 
 export const esClinicaReal = () => clinicaReal() !== null;
 
+/** Modo SOPORTE del panel (solo lectura): no se guarda nada en el servidor. */
+export const esModoSoporte = () => !!clinicaReal()?.sesion.soporte;
+
 export function rolClinica(): RolClinica | null {
   return clinicaReal()?.sesion.usuario.rol ?? null;
 }

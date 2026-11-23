@@ -516,6 +516,10 @@ export const faqs = [
     a: "Podés explorar una demostración de la plataforma con datos de ejemplo antes de contratar.",
   },
   {
+    q: "¿El equipo de Cloud Esther puede ver los datos de mi clínica?",
+    a: "Solo para ayudarte, y siempre en modo solo lectura: alguien de soporte puede ver tu sistema como lo ve el Administrador, sin poder cambiar nada ni ver el chat interno de tu equipo, durante 30 minutos como máximo. Cada acceso queda registrado con el motivo, te avisamos por correo y lo ves en tu sistema.",
+  },
+  {
     q: "¿Necesito instalar algún programa?",
     a: "No. Cloud Esther funciona en la nube y puede utilizarse desde un navegador compatible.",
   },

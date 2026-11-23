@@ -52,8 +52,10 @@ import type {
   Incidente,
   IntentoFallido,
   Liquidacion,
+  EstadoPreferencias,
   Notificacion,
   PagoNomina,
+  PreferenciasNotificaciones,
   PaisOperacion,
   Proveedor,
   SesionPanel,
@@ -65,7 +67,10 @@ import type {
   AdminUser,
   Permiso,
   Clinica,
+  AvisoClinica,
   Contratacion,
+  Cupon,
+  EstadoSistema,
   Facturacion,
   ConsumoIAMensual,
   ConfigDemo,
@@ -73,8 +78,11 @@ import type {
   EventoActividad,
   CambiosPlan,
   CambioTiempoDemo,
+  NuevoAvisoClinica,
+  NuevoCupon,
   PlanConfig,
   PlanId,
+  Respaldo,
   SesionAdmin,
 } from "./tipos";
 
@@ -99,6 +107,18 @@ import type {
    GET    /admin/planes                                              → PlanConfig[]
    PUT    /admin/planes/:id              CambiosPlan                 → PlanConfig  (lo lee la web y la app)
    GET    /planes   (PÚBLICA, sin sesión)                            → PlanConfig[] (la web pública)
+   GET    /modulos/precios  (PÚBLICA)                                → { modulo: USD por mes }
+   PUT    /admin/modulos/precios/:modulo { precio | null }           → 204 (Dueño y Socio)
+   GET    /admin/sistema[?nuevo=1]                                   → EstadoSistema (permiso Soporte)
+   GET    /admin/sistema/respaldos                                   → Respaldo[]
+   POST   /admin/sistema/respaldos       { fecha, donde, nota }      → Respaldo
+   GET    /admin/avisos-clinicas                                     → AvisoClinica[] (Atención/Soporte/Marketing)
+   POST   /admin/avisos-clinicas         NuevoAvisoClinica           → AvisoClinica
+   PATCH  /admin/avisos-clinicas/:id     { activo }                  → AvisoClinica
+   GET    /c/:slug/avisos   (la app de la clínica)                   → { avisos, soporte }
+   GET    /admin/cupones                                             → Cupon[]  (permiso Importes)
+   POST   /admin/cupones                 NuevoCupon                  → Cupon (lo crea también en Paddle)
+   PATCH  /admin/cupones/:id             { activo }                  → Cupon
    GET    /admin/clinicas                                            → Clinica[]
    GET    /admin/contrataciones                                      → Contratacion[]
    PATCH  /admin/contrataciones/:id { notas }                        → Contratacion
@@ -107,6 +127,9 @@ import type {
    POST   /admin/contrataciones/:id/activar { confirmo, referenciaPago? } → Contratacion
    POST   /admin/contrataciones/:id/rechazar { motivo }              → Contratacion
    POST   /admin/clinicas/:id/recordatorio                           → 204 (aviso de pago por correo/WhatsApp)
+   PUT    /admin/clinicas/:id/capacidad { pacientes, usuarios, sucursales, precioMensual, nota } → 204
+   POST   /admin/clinicas/:id/soporte    { motivo }                  → { token, slug, clinica, vence }
+          (permiso Soporte: «entrar como» la clínica SOLO LECTURA, 30 min; queda auditado)
    GET    /admin/demos                                               → CuentaDemo[]
    PATCH  /admin/demos/:id               { estado?, notas?, responsable? } → CuentaDemo
    POST   /demo/eventos                  (lo envía la app del demo: registro, ingreso, módulo,
@@ -118,6 +141,12 @@ import type {
    GET    /demo/config                   (público, lo lee el SaaS)   → ConfigDemo
    GET    /admin/notificaciones                                      → Notificacion[]
    PATCH  /admin/notificaciones          { ids | "todas", cambios }  → 204
+   POST   /admin/notificaciones/eliminar { ids | "todas" }           → { eliminadas } (solo Dueño)
+   GET    /admin/notificaciones/preferencias                         → EstadoPreferencias (las mías)
+   PUT    /admin/notificaciones/preferencias PreferenciasNotificaciones → PreferenciasNotificaciones
+   POST   /admin/notificaciones/push     PushSubscriptionJSON        → { dispositivos }
+   POST   /admin/notificaciones/push/quitar { endpoint }             → 204
+   POST   /admin/notificaciones/probar                               → { correo, push }
    GET    /admin/auditoria/sesiones                                  → SesionPanel[] (con IP)
    GET    /admin/auditoria/intentos                                  → IntentoFallido[]
    GET    /admin/empresa/:coleccion                                  → lista (empleados, asistencias,
@@ -239,6 +268,10 @@ type BaseLocal = {
   configDemo: ConfigDemo;
   actividad: EventoActividad[];
   recuperaciones: { token: string; email: string; vence: number }[];
+  /** Cupones (solo modo sin backend; con backend los guarda el servidor y Paddle) */
+  cupones?: Cupon[];
+  /** Avisos a las clínicas (solo modo sin backend) */
+  avisosClinicas?: AvisoClinica[];
 };
 
 // v2: el portal arranca sin datos de ejemplo; se descartan los guardados de versiones anteriores.
@@ -668,6 +701,183 @@ export async function actualizarNotificaciones(
     ids === "todas" || ids.includes(n.id) ? { ...n, ...cambios } : n,
   );
   guardar();
+}
+
+/* ───────────── Capacidad extra de una clínica (Dueño y Socio) ───────────── */
+
+export async function ponerCapacidadExtra(a: {
+  id: string;
+  pacientes: number;
+  usuarios: number;
+  sucursales: number;
+  precioMensual: number | null;
+  nota: string;
+}): Promise<void> {
+  if (!CON_BACKEND) throw new ErrorApi("La capacidad extra se carga con el servidor conectado.");
+  const { id, ...cuerpo } = a;
+  return http("PUT", `/admin/clinicas/${id}/capacidad`, cuerpo);
+}
+
+/* ───────────── Precios de módulos adicionales (USD por mes) ───────────── */
+
+/** Guarda el precio en el servidor (null = sin precio). Sin servidor no hace nada (queda local). */
+export async function guardarPrecioModuloServidor(modulo: string, precio: number | null): Promise<void> {
+  if (!CON_BACKEND) return;
+  return http("PUT", `/admin/modulos/precios/${encodeURIComponent(modulo)}`, { precio });
+}
+
+/* ───────────── Estado del sistema ───────────── */
+
+export async function obtenerEstadoSistema(nuevo = false): Promise<EstadoSistema | null> {
+  // Sin servidor no hay nada que revisar (los datos de ejemplo viven en este navegador)
+  if (!CON_BACKEND) return null;
+  return http("GET", `/admin/sistema${nuevo ? "?nuevo=1" : ""}`);
+}
+
+export async function obtenerRespaldos(): Promise<Respaldo[]> {
+  if (!CON_BACKEND) return [];
+  return http("GET", "/admin/sistema/respaldos");
+}
+
+export async function anotarRespaldo(r: { fecha: string; donde: string; nota: string }): Promise<Respaldo> {
+  if (!CON_BACKEND) throw new ErrorApi("Los respaldos se anotan con el servidor conectado.");
+  return http("POST", "/admin/sistema/respaldos", r);
+}
+
+/* ───────────── Avisos a las clínicas ───────────── */
+
+export async function obtenerAvisosClinicas(): Promise<AvisoClinica[]> {
+  if (CON_BACKEND) return http("GET", "/admin/avisos-clinicas");
+  return copia((await db()).avisosClinicas ?? []);
+}
+
+export async function crearAvisoClinica(a: NuevoAvisoClinica): Promise<AvisoClinica> {
+  if (CON_BACKEND) return http("POST", "/admin/avisos-clinicas", a);
+  const b = await db();
+  const nuevo: AvisoClinica = {
+    ...a,
+    id: crypto.randomUUID(),
+    desde: a.desde ?? new Date().toISOString(),
+    activo: true,
+    creadoPor: "Equipo",
+    creado: new Date().toISOString(),
+  };
+  b.avisosClinicas = [nuevo, ...(b.avisosClinicas ?? [])];
+  guardar();
+  return copia(nuevo);
+}
+
+export async function cambiarAvisoClinica(a: { id: string; activo: boolean }): Promise<AvisoClinica> {
+  if (CON_BACKEND) return http("PATCH", `/admin/avisos-clinicas/${a.id}`, { activo: a.activo });
+  const b = await db();
+  const x = (b.avisosClinicas ?? []).find((v) => v.id === a.id);
+  if (!x) throw new ErrorApi("Aviso no encontrado.");
+  x.activo = a.activo;
+  guardar();
+  return copia(x);
+}
+
+/* ───────────── Soporte: «entrar como» una clínica (solo lectura) ───────────── */
+
+export type AccesoSoporte = { token: string; slug: string; clinica: string; vence: string };
+
+export async function entrarComoSoporte(a: { id: string; motivo: string }): Promise<AccesoSoporte> {
+  if (!CON_BACKEND)
+    throw new ErrorApi("«Entrar como» necesita el servidor: con datos de ejemplo no hay clínica real para ver.");
+  return http("POST", `/admin/clinicas/${a.id}/soporte`, { motivo: a.motivo });
+}
+
+/* ───────────── Cupones de descuento ───────────── */
+
+export async function obtenerCupones(): Promise<Cupon[]> {
+  if (CON_BACKEND) return http("GET", "/admin/cupones");
+  return copia((await db()).cupones ?? []);
+}
+
+export async function crearCupon(c: NuevoCupon): Promise<Cupon> {
+  if (CON_BACKEND) return http("POST", "/admin/cupones", c);
+  const b = await db();
+  const codigo = c.codigo.trim().toUpperCase();
+  if ((b.cupones ?? []).some((x) => x.codigo === codigo))
+    throw new ErrorApi(`Ya existe un cupón con el código ${codigo}.`);
+  const nuevo: Cupon = {
+    ...c,
+    codigo,
+    id: crypto.randomUUID(),
+    usos: 0,
+    activo: true,
+    creado: new Date().toISOString(),
+  };
+  b.cupones = [nuevo, ...(b.cupones ?? [])];
+  guardar();
+  return copia(nuevo);
+}
+
+export async function cambiarCupon(a: { id: string; activo: boolean }): Promise<Cupon> {
+  if (CON_BACKEND) return http("PATCH", `/admin/cupones/${a.id}`, { activo: a.activo });
+  const b = await db();
+  const c = (b.cupones ?? []).find((x) => x.id === a.id);
+  if (!c) throw new ErrorApi("Cupón no encontrado.");
+  c.activo = a.activo;
+  guardar();
+  return copia(c);
+}
+
+/* Preferencias de notificaciones (cada persona las suyas) */
+const CATEGORIAS_NOTIF = ["Clínicas", "Suscripciones", "Pagos", "Comercial", "Soporte", "Seguridad", "Sistema"] as const;
+export const PREFERENCIAS_INICIALES: PreferenciasNotificaciones = {
+  categorias: Object.fromEntries(
+    CATEGORIAS_NOTIF.map((c) => [c, { panel: true, correo: c === "Seguridad", push: true }]),
+  ) as PreferenciasNotificaciones["categorias"],
+  soloImportantes: false,
+};
+const CLAVE_PREFS_LOCAL = "cloud-esther-admin:preferencias-notificaciones";
+
+export async function obtenerPreferencias(): Promise<EstadoPreferencias> {
+  if (CON_BACKEND) return http("GET", "/admin/notificaciones/preferencias");
+  let preferencias = PREFERENCIAS_INICIALES;
+  try {
+    const raw = window.localStorage.getItem(CLAVE_PREFS_LOCAL);
+    if (raw) preferencias = JSON.parse(raw) as PreferenciasNotificaciones;
+  } catch {
+    /* lo de siempre */
+  }
+  return { preferencias, push: { disponible: false, clavePublica: null, dispositivos: 0 } };
+}
+
+export async function guardarPreferencias(p: PreferenciasNotificaciones): Promise<PreferenciasNotificaciones> {
+  if (CON_BACKEND) return http("PUT", "/admin/notificaciones/preferencias", p);
+  try {
+    window.localStorage.setItem(CLAVE_PREFS_LOCAL, JSON.stringify(p));
+  } catch {
+    /* sin almacenamiento */
+  }
+  return p;
+}
+
+export async function registrarPush(sub: PushSubscriptionJSON): Promise<{ dispositivos: number }> {
+  return http("POST", "/admin/notificaciones/push", sub);
+}
+
+export async function quitarPush(endpoint: string): Promise<void> {
+  if (!CON_BACKEND) return;
+  return http("POST", "/admin/notificaciones/push/quitar", { endpoint });
+}
+
+export async function probarNotificaciones(): Promise<{ correo: boolean; push: number }> {
+  if (!CON_BACKEND) throw new ErrorApi("La prueba necesita el servidor conectado.");
+  return http("POST", "/admin/notificaciones/probar", {});
+}
+
+/** Elimina notificaciones para todo el equipo (solo el Dueño). */
+export async function eliminarNotificaciones(ids: string[] | "todas") {
+  if (CON_BACKEND)
+    return http<{ eliminadas: number }>("POST", "/admin/notificaciones/eliminar", { ids });
+  const b = await db();
+  const antes = b.notificaciones.length;
+  b.notificaciones = b.notificaciones.filter((n) => ids !== "todas" && !ids.includes(n.id));
+  guardar();
+  return { eliminadas: antes - b.notificaciones.length };
 }
 
 /* ───────────── Módulos internos (CRUD genérico) ───────────── */

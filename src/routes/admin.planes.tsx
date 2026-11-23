@@ -1,20 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Box, Building2, Grid2x2, Info, Lock, UserRound, Users } from "lucide-react";
-import { useState } from "react";
+import {
+  Box,
+  Building2,
+  Copy,
+  Grid2x2,
+  Info,
+  Lock,
+  Plus,
+  Power,
+  PowerOff,
+  TicketPercent,
+  UserRound,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { Cargando, Seccion } from "@/components/admin/bits";
+import { Cargando, Seccion, Vacio } from "@/components/admin/bits";
+import {
+  Campo,
+  DialogoFormulario,
+  INPUT,
+  Pildora,
+  Tabla,
+  confirmar,
+} from "@/components/admin/formularios";
 import { RestrictedView } from "@/components/admin/restricted";
 import { canAccess, permisos, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { guardarPlan } from "@/lib/admin/api";
+import { cambiarCupon, crearCupon, guardarPlan, guardarPrecioModuloServidor } from "@/lib/admin/api";
 import { MODULES, PLANS, comprableEn } from "@/lib/cloud-esther/data";
-import { guardarPrecioModulo, usePreciosModulos } from "@/lib/cloud-esther/precios-modulos";
-import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
+import {
+  guardarPrecioModulo,
+  traerDelServidor,
+  usePreciosModulos,
+} from "@/lib/cloud-esther/precios-modulos";
+import { toast } from "sonner";
+import { useAccion, useClinicas, useCupones, usePlanes } from "@/lib/admin/consultas";
 import { limiteTexto, precio, precioAnual } from "@/lib/admin/formato";
-import type { CambiosPlan, PlanConfig } from "@/lib/admin/tipos";
+import type { CambiosPlan, Cupon, NuevoCupon, PlanConfig, PlanId } from "@/lib/admin/tipos";
 
 export const Route = createFileRoute("/admin/planes")({
   head: () => ({
@@ -68,6 +94,8 @@ function PlanesPage() {
       )}
 
       <PreciosModulosAdicionales editable={editable} />
+
+      {permisos.verImportes(role) && <CuponesDescuento planes={planes ?? []} />}
     </AdminShell>
   );
 }
@@ -87,21 +115,35 @@ function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
     Object.fromEntries(vendibles.map((m) => [m.id, precios[m.id] !== undefined ? String(precios[m.id]) : ""])),
   );
 
-  const guardarUno = (id: string) => {
+  // Con servidor: se traen los precios guardados y, al cambiarlos, se llenan las cajas
+  useEffect(() => {
+    void traerDelServidor(true);
+  }, []);
+  useEffect(() => {
+    setF(Object.fromEntries(vendibles.map((m) => [m.id, precios[m.id] !== undefined ? String(precios[m.id]) : ""])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [precios]);
+
+  const guardarUno = async (id: string) => {
     const t = (f[id] ?? "").trim().replace(",", ".");
-    if (t === "") {
-      guardarPrecioModulo(id, null);
-      return;
+    const n = t === "" ? null : Number(t);
+    if (n !== null && (!Number.isFinite(n) || n < 0)) return;
+    if ((precios[id] ?? null) === n) return;
+    try {
+      // Primero en el servidor (así lo ven todas las clínicas); después se ve al instante acá
+      await guardarPrecioModuloServidor(id, n === null ? null : Math.round(n * 100) / 100);
+      guardarPrecioModulo(id, n);
+      toast.success(n === null ? "Precio quitado" : "Precio guardado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar el precio.");
     }
-    const n = Number(t);
-    if (Number.isFinite(n) && n >= 0) guardarPrecioModulo(id, n);
   };
 
   return (
     <div className="mt-6">
       <Seccion
         titulo="Precios de módulos adicionales"
-        descripcion="Precio mensual (USD, sin impuestos) de cada módulo que una clínica puede sumar sin cambiar de plan. Es lo que ve el cliente antes de contratar. Dejar vacío = sin precio (no se muestra monto)."
+        descripcion="Precio MENSUAL (USD, sin impuestos) de cada módulo que una clínica Start, Pro o Plus puede sumar sin cambiar de plan. Es lo que ve la clínica antes de contratar. Si la clínica paga ANUAL, se le cobra mensual × 12 con el mismo descuento anual de su plan. Si paga con Paddle, se suma a su suscripción y Paddle cobra hoy lo proporcional; si no, te llega el aviso para facturarlo. Vacío = sin precio (la clínica no lo puede contratar todavía)."
       >
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {vendibles.map((m) => (
@@ -123,7 +165,7 @@ function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
                   disabled={!editable}
                   placeholder="Sin precio"
                   onChange={(e) => setF((x) => ({ ...x, [m.id]: e.target.value.replace(/[^0-9.,]/g, "") }))}
-                  onBlur={() => editable && guardarUno(m.id)}
+                  onBlur={() => editable && void guardarUno(m.id)}
                   className="h-10 rounded-xl pl-12 pr-16"
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -139,6 +181,328 @@ function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
           </p>
         )}
       </Seccion>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                 CUPONES DE DESCUENTO (permiso «Importes»)                   */
+/* -------------------------------------------------------------------------- */
+
+/** "20 % · primer pago", "USD 50 · 3 cobros"... */
+function resumenCupon(c: Pick<Cupon, "tipo" | "valor" | "duracion" | "meses">) {
+  const cuanto = c.tipo === "porcentaje" ? `${c.valor} %` : `USD ${c.valor}`;
+  const cuando =
+    c.duracion === "primer-pago"
+      ? "primer pago"
+      : c.duracion === "meses"
+        ? `${c.meses} ${c.meses === 1 ? "cobro" : "cobros"}`
+        : "todos los cobros";
+  return `${cuanto} · ${cuando}`;
+}
+
+function estadoCupon(c: Cupon): { texto: string; tono: "ok" | "alerta" | "neutro" } {
+  if (!c.activo) return { texto: "Desactivado", tono: "neutro" };
+  if (c.vence && new Date(c.vence) <= new Date()) return { texto: "Vencido", tono: "alerta" };
+  if (c.limiteUsos !== null && c.usos >= c.limiteUsos) return { texto: "Agotado", tono: "alerta" };
+  return { texto: "Activo", tono: "ok" };
+}
+
+type FormCupon = {
+  codigo: string;
+  descripcion: string;
+  tipo: NuevoCupon["tipo"];
+  valor: string;
+  duracion: NuevoCupon["duracion"];
+  meses: string;
+  planes: PlanId[];
+  limiteUsos: string;
+  vence: string;
+};
+const FORM_VACIO: FormCupon = {
+  codigo: "",
+  descripcion: "",
+  tipo: "porcentaje",
+  valor: "",
+  duracion: "primer-pago",
+  meses: "3",
+  planes: [],
+  limiteUsos: "",
+  vence: "",
+};
+
+function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
+  const { data: cupones, isLoading } = useCupones();
+  const [abierto, setAbierto] = useState(false);
+  const [f, setF] = useState<FormCupon>(FORM_VACIO);
+  const [error, setError] = useState<string | null>(null);
+  const crear = useAccion(crearCupon, ["cupones"], (c) => `Cupón ${c.codigo.toUpperCase()} creado`);
+  const cambiar = useAccion(cambiarCupon, ["cupones"], (a) =>
+    a.activo ? "Cupón activado" : "Cupón desactivado",
+  );
+  const nombrePlan = (id: PlanId) => planes.find((p) => p.id === id)?.nombre ?? id;
+
+  const guardar = () => {
+    setError(null);
+    const codigo = f.codigo.trim().toUpperCase();
+    if (!/^[A-Z0-9_-]{3,30}$/.test(codigo))
+      return setError("El código: de 3 a 30 letras, números, - o _ (sin espacios).");
+    const valor = Number(f.valor.replace(",", "."));
+    if (!Number.isFinite(valor) || valor <= 0) return setError("Poné cuánto descuenta.");
+    if (f.tipo === "porcentaje" && (!Number.isInteger(valor) || valor > 100))
+      return setError("El porcentaje va de 1 a 100 (sin decimales).");
+    const meses = Number(f.meses);
+    if (f.duracion === "meses" && (!Number.isInteger(meses) || meses < 1 || meses > 36))
+      return setError("La cantidad de cobros va de 1 a 36.");
+    const limite = f.limiteUsos.trim() ? Number(f.limiteUsos) : null;
+    if (limite !== null && (!Number.isInteger(limite) || limite < 1))
+      return setError("El máximo de usos tiene que ser un número entero (o vacío = sin límite).");
+    // La fecha vence al terminar ese día
+    const vence = f.vence ? new Date(`${f.vence}T23:59:59`).toISOString() : null;
+    if (vence && new Date(vence) <= new Date()) return setError("La fecha de vencimiento ya pasó.");
+    crear.mutate(
+      {
+        codigo,
+        descripcion: f.descripcion.trim(),
+        tipo: f.tipo,
+        valor: f.tipo === "monto" ? Math.round(valor * 100) / 100 : valor,
+        duracion: f.duracion,
+        meses: f.duracion === "meses" ? meses : null,
+        planes: f.planes,
+        limiteUsos: limite,
+        vence,
+      },
+      {
+        onSuccess: () => {
+          setAbierto(false);
+          setF(FORM_VACIO);
+        },
+        onError: (e) => setError(e instanceof Error ? e.message : "No se pudo crear el cupón."),
+      },
+    );
+  };
+
+  const lista = cupones ?? [];
+  return (
+    <div className="mt-6">
+      <Seccion
+        titulo="Cupones de descuento"
+        descripcion="El cliente escribe el código en la página de pago y el descuento lo aplica el servidor en Paddle. Para cambiar un descuento, desactivá el cupón y creá otro."
+        acciones={
+          <Button
+            onClick={() => {
+              setError(null);
+              setAbierto(true);
+            }}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Nuevo cupón
+          </Button>
+        }
+      >
+        {isLoading ? (
+          <Cargando />
+        ) : lista.length === 0 ? (
+          <Vacio
+            titulo="Todavía no hay cupones"
+            texto="Creá uno (por ejemplo BIENVENIDA20) y compartilo con las clínicas que quieras."
+          />
+        ) : (
+          <Tabla columnas={["Código", "Descuento", "Planes", "Usos", "Vence", "Estado", ""]}>
+            {lista.map((c) => {
+              const e = estadoCupon(c);
+              return (
+                <tr key={c.id} className="border-t border-border/60">
+                  <td className="py-3 pl-5 pr-3">
+                    <span className="inline-flex items-center gap-2">
+                      <TicketPercent className="h-4 w-4 text-primary" />
+                      <span className="font-mono text-sm font-bold tracking-wide">{c.codigo}</span>
+                      <button
+                        type="button"
+                        title="Copiar código"
+                        aria-label="Copiar código"
+                        className="text-muted-foreground transition hover:text-primary"
+                        onClick={() => void navigator.clipboard?.writeText(c.codigo)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                    {c.descripcion && (
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {c.descripcion}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold">{resumenCupon(c)}</td>
+                  <td className="px-3 py-3 text-xs text-muted-foreground">
+                    {c.planes.length ? c.planes.map(nombrePlan).join(", ") : "Todos"}
+                  </td>
+                  <td className="px-3 py-3 text-sm tabular-nums">
+                    {c.usos}
+                    {c.limiteUsos !== null && (
+                      <span className="text-muted-foreground"> / {c.limiteUsos}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-muted-foreground">
+                    {c.vence ? new Date(c.vence).toLocaleDateString("es-AR") : "No vence"}
+                  </td>
+                  <td className="px-3 py-3">
+                    <Pildora tono={e.tono}>{e.texto}</Pildora>
+                  </td>
+                  <td className="py-3 pl-3 pr-5 text-right">
+                    <Button
+                      size="sm"
+                      variant={c.activo ? "outline" : "default"}
+                      disabled={cambiar.isPending}
+                      onClick={() => {
+                        if (
+                          c.activo &&
+                          !confirmar(
+                            `¿Desactivar el cupón ${c.codigo}?\n\nLas clínicas ya no lo van a poder usar.`,
+                          )
+                        )
+                          return;
+                        cambiar.mutate({ id: c.id, activo: !c.activo });
+                      }}
+                    >
+                      {c.activo ? (
+                        <>
+                          <PowerOff className="mr-1.5 h-3.5 w-3.5" /> Desactivar
+                        </>
+                      ) : (
+                        <>
+                          <Power className="mr-1.5 h-3.5 w-3.5" /> Activar
+                        </>
+                      )}
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </Tabla>
+        )}
+      </Seccion>
+
+      <DialogoFormulario
+        abierto={abierto}
+        titulo="Nuevo cupón de descuento"
+        descripcion="Se crea también en Paddle. Una vez creado, el descuento no se puede cambiar (se desactiva y se crea otro)."
+        onCerrar={() => setAbierto(false)}
+        onGuardar={guardar}
+        guardando={crear.isPending}
+        error={error}
+        textoGuardar="Crear cupón"
+      >
+        <Campo label="Código" ayuda="Lo que escribe el cliente. Ej.: BIENVENIDA20">
+          <input
+            className={`${INPUT} font-mono uppercase tracking-wide`}
+            value={f.codigo}
+            maxLength={30}
+            onChange={(e) =>
+              setF({ ...f, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "") })
+            }
+          />
+        </Campo>
+        <Campo
+          label="Descripción (opcional)"
+          ayuda="Solo para el equipo y la factura. Ej.: Promo lanzamiento Chile"
+        >
+          <input
+            className={INPUT}
+            value={f.descripcion}
+            maxLength={200}
+            onChange={(e) => setF({ ...f, descripcion: e.target.value })}
+          />
+        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Tipo">
+            <select
+              className={INPUT}
+              value={f.tipo}
+              onChange={(e) => setF({ ...f, tipo: e.target.value as FormCupon["tipo"] })}
+            >
+              <option value="porcentaje">Porcentaje (%)</option>
+              <option value="monto">Monto fijo (USD)</option>
+            </select>
+          </Campo>
+          <Campo label={f.tipo === "porcentaje" ? "Descuento (%)" : "Descuento (USD)"}>
+            <input
+              className={INPUT}
+              inputMode="decimal"
+              value={f.valor}
+              placeholder={f.tipo === "porcentaje" ? "20" : "50"}
+              onChange={(e) => setF({ ...f, valor: e.target.value.replace(/[^0-9.,]/g, "") })}
+            />
+          </Campo>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="¿En qué cobros?">
+            <select
+              className={INPUT}
+              value={f.duracion}
+              onChange={(e) => setF({ ...f, duracion: e.target.value as FormCupon["duracion"] })}
+            >
+              <option value="primer-pago">Solo el primer pago</option>
+              <option value="meses">Los primeros N cobros</option>
+              <option value="siempre">Todos los cobros</option>
+            </select>
+          </Campo>
+          {f.duracion === "meses" && (
+            <Campo label="Cantidad de cobros">
+              <input
+                className={INPUT}
+                inputMode="numeric"
+                value={f.meses}
+                onChange={(e) => setF({ ...f, meses: e.target.value.replace(/\D/g, "") })}
+              />
+            </Campo>
+          )}
+        </div>
+        <Campo label="Planes donde vale" ayuda="Sin marcar ninguno = vale para todos los planes.">
+          <div className="flex flex-wrap gap-2">
+            {planes.map((p) => {
+              const marcado = f.planes.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={marcado}
+                  onClick={() =>
+                    setF({
+                      ...f,
+                      planes: marcado ? f.planes.filter((x) => x !== p.id) : [...f.planes, p.id],
+                    })
+                  }
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                    marcado
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {p.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Máximo de usos" ayuda="Vacío = sin límite">
+            <input
+              className={INPUT}
+              inputMode="numeric"
+              value={f.limiteUsos}
+              onChange={(e) => setF({ ...f, limiteUsos: e.target.value.replace(/\D/g, "") })}
+            />
+          </Campo>
+          <Campo label="Vence" ayuda="Vacío = no vence">
+            <input
+              type="date"
+              className={INPUT}
+              value={f.vence}
+              onChange={(e) => setF({ ...f, vence: e.target.value })}
+            />
+          </Campo>
+        </div>
+      </DialogoFormulario>
     </div>
   );
 }

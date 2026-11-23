@@ -218,6 +218,18 @@ export type TareaInterna = {
 export type CategoriaNotificacion =
   "Clínicas" | "Suscripciones" | "Pagos" | "Comercial" | "Soporte" | "Seguridad" | "Sistema";
 
+/** Qué le llega a cada persona del panel y por dónde (lo elige ella en Notificaciones › Preferencias). */
+export type CanalesNotificacion = { panel: boolean; correo: boolean; push: boolean };
+export type PreferenciasNotificaciones = {
+  categorias: Record<CategoriaNotificacion, CanalesNotificacion>;
+  /** Por correo y push solo lo de prioridad Alta */
+  soloImportantes: boolean;
+};
+export type EstadoPreferencias = {
+  preferencias: PreferenciasNotificaciones;
+  push: { disponible: boolean; clavePublica: string | null; dispositivos: number };
+};
+
 export type Notificacion = {
   id: string;
   fecha: string;

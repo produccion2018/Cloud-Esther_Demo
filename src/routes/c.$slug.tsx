@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   CLINICA_CON_SERVIDOR,
+  entrarComoSoporteClinica,
   infoPublicaClinica,
   ingresarClinica,
   recuperarClaveClinica,
@@ -34,6 +35,24 @@ function PaginaClinica() {
   const sesion = useSesionClinica(slug);
   const [nombre, setNombre] = useState<string | null>(null);
   const [noExiste, setNoExiste] = useState<string | null>(null);
+  // MODO SOPORTE: el panel abre esta dirección con #soporte=<token> (solo lectura, 30 minutos)
+  const [soporte, setSoporte] = useState<"no" | "entrando" | "error">(() =>
+    typeof window !== "undefined" && window.location.hash.startsWith("#soporte=") ? "entrando" : "no",
+  );
+  const [errorSoporte, setErrorSoporte] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!CLINICA_CON_SERVIDOR) return;
+    const h = window.location.hash;
+    if (!h.startsWith("#soporte=")) return;
+    const token = decodeURIComponent(h.slice("#soporte=".length));
+    // El token se saca de la dirección enseguida (no queda en el historial)
+    window.history.replaceState(null, "", window.location.pathname);
+    entrarComoSoporteClinica(slug, token).catch((e: unknown) => {
+      setErrorSoporte(e instanceof Error ? e.message : "No se pudo abrir el acceso de soporte.");
+      setSoporte("error");
+    });
+  }, [slug]);
 
   useEffect(() => {
     if (!CLINICA_CON_SERVIDOR) return;
@@ -50,6 +69,22 @@ function PaginaClinica() {
     );
   }
   if (sesion) return <Entrando sesion={sesion} />;
+  if (soporte === "error") {
+    return (
+      <MarcoClinica nombre={nombre}>
+        <MensajeError>{errorSoporte}</MensajeError>
+      </MarcoClinica>
+    );
+  }
+  if (soporte === "entrando") {
+    return (
+      <MarcoClinica nombre={nombre}>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Abriendo el modo soporte (solo lectura)…
+        </p>
+      </MarcoClinica>
+    );
+  }
   if (noExiste) {
     return (
       <MarcoClinica nombre={null}>

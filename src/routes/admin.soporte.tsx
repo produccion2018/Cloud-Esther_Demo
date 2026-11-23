@@ -1,5 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, Inbox, LifeBuoy, Plus, Timer } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  CircleSlash,
+  Database,
+  HardDriveDownload,
+  ImageIcon,
+  Inbox,
+  LifeBuoy,
+  Mail,
+  Plus,
+  RefreshCw,
+  Server,
+  Timer,
+  WalletCards,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { Cargando, KpiCard, Seccion, Vacio } from "@/components/admin/bits";
@@ -26,8 +45,22 @@ import { descargarExcel } from "@/lib/admin/excel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { guardarEn, nuevoIdLocal, nuevoNumero } from "@/lib/admin/api";
-import { useAccion, useColeccion, useEquipo } from "@/lib/admin/consultas";
+import {
+  CON_BACKEND,
+  anotarRespaldo,
+  guardarEn,
+  nuevoIdLocal,
+  nuevoNumero,
+  obtenerEstadoSistema,
+} from "@/lib/admin/api";
+import {
+  useAccion,
+  useColeccion,
+  useEquipo,
+  useEstadoSistema,
+  useRespaldos,
+} from "@/lib/admin/consultas";
+import type { ChequeoSistema, EstadoServicio } from "@/lib/admin/tipos";
 import { fecha, haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
 import type {
@@ -77,7 +110,7 @@ const ESTADO_TONO: Record<EstadoTicket, "primario" | "alerta" | "ok" | "neutro">
 const SELECT =
   "h-8 rounded-lg border border-input bg-card px-2 text-xs font-semibold outline-none focus:border-primary/50 disabled:opacity-60";
 
-type Vista = "tickets" | "ficha" | "guias" | "respuestas" | "incidentes" | "tareas";
+type Vista = "tickets" | "ficha" | "guias" | "respuestas" | "incidentes" | "tareas" | "sistema";
 
 function SupportPage() {
   const { data: tickets } = useColeccion("ticketsSoporte");
@@ -87,6 +120,8 @@ function SupportPage() {
   const { role } = useRole();
   const editableSoporte = permisos.gestionarTickets(role);
   const [ticketDesdeFicha, setTicketDesdeFicha] = useState<string | null>(null);
+  const { data: sistema } = useEstadoSistema();
+  const problemas = sistema?.chequeos.filter((c) => c.estado === "error").length ?? 0;
   return (
     <AdminShell
       title="Soporte técnico"
@@ -114,6 +149,11 @@ function SupportPage() {
             label: "Tareas internas",
             cantidad: (tareas ?? []).filter((t) => t.estado !== "Hecha").length,
           },
+          {
+            id: "sistema",
+            label: problemas ? "Estado del sistema ⚠" : "Estado del sistema",
+            ...(problemas ? { cantidad: problemas } : {}),
+          },
         ]}
       />
       {vista === "tickets" ? (
@@ -129,6 +169,8 @@ function SupportPage() {
         <Guias editable={editableSoporte} />
       ) : vista === "respuestas" ? (
         <RespuestasListas area="Soporte" editable={editableSoporte} />
+      ) : vista === "sistema" ? (
+        <EstadoDelSistema />
       ) : vista === "incidentes" ? (
         <Incidentes />
       ) : (
@@ -843,6 +885,238 @@ function Tareas() {
           ))}
         </ul>
       )}
+    </Seccion>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*   ESTADO DEL SISTEMA: servidor, base, Paddle, Resend, Cloudinary y respaldo   */
+/* -------------------------------------------------------------------------- */
+
+const ICONO_SERVICIO: Record<ChequeoSistema["id"], LucideIcon> = {
+  backend: Server,
+  base: Database,
+  paddle: WalletCards,
+  correo: Mail,
+  imagenes: ImageIcon,
+  respaldo: HardDriveDownload,
+};
+const ESTILO_ESTADO: Record<EstadoServicio, { texto: string; icono: LucideIcon; clase: string }> = {
+  ok: { texto: "Funciona", icono: CheckCircle2, clase: "text-success bg-success/10 border-success/25" },
+  aviso: { texto: "Revisar", icono: AlertTriangle, clase: "text-warning-foreground bg-warning/15 border-warning/30" },
+  error: { texto: "Con problemas", icono: XCircle, clase: "text-destructive bg-destructive/10 border-destructive/30" },
+  apagado: { texto: "Apagado", icono: CircleSlash, clase: "text-muted-foreground bg-muted border-border" },
+};
+const NOMBRE_DATO: Record<string, string> = {
+  entorno: "Entorno",
+  node: "Node",
+  version: "Versión publicada",
+  memoriaMB: "Memoria (MB)",
+  tamañoMB: "Tamaño (MB)",
+  migraciones: "Migraciones",
+  ultimoAviso: "Último aviso de Paddle",
+  avisosConError7dias: "Avisos con error (7 días)",
+  remitente: "Remitente",
+  modoPrueba: "Modo prueba",
+  cuenta: "Cuenta",
+  ultimoAnotado: "Último anotado",
+  donde: "Dónde",
+  archivoContinuo: "Archivo continuo",
+};
+const esFecha = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v);
+
+function EstadoDelSistema() {
+  const { data: estado, isLoading, isFetching } = useEstadoSistema();
+  const qc = useQueryClient();
+  const [revisando, setRevisando] = useState(false);
+  const [anotar, setAnotar] = useState(false);
+
+  if (!CON_BACKEND) {
+    return (
+      <Seccion titulo="Estado del sistema">
+        <Vacio
+          titulo="Disponible con el servidor conectado"
+          texto="Con datos de ejemplo no hay servidor, base de datos ni servicios externos que revisar."
+        />
+      </Seccion>
+    );
+  }
+  const revisarAhora = async () => {
+    setRevisando(true);
+    try {
+      qc.setQueryData(["estadoSistema"], await obtenerEstadoSistema(true));
+    } finally {
+      setRevisando(false);
+    }
+  };
+  const general = estado ? ESTILO_ESTADO[estado.general] : null;
+  return (
+    <>
+      <Seccion
+        titulo="Estado del sistema"
+        descripcion="Se revisa en vivo cada minuto. Nunca se muestran llaves ni contraseñas."
+        acciones={
+          <Button variant="outline" size="sm" disabled={revisando || isFetching} onClick={() => void revisarAhora()}>
+            <RefreshCw className={cn("mr-1.5 h-4 w-4", (revisando || isFetching) && "animate-spin")} /> Revisar ahora
+          </Button>
+        }
+      >
+        {isLoading || !estado ? (
+          <Cargando />
+        ) : (
+          <>
+            {general && (
+              <div className={cn("mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3", general.clase)}>
+                <Activity className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-bold">
+                  {estado.general === "ok"
+                    ? "Todo funciona bien."
+                    : estado.general === "error"
+                      ? "Hay servicios con problemas: revisalos abajo."
+                      : "Funciona, pero hay cosas para revisar."}
+                </p>
+                <span className="ml-auto text-xs opacity-80">Revisado {haceCuanto(estado.revisado)}</span>
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {estado.chequeos.map((c) => {
+                const e = ESTILO_ESTADO[c.estado];
+                const Icono = ICONO_SERVICIO[c.id];
+                const datos = Object.entries(c.datos).filter(([, v]) => v !== null && v !== "");
+                return (
+                  <div key={c.id} className="rounded-2xl border border-border bg-card p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                        <Icono className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold">{c.nombre}</p>
+                        <span
+                          className={cn(
+                            "mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                            e.clase,
+                          )}
+                        >
+                          <e.icono className="h-3 w-3" /> {e.texto}
+                          {c.ms !== null && <span className="opacity-70">· {c.ms} ms</span>}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-foreground/85">{c.detalle}</p>
+                    {datos.length > 0 && (
+                      <dl className="mt-3 space-y-1 border-t border-border/60 pt-2 text-[11px]">
+                        {datos.map(([k, v]) => (
+                          <div key={k} className="flex justify-between gap-3">
+                            <dt className="text-muted-foreground">{NOMBRE_DATO[k] ?? k}</dt>
+                            <dd className="truncate text-right font-semibold" title={String(v)}>
+                              {esFecha(v) ? `${fecha(String(v))} (${haceCuanto(String(v))})` : String(v)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                    {c.id === "respaldo" && (
+                      <Button size="sm" variant="outline" className="mt-3" onClick={() => setAnotar(true)}>
+                        <Plus className="mr-1.5 h-3.5 w-3.5" /> Anotar respaldo
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </Seccion>
+      <Respaldos abierto={anotar} onAbrir={setAnotar} />
+    </>
+  );
+}
+
+function Respaldos({ abierto, onAbrir }: { abierto: boolean; onAbrir: (v: boolean) => void }) {
+  const { data: respaldos, isLoading } = useRespaldos();
+  const ahoraLocal = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  };
+  const [f, setF] = useState({ fecha: ahoraLocal(), donde: "", nota: "" });
+  const [error, setError] = useState<string | null>(null);
+  const anotarR = useAccion(anotarRespaldo, ["respaldos", "estadoSistema"], "Respaldo anotado");
+  const guardar = () => {
+    setError(null);
+    if (!f.fecha) return setError("Poné la fecha del respaldo.");
+    if (f.donde.trim().length < 2) return setError("Escribí dónde quedó el respaldo.");
+    anotarR.mutate(
+      { fecha: new Date(f.fecha).toISOString(), donde: f.donde.trim(), nota: f.nota.trim() },
+      {
+        onSuccess: () => {
+          onAbrir(false);
+          setF({ fecha: ahoraLocal(), donde: "", nota: "" });
+        },
+        onError: (e) => setError(e instanceof Error ? e.message : "No se pudo anotar."),
+      },
+    );
+  };
+  const lista = respaldos ?? [];
+  return (
+    <Seccion
+      titulo="Respaldos de la base"
+      descripcion="Anotá cada respaldo que hagas o verifiques (por ejemplo, el diario del proveedor de la base). Si el último tiene más de 7 días, el estado avisa."
+      acciones={
+        <Button size="sm" onClick={() => onAbrir(true)}>
+          <Plus className="mr-1.5 h-4 w-4" /> Anotar respaldo
+        </Button>
+      }
+    >
+      {isLoading ? (
+        <Cargando />
+      ) : lista.length === 0 ? (
+        <Vacio titulo="Todavía no hay respaldos anotados" />
+      ) : (
+        <Tabla columnas={["Fecha", "Dónde quedó", "Nota", "Anotó"]} minimo={620}>
+          {lista.map((b) => (
+            <tr key={b.id} className="border-t border-border/60">
+              <td className="py-2.5 pl-5 pr-3 text-sm font-semibold">{fecha(b.fecha)}</td>
+              <td className="px-3 py-2.5 text-sm">{b.donde}</td>
+              <td className="px-3 py-2.5 text-xs text-muted-foreground">{b.nota || "—"}</td>
+              <td className="py-2.5 pl-3 pr-5 text-xs text-muted-foreground">
+                {b.quien} · {haceCuanto(b.anotado)}
+              </td>
+            </tr>
+          ))}
+        </Tabla>
+      )}
+      <DialogoFormulario
+        abierto={abierto}
+        titulo="Anotar un respaldo"
+        descripcion="Queda en la actividad del panel con tu nombre."
+        onCerrar={() => onAbrir(false)}
+        onGuardar={guardar}
+        guardando={anotarR.isPending}
+        error={error}
+        textoGuardar="Anotar"
+      >
+        <Campo label="Fecha y hora del respaldo">
+          <input
+            type="datetime-local"
+            className={INPUT}
+            value={f.fecha}
+            max={ahoraLocal()}
+            onChange={(e) => setF({ ...f, fecha: e.target.value })}
+          />
+        </Campo>
+        <Campo label="Dónde quedó" ayuda="Ej.: Render (backup automático diario) · Google Drive · disco externo">
+          <input
+            className={INPUT}
+            value={f.donde}
+            maxLength={200}
+            onChange={(e) => setF({ ...f, donde: e.target.value })}
+          />
+        </Campo>
+        <Campo label="Nota (opcional)">
+          <Textarea value={f.nota} maxLength={500} rows={2} onChange={(e) => setF({ ...f, nota: e.target.value })} />
+        </Campo>
+      </DialogoFormulario>
     </Seccion>
   );
 }

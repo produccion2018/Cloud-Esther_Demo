@@ -30,8 +30,22 @@ export type UsuarioClinica = {
   /** Módulos que el Administrador le dejó ver (null o ausente = todo lo de su rol) */
   modulos?: string[] | null;
 };
-export type InfoClinica = { nombre: string; slug: string; plan: string | null; modulos: string[] };
-export type SesionClinica = { token: string; usuario: UsuarioClinica; clinica: InfoClinica };
+export type InfoClinica = {
+  nombre: string;
+  slug: string;
+  plan: string | null;
+  modulos: string[];
+  /** Topes de la clínica: los de su plan + la capacidad extra que le dio Cloud Esther (null = sin límite) */
+  limites?: { pacientes: number | null; usuarios: number | null; sucursales: number | null };
+};
+export type SesionClinica = {
+  token: string;
+  usuario: UsuarioClinica;
+  clinica: InfoClinica;
+  /** MODO SOPORTE (lo abre el equipo de Cloud Esther desde el panel): solo lectura.
+   *  nombre = quién del equipo entró · vence = hasta cuándo dura (ISO). */
+  soporte?: { nombre: string; vence: string } | null;
+};
 
 export type PersonaEquipo = {
   id: string;
@@ -159,21 +173,39 @@ function sesionProlija<T extends { usuario: UsuarioClinica }>(s: T): T {
 
 /* ───────────── Pedidos al servidor ───────────── */
 
+let comprimeEnvios = true;
 async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
   // Demo: la administración de la clínica con un equipo de ejemplo (sin servidor)
   if (slug === SLUG_DEMO) return pedidoDemo<T>(metodo, ruta, cuerpo);
   if (!API_URL) throw new ErrorClinica("El acceso de las clínicas no está disponible en la vista previa.", 503);
   const token = leerSesionClinica(slug)?.token;
-  let r: Response;
-  try {
-    r = await fetch(`${API_URL}/c/${encodeURIComponent(slug)}${ruta}`, {
+  const texto = cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined;
+  // Los envíos grandes (ej. 15.000 pacientes) viajan comprimidos: ~8 veces menos datos
+  const comprimir = !!texto && texto.length > 32_768 && comprimeEnvios && typeof CompressionStream !== "undefined";
+  const pedir = async (gz: boolean) =>
+    fetch(`${API_URL}/c/${encodeURIComponent(slug)}${ruta}`, {
       method: metodo,
       headers: {
         "Content-Type": "application/json",
+        ...(gz ? { "Content-Encoding": "gzip" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(cuerpo !== undefined ? { body: JSON.stringify(cuerpo) } : {}),
+      ...(texto !== undefined
+        ? {
+            body: gz
+              ? await new Response(new Blob([texto]).stream().pipeThrough(new CompressionStream("gzip"))).blob()
+              : texto,
+          }
+        : {}),
     });
+  let r: Response;
+  try {
+    r = await pedir(comprimir);
+    // Un servidor viejo que no acepta comprimido: se manda normal (y no se vuelve a intentar)
+    if (comprimir && r.status === 415) {
+      comprimeEnvios = false;
+      r = await pedir(false);
+    }
   } catch {
     throw new ErrorClinica("No pudimos conectarnos. Revisá tu internet y probá de nuevo.", 0);
   }
@@ -194,6 +226,32 @@ export const infoPublicaClinica = (slug: string) => http<{ nombre: string }>(slu
 
 export async function ingresarClinica(slug: string, email: string, claveIngreso: string): Promise<SesionClinica> {
   const s = sesionProlija(await http<SesionClinica>(slug, "POST", "/ingresar", { email, clave: claveIngreso }));
+  guardarSesionClinica(s);
+  return s;
+}
+
+/** Modo SOPORTE: el panel abre /c/<dirección>#soporte=<token> en otra pestaña.
+ *  Se valida el token con el servidor y queda como la sesión de esta pestaña (solo lectura). */
+export async function entrarComoSoporteClinica(slug: string, token: string): Promise<SesionClinica> {
+  if (!API_URL) throw new ErrorClinica("El acceso de las clínicas no está disponible en la vista previa.", 503);
+  if (!/^[A-Za-z0-9_-]{20,200}$/.test(token)) throw new ErrorClinica("El acceso de soporte no es válido.", 401);
+  let r: Response;
+  try {
+    r = await fetch(`${API_URL}/c/${encodeURIComponent(slug)}/sesion`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ErrorClinica("No pudimos conectarnos. Revisá tu internet y probá de nuevo.", 0);
+  }
+  if (!r.ok) {
+    const texto = await r.text().catch(() => "");
+    throw new ErrorClinica(
+      r.status === 401 ? "El acceso de soporte venció o ya se usó. Volvé a abrirlo desde el panel." : texto || `Error ${r.status}`,
+      r.status,
+    );
+  }
+  const datos = (await r.json()) as Omit<SesionClinica, "token">;
+  const s = sesionProlija({ ...datos, token });
   guardarSesionClinica(s);
   return s;
 }
@@ -301,5 +359,52 @@ export function problemaClaveClinica(c: string): string | null {
 }
 
 /* ───────────── Módulos adicionales: aviso al panel de Cloud Esther para facturarlo ───────────── */
+/* ───────────── Capacidad del plan (pacientes, equipo, sucursales) ───────────── */
+
+export type CapacidadClinica = {
+  limites: { pacientes: number | null; usuarios: number | null; sucursales: number | null };
+  extra: { pacientes: number; usuarios: number; sucursales: number };
+  uso: { pacientes: number; archivados: number; usuarios: number };
+};
+export type TipoCapacidad = "pacientes" | "usuarios" | "sucursales";
+export const verCapacidad = (slug: string) => http<CapacidadClinica>(slug, "GET", "/capacidad");
+export const pedirCapacidad = (slug: string, d: { tipo: TipoCapacidad; cantidad: number | null; mensaje: string }) =>
+  http<void>(slug, "POST", "/capacidad/pedido", d);
+
+/* ───────────── Módulos adicionales (precio para MI clínica y cobro) ───────────── */
+
+export type CicloClinica = "mensual" | "anual";
+export type ModulosDeMiClinica = {
+  ciclo: CicloClinica;
+  /** 0,15 = 15 % (el mismo descuento anual de su plan) */
+  descuentoAnual: number;
+  /** true = paga con Paddle: el módulo se suma a su suscripción y se cobra solo */
+  cobroAutomatico: boolean;
+  proximoCobro: string | null;
+  /** { módulo: { mensual, porPeriodo } } (porPeriodo = por mes o por año, según su ciclo) */
+  precios: Record<string, { mensual: number; porPeriodo: number }>;
+  activos: { modulo: string; nombre: string; importe: number; ciclo: CicloClinica; desde: string; cobro: "paddle" | "manual" }[];
+};
+export type VistaPreviaModulo = {
+  modulo: string;
+  nombre: string;
+  ciclo: CicloClinica;
+  mensual: number;
+  porPeriodo: number;
+  descuentoAnual: number;
+  cobroAutomatico: boolean;
+  proximoCobro: string | null;
+  /** Lo que Paddle cobra HOY (proporcional, con impuestos). null = se factura después */
+  hoy: { subtotal: number; impuesto: number; total: number } | null;
+};
+
+export const verModulosDeMiClinica = (slug: string) => http<ModulosDeMiClinica>(slug, "GET", "/modulos-adicionales");
+export const vistaPreviaModulo = (slug: string, modulo: string) =>
+  http<VistaPreviaModulo>(slug, "POST", "/modulos-adicionales/vista-previa", { modulo });
 export const avisarModuloAdicional = (slug: string, modulo: string, accion: "agregar" | "quitar") =>
-  http<void>(slug, "POST", "/modulos-adicionales", { modulo, accion });
+  http<{ cobro: "paddle" | "manual"; importe: number; ciclo: CicloClinica } | undefined>(
+    slug,
+    "POST",
+    "/modulos-adicionales",
+    { modulo, accion },
+  );

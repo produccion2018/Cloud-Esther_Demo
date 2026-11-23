@@ -111,7 +111,83 @@ export type Clinica = {
   slug?: string;
   /** Solicitud de contratación con la que se activó (si vino de la web). */
   contratacionId?: string | null;
+  /** Capacidad extra que le dio el Dueño (se suma a los topes del plan) */
+  capacidadExtra?: { pacientes: number; usuarios: number; sucursales: number; nota: string };
+  /** Módulos adicionales activos: importe por período (mes o año, según su ciclo), sin impuestos.
+   *  cobro: «paddle» = se cobra solo en su suscripción · «manual» = lo factura el equipo. */
+  adicionales?: {
+    modulo: string;
+    nombre: string;
+    importe: number;
+    ciclo: string;
+    cobro: "paddle" | "manual";
+    desde: string;
+  }[];
 };
+
+/* ───────────── Estado del sistema (Soporte) ───────────── */
+
+export type EstadoServicio = "ok" | "aviso" | "error" | "apagado";
+export type ChequeoSistema = {
+  id: "backend" | "base" | "paddle" | "correo" | "imagenes" | "respaldo";
+  nombre: string;
+  estado: EstadoServicio;
+  detalle: string;
+  datos: Record<string, string | number | null>;
+  ms: number | null;
+};
+export type EstadoSistema = { revisado: string; general: EstadoServicio; chequeos: ChequeoSistema[] };
+export type Respaldo = { id: string; fecha: string; donde: string; nota: string; quien: string; anotado: string };
+
+/* ───────────── Avisos a las clínicas ─────────────
+   Novedades, mantenimientos y avisos importantes que se ven arriba en la app de las clínicas
+   mientras estén vigentes (todas o solo las de ciertos planes). */
+
+export type TipoAvisoClinica = "novedad" | "mantenimiento" | "importante";
+export type AvisoClinica = {
+  id: string;
+  tipo: TipoAvisoClinica;
+  titulo: string;
+  mensaje: string;
+  /** Vacío = todas las clínicas */
+  planes: PlanId[];
+  desde: string;
+  hasta: string | null;
+  activo: boolean;
+  creadoPor: string;
+  creado: string;
+};
+export type NuevoAvisoClinica = Pick<AvisoClinica, "tipo" | "titulo" | "mensaje" | "planes"> & {
+  desde: string | null;
+  hasta: string | null;
+};
+
+/* ───────────── Cupones de descuento (para contratar en línea con Paddle) ─────────────
+   Los crea quien tiene «Importes». El cliente escribe el código en la página de pago y el
+   servidor lo valida y lo aplica (en la ventana de Paddle no se puede escribir). */
+
+export type Cupon = {
+  id: string;
+  /** Lo que escribe el cliente (MAYÚSCULAS) */
+  codigo: string;
+  descripcion: string;
+  tipo: "porcentaje" | "monto";
+  /** porcentaje: 1 a 100 · monto: USD */
+  valor: number;
+  duracion: "primer-pago" | "meses" | "siempre";
+  /** Solo con duración «meses» */
+  meses: number | null;
+  /** Vacío = todos los planes */
+  planes: PlanId[];
+  limiteUsos: number | null;
+  usos: number;
+  /** ISO; null = no vence */
+  vence: string | null;
+  activo: boolean;
+  creado: string;
+};
+
+export type NuevoCupon = Omit<Cupon, "id" | "usos" | "activo" | "creado">;
 
 /* ───────────── Contrataciones (formulario «Contratar servicio») ─────────────
    Es DISTINTO del demo: la clínica pide contratar. Llega al panel; la ven Dueño, Socio y

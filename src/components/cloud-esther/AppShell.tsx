@@ -26,11 +26,16 @@ import { ContadorDemo, ControlSesionDemo } from "@/components/cloud-esther/Contr
 import { DEMO_EN_SERVIDOR } from "@/lib/cloud-esther/demo-servidor";
 import { registrarActividadAuditoria } from "@/lib/cloud-esther/auditoria-store";
 // Clínica real (Etapa 8b): mismas pantallas, sus datos en el servidor, menú según el rol
-import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
+import {
+  salirDeClinica,
+  salirYVolver,
+  slugDeSesionGuardada,
+  useClinicaReal,
+} from "@/lib/clinica/modo-clinica";
 import { useSincronizarEquipo } from "@/lib/cloud-esther/profesionales";
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
-import { avisarModuloAdicional, refrescarSesionClinica } from "@/lib/clinica/api";
+import { avisarModuloAdicional, pedirAClinica, refrescarSesionClinica } from "@/lib/clinica/api";
 import { useAvisosChat } from "@/lib/clinica/chat";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
@@ -1043,6 +1048,172 @@ function AvisoClinica({ titulo, texto, icono }: { titulo: string; texto: string;
   );
 }
 
+/* ───────────── Avisos de Cloud Esther para la clínica ─────────────
+   Novedades, mantenimientos y avisos importantes que publica el equipo de Cloud Esther, y
+   (solo para el Administrador) los accesos de soporte de los últimos 30 días. Cada persona
+   los cierra y no le vuelven a aparecer en este navegador. */
+type AvisoParaClinica = {
+  id: string;
+  tipo: "novedad" | "mantenimiento" | "importante";
+  titulo: string;
+  mensaje: string;
+  desde: string;
+  hasta: string | null;
+};
+type AccesoSoporteClinica = { id: string; fecha: string; quien: string; motivo: string; hasta: string };
+
+const ESTILO_AVISO: Record<AvisoParaClinica["tipo"], { icono: string; clase: string }> = {
+  novedad: { icono: "✨", clase: "border-primary/25 bg-primary/[0.07] text-foreground" },
+  mantenimiento: {
+    icono: "🛠️",
+    clase: "border-amber-500/35 bg-amber-500/10 text-amber-950 dark:text-amber-100",
+  },
+  importante: {
+    icono: "⚠️",
+    clase: "border-destructive/35 bg-destructive/10 text-foreground",
+  },
+};
+const fechaCorta = (iso: string) =>
+  new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function useVistos(slug: string) {
+  const clave = `cloud-esther-avisos-vistos:${slug}`;
+  const [vistos, setVistos] = useState<string[]>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem(clave) ?? "[]") as string[];
+    } catch {
+      return [];
+    }
+  });
+  const marcar = (ids: string[]) => {
+    const nuevos = [...new Set([...vistos, ...ids])].slice(-200);
+    setVistos(nuevos);
+    try {
+      window.localStorage.setItem(clave, JSON.stringify(nuevos));
+    } catch {
+      /* sin almacenamiento: se cierran solo hasta recargar */
+    }
+  };
+  return { vistos, marcar };
+}
+
+function AvisosCloudEsther({ slug }: { slug: string }) {
+  const [datos, setDatos] = useState<{ avisos: AvisoParaClinica[]; soporte: AccesoSoporteClinica[] }>({
+    avisos: [],
+    soporte: [],
+  });
+  const { vistos, marcar } = useVistos(slug);
+  useEffect(() => {
+    let vivo = true;
+    const traer = () =>
+      void pedirAClinica<{ avisos: AvisoParaClinica[]; soporte: AccesoSoporteClinica[] }>(slug, "GET", "/avisos")
+        .then((d) => vivo && setDatos(d))
+        .catch(() => undefined);
+    traer();
+    const id = window.setInterval(() => document.visibilityState === "visible" && traer(), 5 * 60_000);
+    return () => {
+      vivo = false;
+      window.clearInterval(id);
+    };
+  }, [slug]);
+  const avisos = datos.avisos.filter((a) => !vistos.includes(a.id));
+  const soporte = datos.soporte.filter((x) => !vistos.includes(x.id));
+  if (avisos.length === 0 && soporte.length === 0) return null;
+  return (
+    <div className="relative z-20 space-y-2 px-4 pt-3 lg:px-8">
+      {soporte.length > 0 && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+        >
+          <span aria-hidden className="text-lg leading-none">🛟</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">
+              El soporte de Cloud Esther entró a ver tu clínica en modo solo lectura
+            </p>
+            <ul className="mt-1 space-y-0.5 text-xs">
+              {soporte.slice(0, 3).map((x) => (
+                <li key={x.id}>
+                  <b>{x.quien}</b> · {fechaCorta(x.fecha)} · Motivo: {x.motivo}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-[11px] opacity-80">
+              No se puede cambiar nada ni ver el chat interno. Si no pediste ayuda, escribinos.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar aviso"
+            className="rounded-full px-2 text-base leading-none opacity-70 transition hover:opacity-100"
+            onClick={() => marcar(soporte.map((x) => x.id))}
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {avisos.map((a) => {
+        const e = ESTILO_AVISO[a.tipo];
+        return (
+          <div
+            key={a.id}
+            role={a.tipo === "importante" ? "alert" : "status"}
+            className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${e.clase}`}
+          >
+            <span aria-hidden className="text-lg leading-none">{e.icono}</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold">{a.titulo}</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs opacity-90">{a.mensaje}</p>
+              {a.hasta && a.tipo === "mantenimiento" && (
+                <p className="mt-1 text-[11px] opacity-75">
+                  Desde {fechaCorta(a.desde)} hasta {fechaCorta(a.hasta)}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label="Cerrar aviso"
+              className="rounded-full px-2 text-base leading-none opacity-70 transition hover:opacity-100"
+              onClick={() => marcar([a.id])}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Franja fija del MODO SOPORTE (lo abre el equipo de Cloud Esther desde su panel): avisa que
+ *  es solo lectura, quién entró y cuándo vence. «Salir» cierra el acceso en el servidor. */
+function BannerSoporte({ clinica, nombre, vence }: { clinica: string; nombre: string; vence: string }) {
+  const [saliendo, setSaliendo] = useState(false);
+  const hora = new Date(vence).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <div
+      role="status"
+      className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-amber-500/40 bg-amber-400 px-4 py-2 text-center text-xs font-semibold text-amber-950 shadow-sm sm:text-sm"
+    >
+      <span>
+        🛟 <b>Modo soporte · solo lectura</b> — Estás viendo <b>{clinica}</b> como {nombre}. No se
+        guarda ningún cambio. Vence a las {hora}.
+      </span>
+      <button
+        type="button"
+        disabled={saliendo}
+        onClick={() => {
+          setSaliendo(true);
+          void salirDeClinica().finally(() => window.location.assign("/admin/clinicas"));
+        }}
+        className="rounded-full bg-amber-950 px-3 py-1 text-[11px] font-bold text-amber-50 transition hover:bg-amber-900 disabled:opacity-60"
+      >
+        {saliendo ? "Saliendo…" : "Salir del modo soporte"}
+      </button>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { clinic, plan, planListo } = useCloudEsther();
   const settings = useClinicSettings(clinic);
@@ -1156,7 +1327,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background">
       {DEMO_EN_SERVIDOR && !real && <ControlSesionDemo />}
       {real && <Toaster position="top-right" richColors closeButton />}
-      {real && (
+      {/* En modo soporte el chat interno no se ve (es privado de la clínica) */}
+      {real && !real.sesion.soporte && (
         <AvisosChatGlobal onVer={(id) => window.location.assign(`/demo/comunicacion-interna#canal=${id}`)} />
       )}
       {/* La columna ocupa todo el alto de la página con el color del sidebar (sin espacio en
@@ -1175,6 +1347,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_12%_0%,rgba(124,58,237,0.14),transparent_45%),radial-gradient(circle_at_88%_6%,rgba(236,72,153,0.10),transparent_40%)]"
         />
+        {real?.sesion.soporte && (
+          <BannerSoporte
+            clinica={real.sesion.clinica.nombre}
+            nombre={real.sesion.soporte.nombre}
+            vence={real.sesion.soporte.vence}
+          />
+        )}
+        {real && <AvisosCloudEsther slug={real.slug} />}
         <MobileHeader
           sidebarStyle={sidebarStyle}
           menu={menuMovil}

@@ -18,6 +18,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { TelefonoPais } from "@/components/site/TelefonoPais";
 import { additionalModules, plans } from "@/lib/site-data";
+import { formatearPrecioModulo, usePreciosModulos } from "@/lib/cloud-esther/precios-modulos";
+
+/** Los módulos del formulario de la web y su id en la app (donde el Dueño pone el precio) */
+const ID_EN_APP: Record<string, string> = {
+  "esther-ia": "ia",
+  comunicacion: "comunicaciones",
+  "recursos-humanos": "rrhh",
+  "analitica-avanzada": "bi",
+  "estudios-diagnostico": "estudios",
+  "automatizaciones-n8n": "automatizaciones",
+};
 import {
   enviarSolicitudContratacion,
   type SolicitudContratacion,
@@ -83,6 +94,8 @@ function Contratacion() {
       : (plans.find((p) => p.featured)?.id ?? plans[0]?.id ?? ""),
   );
   const [modulos, setModulos] = useState<string[]>([]);
+  const preciosModulos = usePreciosModulos();
+  const precioDeModulo = (id: string) => formatearPrecioModulo(preciosModulos[ID_EN_APP[id] ?? id] ?? null);
   const [periodo, setPeriodo] = useState<SolicitudContratacion["periodo"]>(
     cicloInicial === "anual" ? "Anual" : "Mensual",
   );
@@ -271,10 +284,18 @@ function Contratacion() {
                         >
                           {active && <Check className="size-3.5 text-primary" />}
                           {m.name}
+                          {precioDeModulo(m.id) && (
+                            <span className="font-semibold text-primary">· {precioDeModulo(m.id)}</span>
+                          )}
                         </button>
                       );
                     })}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Precios por mes, sin impuestos. Con el plan anual se cobran por año: precio mensual × 12 con el
+                    mismo descuento anual del plan. Los módulos se suman a tu suscripción cuando tu clínica ya está
+                    activa (desde <b>Mi plan</b>), así que hoy solo pagás el plan; te contactamos para confirmarlos.
+                  </p>
                 </fieldset>
 
                 <fieldset className="space-y-4">

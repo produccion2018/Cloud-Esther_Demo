@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
    profesional y paciente. Es la misma plataforma: cambia solo cómo se abre (modo aplicación).
    - registrarServiceWorker: activa /sw.js (en producción; en desarrollo con VITE_PWA_DEV=1).
    - useInstalarApp: botón «Instalar app» (Android, Chrome y Edge) y ayuda para iPhone/iPad.
-   TODO backend: notificaciones push (suscripción con VAPID y envío desde el servidor). */
+   - Push del panel: activarPushEnEsteDispositivo / pushDeEsteDispositivo / desactivarPushLocal
+     (la suscripción se manda al servidor; el servidor envía con VAPID según las preferencias). */
 
 type EventoInstalacion = Event & {
   prompt: () => Promise<void>;
@@ -154,4 +155,72 @@ export function useInstalarApp() {
       return outcome === "accepted";
     },
   };
+}
+
+/* ───────────── Notificaciones PUSH (panel del dueño y su equipo) ───────────── */
+
+/** ¿Este navegador puede recibir push? (en iPhone/iPad solo con la app instalada, iOS 16.4+) */
+export function pushSoportado(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+async function registroSW(): Promise<ServiceWorkerRegistration> {
+  const existente = await navigator.serviceWorker.getRegistration();
+  if (existente) return existente;
+  // En desarrollo no se registra solo: para probar push se registra acá
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
+}
+
+function claveABytes(base64: string): Uint8Array<ArrayBuffer> {
+  const relleno = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b = atob((base64 + relleno).replace(/-/g, "+").replace(/_/g, "/"));
+  const out = new Uint8Array(new ArrayBuffer(b.length));
+  for (let i = 0; i < b.length; i++) out[i] = b.charCodeAt(i);
+  return out;
+}
+
+/** Pide permiso y suscribe este dispositivo. Devuelve lo que hay que mandarle al servidor. */
+export async function activarPushEnEsteDispositivo(
+  clavePublica: string,
+): Promise<PushSubscriptionJSON> {
+  if (!pushSoportado())
+    throw new Error(
+      "Este navegador no permite notificaciones. En iPhone, primero instalá el panel como app.",
+    );
+  const permiso = await Notification.requestPermission();
+  if (permiso !== "granted")
+    throw new Error(
+      "No diste permiso para las notificaciones. Podés activarlo en la configuración del navegador.",
+    );
+  const reg = await registroSW();
+  const actual = await reg.pushManager.getSubscription();
+  const sub =
+    actual ??
+    (await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: claveABytes(clavePublica),
+    }));
+  return sub.toJSON();
+}
+
+/** La suscripción push de este dispositivo (null = no está activado acá). */
+export async function pushDeEsteDispositivo(): Promise<PushSubscription | null> {
+  if (!pushSoportado()) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return (await reg?.pushManager.getSubscription()) ?? null;
+}
+
+/** Desactiva el push en este dispositivo. Devuelve el endpoint que tenía (para avisarle al servidor). */
+export async function desactivarPushLocal(): Promise<string | null> {
+  const sub = await pushDeEsteDispositivo();
+  if (!sub) return null;
+  const endpoint = sub.endpoint;
+  await sub.unsubscribe().catch(() => false);
+  return endpoint;
 }

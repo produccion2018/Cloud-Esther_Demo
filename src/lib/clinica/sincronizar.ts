@@ -2,14 +2,16 @@ import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
-import { clinicaReal } from "@/lib/clinica/modo-clinica";
+import { clinicaReal, esModoSoporte } from "@/lib/clinica/modo-clinica";
 
 /* Ubicación: src/lib/clinica/sincronizar.ts
    GUARDADO EN EL SERVIDOR de los módulos de una clínica real (Etapa 8b).
    Cada módulo del demo (pacientes, agenda, equipo…) se registra acá con su clave. Entonces:
    - al abrirlo se trae del servidor (si no hay nada, empieza vacío);
    - cada cambio se guarda en el servidor (agrupado: medio segundo después del último cambio);
-   - si otra persona guardó en el medio, el servidor lo rechaza: se trae lo nuevo y se avisa;
+   - si otra persona guardó en el medio, se trae lo nuevo y se JUNTAN los dos cambios solos
+     (cada paciente, turno o registro por separado): no se pierde nada y nadie tiene que repetir;
+     solo si los dos cambiaron EXACTAMENTE el mismo dato, queda el último y se avisa;
    - cada 20 segundos se fija si alguien de la clínica cambió algo y lo actualiza.
    Nada de esto se guarda en el navegador (son datos de pacientes). */
 
@@ -106,12 +108,104 @@ export function guardarModulo(clave: string, valor: unknown) {
   recalcular();
 }
 
+/* ───────────── Juntar cambios hechos al mismo tiempo ─────────────
+   base = lo que había en el servidor cuando esta pantalla empezó a cambiar
+   mio  = lo que quiere guardar esta pantalla
+   suyo = lo que guardó otra persona en el medio
+   Se compara dato por dato; en las listas con «id» (pacientes, turnos, registros…), registro
+   por registro. Si los dos tocaron lo mismo, queda lo de esta pantalla (es el último cambio). */
+type Json = unknown;
+const esObjeto = (v: Json): v is Record<string, Json> => typeof v === "object" && v !== null && !Array.isArray(v);
+const igual = (a: Json, b: Json) => a === b || JSON.stringify(a) === JSON.stringify(b);
+const idDe = (v: Json): string | null =>
+  esObjeto(v) && (typeof v["id"] === "string" || typeof v["id"] === "number") ? String(v["id"]) : null;
+const listaConIds = (v: Json): v is Json[] => Array.isArray(v) && v.every((x) => idDe(x) !== null);
+
+let choques = 0;
+export function juntarCambios(base: Json, mio: Json, suyo: Json): Json {
+  if (igual(mio, suyo)) return mio;
+  if (igual(base, mio)) return suyo; // esta pantalla no cambió esto
+  if (igual(base, suyo)) return mio; // la otra persona no cambió esto
+  if (esObjeto(mio) && esObjeto(suyo)) {
+    const b = esObjeto(base) ? base : {};
+    const out: Record<string, Json> = {};
+    for (const k of new Set([...Object.keys(suyo), ...Object.keys(mio)])) {
+      const enMio = k in mio;
+      const enSuyo = k in suyo;
+      if (!enMio && enSuyo && k in b && igual(b[k], suyo[k])) continue; // lo borré yo
+      if (enMio && !enSuyo && k in b && igual(b[k], mio[k])) continue; // lo borró el otro
+      out[k] = juntarCambios(b[k], enMio ? mio[k] : b[k], enSuyo ? suyo[k] : b[k]);
+    }
+    return out;
+  }
+  if (listaConIds(mio) && listaConIds(suyo)) {
+    const b = new Map((listaConIds(base) ? base : []).map((x) => [idDe(x)!, x]));
+    const m = new Map(mio.map((x) => [idDe(x)!, x]));
+    const t = new Map(suyo.map((x) => [idDe(x)!, x]));
+    const out: Json[] = [];
+    const orden = [...suyo.map((x) => idDe(x)!), ...mio.map((x) => idDe(x)!).filter((id) => !t.has(id))];
+    for (const id of orden) {
+      const xb = b.get(id);
+      const xm = m.get(id);
+      const xt = t.get(id);
+      if (xm === undefined && xb !== undefined && (xt === undefined || igual(xb, xt))) continue; // lo borré yo
+      if (xt === undefined && xb !== undefined && (xm === undefined || igual(xb, xm))) continue; // lo borró el otro
+      out.push(juntarCambios(xb, xm ?? xb ?? xt, xt ?? xb ?? xm));
+    }
+    return out;
+  }
+  // Los dos cambiaron el mismo dato: queda el último (el de esta pantalla)
+  choques++;
+  return mio;
+}
+
+/** Otra persona guardó en el medio: se trae lo nuevo, se juntan los cambios y se vuelve a guardar. */
+async function guardarJuntando(slug: string, clave: string, m: Modulo, mio: Json): Promise<boolean> {
+  const base = JSON.parse(ultimo.get(clave) ?? "null") as Json;
+  for (let intento = 0; intento < 6; intento++) {
+    // Si hay mucha gente guardando a la vez, se espera un poquito (distinto para cada uno)
+    if (intento > 0) await new Promise((ok) => setTimeout(ok, 150 + Math.random() * 350 * intento));
+    const r = await pedirAClinica<{ version: number; datos: Json }>(slug, "GET", `/datos/${clave}`);
+    choques = 0;
+    const junto = juntarCambios(base, mio, r.datos);
+    try {
+      const g = await pedirAClinica<{ version: number }>(slug, "PUT", `/datos/${clave}`, { version: r.version, datos: junto });
+      versiones.set(clave, g.version);
+      ultimo.set(clave, JSON.stringify(junto));
+      // Si mientras tanto esta pantalla siguió cambiando cosas, esos cambios se suman a lo juntado
+      const pendiente = pendientes.get(clave);
+      if (pendiente) {
+        pendiente.valor = juntarCambios(mio, m.paraGuardar(pendiente.valor), junto);
+        m.aplicar(pendiente.valor);
+      } else {
+        m.aplicar(junto);
+      }
+      if (choques > 0) toast.info("Otra persona cambió el mismo dato al mismo tiempo: quedó tu cambio.");
+      return true;
+    } catch (e) {
+      if (!(e instanceof ErrorClinica) || e.status !== 409) throw e;
+      // Volvió a guardar alguien justo ahora: se repite con lo más nuevo
+    }
+  }
+  return false;
+}
+
+const avisadoSoporte = new Set<string>();
 async function enviar(clave: string) {
   const p = pendientes.get(clave);
   const c = clinicaReal();
   const m = modulos.get(clave);
   if (!p || !c || !m) return;
   pendientes.delete(clave);
+  if (esModoSoporte()) {
+    // Modo soporte (solo lectura): no se manda nada; la pantalla vuelve a lo guardado
+    recalcular();
+    if (!avisadoSoporte.has(clave)) toast.info("Modo soporte: solo lectura. Este cambio no se guarda.");
+    avisadoSoporte.add(clave);
+    await cargarModulo(clave);
+    ponerEstado("listo");
+    return;
+  }
   const version = versiones.get(clave);
   if (version === undefined || version < 0) {
     // Todavía no se trajo, o no tiene permiso: no se guarda nada
@@ -139,8 +233,31 @@ async function enviar(clave: string) {
   } catch (e) {
     enVuelo.delete(clave);
     const status = e instanceof ErrorClinica ? e.status : 0;
-    if (status === 409 || status === 403) {
-      toast.warning(e instanceof Error ? e.message : "Otra persona guardó cambios. Repetí el último cambio.");
+    if (status === 409) {
+      // Otra persona guardó en el medio: se juntan los dos cambios solos (no se pierde nada)
+      enVuelo.add(clave);
+      try {
+        const ok = await guardarJuntando(c.slug, clave, m, datos);
+        if (!ok) {
+          toast.warning("Hay mucha gente guardando a la vez en este módulo. Revisá tu último cambio.");
+          await cargarModulo(clave);
+        }
+      } catch (e2) {
+        const st = e2 instanceof ErrorClinica ? e2.status : 0;
+        if (st === 413) toast.error(e2 instanceof Error ? e2.message : "Hay demasiados datos en este módulo.");
+        else toast.warning("No se pudo juntar tu cambio con el de otra persona. Revisá tu último cambio.");
+        await cargarModulo(clave);
+      } finally {
+        enVuelo.delete(clave);
+      }
+      ponerEstado(pendientes.size > 0 || enVuelo.size > 0 ? "guardando" : "listo");
+    } else if (status === 422 || status === 413) {
+      // Límite del plan (ej. pacientes activos) o módulo demasiado grande: el cambio no entra
+      toast.error(e instanceof Error ? e.message : "Este cambio no entra en tu plan.", { duration: 9000 });
+      await cargarModulo(clave);
+      ponerEstado("listo");
+    } else if (status === 403) {
+      toast.warning(e instanceof Error ? e.message : "No tenés permiso para cambiar esto.");
       await cargarModulo(clave);
       ponerEstado("listo");
     } else if (status === 401) {

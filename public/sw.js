@@ -55,3 +55,42 @@ self.addEventListener("fetch", (event) => {
   }
   // Todo lo demás (JS, CSS, imágenes, llamadas a la API): no se intercepta → va directo a la red.
 });
+
+/* NOTIFICACIONES PUSH del panel (las manda el servidor según las preferencias de cada persona).
+   El aviso trae { title, body, url, tag }. Al tocarlo se abre (o se enfoca) el panel en esa sección. */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "Cloud Esther", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Cloud Esther";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      tag: data.tag || undefined,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url || "/admin/notificaciones" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/admin/notificaciones";
+  event.waitUntil(
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const v of ventanas) {
+        if (new URL(v.url).pathname.startsWith("/admin")) {
+          await v.focus();
+          if ("navigate" in v) await v.navigate(url).catch(() => {});
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});

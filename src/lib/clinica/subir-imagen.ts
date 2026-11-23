@@ -51,3 +51,42 @@ export async function subirImagenClinica(slug: string, file: File): Promise<stri
   const data = (await r.json()) as { secure_url: string };
   return data.secure_url;
 }
+
+/** Achica una foto (lado mayor ≤ `lado` px, JPEG). Una foto del celular de 3 MB queda en ~40 KB. */
+export async function achicarFoto(archivo: File, lado = 400): Promise<File> {
+  if (typeof document === "undefined" || !archivo.type.startsWith("image/")) return archivo;
+  try {
+    const bitmap = await createImageBitmap(archivo);
+    const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * escala));
+    canvas.height = Math.max(1, Math.round(bitmap.height * escala));
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.82));
+    return blob ? new File([blob], "foto.jpg", { type: "image/jpeg" }) : archivo;
+  } catch {
+    return archivo;
+  }
+}
+
+/** FOTO DE UN PACIENTE. En la clínica real va a Cloudinary y en el listado queda solo su dirección
+ *  (así 15.000 pacientes siguen entrando en el plan). Si Cloudinary no está disponible, NO se
+ *  guarda la foto adentro del listado (devuelve null). En el demo queda achicada en el navegador. */
+export async function fotoPaciente(archivo: File, slug: string | null): Promise<string | null> {
+  const chica = await achicarFoto(archivo, 400);
+  if (slug) {
+    try {
+      return await subirImagenClinica(slug, chica);
+    } catch {
+      return null;
+    }
+  }
+  const mini = await achicarFoto(archivo, 160);
+  return await new Promise<string>((resolve) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : "");
+    fr.onerror = () => resolve("");
+    fr.readAsDataURL(mini);
+  });
+}

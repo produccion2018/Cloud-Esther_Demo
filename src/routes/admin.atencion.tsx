@@ -7,6 +7,7 @@ import {
   Inbox,
   Info,
   LifeBuoy,
+  Megaphone,
   MessageSquare,
   PhoneCall,
   Plus,
@@ -24,7 +25,7 @@ import {
   Pildora,
   Tabla,
 } from "@/components/admin/formularios";
-import { accesoTotal, permisos, useRole } from "@/components/admin/role";
+import { accesoTotal, permisos, puede, useRole } from "@/components/admin/role";
 import { UsoIAEquipo } from "@/components/admin/uso-ia-equipo";
 import {
   BotonExcel,
@@ -37,11 +38,18 @@ import { descargarExcel } from "@/lib/admin/excel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { guardarEn, nuevoNumero } from "@/lib/admin/api";
-import { useAccion, useClinicas, useColeccion, useEquipo } from "@/lib/admin/consultas";
+import { cambiarAvisoClinica, crearAvisoClinica, guardarEn, nuevoNumero } from "@/lib/admin/api";
+import {
+  useAccion,
+  useAvisosClinicas,
+  useClinicas,
+  useColeccion,
+  useEquipo,
+  usePlanes,
+} from "@/lib/admin/consultas";
 import { fecha, haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
-import type { PlanId } from "@/lib/admin/tipos";
+import type { AvisoClinica, NuevoAvisoClinica, PlanId } from "@/lib/admin/tipos";
 import type {
   CasoAtencion,
   EstadoAtencion,
@@ -99,7 +107,15 @@ const hoyISO = () => {
 };
 const abierto = (c: CasoAtencion) => c.estado !== "Resuelto";
 
-type Vista = "bandeja" | "pedidos" | "clinica" | "seguimientos" | "llamadas" | "respuestas" | "ia";
+type Vista =
+  | "bandeja"
+  | "pedidos"
+  | "clinica"
+  | "seguimientos"
+  | "llamadas"
+  | "respuestas"
+  | "avisos"
+  | "ia";
 
 function useAutor() {
   return useSesionAdmin()?.usuario.nombre ?? "Equipo";
@@ -226,6 +242,7 @@ function AtencionPage() {
                 cantidad: (llamadas ?? []).filter((l) => l.proximoSeguimiento && l.proximoSeguimiento <= hoy).length || undefined,
               },
               { id: "respuestas", label: "Respuestas listas" },
+              { id: "avisos", label: "Avisos a las clínicas" },
               // Solo Dueño y Socio: presupuesto y consumo de IA de cada persona
               ...(accesoTotal(role) ? [{ id: "ia" as const, label: "Uso de IA del equipo 🔒" }] : []),
             ]}
@@ -233,6 +250,8 @@ function AtencionPage() {
 
           {vista === "ia" && accesoTotal(role) ? (
             <UsoIAEquipo />
+          ) : vista === "avisos" ? (
+            <AvisosAClinicas editable={puede(role, "atencion", "soporte", "marketing")} />
           ) : vista === "pedidos" ? (
             <PedidosLlamada editable={editable} />
           ) : vista === "llamadas" ? (
@@ -1013,5 +1032,234 @@ function FormNuevoCaso({
         </label>
       </div>
     </DialogoFormulario>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*     AVISOS A LAS CLÍNICAS: novedades, mantenimientos y avisos importantes     */
+/* -------------------------------------------------------------------------- */
+
+const TIPOS_AVISO: { id: NuevoAvisoClinica["tipo"]; nombre: string; tono: "primario" | "alerta" | "peligro" }[] = [
+  { id: "novedad", nombre: "Novedad", tono: "primario" },
+  { id: "mantenimiento", nombre: "Mantenimiento", tono: "alerta" },
+  { id: "importante", nombre: "Importante", tono: "peligro" },
+];
+
+function estadoAviso(a: AvisoClinica): { texto: string; tono: "ok" | "alerta" | "neutro" } {
+  const ahora = Date.now();
+  if (!a.activo) return { texto: "Despublicado", tono: "neutro" };
+  if (a.hasta && new Date(a.hasta).getTime() <= ahora) return { texto: "Terminó", tono: "neutro" };
+  if (new Date(a.desde).getTime() > ahora) return { texto: "Programado", tono: "alerta" };
+  return { texto: "Visible", tono: "ok" };
+}
+
+/** "2026-11-22T15:30" (hora local del navegador) → ISO; "" → null */
+const aISO = (v: string) => (v ? new Date(v).toISOString() : null);
+const fechaHora = (iso: string) =>
+  new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function AvisosAClinicas({ editable }: { editable: boolean }) {
+  const { data: avisos, isLoading } = useAvisosClinicas();
+  const { data: planes } = usePlanes();
+  const [abierto, setAbierto] = useState(false);
+  const [f, setF] = useState({
+    tipo: "novedad" as NuevoAvisoClinica["tipo"],
+    titulo: "",
+    mensaje: "",
+    planes: [] as PlanId[],
+    desde: "",
+    hasta: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const crear = useAccion(crearAvisoClinica, ["avisosClinicas"], "Aviso publicado");
+  const cambiar = useAccion(cambiarAvisoClinica, ["avisosClinicas"], (a) =>
+    a.activo ? "Aviso publicado de nuevo" : "Aviso despublicado",
+  );
+  const nombrePlan = (id: PlanId) => planes?.find((p) => p.id === id)?.nombre ?? id;
+
+  const publicar = () => {
+    setError(null);
+    if (f.titulo.trim().length < 3) return setError("Escribí un título (al menos 3 letras).");
+    if (f.mensaje.trim().length < 3) return setError("Escribí el mensaje.");
+    const desde = aISO(f.desde);
+    const hasta = aISO(f.hasta);
+    if (hasta && new Date(hasta) <= new Date(desde ?? Date.now()))
+      return setError("La fecha de fin tiene que ser después del inicio (y no puede haber pasado).");
+    crear.mutate(
+      { tipo: f.tipo, titulo: f.titulo.trim(), mensaje: f.mensaje.trim(), planes: f.planes, desde, hasta },
+      {
+        onSuccess: () => {
+          setAbierto(false);
+          setF({ tipo: "novedad", titulo: "", mensaje: "", planes: [], desde: "", hasta: "" });
+        },
+        onError: (e) => setError(e instanceof Error ? e.message : "No se pudo publicar."),
+      },
+    );
+  };
+
+  const lista = avisos ?? [];
+  return (
+    <Seccion
+      titulo="Avisos a las clínicas"
+      descripcion="Lo que publiques acá aparece arriba en la app de las clínicas mientras esté vigente: novedades, mantenimientos programados o avisos importantes. Cada persona lo puede cerrar."
+      acciones={
+        editable ? (
+          <Button
+            onClick={() => {
+              setError(null);
+              setAbierto(true);
+            }}
+          >
+            <Megaphone className="mr-1.5 h-4 w-4" /> Nuevo aviso
+          </Button>
+        ) : undefined
+      }
+    >
+      {isLoading ? (
+        <Cargando />
+      ) : lista.length === 0 ? (
+        <Vacio
+          titulo="Todavía no publicaste avisos"
+          texto="Ej.: «El domingo de 2 a 4 a. m. hacemos mantenimiento» o «Nuevo: recetas con firma digital»."
+        />
+      ) : (
+        <Tabla columnas={["Aviso", "Tipo", "Para", "Cuándo", "Estado", ""]} minimo={820}>
+          {lista.map((a) => {
+            const t = TIPOS_AVISO.find((x) => x.id === a.tipo);
+            const e = estadoAviso(a);
+            return (
+              <tr key={a.id} className="border-t border-border/60 align-top">
+                <td className="max-w-[320px] py-3 pl-5 pr-3">
+                  <span className="block text-sm font-semibold">{a.titulo}</span>
+                  <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{a.mensaje}</span>
+                  <span className="mt-1 block text-[11px] text-muted-foreground/80">
+                    {a.creadoPor} · {haceCuanto(a.creado)}
+                  </span>
+                </td>
+                <td className="px-3 py-3">
+                  <Pildora tono={t?.tono ?? "neutro"}>{t?.nombre ?? a.tipo}</Pildora>
+                </td>
+                <td className="px-3 py-3 text-xs text-muted-foreground">
+                  {a.planes.length ? a.planes.map(nombrePlan).join(", ") : "Todas"}
+                </td>
+                <td className="px-3 py-3 text-xs text-muted-foreground">
+                  Desde {fechaHora(a.desde)}
+                  <br />
+                  {a.hasta ? `Hasta ${fechaHora(a.hasta)}` : "Sin fecha de fin"}
+                </td>
+                <td className="px-3 py-3">
+                  <Pildora tono={e.tono}>{e.texto}</Pildora>
+                </td>
+                <td className="py-3 pl-3 pr-5 text-right">
+                  {editable && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={cambiar.isPending}
+                      onClick={() => cambiar.mutate({ id: a.id, activo: !a.activo })}
+                    >
+                      {a.activo ? "Despublicar" : "Publicar de nuevo"}
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </Tabla>
+      )}
+
+      <DialogoFormulario
+        abierto={abierto}
+        titulo="Nuevo aviso para las clínicas"
+        descripcion="Aparece arriba en la app de cada clínica (todas o solo las de los planes que marques)."
+        onCerrar={() => setAbierto(false)}
+        onGuardar={publicar}
+        guardando={crear.isPending}
+        error={error}
+        textoGuardar="Publicar aviso"
+      >
+        <Campo label="Tipo">
+          <div className="flex flex-wrap gap-2">
+            {TIPOS_AVISO.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={f.tipo === t.id}
+                onClick={() => setF({ ...f, tipo: t.id })}
+                className={cn(
+                  "rounded-xl border px-3 py-1.5 text-xs font-semibold transition",
+                  f.tipo === t.id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40",
+                )}
+              >
+                {t.nombre}
+              </button>
+            ))}
+          </div>
+        </Campo>
+        <Campo label="Título">
+          <input
+            className={INPUT}
+            value={f.titulo}
+            maxLength={120}
+            placeholder="Ej.: Mantenimiento programado"
+            onChange={(e) => setF({ ...f, titulo: e.target.value })}
+          />
+        </Campo>
+        <Campo label="Mensaje" ayuda={`${f.mensaje.length}/1000`}>
+          <Textarea
+            value={f.mensaje}
+            maxLength={1000}
+            rows={4}
+            placeholder="Ej.: El domingo 30 de 2 a 4 a. m. el sistema puede estar lento. No hace falta hacer nada."
+            onChange={(e) => setF({ ...f, mensaje: e.target.value })}
+          />
+        </Campo>
+        <Campo label="Para qué planes" ayuda="Sin marcar ninguno = todas las clínicas.">
+          <div className="flex flex-wrap gap-2">
+            {(planes ?? []).map((p) => {
+              const marcado = f.planes.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={marcado}
+                  onClick={() =>
+                    setF({ ...f, planes: marcado ? f.planes.filter((x) => x !== p.id) : [...f.planes, p.id] })
+                  }
+                  className={cn(
+                    "rounded-xl border px-3 py-1.5 text-xs font-semibold transition",
+                    marcado
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40",
+                  )}
+                >
+                  {p.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Se muestra desde" ayuda="Vacío = ahora">
+            <input
+              type="datetime-local"
+              className={INPUT}
+              value={f.desde}
+              onChange={(e) => setF({ ...f, desde: e.target.value })}
+            />
+          </Campo>
+          <Campo label="Hasta" ayuda="Vacío = hasta despublicarlo">
+            <input
+              type="datetime-local"
+              className={INPUT}
+              value={f.hasta}
+              onChange={(e) => setF({ ...f, hasta: e.target.value })}
+            />
+          </Campo>
+        </div>
+      </DialogoFormulario>
+    </Seccion>
   );
 }

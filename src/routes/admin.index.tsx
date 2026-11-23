@@ -8,6 +8,9 @@ import {
   Flame,
   LifeBuoy,
   MonitorPlay,
+  Server,
+  TrendingDown,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -33,7 +36,14 @@ import {
   Vacio,
   tooltipGrafico,
 } from "@/components/admin/bits";
-import { canAccess, permisos, roleDescription, roleLabel, useRole } from "@/components/admin/role";
+import {
+  canAccess,
+  permisos,
+  puede,
+  roleDescription,
+  roleLabel,
+  useRole,
+} from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
 import {
   useActividad,
@@ -41,6 +51,7 @@ import {
   useConsumoIA,
   useCrecimiento,
   useDemos,
+  useEstadoSistema,
   usePlanes,
   useTickets,
 } from "@/lib/admin/consultas";
@@ -85,6 +96,7 @@ function AdminDashboard() {
   const ia = useConsumoIA();
   const crecimiento = useCrecimiento();
   const planes = usePlanes();
+  const sistema = useEstadoSistema(puede(role, "soporte"));
 
   const nombre = sesion?.usuario.nombre.split(" ")[0] ?? roleLabel[role];
   const cargando = clinicas.isLoading || demos.isLoading;
@@ -110,8 +122,43 @@ function AdminDashboard() {
     return p === null ? s : (s ?? 0) + p;
   }, null);
 
+  // Métricas del negocio (solo quien ve importes). Todo sale de las clínicas reales.
+  // Plan + módulos adicionales (los anuales se pasan a su equivalente por mes)
+  const adicionalesMes = (c: (typeof lista)[number]) =>
+    (c.adicionales ?? []).reduce((t, a) => t + (/anual/i.test(a.ciclo) ? a.importe / 12 : a.importe), 0);
+  const montoDe = (c: (typeof lista)[number]) => {
+    const base = c.importe ?? precioDe(c.plan);
+    return base === null ? null : base + adicionalesMes(c);
+  };
+  const sumar = (cs: typeof lista) => cs.reduce((s, c) => s + (montoDe(c) ?? 0), 0);
+  const conMonto = activas.filter((c) => montoDe(c) !== null);
+  const mrr = sumar(activas);
+  const enRiesgo = sumar(
+    activas.filter((c) => c.estadoPago === "mora" || c.estadoPago === "pendiente"),
+  );
+  const suspendidas = lista.filter((c) => c.estadoPago === "suspendida");
+  const perdido = sumar(suspendidas);
+  const tasaBaja = lista.length ? Math.round((suspendidas.length / lista.length) * 1000) / 10 : 0;
+  const nuevasMes = crecimiento.data?.at(-1)?.nuevas ?? 0;
+  const porPlan = (planes.data ?? [])
+    .map((p) => {
+      const cs = activas.filter((c) => c.plan === p.id);
+      return { id: p.id, nombre: p.nombre, clinicas: cs.length, monto: sumar(cs) };
+    })
+    .filter((p) => p.clinicas > 0);
+  const maxPlan = Math.max(1, ...porPlan.map((p) => p.monto));
+
   // Lo que cada perfil tiene que resolver hoy.
   const tareas: Tarea[] = [];
+  const caidos = (sistema.data?.chequeos ?? []).filter((c) => c.estado === "error");
+  if (caidos.length)
+    tareas.push({
+      texto: `${caidos.length === 1 ? "Un servicio tiene" : `${caidos.length} servicios tienen`} problemas`,
+      detalle: caidos.map((c) => c.nombre).join(", "),
+      to: "/admin/soporte",
+      icono: Server,
+      tono: "text-destructive bg-destructive/10",
+    });
   if (canAccess(role, "/admin/demos") && altoSinContactar.length)
     tareas.push({
       texto: `${altoSinContactar.length} ${altoSinContactar.length === 1 ? "demo" : "demos"} con interés alto sin contactar`,
@@ -169,9 +216,9 @@ function AdminDashboard() {
     const p = planes.data?.find((x) => x.id === c.plan);
     return (
       p &&
-      (c.uso.usuariosInternos / p.usuariosInternos >= 0.85 ||
-        c.uso.pacientesActivos / p.pacientesActivos >= 0.85 ||
-        c.uso.sucursales / p.sucursales >= 1)
+      (c.uso.usuariosInternos / (p.usuariosInternos + (c.capacidadExtra?.usuarios ?? 0)) >= 0.85 ||
+        c.uso.pacientesActivos / (p.pacientesActivos + (c.capacidadExtra?.pacientes ?? 0)) >= 0.85 ||
+        c.uso.sucursales / (p.sucursales + (c.capacidadExtra?.sucursales ?? 0)) >= 1)
     );
   });
   if (cercaLimite.length && (role === "owner" || role === "partner"))
@@ -236,6 +283,71 @@ function AdminDashboard() {
               icon={<CaraEsther className="h-4 w-4" />}
             />
           </div>
+
+          {permisos.verImportes(role) && (
+            <Seccion
+              titulo="Métricas del negocio"
+              descripcion="Ingreso recurrente, riesgo y bajas, calculados con las clínicas reales."
+            >
+              <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+                <KpiCard
+                  label="Ingreso mensual recurrente"
+                  value={precio(mrr)}
+                  hint={`${precio(mrr * 12)} al año`}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                />
+                <KpiCard
+                  label="Promedio por clínica"
+                  value={precio(conMonto.length ? Math.round(mrr / conMonto.length) : null)}
+                  hint={`${conMonto.length} clínicas con monto · ${nuevasMes} nuevas este mes`}
+                  icon={<Building2 className="h-4 w-4" />}
+                />
+                <KpiCard
+                  label="Ingreso en riesgo"
+                  value={precio(enRiesgo)}
+                  hint={`${conteo("pendiente")} por pagar · ${conteo("mora")} en mora`}
+                  tono={enRiesgo > 0 ? "warning" : "success"}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                />
+                <KpiCard
+                  label="Bajas (suspendidas)"
+                  value={`${tasaBaja}%`}
+                  hint={`${suspendidas.length} clínicas · ${precio(perdido)} por mes que no entran`}
+                  tono={suspendidas.length ? "destructive" : "success"}
+                  icon={<TrendingDown className="h-4 w-4" />}
+                />
+              </div>
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                  Ingreso mensual por plan
+                </p>
+                {porPlan.length === 0 ? (
+                  <Vacio titulo="Todavía no hay clínicas activas" />
+                ) : (
+                  <ul className="space-y-2.5">
+                    {porPlan.map((p) => (
+                      <li
+                        key={p.id}
+                        className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3"
+                      >
+                        <span className="text-sm font-semibold">{p.nombre}</span>
+                        <span className="h-2.5 overflow-hidden rounded-full bg-primary/10">
+                          <span
+                            className="block h-full rounded-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-700"
+                            style={{ width: `${Math.max(4, (p.monto / maxPlan) * 100)}%` }}
+                          />
+                        </span>
+                        <span className="text-right text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground">{precio(p.monto)}</span> ·{" "}
+                          {p.clinicas} {p.clinicas === 1 ? "clínica" : "clínicas"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Seccion>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
             <Seccion

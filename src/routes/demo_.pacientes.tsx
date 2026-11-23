@@ -40,6 +40,7 @@ import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import {
   dentroDelLimite,
+  topeDe,
   leerConfigPlanes,
   MENSAJE_LIMITE,
 } from "@/lib/cloud-esther/planes-config";
@@ -53,6 +54,8 @@ import type {
 } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { fotoPaciente } from "@/lib/clinica/subir-imagen";
+import { UsoDelPlan } from "@/components/clinica/pedir-capacidad";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
@@ -542,21 +545,23 @@ function PacienteForm({
         ]
       : catalogoObras;
 
-  const elegirFoto = (
+  // La foto se achica y, en la clínica real, se sube a Cloudinary (en el listado queda solo la dirección)
+  const realFoto = useClinicaReal();
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const elegirFoto = async (
     e: ChangeEvent<HTMLInputElement>,
   ) => {
     const archivo = e.target.files?.[0];
-
-    if (!archivo) return;
-
-    const lector = new FileReader();
-
-    lector.onload = () =>
-      setFoto(String(lector.result));
-
-    lector.readAsDataURL(archivo);
-
     e.target.value = "";
+    if (!archivo) return;
+    setSubiendoFoto(true);
+    try {
+      const url = await fotoPaciente(archivo, realFoto?.slug ?? null);
+      if (url) setFoto(url);
+      else alert("No se pudo subir la foto. Probá de nuevo en un momento.");
+    } finally {
+      setSubiendoFoto(false);
+    }
   };
 
   const enviar = (e: FormEvent) => {
@@ -648,7 +653,7 @@ function PacienteForm({
               ref={fileRef}
               type="file"
               accept="image/*"
-              onChange={elegirFoto}
+              onChange={(e) => void elegirFoto(e)}
               className="hidden"
             />
 
@@ -659,9 +664,11 @@ function PacienteForm({
               }
               className="mt-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors hover:bg-muted"
             >
-              {foto
-                ? "Cambiar foto"
-                : "Seleccionar foto"}
+              {subiendoFoto
+                ? "Subiendo foto…"
+                : foto
+                  ? "Cambiar foto"
+                  : "Seleccionar foto"}
             </button>
           </div>
         </div>
@@ -1536,6 +1543,15 @@ function PacientesInner() {
               '"Inter", ui-sans-serif, system-ui, sans-serif',
           }}
         >
+          {/* Límite de pacientes del plan: desde el 80 % se ve el uso y el botón «Pedir más capacidad» */}
+          <div className="mb-4">
+            <UsoDelPlan
+              tipo="pacientes"
+              usados={contarPacientesActivos(pacientes)}
+              limite={real ? topeDe(plan, "pacientes") : null}
+            />
+          </div>
+
           {/* ───────────── Encabezado ───────────── */}
 
           <section className="relative overflow-hidden rounded-[30px] border border-primary/15 bg-gradient-to-br from-white via-white/96 to-primary/[0.045] shadow-[0_20px_55px_-38px_rgba(76,29,149,0.55)] backdrop-blur-md">

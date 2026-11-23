@@ -3,6 +3,10 @@ import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Check, Loader2, ShieldCheck, X } from "lucide-react";
 
 import { ModuleIcon } from "@/lib/cloud-esther/data";
+import type { VistaPreviaModulo } from "@/lib/clinica/api";
+
+const usd = (n: number) => `USD ${n.toLocaleString("es-AR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+const dia = (iso: string) => new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 /* Ubicación: src/components/cloud-esther/facturacion/DialogoCompraModulo.tsx
    Tarjeta de confirmación antes de contratar un módulo adicional.
@@ -14,6 +18,9 @@ export function DialogoCompraModulo({
   modulo,
   precio,
   planContratado,
+  detalle,
+  cargandoDetalle,
+  errorDetalle,
   onCerrar,
   onConfirmar,
 }: {
@@ -21,9 +28,14 @@ export function DialogoCompraModulo({
   /** Módulo a contratar: nombre e ícono. */
   modulo: { label: string; icon: string } | null;
   /** Texto del cargo, si el backend lo informa (ej. "$ 12.000 / mes"). Opcional. */
-  precio?: string;
+  precio?: string | undefined;
   /** true en la clínica real (el cargo va a la próxima factura); false en el demo (se activa al instante). */
   planContratado?: boolean;
+  /** Clínica real: precio para SU ciclo (mensual/anual) y lo que se cobra hoy (lo calcula el servidor) */
+  detalle?: VistaPreviaModulo | null;
+  cargandoDetalle?: boolean;
+  /** Ej.: «Este módulo todavía no tiene precio publicado» → no se puede confirmar */
+  errorDetalle?: string | null;
   onCerrar: () => void;
   /** Debe activar, registrar y avisar. Puede ser async (clínica real avisa al panel primero). */
   onConfirmar: () => void | Promise<void>;
@@ -72,13 +84,54 @@ export function DialogoCompraModulo({
           {precio ? ` · ${precio}` : ""}.
         </p>
 
+        {(detalle || cargandoDetalle || errorDetalle) && (
+          <div className="relative mt-4 rounded-2xl border border-primary/20 bg-card p-3 text-left text-[12.5px]">
+            {cargandoDetalle ? (
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /> Calculando el precio para tu clínica…
+              </p>
+            ) : errorDetalle ? (
+              <p className="font-medium text-destructive">{errorDetalle}</p>
+            ) : detalle ? (
+              <div className="space-y-1.5">
+                <p className="flex items-baseline justify-between gap-2">
+                  <span className="text-muted-foreground">Precio</span>
+                  <b className="text-base text-foreground">
+                    {usd(detalle.porPeriodo)} / {detalle.ciclo === "anual" ? "año" : "mes"}
+                  </b>
+                </p>
+                {detalle.ciclo === "anual" && (
+                  <p className="text-[11.5px] text-muted-foreground">
+                    Tu plan es <b>anual</b>: {usd(detalle.mensual)} por mes × 12
+                    {detalle.descuentoAnual > 0 ? ` con ${Math.round(detalle.descuentoAnual * 100)} % de descuento` : ""}.
+                  </p>
+                )}
+                {detalle.cobroAutomatico && detalle.hoy ? (
+                  <p className="rounded-xl bg-primary/[0.06] px-2.5 py-2">
+                    <b>Hoy se cobra {usd(detalle.hoy.total)}</b> (con impuestos): la parte proporcional hasta tu próxima
+                    renovación{detalle.proximoCobro ? ` del ${dia(detalle.proximoCobro)}` : ""}. Después se renueva junto con
+                    tu plan, con la misma tarjeta.
+                  </p>
+                ) : (
+                  <p className="rounded-xl bg-primary/[0.06] px-2.5 py-2">
+                    Se suma a tu <b>próxima factura</b> de Cloud Esther
+                    {detalle.proximoCobro ? ` (${dia(detalle.proximoCobro)})` : ""}. Precio sin impuestos.
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+
         <div className="relative mt-4 space-y-2 rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/[0.05] to-fuchsia-500/[0.04] p-3 text-left">
           <p className="flex items-start gap-2 text-[12.5px]">
             <CaraEsther className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
-              {planContratado
-                ? "Se activa al instante y el cargo se suma a tu próxima factura de Cloud Esther."
-                : "Se activa al instante para que lo pruebes en el demo."}
+              {!planContratado
+                ? "Se activa al instante para que lo pruebes en el demo."
+                : detalle?.cobroAutomatico
+                  ? "Se activa al instante y se suma a tu suscripción. Podés quitarlo cuando quieras: deja de cobrarse."
+                  : "Se activa al instante y el cargo se suma a tu próxima factura de Cloud Esther. Podés quitarlo cuando quieras."}
             </span>
           </p>
           <p className="flex items-start gap-2 text-[12.5px]">
@@ -94,7 +147,7 @@ export function DialogoCompraModulo({
           <button
             type="button"
             className="btn-ce !min-h-11 flex-1 justify-center"
-            disabled={enviando}
+            disabled={enviando || !!cargandoDetalle || !!errorDetalle}
             onClick={async () => {
               setEnviando(true);
               try {

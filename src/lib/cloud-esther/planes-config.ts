@@ -241,21 +241,39 @@ export type TipoLimite = "pacientes" | "usuarios" | "sucursales";
 
 export const MENSAJE_LIMITE: Record<TipoLimite, string> = {
   pacientes:
-    "Has alcanzado el límite de pacientes activos incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
+    "Llegaste al límite de pacientes activos de tu plan. Archivá los pacientes que ya no atendés (no cuentan) o pedí más capacidad con el botón «Pedir más capacidad».",
   usuarios:
-    "Has alcanzado el límite de usuarios internos incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
+    "Llegaste al límite de personas del equipo de tu plan. Desactivá a alguien o pedí más capacidad desde Equipo › «Pedir más capacidad».",
   sucursales:
-    "Has alcanzado el límite de sucursales incluido en tu plan. Para ampliar la capacidad, cambiá de plan desde Facturación → Mi plan.",
+    "Llegaste al límite de sucursales de tu plan. Pedí más capacidad o pasate a un plan mayor desde Facturación → Mi plan.",
 };
+
+/** Clínica real: sus topes de verdad (plan + capacidad extra que le dio Cloud Esther), tal como
+ *  los manda el servidor en la sesión. null = demo (se usan los del plan). */
+function limitesClinicaReal(): { pacientes: number | null; usuarios: number | null; sucursales: number | null } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const slug = window.sessionStorage.getItem("cloud-esther-clinica:activa");
+    if (!slug) return null;
+    const s = JSON.parse(window.sessionStorage.getItem(`cloud-esther-clinica:${slug}`) ?? "null") as {
+      clinica?: { limites?: { pacientes: number | null; usuarios: number | null; sucursales: number | null } };
+    } | null;
+    return s?.clinica?.limites ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tope que se aplica (null = sin límite). */
+export function topeDe(plan: PlanId, tipo: TipoLimite): number | null {
+  const real = limitesClinicaReal();
+  if (real) return real[tipo];
+  const c = leerConfigPlanes()[plan];
+  return tipo === "pacientes" ? c.pacientesActivos : tipo === "usuarios" ? c.usuariosInternos : c.sucursales;
+}
 
 /** ¿Se puede sumar uno más? (no borra nada: solo impide superar el límite). */
 export function dentroDelLimite(plan: PlanId, tipo: TipoLimite, usados: number) {
-  const c = leerConfigPlanes()[plan];
-  const max =
-    tipo === "pacientes"
-      ? c.pacientesActivos
-      : tipo === "usuarios"
-        ? c.usuariosInternos
-        : c.sucursales;
-  return usados < max;
+  const max = topeDe(plan, tipo);
+  return max === null || usados < max;
 }

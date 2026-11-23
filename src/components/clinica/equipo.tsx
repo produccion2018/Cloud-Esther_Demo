@@ -1,3 +1,4 @@
+import { UsoDelPlan } from "@/components/clinica/pedir-capacidad";
 import {
   Check,
   ClipboardPaste,
@@ -212,6 +213,8 @@ export function EquipoClinicaPanel({
 
   return (
     <div className="space-y-5">
+      {/* Cerca del tope: uso y «Pedir más capacidad» */}
+      <UsoDelPlan tipo="usuarios" usados={equipo.usados} limite={equipo.limite} />
       {/* Lugares del plan */}
       <section className="ce-tarjeta p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CircleCheckBig, Loader2, Lock, Mail, ShieldCheck, UserCheck } from "lucide-react";
+import { CircleCheckBig, Loader2, Lock, Mail, ShieldCheck, TicketPercent, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
@@ -59,6 +59,11 @@ function Pagar() {
   const [resumen, setResumen] = useState<ResumenPago | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [acepto, setAcepto] = useState(false);
+  // Cupón de descuento: el servidor lo valida y recalcula el resumen (con Paddle)
+  const [cuponTexto, setCuponTexto] = useState("");
+  const [cupon, setCupon] = useState<string | null>(null);
+  const [cuponError, setCuponError] = useState<string | null>(null);
+  const [aplicando, setAplicando] = useState(false);
   const consultando = useRef(false);
 
   // Cargar el resumen
@@ -132,11 +137,24 @@ function Pagar() {
     return () => window.clearInterval(id);
   }, [paso, token]);
 
+  const aplicarCupon = async (codigo: string | null) => {
+    setCuponError(null);
+    const limpio = codigo?.trim().toUpperCase() || null;
+    if (codigo !== null && !limpio) return setCuponError("Escribí el código del cupón.");
+    setAplicando(true);
+    const r = await obtenerResumen(token, limpio);
+    setAplicando(false);
+    if (!r.ok) return setCuponError(r.error);
+    setResumen(r.datos);
+    setCupon(limpio);
+    if (!limpio) setCuponTexto("");
+  };
+
   const pagar = async () => {
     if (!acepto) return setError("Para seguir, aceptá las condiciones de la suscripción.");
     setError(null);
     setPaso("abriendo");
-    const r = await iniciarPago(token);
+    const r = await iniciarPago(token, cupon);
     if (!r.ok) {
       setError(r.error);
       setPaso("resumen");
@@ -265,9 +283,28 @@ function Pagar() {
                         <td className="px-4 py-3 text-right font-semibold tabular-nums">{usd(l.total)}</td>
                       </tr>
                     ))}
+                    {!!resumen.primerPago.descuento && (
+                      <tr className="border-t border-border/70 bg-success/[0.06]">
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-success">
+                            <TicketPercent className="size-4" /> Cupón {resumen.cupon?.codigo}
+                          </span>
+                          {resumen.cupon?.detalle && (
+                            <span className="block text-xs text-muted-foreground">{resumen.cupon.detalle}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right font-semibold text-success tabular-nums">
+                          −{usd(resumen.primerPago.descuento)}
+                        </td>
+                        <td className="px-3 py-3" />
+                        <td className="px-4 py-3" />
+                      </tr>
+                    )}
                     <tr className="border-t-2 border-primary/30 bg-primary/[0.03]">
                       <td className="px-4 py-3 font-bold">Total a pagar hoy</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{usd(resumen.primerPago.subtotal)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {usd(resumen.primerPago.subtotal - (resumen.primerPago.descuento ?? 0))}
+                      </td>
                       <td className="px-3 py-3 text-right tabular-nums">{usd(resumen.primerPago.impuesto)}</td>
                       <td className="px-4 py-3 text-right text-base font-extrabold text-primary tabular-nums">
                         {usd(resumen.primerPago.total)}
@@ -277,11 +314,60 @@ function Pagar() {
                 </table>
               </div>
 
+              {/* Cupón de descuento */}
+              <div className="mt-4 rounded-2xl border border-dashed border-primary/30 p-4">
+                {cupon && resumen.cupon ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="inline-flex items-center gap-2">
+                      <TicketPercent className="size-4 text-success" />
+                      Cupón <b className="font-mono tracking-wide">{resumen.cupon.codigo}</b> aplicado
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+                      disabled={aplicando || paso === "abriendo"}
+                      onClick={() => void aplicarCupon(null)}
+                    >
+                      Quitar cupón
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    className="flex flex-wrap items-end gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void aplicarCupon(cuponTexto);
+                    }}
+                  >
+                    <label className="min-w-0 flex-1 text-sm">
+                      <span className="mb-1.5 block font-semibold">¿Tenés un cupón de descuento?</span>
+                      <input
+                        value={cuponTexto}
+                        maxLength={30}
+                        onChange={(e) => setCuponTexto(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+                        placeholder="Ej.: BIENVENIDA20"
+                        className="h-11 w-full rounded-xl border border-input bg-card px-3 font-mono text-sm uppercase tracking-wide outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                      />
+                    </label>
+                    <Button type="submit" variant="outlineBrand" className="h-11" disabled={aplicando || !cuponTexto}>
+                      {aplicando ? <Loader2 className="size-4 animate-spin" /> : "Aplicar"}
+                    </Button>
+                  </form>
+                )}
+                {cuponError && (
+                  <p role="alert" className="mt-2 text-sm font-medium text-destructive">
+                    {cuponError}
+                  </p>
+                )}
+              </div>
+
               <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
                 <li>
                   <b className="text-foreground">Después:</b> {usd(resumen.renovacion.total)} por {resumen.renovacion.cada}{" "}
-                  ({usd(resumen.renovacion.subtotal)} + {usd(resumen.renovacion.impuesto)} de impuestos). La suscripción se
-                  renueva automáticamente cada {resumen.renovacion.cada}.
+                  ({usd(resumen.renovacion.subtotal - (resumen.renovacion.descuento ?? 0))} +{" "}
+                  {usd(resumen.renovacion.impuesto)} de impuestos
+                  {resumen.renovacion.descuento ? `, con el descuento del cupón: ${resumen.cupon?.detalle ?? ""}` : ""}). La
+                  suscripción se renueva automáticamente cada {resumen.renovacion.cada}.
                 </li>
                 <li>Podés cancelar cuando quieras: deja de renovarse al final del período ya pagado.</li>
                 <li>
@@ -289,6 +375,12 @@ function Pagar() {
                   la conversión con sus propias condiciones.
                 </li>
                 <li>Los impuestos corresponden a {pais} y los calcula el procesador de pagos (Paddle) según la ley de cada país.</li>
+                <li>
+                  <b className="text-foreground">Soporte:</b> si necesitás ayuda, alguien del equipo de Cloud Esther puede
+                  entrar a ver tu sistema en <b className="text-foreground">modo solo lectura</b> (no puede cambiar nada ni ver
+                  el chat interno de tu equipo, y dura como máximo 30 minutos). Cada acceso te lo avisamos por correo y lo ves
+                  en tu sistema, con el motivo.
+                </li>
               </ul>
 
               <label className="mt-6 flex items-start gap-3 rounded-2xl border border-border p-4 text-sm">
@@ -299,7 +391,8 @@ function Pagar() {
                   className="mt-0.5 size-4 accent-primary"
                 />
                 <span>
-                  Acepto contratar Cloud Esther con <b>renovación automática</b> y entiendo que puedo cancelar cuando quiera.
+                  Acepto contratar Cloud Esther con <b>renovación automática</b> y estas condiciones (incluido el acceso de
+                  soporte en modo solo lectura), y entiendo que puedo cancelar cuando quiera.
                 </span>
               </label>
 

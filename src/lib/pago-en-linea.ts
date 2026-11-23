@@ -12,7 +12,7 @@ const PADDLE_TOKEN = import.meta.env["VITE_PADDLE_CLIENT_TOKEN"] as string | und
 /** ¿Se puede pagar en línea desde esta página? (servidor + token de Paddle) */
 export const PAGO_EN_LINEA = Boolean(API_URL && PADDLE_TOKEN);
 
-export type LineaResumen = { concepto: string; subtotal: number; impuesto: number; total: number };
+export type LineaResumen = { concepto: string; subtotal: number; descuento?: number; impuesto: number; total: number };
 export type ResumenPago = {
   codigo: string;
   clinica: string;
@@ -21,9 +21,11 @@ export type ResumenPago = {
   ciclo: "Mensual" | "Anual";
   moneda: "USD";
   lineas: LineaResumen[];
-  primerPago: { subtotal: number; impuesto: number; total: number };
-  renovacion: { subtotal: number; impuesto: number; total: number; cada: "mes" | "año" };
+  primerPago: { subtotal: number; descuento?: number; impuesto: number; total: number };
+  renovacion: { subtotal: number; descuento?: number; impuesto: number; total: number; cada: "mes" | "año" };
   estadoPago: string;
+  /** Cupón aplicado (lo valida el servidor; null = sin cupón) */
+  cupon?: { codigo: string; descripcion: string; detalle: string } | null;
 };
 
 type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string; status?: number };
@@ -44,9 +46,10 @@ async function pedir<T>(ruta: string, cuerpo: unknown): Promise<Resultado<T>> {
   }
 }
 
-export const obtenerResumen = (token: string) => pedir<ResumenPago>("/pago/resumen", { token });
-export const iniciarPago = (token: string) =>
-  pedir<{ transactionId: string }>("/pago/iniciar", { token, acepto: true });
+export const obtenerResumen = (token: string, cupon?: string | null) =>
+  pedir<ResumenPago>("/pago/resumen", { token, ...(cupon ? { cupon } : {}) });
+export const iniciarPago = (token: string, cupon?: string | null) =>
+  pedir<{ transactionId: string }>("/pago/iniciar", { token, acepto: true, ...(cupon ? { cupon } : {}) });
 export const estadoPago = (token: string) =>
   pedir<{ estadoPago: string; activada: boolean }>("/pago/estado", { token });
 

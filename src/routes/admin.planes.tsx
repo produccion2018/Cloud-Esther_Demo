@@ -95,6 +95,8 @@ function PlanesPage() {
 
       <PreciosModulosAdicionales editable={editable} />
 
+      <PreciosCapacidadExtra editable={editable} />
+
       {permisos.verImportes(role) && <CuponesDescuento planes={planes ?? []} />}
     </AdminShell>
   );
@@ -143,7 +145,7 @@ function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
     <div className="mt-6">
       <Seccion
         titulo="Precios de módulos adicionales"
-        descripcion="Precio MENSUAL (USD, sin impuestos) de cada módulo que una clínica Start, Pro o Plus puede sumar sin cambiar de plan. Es lo que ve la clínica antes de contratar. Si la clínica paga ANUAL, se le cobra mensual × 12 con el mismo descuento anual de su plan. Si paga con Paddle, se suma a su suscripción y Paddle cobra hoy lo proporcional; si no, te llega el aviso para facturarlo. Vacío = sin precio (la clínica no lo puede contratar todavía)."
+        descripcion="Precio MENSUAL (USD, sin impuestos) de cada módulo que una clínica Start, Pro o Plus puede sumar sin cambiar de plan. Es lo que ve la clínica antes de contratar. Si la clínica paga ANUAL, se le cobra mensual × 12 con el mismo descuento anual de su plan. Lo contrata la clínica sola (menú lateral «+ Sumar» o Mi plan), se activa al instante y va en su PRÓXIMA FACTURA: si paga con Paddle se cobra solo; si no, te llega el aviso para facturarlo. Vacío = sin precio (la clínica no lo puede contratar todavía)."
       >
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {vendibles.map((m) => (
@@ -180,6 +182,101 @@ function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
             Tu perfil puede ver los precios; los cambia el Dueño.
           </p>
         )}
+      </Seccion>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*          PRECIOS DE CAPACIDAD EXTRA (pacientes, personas, sucursales)       */
+/* -------------------------------------------------------------------------- */
+
+const CAPACIDAD: { id: string; titulo: string; unidad: string; ejemplo: (p: number) => string }[] = [
+  {
+    id: "cap-pacientes",
+    titulo: "Cada 100 pacientes activos extra",
+    unidad: "/ 100 pac. / mes",
+    ejemplo: (p) => `Ej.: +300 pacientes = USD ${(p * 3).toLocaleString("es-AR")} por mes`,
+  },
+  {
+    id: "cap-usuarios",
+    titulo: "Cada persona extra del equipo",
+    unidad: "/ persona / mes",
+    ejemplo: (p) => `Ej.: +5 personas = USD ${(p * 5).toLocaleString("es-AR")} por mes`,
+  },
+  {
+    id: "cap-sucursales",
+    titulo: "Cada sucursal extra",
+    unidad: "/ sucursal / mes",
+    ejemplo: (p) => `Ej.: +2 sucursales = USD ${(p * 2).toLocaleString("es-AR")} por mes`,
+  },
+];
+
+/** Cuando una clínica llega al tope de su plan, ella misma suma lo que necesita (20, 50, 300
+    pacientes…) con ESTOS precios: el límite sube al instante y va en su próxima factura. Vale para
+    todos los planes. Vacío = sin precio: la clínica solo puede mandarte un pedido. */
+function PreciosCapacidadExtra({ editable }: { editable: boolean }) {
+  const precios = usePreciosModulos();
+  const armar = () => Object.fromEntries(CAPACIDAD.map((c) => [c.id, precios[c.id] !== undefined ? String(precios[c.id]) : ""]));
+  const [f, setF] = useState<Record<string, string>>(armar);
+  useEffect(() => {
+    setF(armar());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [precios]);
+
+  const guardarUno = async (id: string) => {
+    const t = (f[id] ?? "").trim().replace(",", ".");
+    const n = t === "" ? null : Number(t);
+    if (n !== null && (!Number.isFinite(n) || n < 0)) return;
+    if ((precios[id] ?? null) === n) return;
+    try {
+      await guardarPrecioModuloServidor(id, n === null ? null : Math.round(n * 100) / 100);
+      guardarPrecioModulo(id, n);
+      toast.success(n === null ? "Precio quitado" : "Precio guardado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar el precio.");
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      <Seccion
+        titulo="Precios de capacidad extra"
+        descripcion="Cuando una clínica (de cualquier plan) se queda sin lugar, entra a Mi plan › «Capacidad de tu plan» (o al aviso en Pacientes / Equipo), elige cuánto suma y ve el precio. Se le activa al instante y va en su PRÓXIMA FACTURA: con Paddle se cobra solo; si no, te llega el aviso para facturarlo. Precio MENSUAL en USD sin impuestos (si paga anual: × 12 con su descuento). Vacío = sin precio: la clínica solo te puede mandar un pedido y vos le sumás la capacidad desde su ficha en Clínicas."
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          {CAPACIDAD.map((c) => {
+            const n = Number((f[c.id] ?? "").replace(",", "."));
+            return (
+              <div key={c.id} className="rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/[0.05] to-transparent p-3">
+                <Label htmlFor={`precio-${c.id}`} className="text-xs font-semibold">
+                  {c.titulo}
+                </Label>
+                <div className="relative mt-1.5">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">
+                    USD
+                  </span>
+                  <Input
+                    id={`precio-${c.id}`}
+                    inputMode="decimal"
+                    value={f[c.id] ?? ""}
+                    disabled={!editable}
+                    placeholder="Sin precio"
+                    onChange={(e) => setF((x) => ({ ...x, [c.id]: e.target.value.replace(/[^0-9.,]/g, "") }))}
+                    onBlur={() => editable && void guardarUno(c.id)}
+                    className="h-10 rounded-xl pl-12 pr-28"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
+                    {c.unidad}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  {f[c.id] && Number.isFinite(n) && n > 0 ? c.ejemplo(n) : "Sin precio: la clínica manda un pedido."}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </Seccion>
     </div>
   );

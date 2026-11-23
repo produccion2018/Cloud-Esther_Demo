@@ -208,7 +208,10 @@ const ICONO_CONECTOR: Record<string, typeof PlugZap> = {
 export function ConfiguracionModule({ onToast }: Props) {
   const { clinic, plan } = useCloudEsther();
 
-  const [tab, setTab] = useState<TabId>("general");
+  // «/demo/configuracion#miplan» abre directo Mi plan (módulos adicionales y capacidad)
+  const [tab, setTab] = useState<TabId>(() =>
+    typeof window !== "undefined" && window.location.hash === "#miplan" ? "miplan" : "general",
+  );
   // Si se cambia a un plan que no incluye la pestaña abierta, se vuelve a General.
   useEffect(() => {
     const t = TABS.find((x) => x.id === tab);

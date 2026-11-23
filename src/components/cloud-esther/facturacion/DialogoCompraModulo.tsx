@@ -106,7 +106,15 @@ export function DialogoCompraModulo({
                     {detalle.descuentoAnual > 0 ? ` con ${Math.round(detalle.descuentoAnual * 100)} % de descuento` : ""}.
                   </p>
                 )}
-                {detalle.cobroAutomatico && detalle.hoy ? (
+                {detalle.cobroAutomatico && !detalle.hoy ? (
+                  <p className="rounded-xl bg-primary/[0.06] px-2.5 py-2">
+                    <b>Hoy no se cobra nada.</b> Se suma a tu suscripción y va en tu <b>próxima factura</b>
+                    {detalle.proximoCobro ? ` del ${dia(detalle.proximoCobro)}` : ""}: lo proporcional de los días que lo
+                    uses + el período siguiente
+                    {detalle.proxima ? `. Esa factura queda en ${usd(detalle.proxima.total)} con impuestos (plan + módulos)` : ""}.
+                    Después se renueva junto con tu plan, con la misma tarjeta.
+                  </p>
+                ) : detalle.cobroAutomatico && detalle.hoy ? (
                   <p className="rounded-xl bg-primary/[0.06] px-2.5 py-2">
                     <b>Hoy se cobra {usd(detalle.hoy.total)}</b> (con impuestos): la parte proporcional hasta tu próxima
                     renovación{detalle.proximoCobro ? ` del ${dia(detalle.proximoCobro)}` : ""}. Después se renueva junto con
@@ -130,7 +138,7 @@ export function DialogoCompraModulo({
               {!planContratado
                 ? "Se activa al instante para que lo pruebes en el demo."
                 : detalle?.cobroAutomatico
-                  ? "Se activa al instante y se suma a tu suscripción. Podés quitarlo cuando quieras: deja de cobrarse."
+                  ? "Se activa al instante y se suma a tu próxima factura (cobro automático). Podés quitarlo cuando quieras: deja de cobrarse."
                   : "Se activa al instante y el cargo se suma a tu próxima factura de Cloud Esther. Podés quitarlo cuando quieras."}
             </span>
           </p>

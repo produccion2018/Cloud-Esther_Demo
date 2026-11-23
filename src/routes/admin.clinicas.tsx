@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { CON_BACKEND, entrarComoSoporte, guardarMontosClinica, ponerCapacidadExtra } from "@/lib/admin/api";
 import { RECORDATORIO_ASESOR } from "@/lib/cloud-esther/cambio-plan";
+import { usePreciosModulos } from "@/lib/cloud-esther/precios-modulos";
 import { useAccion, useClinicas, usePlanes } from "@/lib/admin/consultas";
 import {
   ETIQUETA_PAGO,
@@ -397,6 +398,15 @@ function CapacidadExtraClinica({ clinica: c, editable }: { clinica: Clinica; edi
   const guardar = useAccion(ponerCapacidadExtra, ["clinicas"], "Capacidad extra guardada");
   const n = (v: string) => Number(v.replace(/\D/g, "") || 0);
   const tieneExtra = ex.pacientes + ex.usuarios + ex.sucursales > 0;
+  // Precio de lista (Planes y precios › Capacidad extra) para lo que se está cargando
+  const lista = usePreciosModulos();
+  const hayLista = ["cap-pacientes", "cap-usuarios", "cap-sucursales"].some((k) => lista[k] !== undefined);
+  const deLista =
+    Math.ceil(
+      ((lista["cap-pacientes"] ?? 0) * n(f.pacientes) +
+        (lista["cap-usuarios"] ?? 0) * n(f.usuarios) * 100 +
+        (lista["cap-sucursales"] ?? 0) * n(f.sucursales) * 100),
+    ) / 100;
   return (
     <div className="rounded-2xl border border-border p-4">
       <div className="flex items-center justify-between gap-2">
@@ -413,7 +423,7 @@ function CapacidadExtraClinica({ clinica: c, editable }: { clinica: Clinica; edi
             ? `Tiene +${miles(ex.pacientes)} pacientes, +${ex.usuarios} personas y +${ex.sucursales} sucursales además de su plan${
                 precioActual ? ` · ${precio(precioActual.importe)} ${/anual/i.test(precioActual.ciclo) ? "por año" : "por mes"}` : " · sin cargo"
               }.${ex.nota ? ` Nota: ${ex.nota}` : ""}`
-            : "Usa solo lo que trae su plan. Si pide más (te llega el aviso «pide más capacidad»), sumásela acá."}
+            : "Usa solo lo que trae su plan. Con precios de capacidad cargados (Planes y precios), la clínica la suma sola desde Mi plan; si pide algo especial, sumásela acá."}
         </p>
       ) : (
         <form
@@ -461,7 +471,7 @@ function CapacidadExtraClinica({ clinica: c, editable }: { clinica: Clinica; edi
           </div>
           <Campo
             label="Precio por mes (USD, opcional)"
-            ayuda="Se cobra como un adicional (si paga anual: × 12 con su descuento). Vacío = sin cargo."
+            ayuda="Se cobra como un adicional en su próxima factura: con Paddle se cobra solo (si paga anual: × 12 con su descuento). Vacío = sin cargo."
           >
             <input
               className={INPUT}
@@ -470,6 +480,15 @@ function CapacidadExtraClinica({ clinica: c, editable }: { clinica: Clinica; edi
               placeholder="Ej.: 30"
               onChange={(e) => setF({ ...f, precio: e.target.value.replace(/[^0-9.,]/g, "") })}
             />
+            {hayLista && deLista > 0 && (
+              <button
+                type="button"
+                className="mt-1 text-xs font-semibold text-primary hover:underline"
+                onClick={() => setF({ ...f, precio: String(deLista) })}
+              >
+                Usar precio de lista: USD {deLista.toLocaleString("es-AR")} por mes
+              </button>
+            )}
           </Campo>
           <Campo label="Nota (opcional)">
             <input className={INPUT} value={f.nota} maxLength={500} onChange={(e) => setF({ ...f, nota: e.target.value })} />

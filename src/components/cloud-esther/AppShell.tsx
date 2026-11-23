@@ -35,7 +35,13 @@ import {
 import { useSincronizarEquipo } from "@/lib/cloud-esther/profesionales";
 import { NOMBRE_ROL, moduloHabilitado, puedeVer } from "@/lib/clinica/permisos";
 import { hayCambiosSinGuardar, useEstadoGuardado } from "@/lib/clinica/sincronizar";
-import { avisarModuloAdicional, pedirAClinica, refrescarSesionClinica } from "@/lib/clinica/api";
+import {
+  avisarModuloAdicional,
+  pedirAClinica,
+  refrescarSesionClinica,
+  vistaPreviaModulo,
+  type VistaPreviaModulo,
+} from "@/lib/clinica/api";
 import { useAvisosChat } from "@/lib/clinica/chat";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
@@ -46,6 +52,7 @@ import { borrarDatosGuardados } from "@/lib/cloud-esther/tenant-store";
 import { LimiteSeccion } from "@/components/cloud-esther/LimiteSeccion";
 import { contratarModuloExtra, storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
+import { usePrecioTexto } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useNotificaciones } from "@/components/cloud-esther/useNotificaciones";
@@ -241,13 +248,30 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                     : pathname === m.path || pathname.startsWith(`${m.path}/`);
 
                 if (!unlocked) {
+                  // No viene en el plan: al tocarlo se abre la tarjeta para sumarlo como adicional
+                  // (con su precio) o, en el demo, probar el plan que lo incluye.
+                  const sePuedeSumar = comprableEn(m, plan);
                   return (
                     <li key={m.id}>
-                      <div className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-sidebar-foreground/35">
+                      <Link
+                        to={m.path as never}
+                        onClick={onNavigate}
+                        title={sePuedeSumar ? `Sumar ${etiquetaModulo(m, plan)} a tu plan` : `Incluido desde ${PLANS[m.minPlan].name}`}
+                        className={cn(
+                          "group flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-sidebar-foreground/45 transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-foreground/80",
+                          active && "bg-sidebar-accent/60 text-sidebar-foreground/80",
+                        )}
+                      >
                         <ModuleIcon name={m.icon} className="size-4 shrink-0" />
                         <span className="truncate">{etiquetaModulo(m, plan)}</span>
-                        <Lock className="ml-auto size-3" />
-                      </div>
+                        {sePuedeSumar ? (
+                          <span className="ml-auto rounded-full bg-sidebar-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-primary">
+                            + Sumar
+                          </span>
+                        ) : (
+                          <Lock className="ml-auto size-3" />
+                        )}
+                      </Link>
                     </li>
                   );
                 }
@@ -965,14 +989,35 @@ function ModuloNoIncluido({
   // Administrador, y antes se le avisa al panel de Cloud Esther para facturarlo.
   const comprable = !!modulo && comprableEn(modulo, plan) && (!real || real.rol === "admin");
   const [comprar, setComprar] = useState(false);
+  // Precio para ESTA clínica (según su ciclo) y, al abrir la compra, lo que calcula el servidor
+  const { texto: precioDe, recargar } = usePrecioTexto(real?.slug ?? null);
+  const precio = modulo ? precioDe(modulo.id) : null;
+  const [detalle, setDetalle] = useState<VistaPreviaModulo | null>(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
+  useEffect(() => {
+    setDetalle(null);
+    setErrorDetalle(null);
+    if (!comprar || !real || !modulo) return;
+    let vivo = true;
+    setCargandoDetalle(true);
+    vistaPreviaModulo(real.slug, modulo.id)
+      .then((d) => vivo && setDetalle(d))
+      .catch((e: unknown) => vivo && setErrorDetalle(e instanceof Error ? e.message : "No se pudo calcular el precio."))
+      .finally(() => vivo && setCargandoDetalle(false));
+    return () => {
+      vivo = false;
+    };
+  }, [comprar, real?.slug, modulo?.id]);
   const confirmarCompra = async () => {
     if (!modulo) return;
     // Clínica real: primero se avisa al panel de Cloud Esther (para facturarlo)
     if (real) {
       try {
         await avisarModuloAdicional(real.slug, modulo.id, "agregar");
+        void recargar();
       } catch (e) {
-        window.alert(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
+        setErrorDetalle(e instanceof Error ? e.message : "No se pudo avisar a Cloud Esther. Probá de nuevo.");
         return;
       }
     }
@@ -991,9 +1036,10 @@ function ModuloNoIncluido({
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           {planContratado
-            ? `Tu plan contratado es ${PLANS[plan].name}. Podés contratarlo como módulo adicional; el cargo se suma a tu próxima factura de Cloud Esther.`
+            ? `Tu plan contratado es ${PLANS[plan].name}. ${comprable ? "Podés sumarlo como módulo adicional: se activa al instante y el cargo va en tu próxima factura de Cloud Esther." : "Para usarlo, pasate a un plan que lo incluya."}`
             : `Estás viendo el demo con el plan ${PLANS[plan].name}. Podés sumarlo como módulo adicional o probar el plan ${PLANS[minPlan].name}, sin salir de acá.`}
         </p>
+        {comprable && precio && <p className="mt-2 text-sm font-semibold text-primary">Precio: {precio}</p>}
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {comprable && (
             <button type="button" className="btn-ce" onClick={() => setComprar(true)}>
@@ -1009,6 +1055,9 @@ function ModuloNoIncluido({
               Probar el plan {PLANS[minPlan].name}
             </button>
           )}
+          <Link to={"/demo/configuracion" as never} hash="miplan" className="btn-ce-outline">
+            Ver todos los adicionales
+          </Link>
           <Link to={"/demo" as never} className="btn-ce-outline">
             Volver al Dashboard
           </Link>
@@ -1017,6 +1066,10 @@ function ModuloNoIncluido({
       <DialogoCompraModulo
         abierto={comprar}
         modulo={modulo ? { label: modulo.label, icon: modulo.icon } : null}
+        precio={precio ?? undefined}
+        detalle={detalle}
+        cargandoDetalle={cargandoDetalle}
+        errorDetalle={errorDetalle}
         planContratado={planContratado}
         onCerrar={() => setComprar(false)}
         onConfirmar={confirmarCompra}

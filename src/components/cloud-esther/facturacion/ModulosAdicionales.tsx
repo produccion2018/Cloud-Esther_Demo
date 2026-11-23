@@ -27,6 +27,52 @@ import {
   type VistaPreviaModulo,
 } from "@/lib/clinica/api";
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from "@/components/cloud-esther/rrhh/ui";
+import { CapacidadDeMiPlan } from "@/components/clinica/pedir-capacidad";
+
+const usd = (n: number) => `USD ${n.toLocaleString("es-AR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+const dia = (iso: string) => new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+/** «Tu próxima factura»: plan + módulos adicionales + capacidad extra (clínica real). */
+function ProximaFactura({ datos }: { datos: ModulosDeMiClinica }) {
+  const cada = datos.ciclo === "anual" ? "por año" : "por mes";
+  const extras = datos.activos;
+  const totalExtras = extras.reduce((t, a) => t + a.importe, 0);
+  // El importe del plan que carga Cloud Esther es mensual: se suma solo si el plan se paga por mes
+  const plan = datos.ciclo === "mensual" && datos.planMensual != null ? datos.planMensual : null;
+  if (!extras.length && plan === null) return null;
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold">Tu próxima factura</p>
+        {datos.proximoCobro && <span className="text-[12px] text-muted-foreground">{dia(datos.proximoCobro)}</span>}
+      </div>
+      <ul className="mt-2 divide-y divide-border/60 text-[13px]">
+        {plan !== null && (
+          <li className="flex justify-between gap-3 py-1.5">
+            <span>Tu plan</span>
+            <b>{usd(plan)}</b>
+          </li>
+        )}
+        {extras.map((a) => (
+          <li key={a.modulo} className="flex justify-between gap-3 py-1.5">
+            <span className="min-w-0 truncate">{a.nombre}</span>
+            <b className="shrink-0">{usd(a.importe)}</b>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 flex justify-between gap-3 border-t border-primary/15 pt-2 text-sm">
+        <span className="font-semibold">{plan !== null ? "Total" : "Adicionales"} {cada}</span>
+        <b className="text-primary">{usd((plan ?? 0) + totalExtras)}</b>
+      </p>
+      <p className="mt-1 text-[11.5px] text-muted-foreground">
+        {datos.cobroAutomatico
+          ? "Se cobra solo con tu tarjeta. Lo que agregues hoy entra en esta factura (proporcional a los días que lo uses). "
+          : "Cloud Esther te la envía con todo lo que tengas activo ese día. "}
+        Precios sin impuestos.
+      </p>
+    </div>
+  );
+}
 
 /* Ubicación: src/components/cloud-esther/facturacion/ModulosAdicionales.tsx
    Tarjeta «Módulos adicionales»: Start, Pro y Plus pueden sumar módulos que su plan no incluye.
@@ -69,7 +115,7 @@ function useModulosDeMiClinica(slug: string | null) {
 }
 
 /** Texto del precio para esta clínica: «USD 204 / año» o «USD 20 / mes». */
-function usePrecioTexto(slug: string | null) {
+export function usePrecioTexto(slug: string | null) {
   const precios = usePreciosModulos();
   const { datos, recargar } = useModulosDeMiClinica(slug);
   const texto = (id: string) =>
@@ -244,13 +290,14 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
     (m) => comprableEn(m, plan) && !m.maxPlan && m.id !== "odontograma3d",
   );
   const haySwitch = !tres3DPorPlan(plan);
-  if (!comprables.length && !haySwitch) return null;
   const precioTexto = precioDe;
   const cadaTexto = mios?.ciclo === "anual" ? "por año" : "por mes";
   const totalModulos = mios?.activos.reduce((t, a) => t + a.importe, 0) ?? 0;
   return (
     <div className="space-y-4">
-      <OdontogramaSwitch onToast={onToast} />
+      {mios && <ProximaFactura datos={mios} />}
+
+      {haySwitch && <OdontogramaSwitch onToast={onToast} />}
 
       {comprables.length > 0 && (
         <div className="card-grad p-4">
@@ -262,8 +309,8 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
                 {!planContratado
                   ? " En el demo se activan al instante."
                   : mios?.cobroAutomatico
-                    ? " Se suman a tu suscripción: hoy se cobra lo proporcional y después se renuevan con tu plan."
-                    : " El cargo se agrega a tu próxima factura de Cloud Esther."}
+                    ? " Se activan al instante y van en tu próxima factura (cobro automático con tu tarjeta); después se renuevan con tu plan."
+                    : " Se activan al instante y el cargo se agrega a tu próxima factura de Cloud Esther."}
                 {mios && (
                   <>
                     {" "}
@@ -345,6 +392,8 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
         </div>
       )}
 
+      <CapacidadDeMiPlan onToast={onToast} alCambiar={() => void recargar()} />
+
       <DialogoCompraModulo
         abierto={!!comprar}
         modulo={comprar}
@@ -375,7 +424,7 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
             !real
               ? `${m.label} contratado y activado en tu plan ${PLANS[plan].name}`
               : cobro === "paddle"
-                ? `${m.label} contratado: se sumó a tu suscripción`
+                ? `${m.label} contratado: va en tu próxima factura`
                 : `${m.label} contratado: se suma a tu próxima factura de Cloud Esther`,
           );
         }}

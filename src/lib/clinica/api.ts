@@ -361,15 +361,41 @@ export function problemaClaveClinica(c: string): string | null {
 /* ───────────── Módulos adicionales: aviso al panel de Cloud Esther para facturarlo ───────────── */
 /* ───────────── Capacidad del plan (pacientes, equipo, sucursales) ───────────── */
 
+export type TipoCapacidad = "pacientes" | "usuarios" | "sucursales";
+/** Precio publicado por Cloud Esther: `mensual` USD por cada `cada` (ej. cada 100 pacientes) */
+export type PrecioCapacidad = { cada: number; mensual: number; porPeriodo: number } | null;
+export type Limites = { pacientes: number | null; usuarios: number | null; sucursales: number | null };
 export type CapacidadClinica = {
-  limites: { pacientes: number | null; usuarios: number | null; sucursales: number | null };
+  limites: Limites;
+  plan?: Limites;
   extra: { pacientes: number; usuarios: number; sucursales: number };
   uso: { pacientes: number; archivados: number; usuarios: number };
+  ciclo?: CicloClinica;
+  descuentoAnual?: number;
+  cobroAutomatico?: boolean;
+  proximoCobro?: string | null;
+  precios?: Record<TipoCapacidad, PrecioCapacidad>;
+  /** Lo que ya paga por capacidad extra por período (0 = nada) */
+  importeActual?: number;
 };
-export type TipoCapacidad = "pacientes" | "usuarios" | "sucursales";
 export const verCapacidad = (slug: string) => http<CapacidadClinica>(slug, "GET", "/capacidad");
 export const pedirCapacidad = (slug: string, d: { tipo: TipoCapacidad; cantidad: number | null; mensaje: string }) =>
   http<void>(slug, "POST", "/capacidad/pedido", d);
+/** Sumar capacidad YA con el precio publicado: el límite sube al instante y va a la próxima factura */
+export const comprarCapacidad = (slug: string, d: { tipo: TipoCapacidad; cantidad: number }) =>
+  http<{ limites: Limites; suma: number; total: number; ciclo: CicloClinica; cobro: "paddle" | "manual" }>(
+    slug,
+    "POST",
+    "/capacidad/comprar",
+    d,
+  );
+
+/** Después de sumar capacidad: los nuevos topes quedan en la sesión (se aplican sin recargar) */
+export function actualizarLimitesSesion(slug: string, limites: Limites) {
+  const s = leerSesionClinica(slug);
+  if (!s) return;
+  guardarSesionClinica({ ...s, clinica: { ...s.clinica, limites } });
+}
 
 /* ───────────── Módulos adicionales (precio para MI clínica y cobro) ───────────── */
 
@@ -381,6 +407,8 @@ export type ModulosDeMiClinica = {
   /** true = paga con Paddle: el módulo se suma a su suscripción y se cobra solo */
   cobroAutomatico: boolean;
   proximoCobro: string | null;
+  /** Lo que paga por mes por el plan (lo carga Cloud Esther). null = no cargado */
+  planMensual?: number | null;
   /** { módulo: { mensual, porPeriodo } } (porPeriodo = por mes o por año, según su ciclo) */
   precios: Record<string, { mensual: number; porPeriodo: number }>;
   activos: { modulo: string; nombre: string; importe: number; ciclo: CicloClinica; desde: string; cobro: "paddle" | "manual" }[];
@@ -396,6 +424,8 @@ export type VistaPreviaModulo = {
   proximoCobro: string | null;
   /** Lo que Paddle cobra HOY (proporcional, con impuestos). null = se factura después */
   hoy: { subtotal: number; impuesto: number; total: number } | null;
+  /** Paddle: cuánto queda la PRÓXIMA factura completa (plan + módulos + este, con impuestos) */
+  proxima?: { subtotal: number; impuesto: number; total: number } | null;
 };
 
 export const verModulosDeMiClinica = (slug: string) => http<ModulosDeMiClinica>(slug, "GET", "/modulos-adicionales");

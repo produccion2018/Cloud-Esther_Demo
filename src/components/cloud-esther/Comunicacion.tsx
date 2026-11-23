@@ -68,7 +68,9 @@ import {
 } from "@/lib/cloud-esther/comunicacion-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { abrirRecordatorioWhatsApp, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
+import { abrirRecordatorioWhatsApp, telefonoDePaciente, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
+import { enviarWhatsappBusiness } from "@/lib/clinica/api";
+import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { ComunicacionInterna, ElegirFondo } from "@/components/clinica/comunicacion-interna";
 import { useFondoChat } from "@/lib/clinica/fondo-chat";
@@ -1775,8 +1777,11 @@ function PanelPaciente({ conv, ctx }: { conv: Conversacion; ctx: Ctx }) {
 /* ───────────── Recordatorios ───────────── */
 
 function Recordatorios({ ctx }: { ctx: Ctx }) {
-  // Clínica real: el recordatorio sale por el WhatsApp de la clínica con un toque (todos los planes)
-  const real = !!useClinicaReal();
+  // Clínica real: el recordatorio sale por el WhatsApp de la clínica con un toque (todos los planes).
+  // Con WhatsApp Business conectado (Automatizaciones › Conexión) sale SOLO, sin abrir nada.
+  const clinicaR = useClinicaReal();
+  const real = !!clinicaR;
+  const waBusiness = !!useEstadoAutomatizaciones()?.whatsapp.conectado;
   const { turnos } = storeAgenda.usar();
   const { recordatorios, config, plantillas } = storeComunicacion.usar();
   const [dias, setDias] = useState<"1" | "3" | "7">("7");
@@ -1809,6 +1814,25 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
     }));
 
   const enviar = (t: Turno, silencioso = false) => {
+    if (real && waBusiness && clinicaR) {
+      const tel = telefonoDePaciente(t.paciente);
+      if (!tel) {
+        ctx.onToast(`${t.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
+        return false;
+      }
+      const texto = textoRecordatorioTurno(t, ctx.clinica);
+      enviarWhatsappBusiness(clinicaR.slug, { telefono: tel, texto, paciente: t.paciente })
+        .then(() => {
+          setComunicacion("recordatorios", (prev) => ({
+            ...prev,
+            [t.id]: { estado: "Enviado", fecha: new Date().toISOString(), canal: "WhatsApp" },
+          }));
+          registrarEnvio({ paciente: t.paciente, canal: "WhatsApp", tipo: "Recordatorio", texto, estado: "enviado" });
+          if (!silencioso) ctx.onToast(`Recordatorio enviado a ${t.paciente} por WhatsApp Business`);
+        })
+        .catch((e: unknown) => ctx.onToast(e instanceof Error ? e.message : "No se pudo enviar por WhatsApp Business."));
+      return true;
+    }
     if (real) {
       if (!abrirRecordatorioWhatsApp(t, ctx.clinica)) {
         ctx.onToast(`${t.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
@@ -1895,6 +1919,12 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
   };
 
   const enviarTodos = () => {
+    // Clínica real con WhatsApp Business: salen todos solos
+    if (real && waBusiness) {
+      for (const t of sinEnviar) enviar(t, true);
+      if (sinEnviar.length) ctx.onToast(`Enviando ${sinEnviar.length} recordatorios por WhatsApp Business…`);
+      return;
+    }
     // Clínica real: WhatsApp se abre de a uno (se envía el siguiente pendiente)
     if (real) {
       const sig = sinEnviar[0];
@@ -2076,11 +2106,18 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
               </span>
               Recordatorios por WhatsApp
             </p>
-            <ol className="space-y-2 text-xs text-muted-foreground">
-              <li className="flex gap-2"><b className="text-primary">1.</b> Tocá <b className="text-foreground">WhatsApp</b> en el turno.</li>
-              <li className="flex gap-2"><b className="text-primary">2.</b> Se abre el WhatsApp de la clínica con el mensaje listo.</li>
-              <li className="flex gap-2"><b className="text-primary">3.</b> Tocá enviar. Cuando el paciente responda, confirmá el turno acá o en la Agenda.</li>
-            </ol>
+            {waBusiness ? (
+              <p className="text-xs text-muted-foreground">
+                <b className="text-foreground">WhatsApp Business conectado:</b> al tocar WhatsApp (o «enviar todos») el recordatorio sale
+                solo desde el número de la clínica. Las respuestas de los pacientes se ven en Automatizaciones › Agente IA.
+              </p>
+            ) : (
+              <ol className="space-y-2 text-xs text-muted-foreground">
+                <li className="flex gap-2"><b className="text-primary">1.</b> Tocá <b className="text-foreground">WhatsApp</b> en el turno.</li>
+                <li className="flex gap-2"><b className="text-primary">2.</b> Se abre el WhatsApp de la clínica con el mensaje listo.</li>
+                <li className="flex gap-2"><b className="text-primary">3.</b> Tocá enviar. Cuando el paciente responda, confirmá el turno acá o en la Agenda.</li>
+              </ol>
+            )}
             <div className="rounded-xl border border-primary/10 bg-white p-3">
               <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Mensaje</p>
               <p className="text-xs">
@@ -2091,7 +2128,9 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
               </p>
             </div>
             <p className="rounded-xl bg-primary/[0.05] p-2.5 text-[11px] text-muted-foreground">
-              Para que los recordatorios salgan solos, sin tocar nada, hay que conectar WhatsApp Business. Pedíselo a Cloud Esther.
+              {waBusiness
+                ? "Para que salgan solos 24 h antes, sin tocar nada, activá el flujo «Recordatorio y confirmación de turno» en Automatizaciones."
+                : "Para que los recordatorios salgan solos, sin tocar nada, conectá WhatsApp Business en Automatizaciones › Conexión."}
             </p>
           </div>
         ) : (

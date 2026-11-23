@@ -440,3 +440,73 @@ export const avisarModuloAdicional = (slug: string, modulo: string, accion: "agr
     "/modulos-adicionales",
     { modulo, accion },
   );
+
+/* ───────────── Automatizaciones, WhatsApp Business e IA (en el servidor) ───────────── */
+
+export type EstadoAutomatizaciones = {
+  habilitado: boolean;
+  ia: { habilitada: boolean; conLlave: boolean };
+  whatsapp: {
+    conectado: boolean;
+    phoneId: string;
+    numero: string;
+    token: string;
+    appSecret: string;
+    plantilla: string;
+    idioma: string;
+    webhook: string;
+    verifyToken: string;
+  };
+  n8n: { eventosUrl: string; webhookAcciones: string; secreto: string };
+  agente: { activo: boolean };
+  flujosActivos: number;
+};
+export type EjecucionServidor = {
+  id: string;
+  flujoId: string;
+  flujo: string;
+  fecha: string;
+  disparador: string;
+  sede: string;
+  estado: "En curso" | "En espera" | "Completada" | "Detenida" | "Error";
+  pasos: { tipo: string; titulo: string; resultado: string; estado: "ok" | "omitido" | "espera" | "error" }[];
+  modo: "Manual" | "Automática";
+  retomaEl: string | null;
+};
+export type ItemBandeja = { id: string; tipo: "tarea" | "aviso" | "seguimiento"; datos: Record<string, unknown>; fecha: string };
+export type MensajeWhatsapp = {
+  id: string;
+  telefono: string;
+  nombre: string;
+  direccion: "entrante" | "saliente";
+  texto: string;
+  por: string;
+  estado: string;
+  fecha: string;
+};
+
+export const verEstadoAutomatizaciones = (slug: string) => http<EstadoAutomatizaciones>(slug, "GET", "/automatizaciones/estado");
+export const guardarConexionAutomatizaciones = (
+  slug: string,
+  d: {
+    n8nEventsUrl?: string;
+    whatsapp?: { phoneId: string; token?: string; appSecret?: string; plantilla: string; idioma: string; desconectar?: boolean };
+  },
+) => http<EstadoAutomatizaciones>(slug, "PUT", "/automatizaciones/conexion", d);
+export const probarWhatsappBusiness = (slug: string, telefono: string) =>
+  http<{ ok: true }>(slug, "POST", "/automatizaciones/probar-whatsapp", { telefono });
+export const probarN8n = (slug: string) => http<{ ok: true }>(slug, "POST", "/automatizaciones/probar-n8n");
+export const renovarSecretoAutomatizaciones = (slug: string) =>
+  http<EstadoAutomatizaciones>(slug, "POST", "/automatizaciones/secreto");
+export const sincronizarFlujos = (slug: string, d: { flujos: unknown[]; agente?: { estado: string; config: unknown } }) =>
+  http<{ ok: true; activos: number; habilitado: boolean }>(slug, "PUT", "/automatizaciones/flujos", d);
+export const ejecutarFlujoEnServidor = (slug: string, flujoId: string, disparo: Record<string, unknown>) =>
+  http<EjecucionServidor>(slug, "POST", `/automatizaciones/flujos/${encodeURIComponent(flujoId)}/ejecutar`, { disparo });
+export const verEjecucionesServidor = (slug: string) => http<EjecucionServidor[]>(slug, "GET", "/automatizaciones/ejecuciones");
+export const tomarBandejaAutomatizaciones = (slug: string) => http<ItemBandeja[]>(slug, "POST", "/automatizaciones/bandeja");
+export const verMensajesWhatsapp = (slug: string, telefono?: string) =>
+  http<MensajeWhatsapp[]>(slug, "GET", `/whatsapp/mensajes${telefono ? `?telefono=${encodeURIComponent(telefono)}` : ""}`);
+export const enviarWhatsappBusiness = (slug: string, d: { telefono: string; texto: string; paciente?: string }) =>
+  http<{ ok: true }>(slug, "POST", "/whatsapp/enviar", d);
+export const preguntarIAServidor = (slug: string, d: { pregunta: string; contexto: string }) =>
+  http<{ texto: string | null; motivo: "sin-llave" | "limite" | "error" | null }>(slug, "POST", "/ia/preguntar", d);

@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { preguntarIAServidor } from "@/lib/clinica/api";
+import { clinicaReal } from "@/lib/clinica/modo-clinica";
 
 /* Ubicación: src/lib/cloud-esther/esther-llm.ts
    Cerebro real de Esther Infinity: un endpoint de SERVIDOR (solo planes con IA) que le pasa a
@@ -20,7 +22,7 @@ const SISTEMA =
   "si un dato no está en el CONTEXTO, decí con naturalidad que no lo tenés a mano y sugerí en qué módulo verlo; " +
   "NUNCA inventes datos, cifras ni nombres. No hables de modelos de IA, proveedores ni de cómo estás hecha.";
 
-export const preguntarIA = createServerFn({ method: "POST" })
+const preguntarIAVercel = createServerFn({ method: "POST" })
   .inputValidator((d: EntradaIA) => d)
   .handler(async ({ data }): Promise<{ text: string } | null> => {
     // Proveedor flexible (todos usan la misma API estilo OpenAI):
@@ -67,3 +69,23 @@ export const preguntarIA = createServerFn({ method: "POST" })
       return null; // cualquier error: respaldo al motor interno
     }
   });
+
+/** Pregunta a la IA. En una CLÍNICA REAL va primero al servidor de Cloud Esther (con su llave y
+ *  el límite diario de la clínica); si no hay llave ahí, prueba el endpoint de Vercel; si nada
+ *  responde, devuelve null y la pantalla usa el motor interno. Nunca rompe. */
+export async function preguntarIA(args: { data: EntradaIA }): Promise<{ text: string } | null> {
+  const real = clinicaReal();
+  if (real) {
+    try {
+      const r = await preguntarIAServidor(real.slug, { pregunta: args.data.pregunta, contexto: args.data.contexto.slice(0, 6000) });
+      if (r.texto) return { text: r.texto };
+    } catch {
+      /* sin conexión o sin el módulo: se prueba la otra vía */
+    }
+  }
+  try {
+    return await preguntarIAVercel(args);
+  } catch {
+    return null;
+  }
+}

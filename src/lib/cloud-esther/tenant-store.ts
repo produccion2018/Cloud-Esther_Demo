@@ -218,7 +218,8 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
     return leer();
   };
 
-  return { leer: leerConCarga, poner, usar };
+  // suscribir: avisos de cambios fuera de React (ej. mandar los flujos al servidor)
+  return { leer: leerConCarga, poner, usar, suscribir };
 }
 
 /** Vacía TODOS los datos de práctica guardados en este navegador: los de las clínicas (todas las

@@ -129,7 +129,7 @@ export type Clinica = {
 
 export type EstadoServicio = "ok" | "aviso" | "error" | "apagado";
 export type ChequeoSistema = {
-  id: "backend" | "base" | "paddle" | "correo" | "imagenes" | "respaldo";
+  id: "backend" | "base" | "paddle" | "correo" | "imagenes" | "respaldo" | "ia";
   nombre: string;
   estado: EstadoServicio;
   detalle: string;

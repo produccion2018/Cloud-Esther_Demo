@@ -43,6 +43,7 @@ import {
   type VistaPreviaModulo,
 } from "@/lib/clinica/api";
 import { useAvisosChat } from "@/lib/clinica/chat";
+import { useBandejaAutomatizaciones, useSincronizarAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { CambiarVista } from "@/components/clinica/cambiar-vista";
 import { useAlmacenClinicoListo } from "@/lib/clinica/almacen-clinico";
@@ -1277,6 +1278,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // de Acceso que todavía no tenga perfil (additivo y seguro). Así aparecen en
   // agenda, firma e historia, no solo en los selectores.
   useSincronizarEquipo();
+  // Clínica real: los flujos y el Agente IA van al servidor (que los ejecuta) y lo que dejan las
+  // automatizaciones (tareas, avisos, seguimientos) se guarda en la Agenda y en Notificaciones
+  useSincronizarAutomatizaciones();
+  useBandejaAutomatizaciones();
   // Las sucursales (sedes) salen de lo que cargó el dueño en Configuración. Si no cargó ninguna,
   // la sede es el nombre de la clínica. Vale para el demo y para la clínica real.
   ajustarCatalogosClinica(

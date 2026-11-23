@@ -18,6 +18,8 @@ import { nivelStock, storeInventario } from "@/lib/cloud-esther/inventario-store
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { setNotificaciones } from "@/lib/cloud-esther/notificaciones-store";
 import { auditarConsulta } from "@/lib/cloud-esther/ia-store";
+import { leerEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
+import { clinicaReal } from "@/lib/clinica/modo-clinica";
 import {
   EVENTOS,
   PASOS,
@@ -293,7 +295,16 @@ export function ejecutarFlujo(
   const d = opciones.disparo ?? candidatos(flujo)[0];
   if (!d) return null;
   const creds = storeN8n.leer().credenciales;
-  const conectada = (id: string) => creds.find((c) => c.id === id)?.conectada ?? false;
+  // Clínica real: WhatsApp Business según el servidor y el correo sale por Cloud Esther (siempre)
+  const estReal = clinicaReal() ? leerEstadoAutomatizaciones() : null;
+  const conectada = (id: string) =>
+    estReal
+      ? id === "whatsapp"
+        ? estReal.whatsapp.conectado
+        : id === "smtp"
+          ? true
+          : creds.find((c) => c.id === id)?.conectada ?? false
+      : (creds.find((c) => c.id === id)?.conectada ?? false);
   const ctx = { texto: "" };
   const pasos: PasoEjecutado[] = [];
   let estado: Ejecucion["estado"] = "Completada";
@@ -344,7 +355,7 @@ export function ejecutarFlujo(
         break;
       case "whatsapp":
         if (!conectada("whatsapp")) {
-          resultado = "WhatsApp Business no está conectado en n8n";
+          resultado = "WhatsApp Business no está conectado (Automatizaciones › Conexión)";
           e = "error";
         } else if (!d.telefono) {
           resultado = "El paciente no tiene teléfono cargado";

@@ -15,6 +15,7 @@ import {
   Server,
   Timer,
   WalletCards,
+  Bot,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -900,6 +901,7 @@ const ICONO_SERVICIO: Record<ChequeoSistema["id"], LucideIcon> = {
   correo: Mail,
   imagenes: ImageIcon,
   respaldo: HardDriveDownload,
+  ia: Bot,
 };
 const ESTILO_ESTADO: Record<EstadoServicio, { texto: string; icono: LucideIcon; clase: string }> = {
   ok: { texto: "Funciona", icono: CheckCircle2, clase: "text-success bg-success/10 border-success/25" },
@@ -981,7 +983,7 @@ function EstadoDelSistema() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {estado.chequeos.map((c) => {
                 const e = ESTILO_ESTADO[c.estado];
-                const Icono = ICONO_SERVICIO[c.id];
+                const Icono = ICONO_SERVICIO[c.id] ?? Server;
                 const datos = Object.entries(c.datos).filter(([, v]) => v !== null && v !== "");
                 return (
                   <div key={c.id} className="rounded-2xl border border-border bg-card p-4">

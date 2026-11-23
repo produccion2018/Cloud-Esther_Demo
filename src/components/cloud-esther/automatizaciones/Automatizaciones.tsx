@@ -54,6 +54,11 @@ import {
 } from "@/lib/cloud-esther/n8n-store";
 import { candidatos, ejecutarFlujo } from "@/lib/cloud-esther/n8n-motor";
 import { AgenteIA } from "@/components/cloud-esther/automatizaciones/AgenteIA";
+import { ConexionReal } from "@/components/cloud-esther/automatizaciones/ConexionReal";
+import { leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { ejecutarFlujoEnServidor, verEjecucionesServidor } from "@/lib/clinica/api";
+import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import {
   Acciones,
   BTN_ICONO,
@@ -106,6 +111,7 @@ const ESTADO_EJ: Record<Ejecucion["estado"], string> = {
   "En espera": "bg-sky-100 text-sky-700",
   Detenida: "bg-amber-100 text-amber-700",
   Error: "bg-rose-100 text-rose-700",
+  "En curso": "bg-violet-100 text-violet-700",
 };
 const ESTADO_PASO: Record<string, string> = {
   ok: "text-emerald-600",
@@ -142,8 +148,31 @@ export function Automatizaciones() {
   const { plan } = useCloudEsther();
   const { usuario: u } = useSesion();
   const est = storeN8n.usar();
+  const real = useClinicaReal();
+  const estServ = useEstadoAutomatizaciones();
+  const [ejecServ, setEjecServ] = useState<Ejecucion[]>([]);
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("agente");
+  // Clínica real: las ejecuciones de verdad las hace el servidor (aunque nadie tenga la app abierta)
+  useEffect(() => {
+    if (!real || real.rol !== "admin") return;
+    let vivo = true;
+    const traer = () =>
+      verEjecucionesServidor(real.slug)
+        .then((l) => vivo && setEjecServ(l as Ejecucion[]))
+        .catch(() => undefined);
+    void traer();
+    const t = window.setInterval(() => void traer(), 30_000);
+    return () => {
+      vivo = false;
+      window.clearInterval(t);
+    };
+  }, [real?.slug, real?.rol, seccion]);
+  const ejecuciones = useMemo(
+    () => [...ejecServ, ...est.ejecuciones].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 300),
+    [ejecServ, est.ejecuciones],
+  );
+  const activas = real ? !!estServ?.habilitado && (estServ?.flujosActivos ?? 0) > 0 : est.conectado;
   const [sel, setSel] = useState<string | null>(null);
   const [editando, setEditando] = useState<Flujo | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -158,7 +187,7 @@ export function Automatizaciones() {
   };
 
   const mes = new Date().toISOString().slice(0, 7);
-  const delMes = est.ejecuciones.filter((e) => e.fecha.startsWith(mes));
+  const delMes = ejecuciones.filter((e) => e.fecha.startsWith(mes));
   const acciones = delMes
     .flatMap((e) => e.pasos)
     .filter((p) => p.estado === "ok" && p.tipo !== "esperar" && p.tipo !== "condicion");
@@ -201,7 +230,7 @@ export function Automatizaciones() {
       id: "ejecuciones",
       label: "Ejecuciones",
       icon: History,
-      badge: est.ejecuciones.filter((e) => e.estado === "Error").length,
+      badge: ejecuciones.filter((e) => e.estado === "Error").length,
     },
     { id: "conexion", label: "Conexión", icon: Plug },
   ];
@@ -258,14 +287,22 @@ export function Automatizaciones() {
                     Enterprise
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${est.conectado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${activas ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
                   >
-                    {est.conectado ? (
+                    {activas ? (
                       <ShieldCheck className="size-3.5" />
                     ) : (
                       <Clock3 className="size-3.5" />
                     )}
-                    {est.conectado ? "Automatizaciones activas" : "En modo prueba"}
+                    {real
+                      ? activas
+                        ? `${estServ?.flujosActivos} ${estServ?.flujosActivos === 1 ? "flujo activo" : "flujos activos"} en el servidor`
+                        : estServ && !estServ.habilitado
+                          ? "No incluido en tu plan"
+                          : "Sin flujos activos"
+                      : est.conectado
+                        ? "Automatizaciones activas"
+                        : "En modo prueba"}
                   </span>
                 </div>
                 <h1 className="mt-4 text-[34px] font-bold tracking-[-0.035em] md:text-[42px]">
@@ -367,7 +404,7 @@ export function Automatizaciones() {
           ) : seccion === "flujos" ? (
             <Flujos
               flujos={est.flujos}
-              ejecuciones={est.ejecuciones}
+              ejecuciones={ejecuciones}
               sel={sel ?? est.flujos[0]?.id ?? null}
               onSel={setSel}
               onEditar={setEditando}
@@ -378,7 +415,7 @@ export function Automatizaciones() {
           ) : seccion === "plantillas" ? (
             <Plantillas flujos={est.flujos} onUsar={desdePlantilla} />
           ) : seccion === "ejecuciones" ? (
-            <Ejecuciones ejecuciones={est.ejecuciones} flujos={est.flujos} />
+            <Ejecuciones ejecuciones={ejecuciones} flujos={est.flujos} />
           ) : (
             <Conexion onToast={onToast} />
           )}
@@ -466,11 +503,9 @@ function CatalogoAutomatizaciones({
           <div>
             <p className="font-display text-base font-bold">Las {TOTAL_AUTOMATIZACIONES} automatizaciones de Esther Infinity</p>
             <p className="text-xs text-muted-foreground">
-              {grupo4
-                ? "Incluidas en tu plan: Esther Infinity las ejecuta sola cuando corresponde."
-                : puedeActivar
-                  ? "Incluidas en Esther Infinity completo. Activá las que quieras usar."
-                  : "Son parte de Esther Infinity completo (plan avanzado o grupo)."}
+              {grupo4 || puedeActivar
+                ? "Ideas listas para tu clínica: marcá las que querés usar y armalas en «Flujos» (o desde «Plantillas»). Los flujos activos los ejecuta el servidor solo, aunque nadie tenga la app abierta."
+                : "Son parte de Esther Infinity completo (plan avanzado o grupo)."}
             </p>
           </div>
         </div>
@@ -578,6 +613,8 @@ function Flujos({
   onNuevo: () => void;
 }) {
   const f = flujos.find((x) => x.id === sel) ?? flujos[0];
+  const real = useClinicaReal();
+  const [ejecutando, setEjecutando] = useState(false);
   const [disparo, setDisparo] = useState(0);
   const [ultima, setUltima] = useState<Ejecucion | null>(null);
   const lista = useMemo(() => (f ? candidatos(f) : []), [f]);
@@ -611,6 +648,32 @@ function Flujos({
     onToast(
       `Ejecución ${ej.estado.toLowerCase()}: ${ej.pasos.filter((p) => p.estado === "ok").length} pasos`,
     );
+  };
+  const ejecutarDeVerdad = async () => {
+    const d = lista[disparo];
+    if (!real || !d) return;
+    if (!window.confirm(`Se va a ejecutar «${f.nombre}» DE VERDAD con «${d.titulo}» (envía los WhatsApp y correos reales). ¿Seguimos?`)) return;
+    setEjecutando(true);
+    try {
+      const pac = d.pacienteId ? leerPacientes().find((p) => p.id === d.pacienteId) : undefined;
+      const ej = await ejecutarFlujoEnServidor(real.slug, f.id, {
+        titulo: d.titulo,
+        paciente: d.paciente,
+        pacienteId: d.pacienteId,
+        telefono: d.telefono,
+        email: pac?.email ?? "",
+        sede: d.sede,
+        monto: d.monto,
+        presupuestoId: d.presupuestoId ?? null,
+        dato: d.dato,
+      });
+      setUltima(ej as Ejecucion);
+      onToast(`Ejecución real: ${ej.estado.toLowerCase()}`);
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "No se pudo ejecutar. Probá de nuevo.");
+    } finally {
+      setEjecutando(false);
+    }
   };
   const cambiar = (patch: Partial<Flujo>) =>
     setN8n("flujos", (prev) => prev.map((x) => (x.id === f.id ? { ...x, ...patch } : x)));
@@ -794,7 +857,7 @@ function Flujos({
               <p className="text-sm font-semibold">Probar con datos reales</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {lista.length
-                  ? `${lista.length} ${lista.length === 1 ? "registro cumple" : "registros cumplen"} este evento ahora. Los envíos externos se simulan; el seguimiento, las tareas y los avisos se registran de verdad.`
+                  ? `${lista.length} ${lista.length === 1 ? "registro cumple" : "registros cumplen"} este evento ahora. «Probar» simula los envíos externos${real ? "; «Ejecutar de verdad» manda los WhatsApp y correos reales" : ""}. Con el flujo activo, el servidor lo ejecuta solo cada vez que pasa el evento.`
                   : "Ningún registro de esta empresa cumple el evento en este momento."}
               </p>
               {lista.length > 0 && (
@@ -814,9 +877,14 @@ function Flujos({
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <button type="button" className={BTN_PRIMARIO} onClick={probar}>
+                  <button type="button" className={real ? BTN_SECUNDARIO : BTN_PRIMARIO} onClick={probar}>
                     <Play className="size-4" /> Probar ahora
                   </button>
+                  {real?.rol === "admin" && (
+                    <button type="button" className={BTN_PRIMARIO} onClick={() => void ejecutarDeVerdad()} disabled={ejecutando}>
+                      <Zap className="size-4" /> {ejecutando ? "Ejecutando…" : "Ejecutar de verdad"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1254,6 +1322,11 @@ function Ejecuciones({ ejecuciones, flujos }: { ejecuciones: Ejecucion[]; flujos
 /* ───────────── Conexión ───────────── */
 
 function Conexion({ onToast }: { onToast: (m: string) => void }) {
+  const real = useClinicaReal();
+  return real ? <ConexionReal onToast={onToast} /> : <ConexionDemo onToast={onToast} />;
+}
+
+function ConexionDemo({ onToast }: { onToast: (m: string) => void }) {
   const est = storeN8n.usar();
   const [instancia, setInstancia] = useState(est.instancia);
   const [apiKey, setApiKey] = useState(est.apiKey);

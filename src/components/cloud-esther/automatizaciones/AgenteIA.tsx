@@ -25,6 +25,9 @@ import {
   type EstadoAgente,
 } from "@/lib/cloud-esther/agente-ia-store";
 import { ProbadorAgente } from "@/components/cloud-esther/automatizaciones/ProbadorAgente";
+import { ConversacionesWhatsapp } from "@/components/cloud-esther/automatizaciones/ConversacionesWhatsapp";
+import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import {
   BTN_PRIMARIO,
   BTN_SECUNDARIO,
@@ -57,6 +60,10 @@ export function AgenteIA({
 }) {
   const est = storeAgenteIA.usar();
   const m = useMemo(() => metricasAgente(est), [est]);
+  // Clínica real: WhatsApp Business se conecta en Automatizaciones › Conexión (lo confirma Meta)
+  const real = useClinicaReal();
+  const estServ = useEstadoAutomatizaciones();
+  const waConectado = real ? !!estServ?.whatsapp.conectado : est.whatsappConectado;
   const [verConfig, setVerConfig] = useState(false);
 
   const setEstado = (estado: EstadoAgente) => {
@@ -158,7 +165,7 @@ export function AgenteIA({
           <div>
             <p className="text-[12px] font-semibold text-muted-foreground">Conexión de WhatsApp</p>
             <div className="mt-2">
-              {est.whatsappConectado ? (
+              {waConectado ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-bold text-emerald-700">
                   <CheckCircle2 className="size-3.5" /> WhatsApp conectado
                 </span>
@@ -170,28 +177,35 @@ export function AgenteIA({
             </div>
           </div>
           <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-            Mientras WhatsApp no esté conectado, el agente no atiende mensajes reales. Podés probar su
-            funcionamiento abajo, en el <b>Probador</b>.
+            {waConectado
+              ? est.estado === "activo"
+                ? "El agente responde solo los WhatsApp que llegan a tu número (con IA), deriva las urgencias y deja los pedidos de turno como tarea."
+                : "WhatsApp está conectado. Poné el agente en «Activo» para que responda solo."
+              : real
+                ? "Conectá WhatsApp Business en la pestaña «Conexión». Mientras tanto, podés probarlo abajo, en el Probador."
+                : "Mientras WhatsApp no esté conectado, el agente no atiende mensajes reales. Podés probar su funcionamiento abajo, en el Probador."}
           </p>
         </div>
       </section>
 
       {/* ───────── Cómo activarlo (honesto) ───────── */}
-      {!est.whatsappConectado && (
+      {waConectado && real && <ConversacionesWhatsapp onToast={onToast} />}
+
+      {!waConectado && (
         <section className="rounded-2xl border border-amber-300/40 bg-amber-500/[0.06] p-4">
           <p className="flex items-center gap-1.5 text-[13px] font-semibold text-amber-700">
             <ShieldAlert className="size-4" /> Cómo se activa la atención real por WhatsApp
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-amber-900/80 dark:text-amber-100/80">
-            Para que el agente atienda WhatsApp de verdad (recibir mensajes y audios, transcribir y
-            agendar solo), falta conectar servicios externos. Hasta entonces, acá figura como pendiente
-            —nunca se simula una conexión real—.
+            {real
+              ? "Andá a la pestaña «Conexión», cargá los datos de WhatsApp Business de tu clínica (Meta los confirma en el momento) y pegá el webhook en tu app de Meta. n8n es opcional: el agente funciona sin él."
+              : "Para que el agente atienda WhatsApp de verdad, la clínica conecta su WhatsApp Business (API oficial de Meta) en la pestaña «Conexión». Hasta entonces, acá figura como pendiente —nunca se simula una conexión real—."}
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {[
-              { t: "WhatsApp Business API", d: "Número y credenciales de la clínica." },
-              { t: "n8n (motor de flujos)", d: "Orquesta el ida y vuelta de los mensajes." },
-              { t: "IA + transcripción", d: "Entiende el texto y los audios." },
+              { t: "WhatsApp Business API", d: "Número y credenciales de la clínica (Meta)." },
+              { t: "n8n (opcional)", d: "Para sumar tus propios flujos externos." },
+              { t: "IA", d: "Entiende el mensaje y responde (llave en el servidor)." },
             ].map((x) => (
               <div key={x.t} className="rounded-xl border border-amber-200/60 bg-white/70 p-3 dark:bg-white/5">
                 <p className="flex items-center gap-1.5 text-[12px] font-semibold">

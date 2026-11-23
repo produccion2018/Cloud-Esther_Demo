@@ -196,9 +196,12 @@ export type Ejecucion = {
   fecha: string;
   disparador: string;
   sede: string;
-  estado: "Completada" | "En espera" | "Detenida" | "Error";
+  estado: "Completada" | "En espera" | "Detenida" | "Error" | "En curso";
   pasos: PasoEjecutado[];
-  modo: "Prueba" | "Automática";
+  /** Prueba (simulada en la pantalla), Automática (la corrió el servidor) o Manual (de verdad, a pedido) */
+  modo: "Prueba" | "Automática" | "Manual";
+  /** Clínica real: cuándo se retoma un paso «Esperar» */
+  retomaEl?: string | null;
 };
 
 export type Credencial = { id: string; nombre: string; conectada: boolean; detalle: string };

@@ -35,6 +35,8 @@ import {
 } from "@/lib/cloud-esther/integraciones";
 import { probarUrl } from "@/lib/cloud-esther/integraciones-probar";
 import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
+import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
 
 /* Ubicación: src/components/cloud-esther/Integraciones.tsx
@@ -190,7 +192,21 @@ function IntegracionesInner() {
     if (c.id === "n8n") return conN8n;
     return !d || planLevel(plan) >= planLevel(d.minPlan);
   };
-  const delPlan = conectores.filter(incluido);
+  // Clínica real: WhatsApp Business y n8n muestran lo que confirmó el servidor (se configuran en
+  // Automatizaciones › Conexión, con las llaves cifradas en el servidor)
+  const real = useClinicaReal();
+  const estServ = useEstadoAutomatizaciones();
+  const DEL_SERVIDOR = ["whatsapp", "n8n"];
+  const vista: Conector[] = real
+    ? conectores.map((c) =>
+        c.id === "whatsapp"
+          ? { ...c, estado: estServ?.whatsapp.conectado ? "Conectado" : "Desconectado" }
+          : c.id === "n8n"
+            ? { ...c, estado: estServ?.n8n.eventosUrl ? "Conectado" : "Desconectado" }
+            : c,
+      )
+    : conectores;
+  const delPlan = vista.filter(incluido);
   const ocultos = conectores.length - delPlan.length;
   const proximoPlan: PlanId | null = planLevel(plan) < 3 ? "avanzada" : !conN8n ? "grupo" : null;
 
@@ -347,7 +363,11 @@ function IntegracionesInner() {
                   <button
                     type="button"
                     className="btn-ce flex-1 justify-center"
-                    onClick={() => setAbierto(c)}
+                    onClick={() =>
+                      real && DEL_SERVIDOR.includes(c.id)
+                        ? aviso(`${c.nombre} se configura en Automatizaciones › Conexión`)
+                        : setAbierto(c)
+                    }
                   >
                     <Settings2 className="size-4" /> {on || configurado ? "Configuración" : "Conectar"}
                   </button>

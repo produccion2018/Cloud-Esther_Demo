@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { usePaisesVenta } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/components/site/TeLlamamos.tsx
    «TE LLAMAMOS GRATIS» (web pública): botón flotante abajo a la izquierda. La clínica deja su nombre,
@@ -30,6 +30,8 @@ const ETIQUETA = "text-[13px] font-semibold tracking-tight text-foreground/85";
 export function TeLlamamos() {
   const [abierto, setAbierto] = useState(false);
   const [pais, setPais] = useState("");
+  // Países donde hoy se vende (los marca el Dueño en el panel › Países)
+  const paisesVenta = usePaisesVenta();
   const [horario, setHorario] = useState<string>(HORARIOS[0]);
   const [estado, setEstado] = useState<"inicio" | "enviando" | "listo">("inicio");
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +180,7 @@ export function TeLlamamos() {
                   </Label>
                   <select id="ll-pais" value={pais} onChange={(e) => setPais(e.target.value)} className={CAMPO} required>
                     <option value="">Elegí tu país</option>
-                    {PAISES_DEMO.map((p) => (
+                    {paisesVenta.map((p) => (
                       <option key={p.codigo} value={p.codigo}>
                         {p.nombre}
                       </option>

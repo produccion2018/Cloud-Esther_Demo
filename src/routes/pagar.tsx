@@ -3,7 +3,7 @@ import { CircleCheckBig, Loader2, Lock, Mail, ShieldCheck, TicketPercent, UserCh
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/site/PublicLayout";
-import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { PAISES_TODOS } from "@/lib/cloud-esther/demo-servidor";
 import {
   abrirPago,
   escucharPaddle,
@@ -168,7 +168,7 @@ function Pagar() {
     }
   };
 
-  const pais = PAISES_DEMO.find((p) => p.codigo === resumen?.pais)?.nombre ?? resumen?.pais ?? "";
+  const pais = PAISES_TODOS.find((p) => p.codigo === resumen?.pais)?.nombre ?? resumen?.pais ?? "";
 
   return (
     <PublicLayout>

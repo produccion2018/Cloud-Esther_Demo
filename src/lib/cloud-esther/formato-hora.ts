@@ -1,5 +1,6 @@
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { paisEfectivo } from "@/lib/cloud-esther/terminologia";
 
 /* ───────────────────────────────────────────────────────────────
    Formato de hora internacional (pedido de Camilo, nov 2026).
@@ -66,6 +67,7 @@ export function useFormatoHora(): (valor: Date | string | number) => string {
   const { clinic } = useCloudEsther();
   const settings = useClinicSettings(clinic);
   const formato = settings.formatoHora ?? "auto";
-  const pais = settings.datosClinica?.pais ?? "";
+  // País cargado en Configuración; si no, el que contrató (o el del navegador en el demo)
+  const pais = paisEfectivo(settings.datosClinica?.pais);
   return (valor) => formatearHora(valor, formato, pais);
 }

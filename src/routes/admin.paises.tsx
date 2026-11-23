@@ -30,7 +30,7 @@ import { useClinicas, useColeccion, useDemos, useGuardarEn } from "@/lib/admin/c
 import { NOMBRE_PLAN, fecha, miles } from "@/lib/admin/formato";
 import type { Clinica, CuentaDemo, PlanId } from "@/lib/admin/tipos";
 import type { EstadoPais, PaisOperacion } from "@/lib/admin/tipos-empresa";
-import { bandera, estaSeleccionado } from "@/lib/paises";
+import { PAISES_SIN_PAGOS, bandera, estaSeleccionado } from "@/lib/paises";
 
 /* Ubicación: src/routes/admin.paises.tsx
    Países donde se vende Cloud Esther: clínicas contratadas y demos por país, y los datos de cada
@@ -188,7 +188,7 @@ function PaisesPage() {
 
           <Seccion
             titulo="Países seleccionados"
-            descripcion="Dónde se vende Cloud Esther. Las clínicas solo pueden elegir estos países en su configuración."
+            descripcion="Dónde se vende Cloud Esther. Tocá un país para activarlo o pausarlo: se aplica en el momento en la web (demo, registro, contratación y «Te llamamos»). Las clínicas que ya tenés en un país pausado siguen funcionando igual. Cada clínica ve el sistema con los términos de su país (DNI, CI, RUT, CURP, DPI…). Venezuela, Cuba y Nicaragua no se pueden activar: el servicio de pagos no cobra ahí."
           >
             <div className="flex flex-wrap gap-2">
               {lista.map((p) => {
@@ -197,7 +197,8 @@ function PaisesPage() {
                   <button
                     key={p.id}
                     type="button"
-                    disabled={!puedeEditar || guardarPais.isPending}
+                    disabled={!puedeEditar || guardarPais.isPending || (!elegido && PAISES_SIN_PAGOS.has(p.codigo))}
+                    title={PAISES_SIN_PAGOS.has(p.codigo) ? "El servicio de pagos no cobra en este país" : undefined}
                     aria-pressed={elegido}
                     onClick={() =>
                       guardarPais.mutate({

@@ -34,7 +34,7 @@ import {
   type SolicitudContratacion,
   type SolicitudGuardada,
 } from "@/lib/contratacion";
-import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { usePaisesVenta } from "@/lib/cloud-esther/demo-servidor";
 import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 import type { PlanId } from "@/lib/cloud-esther/data";
 import { PAGO_EN_LINEA } from "@/lib/pago-en-linea";
@@ -93,6 +93,8 @@ const ID_APP: Record<string, PlanId> = { esencial: "inicial", profesional: "prof
 
 function Contratacion() {
   const configPlanes = useConfigPlanes();
+  // Países donde hoy se vende (los marca el Dueño en el panel › Países)
+  const paisesVenta = usePaisesVenta();
   const { plan: planInicial, ciclo: cicloInicial } = Route.useSearch();
   const [plan, setPlan] = useState(
     plans.some((p) => p.id === planInicial)
@@ -333,7 +335,7 @@ function Contratacion() {
                         <option value="" disabled>
                           Elegí tu país
                         </option>
-                        {PAISES_DEMO.map((p) => (
+                        {paisesVenta.map((p) => (
                           <option key={p.codigo} value={p.codigo}>
                             {p.nombre}
                           </option>

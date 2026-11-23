@@ -13,10 +13,10 @@ import { mapSitePlanToPlanId, setStoredPlan } from "@/lib/cloud-esther/data";
 import { existeCuentaLocal, registrarCuenta } from "@/lib/cloud-esther/auth-store";
 import {
   DEMO_EN_SERVIDOR,
-  PAISES_DEMO,
   pedirEnlaceDemo,
   problemaClaveDemo,
   registrarDemoEnServidor,
+  usePaisesVenta,
 } from "@/lib/cloud-esther/demo-servidor";
 import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 
@@ -41,6 +41,8 @@ export const Route = createFileRoute("/registro")({
 });
 
 function Registro() {
+  // Países donde hoy se vende (los marca el Dueño en el panel › Países)
+  const paisesVenta = usePaisesVenta();
   const { plan } = Route.useSearch();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(plan ?? "profesional");
@@ -201,7 +203,7 @@ function Registro() {
                             <option value="" disabled>
                               Elegí tu país
                             </option>
-                            {PAISES_DEMO.map((p) => (
+                            {paisesVenta.map((p) => (
                               <option key={p.codigo} value={p.codigo}>
                                 {p.nombre}
                               </option>

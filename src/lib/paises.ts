@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
 import type { PaisOperacion } from "@/lib/admin/tipos-empresa";
+import { DEMO_EN_SERVIDOR, usePaisesVenta } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/lib/paises.ts
    Países donde se vende Cloud Esther. Los elige el dueño en su panel (/admin/paises → «Países
-   seleccionados») y la configuración de cada clínica solo ofrece esos países.
+   seleccionados»): lo que está «Activo» es lo que la web ofrece y el servidor acepta (demo,
+   registro, contratación y «Te llamamos»). De entrada: los 7 de siempre.
    TODO backend: GET /paises (públicos, solo los seleccionados) y PUT /admin/empresa/paises. */
 
 /** Países hispanohablantes de Latinoamérica y España (incluye México). Brasil queda afuera
@@ -27,7 +29,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-uy",
     codigo: "UY",
     nombre: "Uruguay",
-    estado: "Activo",
+    estado: "Próximamente",
     moneda: "UYU · Peso uruguayo",
     facturacion: "DGI · CFE (comprobante fiscal electrónico)",
     impuesto: "IVA 22 %",
@@ -51,7 +53,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-mx",
     codigo: "MX",
     nombre: "México",
-    estado: "Próximamente",
+    estado: "Activo",
     moneda: "MXN · Peso mexicano",
     facturacion: "SAT · CFDI 4.0",
     impuesto: "IVA 16 %",
@@ -63,7 +65,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-co",
     codigo: "CO",
     nombre: "Colombia",
-    estado: "Próximamente",
+    estado: "Activo",
     moneda: "COP · Peso colombiano",
     facturacion: "DIAN · factura electrónica",
     impuesto: "IVA 19 %",
@@ -75,7 +77,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-pe",
     codigo: "PE",
     nombre: "Perú",
-    estado: "Próximamente",
+    estado: "Activo",
     moneda: "PEN · Sol",
     facturacion: "SUNAT · comprobante de pago electrónico",
     impuesto: "IGV 18 %",
@@ -87,7 +89,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-ec",
     codigo: "EC",
     nombre: "Ecuador",
-    estado: "Próximamente",
+    estado: "Activo",
     moneda: "USD · Dólar estadounidense",
     facturacion: "SRI · comprobante electrónico",
     impuesto: "IVA 15 %",
@@ -123,7 +125,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-ve",
     codigo: "VE",
     nombre: "Venezuela",
-    estado: "Próximamente",
+    estado: "Pausado",
     moneda: "VES · Bolívar",
     facturacion: "SENIAT · factura fiscal",
     impuesto: "IVA 16 %",
@@ -195,7 +197,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-ni",
     codigo: "NI",
     nombre: "Nicaragua",
-    estado: "Próximamente",
+    estado: "Pausado",
     moneda: "NIO · Córdoba",
     facturacion: "DGI · facturación",
     impuesto: "IVA 15 %",
@@ -219,7 +221,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-cu",
     codigo: "CU",
     nombre: "Cuba",
-    estado: "Próximamente",
+    estado: "Pausado",
     moneda: "CUP · Peso cubano",
     facturacion: "ONAT",
     impuesto: "A definir",
@@ -243,7 +245,7 @@ export const PAISES_BASE: PaisOperacion[] = [
     id: "pais-es",
     codigo: "ES",
     nombre: "España",
-    estado: "Próximamente",
+    estado: "Activo",
     moneda: "EUR · Euro",
     facturacion: "AEAT · factura electrónica (Verifactu)",
     impuesto: "IVA 21 % (sanidad: exento)",
@@ -261,6 +263,9 @@ export function completarPaises(guardados: PaisOperacion[]): PaisOperacion[] {
 
 /** Todos los países donde Cloud Esther puede operar (para selectores de configuración). */
 export const PAISES_SOPORTADOS = PAISES_BASE;
+
+/** Países donde el servicio de pagos (Paddle) no cobra: no se pueden activar. */
+export const PAISES_SIN_PAGOS = new Set(["VE", "CU", "NI"]);
 
 /** Un país está «seleccionado» (se vende y las clínicas pueden elegirlo) cuando está Activo. */
 export const estaSeleccionado = (p: PaisOperacion) => p.estado === "Activo";
@@ -289,9 +294,12 @@ export function leerPaisesSeleccionados(): PaisOperacion[] {
   return lista.filter(estaSeleccionado);
 }
 
-/** Hook: países seleccionados (se leen después de montar, igual en servidor y cliente). */
+/** Hook: países seleccionados (se leen después de montar, igual en servidor y cliente).
+    Con servidor: los que el Dueño marcó «Activo» en el panel (GET /paises). */
 export function usePaisesSeleccionados() {
+  const venta = usePaisesVenta();
   const [paises, setPaises] = useState<PaisOperacion[]>(() => PAISES_BASE.filter(estaSeleccionado));
   useEffect(() => setPaises(leerPaisesSeleccionados()), []);
+  if (DEMO_EN_SERVIDOR) return PAISES_BASE.filter((p) => venta.some((v) => v.codigo === p.codigo));
   return paises;
 }

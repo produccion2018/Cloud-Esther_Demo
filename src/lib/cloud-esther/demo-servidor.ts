@@ -15,7 +15,7 @@ export const DEMO_EN_SERVIDOR = Boolean(API_URL);
 
 /** Países donde está Cloud Esther, con su código de teléfono. La persona tiene que ESTAR en el país
  *  que elige (el servidor lo verifica por su conexión) y el teléfono tiene que ser de ese país. */
-export const PAISES_DEMO = [
+export const PAISES_DEMO: readonly PaisVenta[] = [
   { codigo: "AR", nombre: "Argentina", prefijo: "54" },
   { codigo: "CL", nombre: "Chile", prefijo: "56" },
   { codigo: "CO", nombre: "Colombia", prefijo: "57" },
@@ -23,7 +23,69 @@ export const PAISES_DEMO = [
   { codigo: "EC", nombre: "Ecuador", prefijo: "593" },
   { codigo: "MX", nombre: "México", prefijo: "52" },
   { codigo: "ES", nombre: "España", prefijo: "34" },
-] as const;
+];
+
+export type PaisVenta = { codigo: string; nombre: string; prefijo: string };
+
+/** Todos los países que el Dueño puede activar (para mostrar nombres y códigos de teléfono). */
+export const PAISES_TODOS: readonly PaisVenta[] = [
+  { codigo: "AR", nombre: "Argentina", prefijo: "54" },
+  { codigo: "UY", nombre: "Uruguay", prefijo: "598" },
+  { codigo: "CL", nombre: "Chile", prefijo: "56" },
+  { codigo: "CO", nombre: "Colombia", prefijo: "57" },
+  { codigo: "PE", nombre: "Perú", prefijo: "51" },
+  { codigo: "EC", nombre: "Ecuador", prefijo: "593" },
+  { codigo: "BO", nombre: "Bolivia", prefijo: "591" },
+  { codigo: "PY", nombre: "Paraguay", prefijo: "595" },
+  { codigo: "CR", nombre: "Costa Rica", prefijo: "506" },
+  { codigo: "PA", nombre: "Panamá", prefijo: "507" },
+  { codigo: "GT", nombre: "Guatemala", prefijo: "502" },
+  { codigo: "HN", nombre: "Honduras", prefijo: "504" },
+  { codigo: "SV", nombre: "El Salvador", prefijo: "503" },
+  { codigo: "DO", nombre: "República Dominicana", prefijo: "1" },
+  { codigo: "PR", nombre: "Puerto Rico", prefijo: "1" },
+  { codigo: "MX", nombre: "México", prefijo: "52" },
+  { codigo: "ES", nombre: "España", prefijo: "34" },
+  { codigo: "VE", nombre: "Venezuela", prefijo: "58" },
+];
+
+/* Países donde HOY se vende: los marca el Dueño en su panel (Países › «Activo»). La web los trae
+   de GET /paises; sin servidor (o sin conexión) se usan los de siempre (PAISES_DEMO). */
+let paisesCache: readonly PaisVenta[] | null = null;
+let paisesPedido: Promise<readonly PaisVenta[]> | null = null;
+function traerPaisesVenta(): Promise<readonly PaisVenta[]> {
+  if (!API_URL || typeof window === "undefined") return Promise.resolve(PAISES_DEMO);
+  if (paisesCache) return Promise.resolve(paisesCache);
+  paisesPedido ??= fetch(`${API_URL}/paises`)
+    .then((r) => (r.ok ? (r.json() as Promise<PaisVenta[]>) : null))
+    .then((lista) => {
+      const ok = Array.isArray(lista) && lista.length > 0 && lista.every((p) => typeof p?.codigo === "string");
+      paisesCache = ok ? lista : PAISES_DEMO;
+      return paisesCache;
+    })
+    .catch(() => PAISES_DEMO)
+    .finally(() => {
+      paisesPedido = null;
+    });
+  return paisesPedido;
+}
+
+/** Hook: países donde hoy se puede pedir la demo, registrarse, contratar o pedir que te llamen. */
+export function usePaisesVenta(): readonly PaisVenta[] {
+  const [lista, setLista] = useState<readonly PaisVenta[]>(paisesCache ?? PAISES_DEMO);
+  useEffect(() => {
+    let vivo = true;
+    void traerPaisesVenta().then((l) => vivo && setLista(l));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  return lista;
+}
+
+/** Nombre de un país por su código (cualquiera del catálogo). */
+export const nombrePais = (codigo: string | undefined) =>
+  PAISES_TODOS.find((p) => p.codigo === codigo)?.nombre ?? codigo ?? "";
 
 export type EstadoDemoServidor = {
   nombre: string;

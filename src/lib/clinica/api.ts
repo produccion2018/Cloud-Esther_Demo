@@ -37,6 +37,8 @@ export type InfoClinica = {
   modulos: string[];
   /** Topes de la clínica: los de su plan + la capacidad extra que le dio Cloud Esther (null = sin límite) */
   limites?: { pacientes: number | null; usuarios: number | null; sucursales: number | null };
+  /** País de la clínica (AR, UY, MX…): la app usa sus términos (DNI, RUT, CURP…) */
+  pais?: string;
 };
 export type SesionClinica = {
   token: string;

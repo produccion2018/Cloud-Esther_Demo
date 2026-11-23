@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { PAISES_TODOS } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/components/site/TelefonoPais.tsx
    Teléfono con el código del país FIJO (+54 Argentina, +57 Colombia…): no se puede cambiar.
@@ -23,7 +23,7 @@ export function TelefonoPais({
   placeholder?: string;
 }) {
   const [numero, setNumero] = useState("");
-  const prefijo = PAISES_DEMO.find((p) => p.codigo === pais)?.prefijo;
+  const prefijo = PAISES_TODOS.find((p) => p.codigo === pais)?.prefijo;
   // Si la persona escribe el código del país ("+54 11…"), se saca: ya va fijo adelante
   let limpio = numero.replace(/[^0-9+ ()\-.]/g, "");
   if (prefijo && limpio.trim().startsWith("+")) {

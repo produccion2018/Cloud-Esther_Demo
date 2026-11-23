@@ -1,6 +1,7 @@
 import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { storePresupuestos, type Cobertura, type TipoCobertura } from "@/lib/cloud-esther/presupuestos-store";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { paisEfectivo } from "@/lib/cloud-esther/terminologia";
 
 /* Ubicación: src/lib/cloud-esther/coberturas.ts
    COBERTURAS Y NOMENCLADOR (Argentina y el resto de los países).
@@ -106,6 +107,33 @@ export const COBERTURAS_SUGERIDAS: Record<string, { nombre: string; tipo: TipoCo
     { nombre: "Caja Petrolera de Salud", tipo: "Pública" },
     { nombre: "Caja Bancaria Estatal de Salud", tipo: "Pública" },
   ],
+  CR: [
+    { nombre: "CCSS – Caja Costarricense de Seguro Social", tipo: "Pública" },
+    { nombre: "INS – Instituto Nacional de Seguros", tipo: "Seguro" },
+  ],
+  PA: [
+    { nombre: "CSS – Caja de Seguro Social", tipo: "Pública" },
+  ],
+  GT: [
+    { nombre: "IGSS – Instituto Guatemalteco de Seguridad Social", tipo: "Pública" },
+  ],
+  HN: [
+    { nombre: "IHSS – Instituto Hondureño de Seguridad Social", tipo: "Pública" },
+  ],
+  SV: [
+    { nombre: "ISSS – Instituto Salvadoreño del Seguro Social", tipo: "Pública" },
+  ],
+  DO: [
+    { nombre: "ARS SeNaSa", tipo: "Pública" },
+    { nombre: "ARS Humano", tipo: "Seguro" },
+    { nombre: "ARS Universal", tipo: "Seguro" },
+    { nombre: "ARS Palic", tipo: "Seguro" },
+  ],
+  PR: [
+    { nombre: "Triple-S", tipo: "Seguro" },
+    { nombre: "MCS", tipo: "Seguro" },
+    { nombre: "Plan Vital (Medicaid)", tipo: "Pública" },
+  ],
   ES: [
     { nombre: "Sanitas", tipo: "Seguro" },
     { nombre: "Adeslas", tipo: "Seguro" },
@@ -128,6 +156,22 @@ export function nombreCobertura(pais: string): { singular: string; plural: strin
       return { singular: "Isapre / Fonasa", plural: "Isapres y Fonasa" };
     case "CO":
       return { singular: "EPS / prepagada", plural: "EPS y medicina prepagada" };
+    case "PY":
+      return { singular: "IPS / prepaga", plural: "IPS y prepagas" };
+    case "BO":
+      return { singular: "Caja de salud / seguro", plural: "Cajas de salud y seguros" };
+    case "CR":
+      return { singular: "CCSS / seguro", plural: "CCSS y seguros privados" };
+    case "PA":
+      return { singular: "CSS / seguro", plural: "CSS y seguros privados" };
+    case "GT":
+    case "HN":
+    case "SV":
+      return { singular: "Seguro social / seguro", plural: "Seguro social y seguros privados" };
+    case "DO":
+      return { singular: "ARS", plural: "ARS (administradoras de riesgos de salud)" };
+    case "PR":
+      return { singular: "Plan médico", plural: "Planes médicos" };
     case "ES":
       return { singular: "Aseguradora", plural: "Aseguradoras" };
     default:
@@ -137,11 +181,12 @@ export function nombreCobertura(pais: string): { singular: string; plural: strin
 
 export const PARTICULAR = "No aplica / particular";
 
-/** País de la clínica (Configuración → datos de la clínica); Argentina si no está cargado */
+/** País de la clínica (Configuración → datos de la clínica; si no, el que contrató o el del
+    navegador en el demo); Argentina si no se sabe */
 export function usePaisClinica(): string {
   const ctx = useCloudEstherOpcional();
   const s = useClinicSettings(ctx?.clinic ?? "demo");
-  return s.datosClinica.pais || "AR";
+  return paisEfectivo(s.datosClinica.pais) || "AR";
 }
 
 /** Nombres para elegir en la ficha del paciente: las coberturas activas de la clínica

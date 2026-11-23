@@ -66,7 +66,7 @@ import { buildSidebarPalette } from "@/lib/cloud-esther/sidebar-paleta";
 import { SeguridadAuditoria } from "./configuracion/SeguridadAuditoria";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
-import { bandera, usePaisesSeleccionados } from "@/lib/paises";
+import { PAISES_BASE, bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 
 const CARD =
@@ -656,7 +656,12 @@ function GeneralTab({
   const conIA = useConIA();
   const { plan } = useCloudEsther();
   // País: solo los que el dueño de Cloud Esther tiene seleccionados para vender.
-  const paises = usePaisesSeleccionados();
+  const paisesVenta = usePaisesSeleccionados();
+  // El país de la clínica siempre aparece, aunque hoy no se venda ahí
+  const paises =
+    settings.datosClinica.pais && !paisesVenta.some((p) => p.codigo === settings.datosClinica.pais)
+      ? [...paisesVenta, ...PAISES_BASE.filter((p) => p.codigo === settings.datosClinica.pais)]
+      : paisesVenta;
   const [datos, setDatos] = useState<DatosClinica>(settings.datosClinica);
   useEffect(() => setDatos(settings.datosClinica), [settings.datosClinica]);
   const set = (k: keyof DatosClinica) => (e: { target: { value: string } }) =>

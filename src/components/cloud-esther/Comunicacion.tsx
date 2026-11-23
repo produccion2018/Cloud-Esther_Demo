@@ -836,6 +836,8 @@ function ComunicacionInner() {
           <div className="mt-5">
             {!montado ? (
               <div className="card-grad h-[560px] animate-pulse" />
+            ) : seccion !== seccionVisible ? (
+              <SeccionBloqueada id={seccion} onVolver={() => setSeccion("bandeja")} />
             ) : seccionVisible === "bandeja" ? (
               <Bandeja
                 ctx={ctx}
@@ -2596,6 +2598,48 @@ function PlantillaForm({
 }
 
 /* ───────────── Campañas ───────────── */
+
+/* Sección que el plan todavía no trae (por ejemplo Plantillas en Start): en vez de mostrar
+   otra cosa sin avisar, explica qué hace, desde qué plan viene y lleva a Mi plan. */
+const QUE_HACE: Partial<Record<Seccion, string>> = {
+  plantillas:
+    "Textos listos para WhatsApp, SMS y correo (recordatorio, confirmación, cumpleaños, presupuesto…) que se completan solos con el nombre del paciente, el día y la hora del turno. Los usás con un toque al escribir un mensaje.",
+  campanas:
+    "Enviá mensajes a grupos de pacientes (control semestral, cumpleaños, por obra social) y medí cuántos sacaron turno.",
+  canales:
+    "Elegí por qué canal sale cada aviso, el horario en que se puede escribir a los pacientes y conectá WhatsApp Business.",
+};
+const PLAN_DE_NIVEL: Record<NivelModulo, keyof typeof PLANS> = {
+  basico: "inicial",
+  avanzado: "profesional",
+  completo: "avanzada",
+};
+function SeccionBloqueada({ id, onVolver }: { id: Seccion; onVolver: () => void }) {
+  const info = SECCIONES.find((x) => x.id === id);
+  if (!info) return null;
+  const plan = PLANS[PLAN_DE_NIVEL[info.desde]];
+  return (
+    <div className="card-grad grid min-h-64 place-items-center p-6 text-center sm:p-8">
+      <div className="max-w-md">
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-[0_12px_26px_-12px_rgba(124,58,237,0.9)]">
+          <Lock className="size-6" />
+        </span>
+        <p className="mt-3 text-base font-semibold">{info.label}</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {QUE_HACE[id] ?? ""} Viene incluido desde el plan <b className="text-foreground">{plan.name}</b>.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link to={"/demo/configuracion" as never} hash="miplan" className={BTN_PRIMARIO}>
+            Ver Mi plan
+          </Link>
+          <button type="button" className={BTN_SECUNDARIO} onClick={onVolver}>
+            Volver a la bandeja
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CampanasBloqueadas() {
   return (

@@ -1,14 +1,15 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Cloud Esther — buscadores
+# La página pública se indexa; los paneles (clínicas, demo, administración) son privados.
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /demo/
+Disallow: /c/
+Disallow: /app
+Disallow: /api/
+Disallow: /portal
+Disallow: /equipo
+Disallow: /dueno
+Disallow: /pagar
+
+Sitemap: https://cloud-esther-staging.vercel.app/sitemap.xml

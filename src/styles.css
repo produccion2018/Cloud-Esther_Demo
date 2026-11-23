@@ -1333,7 +1333,7 @@ label {
 @media (max-width: 640px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,
-  [data-seleccion],
+  [data-seleccion]:not([class*="text-["], [class*="text-xs"]),
   textarea {
     font-size: 16px;
   }
@@ -1685,7 +1685,27 @@ label {
       .grid:not([data-ficha] .grid, .fixed) > li > :is([class*="rounded-"], .card-grad)
     ) {
     overflow-wrap: break-word;
-    hyphens: auto;
+    hyphens: manual;
+    container-type: inline-size;
+  }
+  /* Las palabras nunca se parten (nada de «RECORDATO-RIOS»): los títulos en mayúscula
+     bajan de renglón entre palabras, y si la tarjeta es angosta el ícono sube arriba del
+     título para dejarle todo el ancho. */
+  .panel-clinica .uppercase {
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: manual;
+  }
+  @container (max-width: 210px) {
+    .panel-clinica .flex.items-start.justify-between:has(> [class*="size-"]:last-child > svg) {
+      flex-direction: column-reverse;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .panel-clinica .uppercase {
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
   }
   /* Títulos en mayúscula de las tarjetas: menos separación entre letras para que no se corten. */
   .panel-clinica

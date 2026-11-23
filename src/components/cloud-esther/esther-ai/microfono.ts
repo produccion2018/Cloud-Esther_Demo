@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { audioATexto } from "@/lib/cloud-esther/esther-llm";
 
-/* Dictado del navegador (Web Speech API) para hablarle a Esther.
-   TODO backend: transcripción del servidor para navegadores sin soporte y audios largos. */
+/* Dictado para hablarle a Esther. Usa el dictado del navegador (Web Speech API) y, si el
+   navegador no lo tiene (iPhone, navegadores dentro de apps) o falla, graba el audio y lo pasa a
+   texto con el servidor de IA. Así funciona en todos los celulares, en el demo y en la clínica. */
 type Reconocedor = {
   lang: string;
   interimResults: boolean;
@@ -51,10 +53,51 @@ export function useMicrofono({
   const cb = useRef({ onTexto, onEstado });
   cb.current = { onTexto, onEstado };
 
+  const grabador = useRef<MediaRecorder | null>(null);
+  const corte = useRef<number | null>(null);
   useEffect(() => {
     const w = window as unknown as Record<string, unknown>;
-    setSoportado(Boolean(w["SpeechRecognition"] ?? w["webkitSpeechRecognition"]));
-    return () => rec.current?.stop();
+    const puedeGrabar = !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+    setSoportado(Boolean(w["SpeechRecognition"] ?? w["webkitSpeechRecognition"]) || puedeGrabar);
+    return () => {
+      rec.current?.stop();
+      grabador.current?.stop();
+    };
+  }, []);
+
+  /* Respaldo: grabar y transcribir en el servidor. Tocar de nuevo termina (o a los 45 s). */
+  const grabarYTranscribir = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setAviso("Este navegador no permite usar el micrófono. Escribí la consulta.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const r = new MediaRecorder(stream);
+      const partes: Blob[] = [];
+      r.ondataavailable = (e) => e.data.size && partes.push(e.data);
+      r.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (corte.current) window.clearTimeout(corte.current);
+        grabador.current = null;
+        setParcial("Pasando tu audio a texto…");
+        const t = await audioATexto(new Blob(partes, { type: r.mimeType || "audio/webm" }));
+        setParcial("");
+        setEscuchando(false);
+        cb.current.onEstado?.(false);
+        const final = (t ?? "").replace(/^\s*(hola\s+)?esther[,:]?\s*/i, "").trim();
+        if (final) cb.current.onTexto(final);
+        else setAviso("No te escuché bien, probá de nuevo o escribí la consulta.");
+      };
+      grabador.current = r;
+      r.start();
+      setEscuchando(true);
+      setParcial("Te escucho… tocá de nuevo el micrófono para terminar");
+      cb.current.onEstado?.(true);
+      corte.current = window.setTimeout(() => r.state !== "inactive" && r.stop(), 45_000);
+    } catch {
+      setAviso("Habilitá el micrófono en el navegador para hablarle a Esther.");
+    }
   }, []);
   useEffect(() => {
     if (!aviso) return;
@@ -64,12 +107,13 @@ export function useMicrofono({
 
   const alternar = useCallback(() => {
     if (escuchando) {
-      rec.current?.stop();
+      if (grabador.current) grabador.current.stop();
+      else rec.current?.stop();
       return;
     }
     const r = crearReconocedor();
     if (!r) {
-      setAviso("Tu navegador no permite dictar. Probá con Chrome o Edge, o escribí la consulta.");
+      void grabarYTranscribir();
       return;
     }
     setAviso("");
@@ -85,7 +129,14 @@ export function useMicrofono({
         .trim();
       setParcial(texto.current);
     };
-    r.onerror = (e) =>
+    r.onerror = (e) => {
+      // Sin servicio de dictado en este navegador: se graba y se transcribe en el servidor.
+      if (e.error === "network" || e.error === "service-not-allowed" || e.error === "language-not-supported") {
+        texto.current = "";
+        rec.current = null;
+        window.setTimeout(() => void grabarYTranscribir(), 300);
+        return;
+      }
       setAviso(
         e.error === "not-allowed" || e.error === "service-not-allowed"
           ? "Habilitá el micrófono en el navegador para hablarle a Esther."
@@ -93,6 +144,7 @@ export function useMicrofono({
             ? "No escuché nada. Tocá el micrófono y hablá."
             : "No te escuché bien, probá de nuevo.",
       );
+    };
     r.onend = () => {
       setEscuchando(false);
       setParcial("");
@@ -109,7 +161,7 @@ export function useMicrofono({
       setEscuchando(false);
       cb.current.onEstado?.(false);
     }
-  }, [escuchando]);
+  }, [escuchando, grabarYTranscribir]);
 
   return { escuchando, parcial, aviso, soportado, alternar };
 }

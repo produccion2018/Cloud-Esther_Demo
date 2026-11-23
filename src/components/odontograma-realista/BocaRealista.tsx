@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import type { ViewName, MatMode } from "./MouthScene";
 import { ORDER, TYPE_LABEL } from "./anatomy";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/odontograma-realista/BocaRealista.tsx
    Boca 3D realista (del repo «Real Eye Mouth»), integrada al demo como visor del odontograma /
@@ -225,7 +226,7 @@ export function BocaRealista({
   };
 
   const chip = (active: boolean) =>
-    `rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all ${
+    `rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all sm:px-3.5 sm:py-1.5 sm:text-[12px] ${
       active
         ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
         : "border border-primary/15 bg-card text-muted-foreground hover:border-primary/35 hover:text-foreground"
@@ -282,7 +283,8 @@ export function BocaRealista({
           <div className="grid h-full place-items-center text-sm text-muted-foreground">Cargando el modelo 3D…</div>
         )}
 
-        <div className="absolute left-4 top-4 flex flex-col gap-2">
+        {/* En el celular los controles van en una fila chica arriba para no tapar los dientes */}
+        <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5 sm:left-4 sm:right-auto sm:top-4 sm:flex-col sm:gap-2">
           <button type="button" className={chip(upper)} onClick={() => setUpper((x) => !x || !lower)}>
             Arcada superior
           </button>
@@ -295,7 +297,7 @@ export function BocaRealista({
         </div>
 
         {/* Acabado del modelo 3D (como el visor STL de Oclu) */}
-        <div className="absolute right-4 top-4 rounded-2xl border border-primary/12 bg-card/85 p-2 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
+        <div className="absolute right-4 top-4 hidden rounded-2xl border border-primary/12 bg-card/85 p-2 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur sm:block">
           <p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-[0.16em] text-primary">Acabado</p>
           <div className="flex flex-col gap-1.5">
             {MAT_LABELS.map(([m, l]) => (
@@ -306,13 +308,29 @@ export function BocaRealista({
           </div>
         </div>
 
+        {/* Acabado en el celular: un selector chico abajo a la derecha */}
+        <div className="absolute bottom-3 right-3 sm:hidden">
+          <Seleccion
+            aria-label="Acabado del modelo"
+            value={material}
+            onChange={(e) => setMaterial(e.target.value as MatMode)}
+            className="h-8 rounded-full border border-primary/15 bg-card/90 px-3 text-[11px] font-semibold text-primary shadow-[0_10px_24px_-16px_rgba(76,29,149,0.7)] backdrop-blur"
+          >
+            {MAT_LABELS.map(([m, l]) => (
+              <option key={m} value={m}>
+                {l}
+              </option>
+            ))}
+          </Seleccion>
+        </div>
+
         {leyenda && (
           <div className="absolute left-4 bottom-4 max-w-[60%] rounded-2xl border border-primary/12 bg-card/90 p-2.5 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
             {leyenda}
           </div>
         )}
         {mostrarInfo && (
-        <div className="absolute bottom-4 right-4 w-64 rounded-2xl border border-primary/12 bg-card/90 p-4 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
+        <div className="absolute bottom-4 right-4 hidden w-64 rounded-2xl sm:block border border-primary/12 bg-card/90 p-4 shadow-[0_18px_40px_-28px_rgba(76,29,149,0.7)] backdrop-blur">
           {info ? (
             <>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Pieza {selected}</p>

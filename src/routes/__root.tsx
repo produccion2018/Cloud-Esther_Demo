@@ -80,6 +80,11 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
+/* SEO: dirección pública del sitio (para Google, WhatsApp, Facebook, LinkedIn…). Cuando la página
+   pase al dominio propio (Hostinger), se carga VITE_SITE_URL en Vercel y todo apunta ahí. */
+const SITIO = ((import.meta.env["VITE_SITE_URL"] as string | undefined) ?? "https://cloud-esther-staging.vercel.app").replace(/\/$/, "");
+const IMAGEN_SOCIAL = `${SITIO}/og-cloud-esther.png`;
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -105,7 +110,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "Agenda, pacientes, tratamientos, finanzas y analítica en un solo lugar.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Cloud Esther" },
+      { property: "og:locale", content: "es_AR" },
+      { property: "og:image", content: IMAGEN_SOCIAL },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Cloud Esther — Software de gestión para clínicas odontológicas" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Cloud Esther — Gestión inteligente para clínicas" },
+      {
+        name: "twitter:description",
+        content: "Agenda, pacientes, odontograma 3D, IA y WhatsApp para tu clínica odontológica, en un solo lugar.",
+      },
+      { name: "twitter:image", content: IMAGEN_SOCIAL },
+      { name: "robots", content: "index, follow, max-image-preview:large" },
+      {
+        name: "keywords",
+        content:
+          "software odontológico, sistema para clínicas dentales, agenda odontológica, odontograma 3D, historia clínica odontológica, gestión de consultorio dental, turnos online dentista, software para dentistas",
+      },
+      { name: "author", content: "Cloud Esther" },
     ],
     links: [
       {

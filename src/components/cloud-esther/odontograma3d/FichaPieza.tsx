@@ -8,6 +8,7 @@ import {
   History,
   ImagePlus,
   Mic,
+  Sparkles,
   Pencil,
   Plus,
   ScanSearch,
@@ -36,6 +37,7 @@ import {
   type Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { Seleccion } from "@/components/ui/seleccion";
+import { notaClinicaIA } from "@/lib/cloud-esther/esther-llm";
 
 /* Ubicación: src/components/cloud-esther/odontograma3d/FichaPieza.tsx
    Ficha clínica de la pieza seleccionada en el Odontograma 3D.
@@ -894,6 +896,22 @@ function SeccionNotas({
     );
   };
 
+  /* Nota de voz → nota clínica: Esther ordena lo dictado en los campos y abre el editor para
+     que el profesional revise y guarde. Sin IA disponible, el texto queda en Observaciones. */
+  const [armando, setArmando] = useState(false);
+  const armarConIA = async (texto: string) => {
+    setArmando(true);
+    const campos = await notaClinicaIA({ data: { texto, pieza: String(fdi) } }).catch(() => null);
+    setArmando(false);
+    setEditando("nueva");
+    setForm(campos ?? { ...NOTA_VACIA, observaciones: texto });
+    onToast(
+      campos
+        ? "Esther armó la nota con tu audio: revisala y guardala"
+        : "Nota de voz guardada: completá la nota clínica con lo que dictaste",
+    );
+  };
+
   const guardar = () => {
     if (!form.motivoConsulta.trim() && !form.diagnostico.trim() && !form.procedimiento.trim())
       return onToast("Completá al menos el motivo, el diagnóstico o el procedimiento");
@@ -977,8 +995,9 @@ function SeccionNotas({
                 { ...nota, id: siguienteId(prev), piezas: String(fdi) },
               ]);
               auditar(`Nota de voz en pieza ${fdi}`);
-              onToast(`Nota de voz guardada en la pieza ${fdi}`);
               setGrabando(false);
+              if (nota.transcripcion) void armarConIA(nota.transcripcion);
+              else onToast(`Nota de voz guardada en la pieza ${fdi}`);
             }}
           />
           <div className="flex justify-end">
@@ -1006,10 +1025,28 @@ function SeccionNotas({
               <Meta fecha={v.fecha} extra={v.hora} profesional={v.profesional} />
             </div>
           </div>
-          <audio controls src={v.audioUrl} className="mt-2 h-9 w-full" />
-          <p className="mt-1 text-[10.5px] text-muted-foreground">
-            Transcripción: {v.estadoTranscripcion.toLowerCase()}.
-          </p>
+          {v.audioUrl && !v.audioUrl.startsWith("blob:") && (
+            <audio controls src={v.audioUrl} className="mt-2 h-9 w-full" />
+          )}
+          {v.transcripcion ? (
+            <>
+              <p className="mt-1.5 rounded-lg bg-primary/[0.05] px-2.5 py-1.5 text-[11.5px] leading-relaxed text-foreground/85">
+                «{v.transcripcion}»
+              </p>
+              {editando === null && (
+                <button
+                  type="button"
+                  disabled={armando}
+                  onClick={() => void armarConIA(v.transcripcion)}
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-primary/20 px-2 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+                >
+                  <Sparkles className="size-3" /> {armando ? "Armando…" : "Armar nota clínica con Esther"}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="mt-1 text-[10.5px] text-muted-foreground">Sin transcripción.</p>
+          )}
         </div>
       ))}
 

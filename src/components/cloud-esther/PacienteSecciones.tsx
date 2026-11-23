@@ -68,6 +68,7 @@ import {
   PencilLine,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { audioATexto } from "@/lib/cloud-esther/esther-llm";
 import { blobABase64, descargarBlob, descargarPDF, documentoPDF, pdfBlobDeHtml } from "@/lib/descargas";
 import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
@@ -341,7 +342,7 @@ type NotaVoz = {
   duracionSegundos: number;
   audioUrl: string;
   transcripcion: string;
-  estadoTranscripcion: "Pendiente de integración" | "Transcrita";
+  estadoTranscripcion: "Pendiente de integración" | "Transcrita" | "Sin transcripción";
   /** Pieza dental (FDI) cuando se grabó desde el Odontograma 3D. */
   piezas?: string;
 };
@@ -2169,22 +2170,40 @@ export function NotaVozRecorder({
   onSave: (nota: Omit<NotaVoz, "id">) => void;
   onToast: (msg: string) => void;
 }) {
+  /* Graba, pasa el audio a texto al instante (servidor de IA) y guarda el audio dentro de la
+     ficha (queda aunque se recargue la página). Funciona igual en el demo y en la clínica. */
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const blobRef = useRef<Blob | null>(null);
   const startedAtRef = useRef<number | null>(null);
+  const corteRef = useRef<number | null>(null);
   const [grabando, setGrabando] = useState(false);
   const [preparando, setPreparando] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
   const [duracion, setDuracion] = useState(0);
+  const [transcribiendo, setTranscribiendo] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [sinTexto, setSinTexto] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const intervaloRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       if (intervaloRef.current) window.clearInterval(intervaloRef.current);
+      if (corteRef.current) window.clearTimeout(corteRef.current);
       recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
     },
     [],
   );
+
+  const transcribir = async (blob: Blob) => {
+    setTranscribiendo(true);
+    setSinTexto(false);
+    const t = await audioATexto(blob);
+    setTranscribiendo(false);
+    if (t) setTexto(t);
+    else setSinTexto(true);
+  };
 
   const iniciar = async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -2201,6 +2220,7 @@ export function NotaVozRecorder({
       };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        blobRef.current = blob;
         if (audioUrl) URL.revokeObjectURL(audioUrl);
         setAudioUrl(URL.createObjectURL(blob));
         const seconds = startedAtRef.current
@@ -2208,21 +2228,25 @@ export function NotaVozRecorder({
           : 1;
         setDuracion(seconds);
         stream.getTracks().forEach((track) => track.stop());
+        void transcribir(blob);
       };
       recorder.start();
       recorderRef.current = recorder;
       startedAtRef.current = Date.now();
       setDuracion(0);
+      setTexto("");
+      setSinTexto(false);
       setGrabando(true);
       setPreparando(false);
-      const id = window.setInterval(() => {
+      intervaloRef.current = window.setInterval(() => {
         if (startedAtRef.current)
           setDuracion(Math.round((Date.now() - startedAtRef.current) / 1000));
       }, 500);
-      intervaloRef.current = id;
+      // Tope de 3 minutos por nota (para que el audio entre en la ficha)
+      corteRef.current = window.setTimeout(() => detener(), 180_000);
     } catch {
       setPreparando(false);
-      onToast("No se pudo acceder al micrófono");
+      onToast("No se pudo acceder al micrófono. Habilitalo en el navegador y probá de nuevo.");
     }
   };
 
@@ -2232,46 +2256,61 @@ export function NotaVozRecorder({
     recorderRef.current = null;
     setGrabando(false);
     if (intervaloRef.current) window.clearInterval(intervaloRef.current);
+    if (corteRef.current) window.clearTimeout(corteRef.current);
     intervaloRef.current = null;
   };
 
-  const guardar = () => {
-    if (!audioUrl) return;
+  const guardar = async () => {
+    const blob = blobRef.current;
+    if (!blob || !audioUrl) return;
+    setGuardando(true);
+    // El audio se guarda dentro de la ficha (si es muy largo, queda solo la transcripción)
+    let url = audioUrl;
+    if (blob.size < 2_500_000) {
+      url = await new Promise<string>((res) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result));
+        fr.onerror = () => res(audioUrl);
+        fr.readAsDataURL(blob);
+      });
+    }
+    setGuardando(false);
     onSave({
       fecha: hoyISO(),
       hora: new Date().toTimeString().slice(0, 5),
       profesional: profesional || "Profesional actual",
       duracionSegundos: duracion,
-      audioUrl,
-      transcripcion: "",
-      estadoTranscripcion: "Pendiente de integración",
+      audioUrl: url,
+      transcripcion: texto.trim(),
+      estadoTranscripcion: texto.trim() ? "Transcrita" : "Sin transcripción",
     });
     setAudioUrl("");
+    setTexto("");
     setDuracion(0);
+    blobRef.current = null;
   };
 
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/[0.055] via-card to-background p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold">Nota de voz clínica</p>
             <p className="text-xs text-muted-foreground">
-              Graba ahora; la transcripción automática quedará preparada para una futura
-              integración.
+              Hablá como si se lo contaras a un colega. Esther lo pasa a texto y arma la nota clínica.
             </p>
           </div>
           <span
-            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${grabando ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${grabando ? "animate-pulse bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}
           >
-            {grabando ? "Grabando" : "Listo"}
+            {grabando ? "● Grabando" : transcribiendo ? "Pasando a texto…" : "Listo"}
           </span>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {!grabando ? (
-            <button type="button" disabled={preparando} onClick={iniciar} className={BTN_PRIMARIO}>
+            <button type="button" disabled={preparando || transcribiendo} onClick={iniciar} className={BTN_PRIMARIO}>
               <Mic className="size-4" />{" "}
-              {preparando ? "Preparando micrófono…" : "Iniciar grabación"}
+              {preparando ? "Preparando micrófono…" : audioUrl ? "Grabar de nuevo" : "Iniciar grabación"}
             </button>
           ) : (
             <button
@@ -2279,7 +2318,7 @@ export function NotaVozRecorder({
               onClick={detener}
               className={`${BTN_SECUNDARIO} text-destructive hover:border-destructive/40`}
             >
-              <Square className="size-3.5" /> Detener
+              <Square className="size-3.5" /> Terminar
             </button>
           )}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs tabular-nums">
@@ -2289,10 +2328,28 @@ export function NotaVozRecorder({
         </div>
       </div>
       {audioUrl && (
-        <div className="rounded-xl border border-border bg-background p-3">
+        <div className="space-y-2 rounded-xl border border-border bg-background p-3">
           <audio controls src={audioUrl} className="w-full" />
-          <div className="mt-2 flex flex-wrap justify-end gap-2">
-            <BotonMini icon={Check} label="Guardar nota de voz" onClick={guardar} />
+          {transcribiendo ? (
+            <p className="animate-pulse text-xs text-muted-foreground">Esther está pasando tu audio a texto…</p>
+          ) : (
+            <label className="block">
+              <span className="text-[11px] font-semibold text-muted-foreground">Lo que dictaste (podés corregirlo)</span>
+              <textarea
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                rows={3}
+                placeholder={sinTexto ? "No se pudo pasar a texto: podés escribirlo acá o guardar solo el audio." : ""}
+                className="mt-1 w-full resize-none rounded-xl border border-primary/15 bg-card px-3 py-2 text-sm outline-none"
+              />
+            </label>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <BotonMini
+              icon={Check}
+              label={guardando ? "Guardando…" : texto.trim() ? "Guardar y armar nota" : "Guardar nota de voz"}
+              onClick={() => void guardar()}
+            />
           </div>
         </div>
       )}

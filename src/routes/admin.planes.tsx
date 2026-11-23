@@ -385,7 +385,7 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
     <div className="mt-6">
       <Seccion
         titulo="Cupones de descuento"
-        descripcion="El cliente escribe el código en la página de pago y el descuento lo aplica el servidor en Paddle. Para cambiar un descuento, desactivá el cupón y creá otro."
+        descripcion="Un cupón es un código de promoción (por ejemplo BIENVENIDA20) que le pasás a una clínica para que pague menos. La clínica lo escribe al pagar su plan y el precio baja solo. Vos elegís cuánto descuenta, en qué planes vale, por cuántos meses y cuántas veces se puede usar."
         acciones={
           <Button
             onClick={() => {
@@ -402,7 +402,7 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
         ) : lista.length === 0 ? (
           <Vacio
             titulo="Todavía no hay cupones"
-            texto="Creá uno (por ejemplo BIENVENIDA20) y compartilo con las clínicas que quieras."
+            texto="Ejemplo: creás BIENVENIDA20 con 20 % en el primer pago y se lo mandás a una clínica por WhatsApp. Cuando paga su plan escribe el código y en vez de USD 100 paga USD 80. Si no usás promociones, podés ignorar esta sección."
           />
         ) : (
           <Tabla columnas={["Código", "Descuento", "Planes", "Usos", "Vence", "Estado", ""]}>
@@ -483,7 +483,7 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
       <DialogoFormulario
         abierto={abierto}
         titulo="Nuevo cupón de descuento"
-        descripcion="Se crea también en Paddle. Una vez creado, el descuento no se puede cambiar (se desactiva y se crea otro)."
+        descripcion="Completá el código que va a escribir la clínica al pagar y cuánto descuenta. Una vez creado no se puede cambiar: si te equivocás, lo desactivás y creás otro."
         onCerrar={() => setAbierto(false)}
         onGuardar={guardar}
         guardando={crear.isPending}

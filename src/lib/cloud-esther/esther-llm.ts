@@ -120,3 +120,86 @@ export const transcribirAudioWeb = createServerFn({ method: "POST" })
       return { texto: null };
     }
   });
+
+/* NOTA DE VOZ → NOTA CLÍNICA (odontograma 3D y ficha del paciente, demo y clínica): la IA ordena
+   lo que dictó el profesional en los campos de la nota. Solo reacomoda lo dicho: no agrega
+   diagnósticos ni datos. El profesional revisa y guarda. null si no hay IA o falla. */
+export type CamposNotaClinica = {
+  motivoConsulta: string;
+  diagnostico: string;
+  procedimiento: string;
+  evolucion: string;
+  indicaciones: string;
+  observaciones: string;
+};
+const CAMPOS_NOTA: (keyof CamposNotaClinica)[] = [
+  "motivoConsulta",
+  "diagnostico",
+  "procedimiento",
+  "evolucion",
+  "indicaciones",
+  "observaciones",
+];
+export const notaClinicaIA = createServerFn({ method: "POST" })
+  .inputValidator((d: { texto: string; pieza?: string }) => ({
+    texto: String(d?.texto ?? "").slice(0, 6000),
+    pieza: d?.pieza ? String(d.pieza).slice(0, 20) : "",
+  }))
+  .handler(async ({ data }): Promise<CamposNotaClinica | null> => {
+    const key = process.env["OPENAI_API_KEY"] ?? process.env["ESTHER_IA_KEY"];
+    if (!key || !data.texto.trim()) return null;
+    const url = process.env["OPENAI_API_KEY"]
+      ? "https://api.openai.com/v1/chat/completions"
+      : (process.env["ESTHER_IA_URL"] ?? "https://api.openai.com/v1/chat/completions");
+    const model = process.env["OPENAI_API_KEY"] ? "gpt-4o-mini" : (process.env["ESTHER_IA_MODEL"] ?? "gpt-4o-mini");
+    const sistema =
+      "Sos asistente de un odontólogo. Recibís lo que dictó por voz después de atender a un paciente" +
+      (data.pieza ? ` (pieza dental ${data.pieza})` : "") +
+      ". Ordenalo en una nota clínica en español, en tercera persona y con lenguaje odontológico correcto. " +
+      "Usá SOLO lo que dijo: no inventes diagnósticos, piezas, materiales ni indicaciones. Si un campo no se mencionó, dejalo vacío. " +
+      'Respondé SOLO un JSON con estas claves de texto: {"motivoConsulta":"","diagnostico":"","procedimiento":"","evolucion":"","indicaciones":"","observaciones":""}';
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model,
+          max_tokens: 600,
+          temperature: 0.1,
+          messages: [
+            { role: "system", content: sistema },
+            { role: "user", content: data.texto },
+          ],
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!r.ok) return null;
+      const j = (await r.json()) as { choices?: { message?: { content?: string } }[] };
+      const crudo = j?.choices?.[0]?.message?.content ?? "";
+      const json = crudo.slice(crudo.indexOf("{"), crudo.lastIndexOf("}") + 1);
+      const o = JSON.parse(json) as Record<string, unknown>;
+      const nota = Object.fromEntries(
+        CAMPOS_NOTA.map((k) => [k, typeof o[k] === "string" ? (o[k] as string).trim().slice(0, 2000) : ""]),
+      ) as CamposNotaClinica;
+      return CAMPOS_NOTA.some((k) => nota[k]) ? nota : null;
+    } catch {
+      return null;
+    }
+  });
+
+/** Pasa un audio grabado (Blob) a texto con el servidor. null si no se pudo. */
+export async function audioATexto(blob: Blob): Promise<string | null> {
+  if (blob.size < 1000) return null;
+  const b64 = await new Promise<string>((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(",")[1] ?? "");
+    fr.onerror = () => rej(new Error("audio"));
+    fr.readAsDataURL(blob);
+  });
+  try {
+    const { texto } = await transcribirAudioWeb({ data: { audio: b64, mime: blob.type || "audio/webm" } });
+    return texto;
+  } catch {
+    return null;
+  }
+}

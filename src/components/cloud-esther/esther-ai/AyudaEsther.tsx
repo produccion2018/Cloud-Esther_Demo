@@ -6,6 +6,7 @@ import { ArrowRight, BookOpen, ChevronRight, LifeBuoy, Search, X } from "lucide-
 import { AvatarEsther } from "./AvatarEsther";
 import { POS_FLOTANTE, POS_FLOTANTE_CHAT, useHayComposer } from "@/lib/cloud-esther/composer-visible";
 import { normalizarBusqueda } from "@/lib/utils";
+import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
 
 /* Ubicación: src/components/cloud-esther/esther-ai/AyudaEsther.tsx
    AYUDA DE ESTHER — soporte inteligente integrado, en TODOS los planes:
@@ -187,9 +188,38 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
   const [q, setQ] = useState("");
   const [elegida, setElegida] = useState<Pregunta | null>(null);
   const caja = useRef<HTMLInputElement>(null);
+  // Respuesta de Esther con IA cuando la duda no está en las preguntas frecuentes
+  const [respuestaIA, setRespuestaIA] = useState<{ p: string; r: string } | null>(null);
+  const [pensando, setPensando] = useState(false);
   const ayuda = AYUDA_MODULO[ALIAS[moduloId] ?? moduloId] ?? { ...GENERAL, titulo: modulo || GENERAL.titulo };
   const resultados = useMemo(() => buscar(q), [q]);
   const sugeridas = PREGUNTAS.filter((p) => p.ir && ayuda.titulo && normalizarBusqueda(p.r).includes(normalizarBusqueda(ayuda.titulo.split(" ")[0] ?? ""))).slice(0, 3);
+
+  const preguntarAEsther = async () => {
+    const pregunta = q.trim();
+    if (!pregunta || pensando) return;
+    setPensando(true);
+    const manual = [
+      `Pantalla actual: ${ayuda.titulo}. ${ayuda.resumen} Pasos: ${ayuda.pasos.join(" ")}`,
+      ...Object.values(AYUDA_MODULO).map((a) => `${a.titulo}: ${a.resumen} ${a.pasos.join(" ")}`),
+      ...PREGUNTAS.map((x) => `${x.p} ${x.r}`),
+    ]
+      .join("\n")
+      .slice(0, 5800);
+    const r = await preguntarIA({
+      data: {
+        pregunta: `Duda sobre cómo usar el sistema Cloud Esther: ${pregunta}. Explicá los pasos concretos, breve.`,
+        contexto: `MANUAL DE USO DE CLOUD ESTHER:\n${manual}`,
+      },
+    }).catch(() => null);
+    setPensando(false);
+    setRespuestaIA({
+      p: pregunta,
+      r:
+        r?.text ??
+        "No encontré esa respuesta en la ayuda. Probá con otras palabras (por ejemplo: «turno», «receta», «importar») o escribinos desde Soporte.",
+    });
+  };
 
   useEffect(() => {
     if (!abierto) return;
@@ -221,7 +251,15 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
           </div>
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-            {elegida ? (
+            {respuestaIA ? (
+              <div className="space-y-3">
+                <button type="button" onClick={() => setRespuestaIA(null)} className="text-xs font-semibold text-primary hover:underline">
+                  ← Volver
+                </button>
+                <p className="text-sm font-bold">{respuestaIA.p}</p>
+                <p className="whitespace-pre-line rounded-2xl bg-primary/[0.05] p-3 text-sm leading-relaxed text-foreground/90">{respuestaIA.r}</p>
+              </div>
+            ) : elegida ? (
               <div className="space-y-3">
                 <button type="button" onClick={() => setElegida(null)} className="text-xs font-semibold text-primary hover:underline">
                   ← Volver
@@ -259,17 +297,33 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
                       ref={caja}
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (resultados.length === 1 && resultados[0]) setElegida(resultados[0]);
+                          else void preguntarAEsther();
+                        }
+                      }}
+                      enterKeyHint="send"
                       placeholder="Preguntame cómo hacer algo…"
                       className="h-11 w-full rounded-2xl border border-primary/15 bg-card pl-10 pr-3 text-sm outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
                     />
                   </label>
                   {q.trim() && (
                     <ul className="mt-2 space-y-1.5">
-                      {resultados.length === 0 ? (
-                        <li className="rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
-                          No encontré esa respuesta. Probá con otras palabras (por ejemplo: «turno», «receta», «importar»).
-                        </li>
-                      ) : (
+                      <li>
+                        <button
+                          type="button"
+                          disabled={pensando}
+                          onClick={() => void preguntarAEsther()}
+                          className="flex w-full items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 px-3 py-2.5 text-left text-sm font-semibold text-white shadow-[0_10px_24px_-14px_rgba(124,58,237,0.9)] transition hover:brightness-110 disabled:opacity-70"
+                        >
+                          <CaraEsther className="size-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{pensando ? "Esther está pensando…" : `Preguntarle a Esther: «${q.trim()}»`}</span>
+                          <ArrowRight className="size-4" />
+                        </button>
+                      </li>
+                      {resultados.length === 0 ? null : (
                         resultados.map((p) => (
                           <li key={p.p}>
                             <button type="button" onClick={() => setElegida(p)} className="flex w-full items-center gap-2 rounded-xl border border-primary/10 bg-card px-3 py-2.5 text-left text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/[0.04]">

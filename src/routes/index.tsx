@@ -48,10 +48,44 @@ export const Route = createFileRoute("/")({
         content:
           "La plataforma inteligente para administrar tu clínica, tus pacientes y todo tu equipo desde un solo lugar.",
       },
+      { property: "og:url", content: `${SITIO}/` },
+    ],
+    links: [{ rel: "canonical", href: `${SITIO}/` }],
+    // Datos estructurados: Google entiende que es un software para clínicas odontológicas.
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "Cloud Esther",
+              url: `${SITIO}/`,
+              logo: `${SITIO}/icons/icon-512.png`,
+            },
+            {
+              "@type": "SoftwareApplication",
+              name: "Cloud Esther",
+              applicationCategory: "BusinessApplication",
+              applicationSubCategory: "Software de gestión para clínicas odontológicas",
+              operatingSystem: "Web, Android, iOS, Windows, macOS",
+              inLanguage: "es",
+              url: `${SITIO}/`,
+              image: `${SITIO}/og-cloud-esther.png`,
+              description:
+                "Agenda, pacientes, historia clínica, odontograma 3D, facturación, WhatsApp e inteligencia artificial para clínicas odontológicas.",
+              offers: { "@type": "Offer", url: `${SITIO}/planes`, category: "Suscripción mensual" },
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: Home,
 });
+
+const SITIO = ((import.meta.env["VITE_SITE_URL"] as string | undefined) ?? "https://cloud-esther-staging.vercel.app").replace(/\/$/, "");
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 

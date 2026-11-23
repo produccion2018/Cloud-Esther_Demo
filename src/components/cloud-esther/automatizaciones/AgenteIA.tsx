@@ -189,7 +189,7 @@ export function AgenteIA({
       </section>
 
       {/* ───────── Cómo activarlo (honesto) ───────── */}
-      {waConectado && real && <ConversacionesWhatsapp onToast={onToast} />}
+      {waConectado && <ConversacionesWhatsapp onToast={onToast} />}
 
       {!waConectado && (
         <section className="rounded-2xl border border-amber-300/40 bg-amber-500/[0.06] p-4">

@@ -16,6 +16,7 @@ import {
   storeModulosExtra,
 } from "@/lib/cloud-esther/modulos-extra-store";
 import { usePreciosModulos, formatearPrecioModulo } from "@/lib/cloud-esther/precios-modulos";
+import { useConfigPlanes } from "@/lib/cloud-esther/planes-config";
 import { DialogoCompraModulo } from "@/components/cloud-esther/facturacion/DialogoCompraModulo";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -284,7 +285,28 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
     };
   }, [comprar, real?.slug]);
   const activos = storeModulosExtra.usar().activos;
+  // Demo: «Tu próxima factura» con el precio del plan (Planes y precios) y los adicionales que sume
+  const configPlanes = useConfigPlanes();
+  const preciosDemo = usePreciosModulos();
   if (real && real.rol !== "admin") return null;
+  const facturaDemo: ModulosDeMiClinica | null = real
+    ? null
+    : {
+        ciclo: "mensual",
+        descuentoAnual: 0,
+        cobroAutomatico: true,
+        proximoCobro: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString(),
+        planMensual: configPlanes[plan]?.precioMensual ?? null,
+        precios: {},
+        activos: activos.map((a) => ({
+          modulo: a.id,
+          nombre: MODULES.find((m) => m.id === a.id)?.label ?? a.id,
+          importe: preciosDemo[a.id] ?? 0,
+          ciclo: "mensual" as const,
+          desde: a.desde,
+          cobro: "paddle" as const,
+        })),
+      };
   // El odontograma 3D NO va en la grilla: tiene su propio interruptor 2D/3D arriba.
   const comprables = MODULES.filter(
     (m) => comprableEn(m, plan) && !m.maxPlan && m.id !== "odontograma3d",
@@ -295,7 +317,7 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
   const totalModulos = mios?.activos.reduce((t, a) => t + a.importe, 0) ?? 0;
   return (
     <div className="space-y-4">
-      {mios && <ProximaFactura datos={mios} />}
+      {(mios ?? facturaDemo) && <ProximaFactura datos={(mios ?? facturaDemo)!} />}
 
       {haySwitch && <OdontogramaSwitch onToast={onToast} />}
 

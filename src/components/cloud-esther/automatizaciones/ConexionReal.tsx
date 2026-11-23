@@ -10,6 +10,8 @@ import {
 } from "@/lib/clinica/api";
 import { ponerEstadoAutomatizaciones, recargarEstadoAutomatizaciones, useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import type { EstadoAutomatizaciones } from "@/lib/clinica/api";
+import { storeAgenteIA } from "@/lib/cloud-esther/agente-ia-store";
 
 /* Ubicación: src/components/cloud-esther/automatizaciones/ConexionReal.tsx
    CONEXIÓN DE VERDAD (clínica real), solo el Administrador:
@@ -65,9 +67,37 @@ function Tarjeta({ icono, titulo, estado, children }: { icono: ReactNode; titulo
   );
 }
 
+/* DEMO: la misma pantalla, con todo simulado (no se conecta nada de verdad). Así el cliente ve
+   exactamente lo que va a tener cuando contrate. */
+const DEMO_INICIAL: EstadoAutomatizaciones = {
+  habilitado: true,
+  ia: { habilitada: true, conLlave: true },
+  whatsapp: {
+    conectado: false,
+    phoneId: "",
+    numero: "",
+    token: "",
+    appSecret: "",
+    plantilla: "",
+    idioma: "es",
+    webhook: "https://api.cloudesther.com/webhooks/whatsapp/tu-clinica",
+    verifyToken: "demo-token-de-verificacion",
+  },
+  n8n: {
+    eventosUrl: "",
+    webhookAcciones: "https://api.cloudesther.com/webhooks/automatizacion/tu-clinica",
+    secreto: "demo-secreto-de-tu-clinica-1234567890",
+  },
+  agente: { activo: false },
+  flujosActivos: 0,
+};
+
 export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
   const real = useClinicaReal();
-  const est = useEstadoAutomatizaciones();
+  const estServ = useEstadoAutomatizaciones();
+  const [estDemo, setEstDemo] = useState<EstadoAutomatizaciones>(DEMO_INICIAL);
+  const est = real ? estServ : estDemo;
+  const demo = !real;
   const [wa, setWa] = useState({ phoneId: "", token: "", appSecret: "", plantilla: "", idioma: "es" });
   const [n8nUrl, setN8nUrl] = useState("");
   const [telPrueba, setTelPrueba] = useState("");
@@ -77,14 +107,17 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
   useEffect(() => {
     if (real) void recargarEstadoAutomatizaciones(real.slug);
   }, [real?.slug]);
+  // En la demo, «Conectado» también se refleja en el Agente IA (para que se vea completo)
+  useEffect(() => {
+    if (demo) storeAgenteIA.poner({ ...storeAgenteIA.leer(), whatsappConectado: estDemo.whatsapp.conectado });
+  }, [demo, estDemo.whatsapp.conectado]);
   useEffect(() => {
     if (!est) return;
     setWa((w) => ({ ...w, phoneId: est.whatsapp.phoneId, plantilla: est.whatsapp.plantilla, idioma: est.whatsapp.idioma || "es" }));
     setN8nUrl(est.n8n.eventosUrl);
   }, [est?.whatsapp.phoneId, est?.whatsapp.plantilla, est?.n8n.eventosUrl]);
 
-  if (!real) return null;
-  if (real.rol !== "admin")
+  if (real && real.rol !== "admin")
     return <p className="card-grad p-5 text-sm text-muted-foreground">La conexión la configura el Administrador de la clínica.</p>;
   if (!est)
     return (
@@ -109,6 +142,12 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
 
   return (
     <div className="space-y-4">
+      {demo && (
+        <p className="rounded-2xl border border-primary/20 bg-primary/[0.05] p-4 text-sm text-muted-foreground">
+          <b className="text-foreground">Demo:</b> esta es la misma pantalla que usa la clínica real. Acá todo se simula (podés
+          escribir cualquier dato); con la clínica contratada, Meta y n8n se conectan de verdad.
+        </p>
+      )}
       {!est.habilitado && (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Automatizaciones no está incluido en tu plan. Podés sumarlo como módulo adicional desde <b>Configuración › Mi plan</b>:
@@ -159,7 +198,18 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
             disabled={!!ocupado || !est.habilitado}
             onClick={() =>
               void hacer("wa", async () => {
-                const e = await guardarConexionAutomatizaciones(real.slug, {
+                if (demo) {
+                  if (!wa.phoneId || !wa.token) throw new Error("Completá el identificador del número y el token (en la demo, cualquier valor sirve).");
+                  await new Promise((r) => setTimeout(r, 700));
+                  setEstDemo((x) => ({
+                    ...x,
+                    whatsapp: { ...x.whatsapp, conectado: true, phoneId: wa.phoneId, numero: "+54 9 11 5555-0000 · Tu clínica", token: `••••${wa.token.slice(-4)}`, appSecret: wa.appSecret ? `••••${wa.appSecret.slice(-4)}` : "", plantilla: wa.plantilla, idioma: wa.idioma },
+                  }));
+                  setWa((w) => ({ ...w, token: "", appSecret: "" }));
+                  onToast("Demo: en la clínica real Meta confirma las llaves en este momento");
+                  return;
+                }
+                const e = await guardarConexionAutomatizaciones(real!.slug, {
                   whatsapp: { phoneId: wa.phoneId, ...(wa.token ? { token: wa.token } : {}), ...(wa.appSecret ? { appSecret: wa.appSecret } : {}), plantilla: wa.plantilla, idioma: wa.idioma },
                 });
                 ponerEstadoAutomatizaciones(e);
@@ -178,7 +228,8 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
               onClick={() =>
                 window.confirm("¿Desconectar WhatsApp Business? Las automatizaciones dejan de mandar WhatsApp.") &&
                 void hacer("wa-off", async () => {
-                  ponerEstadoAutomatizaciones(await guardarConexionAutomatizaciones(real.slug, { whatsapp: { phoneId: "", plantilla: "", idioma: "es", desconectar: true } }));
+                  if (demo) setEstDemo((x) => ({ ...x, whatsapp: { ...DEMO_INICIAL.whatsapp } }));
+                  else ponerEstadoAutomatizaciones(await guardarConexionAutomatizaciones(real!.slug, { whatsapp: { phoneId: "", plantilla: "", idioma: "es", desconectar: true } }));
                   onToast("WhatsApp Business desconectado");
                 })
               }
@@ -200,7 +251,12 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
                   disabled={!!ocupado || telPrueba.replace(/\D/g, "").length < 8}
                   onClick={() =>
                     void hacer("wa-test", async () => {
-                      await probarWhatsappBusiness(real.slug, telPrueba);
+                      if (demo) {
+                        await new Promise((r) => setTimeout(r, 600));
+                        onToast("Demo: en la clínica real llega un WhatsApp de prueba a ese número");
+                        return;
+                      }
+                      await probarWhatsappBusiness(real!.slug, telPrueba);
                       onToast("WhatsApp de prueba enviado");
                     })
                   }
@@ -234,7 +290,10 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
               disabled={!!ocupado || !est.habilitado}
               onClick={() =>
                 void hacer("n8n", async () => {
-                  ponerEstadoAutomatizaciones(await guardarConexionAutomatizaciones(real.slug, { n8nEventsUrl: n8nUrl }));
+                  if (demo) {
+                    if (n8nUrl && !/^https:\/\/.+\..+/.test(n8nUrl)) throw new Error("El webhook tiene que empezar con https://");
+                    setEstDemo((x) => ({ ...x, n8n: { ...x.n8n, eventosUrl: n8nUrl } }));
+                  } else ponerEstadoAutomatizaciones(await guardarConexionAutomatizaciones(real!.slug, { n8nEventsUrl: n8nUrl }));
                   onToast(n8nUrl ? "n8n guardado" : "n8n desconectado");
                 })
               }
@@ -248,7 +307,12 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
                 disabled={!!ocupado}
                 onClick={() =>
                   void hacer("n8n-test", async () => {
-                    await probarN8n(real.slug);
+                    if (demo) {
+                      await new Promise((r) => setTimeout(r, 600));
+                      onToast("Demo: en la clínica real n8n recibe un evento de prueba firmado");
+                      return;
+                    }
+                    await probarN8n(real!.slug);
                     onToast("n8n recibió el evento de prueba");
                   })
                 }
@@ -280,7 +344,8 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
               onClick={() =>
                 window.confirm("¿Generar un secreto nuevo? Vas a tener que actualizarlo en n8n.") &&
                 void hacer("secreto", async () => {
-                  ponerEstadoAutomatizaciones(await renovarSecretoAutomatizaciones(real.slug));
+                  if (demo) setEstDemo((x) => ({ ...x, n8n: { ...x.n8n, secreto: `demo-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}` } }));
+                  else ponerEstadoAutomatizaciones(await renovarSecretoAutomatizaciones(real!.slug));
                   onToast("Secreto nuevo generado");
                 })
               }

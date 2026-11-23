@@ -651,7 +651,13 @@ function Flujos({
   };
   const ejecutarDeVerdad = async () => {
     const d = lista[disparo];
-    if (!real || !d) return;
+    if (!d) return;
+    if (!real) {
+      // Demo: corre el flujo con los datos de ejemplo y explica qué pasa en la clínica real
+      probar();
+      onToast("Demo: en la clínica real este botón manda los WhatsApp y correos de verdad, y el servidor lo ejecuta solo cada vez que pasa el evento");
+      return;
+    }
     if (!window.confirm(`Se va a ejecutar «${f.nombre}» DE VERDAD con «${d.titulo}» (envía los WhatsApp y correos reales). ¿Seguimos?`)) return;
     setEjecutando(true);
     try {
@@ -857,7 +863,7 @@ function Flujos({
               <p className="text-sm font-semibold">Probar con datos reales</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {lista.length
-                  ? `${lista.length} ${lista.length === 1 ? "registro cumple" : "registros cumplen"} este evento ahora. «Probar» simula los envíos externos${real ? "; «Ejecutar de verdad» manda los WhatsApp y correos reales" : ""}. Con el flujo activo, el servidor lo ejecuta solo cada vez que pasa el evento.`
+                  ? `${lista.length} ${lista.length === 1 ? "registro cumple" : "registros cumplen"} este evento ahora. «Probar» simula los envíos externos${real ? "; «Ejecutar de verdad» manda los WhatsApp y correos reales" : "; en la clínica real, «Ejecutar de verdad» manda los WhatsApp y correos reales"}. Con el flujo activo, el servidor lo ejecuta solo cada vez que pasa el evento.`
                   : "Ningún registro de esta empresa cumple el evento en este momento."}
               </p>
               {lista.length > 0 && (
@@ -877,10 +883,10 @@ function Flujos({
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <button type="button" className={real ? BTN_SECUNDARIO : BTN_PRIMARIO} onClick={probar}>
+                  <button type="button" className={BTN_SECUNDARIO} onClick={probar}>
                     <Play className="size-4" /> Probar ahora
                   </button>
-                  {real?.rol === "admin" && (
+                  {(!real || real.rol === "admin") && (
                     <button type="button" className={BTN_PRIMARIO} onClick={() => void ejecutarDeVerdad()} disabled={ejecutando}>
                       <Zap className="size-4" /> {ejecutando ? "Ejecutando…" : "Ejecutar de verdad"}
                     </button>
@@ -1321,186 +1327,7 @@ function Ejecuciones({ ejecuciones, flujos }: { ejecuciones: Ejecucion[]; flujos
 
 /* ───────────── Conexión ───────────── */
 
+/** La misma pantalla en la demo y en la clínica real (en la demo, todo se simula). */
 function Conexion({ onToast }: { onToast: (m: string) => void }) {
-  const real = useClinicaReal();
-  return real ? <ConexionReal onToast={onToast} /> : <ConexionDemo onToast={onToast} />;
-}
-
-function ConexionDemo({ onToast }: { onToast: (m: string) => void }) {
-  const est = storeN8n.usar();
-  const [instancia, setInstancia] = useState(est.instancia);
-  const [apiKey, setApiKey] = useState(est.apiKey);
-  const [probando, setProbando] = useState(false);
-  const tenant = clinicaActualId() ?? "demo";
-  const webhook = `https://api.cloudesther.com/webhooks/automatizacion/${tenant}`;
-  const probar = () => {
-    setProbando(true);
-    window.setTimeout(() => {
-      setProbando(false);
-      const ok = /^https:\/\/.+\..+/.test(instancia) && apiKey.trim().length >= 12;
-      storeN8n.poner({
-        ...storeN8n.leer(),
-        instancia,
-        apiKey,
-        conectado: ok,
-        ultimaPrueba: new Date().toISOString(),
-      });
-      onToast(
-        ok
-          ? "Motor de automatización conectado"
-          : "No se pudo conectar: revisá la URL y la API key (mínimo 12 caracteres)",
-      );
-    }, 700);
-  };
-  const ARQ: { t: string; d: string; i: LucideIcon; c: string }[] = [
-    {
-      t: "Cloud Esther",
-      d: "Emite el evento con el tenant y la sede",
-      i: Zap,
-      c: "bg-sky-100 text-sky-700",
-    },
-    {
-      t: "Automatización",
-      d: "Detecta el evento y orquesta el flujo",
-      i: Workflow,
-      c: "bg-rose-100 text-rose-600",
-    },
-    {
-      t: "Esther Infinity",
-      d: "Analiza, prioriza o redacta con el contexto permitido",
-      i: Bot,
-      c: "bg-gradient-to-br from-primary to-fuchsia-500 text-white",
-    },
-    {
-      t: "Acción",
-      d: "WhatsApp, correo, tarea o webhook; el resultado vuelve y se audita",
-      i: CheckCircle2,
-      c: "bg-emerald-100 text-emerald-700",
-    },
-  ];
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="card-grad space-y-3 p-5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold">Motor de automatización</p>
-          <Pill
-            clase={
-              est.conectado ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-            }
-          >
-            {est.conectado ? "Conectada" : "Modo prueba"}
-          </Pill>
-        </div>
-        <Field label="URL de la instancia">
-          <input
-            className={INPUT}
-            value={instancia}
-            onChange={(e) => setInstancia(e.target.value)}
-            placeholder="https://automatizacion.tuclinica.com"
-          />
-        </Field>
-        <Field label="API key">
-          <input
-            className={INPUT}
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="clave_api_…"
-            autoComplete="off"
-          />
-        </Field>
-        <Field label="Webhook de esta empresa">
-          <div className="flex gap-2">
-            <input className={`${INPUT} font-mono text-xs`} value={webhook} readOnly />
-            <button
-              type="button"
-              className={BTN_ICONO + " size-9"}
-              aria-label="Copiar webhook"
-              onClick={() => {
-                void navigator.clipboard?.writeText(webhook);
-                onToast("Webhook copiado");
-              }}
-            >
-              <Copy className="size-3.5" />
-            </button>
-          </div>
-        </Field>
-        <p className="text-[11px] leading-5 text-muted-foreground">
-          Cada empresa tiene su propio webhook firmado: el motor de automatización nunca recibe datos de otra clínica. Las
-          llamadas a Esther Infinity usan el token de la empresa y respetan plan, rol y sede.
-        </p>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">
-            {est.ultimaPrueba ? `Última prueba ${hace(est.ultimaPrueba)}` : "Sin pruebas todavía"}
-          </span>
-          <button type="button" className={BTN_PRIMARIO} onClick={probar} disabled={probando}>
-            <RefreshCw className={`size-4 ${probando ? "animate-spin" : ""}`} />
-            {probando ? "Probando…" : "Probar conexión"}
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="card-grad p-5">
-          <p className="text-sm font-semibold">Credenciales conectadas</p>
-          <ul className="mt-3 space-y-2">
-            {est.credenciales.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-white/80 px-3 py-2"
-              >
-                <Plug
-                  className={`size-4 ${c.conectada ? "text-emerald-600" : "text-muted-foreground"}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{c.nombre}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {c.conectada ? c.detalle || "Conectada" : "Sin conectar"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={c.conectada ? BTN_SECUNDARIO : BTN_PRIMARIO}
-                  onClick={() => {
-                    setN8n("credenciales", (prev) =>
-                      prev.map((x) => (x.id === c.id ? { ...x, conectada: !x.conectada } : x)),
-                    );
-                    onToast(`${c.nombre} ${c.conectada ? "desconectado" : "conectado"}`);
-                  }}
-                >
-                  {c.conectada ? "Desconectar" : "Conectar"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="card-grad p-5">
-          <p className="text-sm font-semibold">Cómo funciona</p>
-          <ol className="mt-3 grid gap-2 sm:grid-cols-2">
-            {ARQ.map((a, i) => (
-              <li
-                key={a.t}
-                className="flex gap-2.5 rounded-2xl border border-primary/10 bg-white/80 p-3"
-              >
-                <span className={`grid size-8 shrink-0 place-items-center rounded-xl ${a.c}`}>
-                  <a.i className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs font-semibold">
-                    {i + 1}. {a.t}
-                  </p>
-                  <p className="text-[11px] leading-4 text-muted-foreground">{a.d}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
-            El motor de automatización no reemplaza a la IA: se encarga de los tiempos, las condiciones y los canales
-            externos. Esther Infinity decide qué decir y a quién priorizar.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return <ConexionReal onToast={onToast} />;
 }

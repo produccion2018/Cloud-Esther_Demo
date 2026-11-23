@@ -89,3 +89,34 @@ export async function preguntarIA(args: { data: EntradaIA }): Promise<{ text: st
     return null;
   }
 }
+
+/** AUDIO → TEXTO (Probador del Agente IA, en la demo y en la clínica): Whisper del mismo proveedor
+ *  de IA cargado en Vercel. Máximo ~3 MB (un audio de 1 minuto). null si no se pudo. */
+export const transcribirAudioWeb = createServerFn({ method: "POST" })
+  .inputValidator((d: { audio: string; mime: string }) => {
+    if (typeof d?.audio !== "string" || d.audio.length > 4_200_000) throw new Error("El audio es demasiado largo (máximo 1 minuto).");
+    return { audio: d.audio, mime: typeof d.mime === "string" ? d.mime.slice(0, 60) : "audio/webm" };
+  })
+  .handler(async ({ data }): Promise<{ texto: string | null }> => {
+    const key = process.env["OPENAI_API_KEY"] ?? process.env["ESTHER_IA_KEY"];
+    if (!key) return { texto: null };
+    const openai = !!process.env["OPENAI_API_KEY"];
+    const chatUrl = openai ? "https://api.openai.com/v1/chat/completions" : (process.env["ESTHER_IA_URL"] ?? "https://api.openai.com/v1/chat/completions");
+    const url = openai ? "https://api.openai.com/v1/audio/transcriptions" : chatUrl.replace(/\/chat\/completions\/?$/, "/audio/transcriptions");
+    const model = openai ? "whisper-1" : /groq\.com/.test(chatUrl) ? "whisper-large-v3-turbo" : (process.env["ESTHER_TRANSCRIPCION_MODEL"] ?? "whisper-1");
+    const audio = Buffer.from(data.audio, "base64");
+    if (!audio.length) return { texto: null };
+    const ext = data.mime.includes("mp4") ? "m4a" : data.mime.includes("ogg") ? "ogg" : data.mime.includes("mpeg") ? "mp3" : "webm";
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(audio)], { type: data.mime }), `audio.${ext}`);
+    form.append("model", model);
+    form.append("language", "es");
+    try {
+      const r = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(45_000) });
+      if (!r.ok) return { texto: null };
+      const d = (await r.json()) as { text?: unknown };
+      return { texto: typeof d.text === "string" && d.text.trim() ? d.text.trim() : null };
+    } catch {
+      return { texto: null };
+    }
+  });

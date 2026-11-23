@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { CalendarCheck, FlaskConical, RotateCcw, Send, Siren } from "lucide-react";
-import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
+import { CalendarCheck, FlaskConical, Mic, RotateCcw, Send, Siren, Square } from "lucide-react";
+import { preguntarIA, transcribirAudioWeb } from "@/lib/cloud-esther/esther-llm";
 import { storeAgenteIA, type Conversacion, type MensajeConv } from "@/lib/cloud-esther/agente-ia-store";
 import {
   storeAgenda,
@@ -97,8 +97,59 @@ export function ProbadorAgente({ usuario: _usuario, onToast }: { usuario: string
     storeAgenteIA.poner({ ...e, conversaciones: [...e.conversaciones, conv] });
   };
 
-  const enviar = async () => {
-    const t = texto.trim();
+  // 🎤 Audio: se graba con el micrófono, se pasa a texto con IA y se manda como mensaje del paciente
+  // (igual que los audios de WhatsApp en la clínica real).
+  const [grabando, setGrabando] = useState(false);
+  const grabador = useRef<MediaRecorder | null>(null);
+  const corte = useRef<number | null>(null);
+  const grabar = async () => {
+    if (grabando) {
+      grabador.current?.stop();
+      return;
+    }
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      onToast("Este navegador no permite grabar audio.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const partes: Blob[] = [];
+      rec.ondataavailable = (e) => e.data.size && partes.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (corte.current) window.clearTimeout(corte.current);
+        setGrabando(false);
+        const blob = new Blob(partes, { type: rec.mimeType || "audio/webm" });
+        if (blob.size < 1000) return;
+        setCargando(true);
+        try {
+          const b64 = await new Promise<string>((res, rej) => {
+            const fr = new FileReader();
+            fr.onload = () => res(String(fr.result).split(",")[1] ?? "");
+            fr.onerror = () => rej(new Error("audio"));
+            fr.readAsDataURL(blob);
+          });
+          const { texto: t } = await transcribirAudioWeb({ data: { audio: b64, mime: blob.type } });
+          setCargando(false);
+          if (t) void enviar(`🎤 ${t}`);
+          else onToast("No se pudo pasar el audio a texto. Probá de nuevo o escribí el mensaje.");
+        } catch (err) {
+          setCargando(false);
+          onToast(err instanceof Error ? err.message : "No se pudo pasar el audio a texto.");
+        }
+      };
+      grabador.current = rec;
+      rec.start();
+      setGrabando(true);
+      corte.current = window.setTimeout(() => rec.state === "recording" && rec.stop(), 60_000);
+    } catch {
+      onToast("No se pudo usar el micrófono. Revisá los permisos del navegador.");
+    }
+  };
+
+  const enviar = async (dictado?: string) => {
+    const t = (dictado ?? texto).trim();
     if (!t || cargando) return;
     setTexto("");
     const urgente = esUrgencia(t);
@@ -273,7 +324,17 @@ export function ProbadorAgente({ usuario: _usuario, onToast }: { usuario: string
             className={INPUT}
             disabled={cargando}
           />
-          <button type="button" className={BTN_PRIMARIO} onClick={enviar} disabled={cargando}>
+          <button
+            type="button"
+            className={grabando ? `${BTN_PRIMARIO} animate-pulse bg-rose-500` : BTN_SECUNDARIO}
+            onClick={() => void grabar()}
+            disabled={cargando && !grabando}
+            aria-label={grabando ? "Terminar audio" : "Mandar un audio"}
+            title={grabando ? "Tocá para terminar y enviar" : "Mandar un audio (se pasa a texto)"}
+          >
+            {grabando ? <Square className="size-4" /> : <Mic className="size-4" />}
+          </button>
+          <button type="button" className={BTN_PRIMARIO} onClick={() => void enviar()} disabled={cargando}>
             <Send className="size-4" /> {cargando ? "…" : "Enviar"}
           </button>
         </div>

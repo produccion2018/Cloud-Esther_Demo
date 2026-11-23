@@ -47,6 +47,7 @@ import { Route as AdminRecuperarRouteImport } from './routes/admin.recuperar'
 import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
 import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer'
 import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
+import { Route as ApiIaRouteImport } from './routes/api.ia'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
@@ -273,6 +274,11 @@ const AdminSoporteRoute = AdminSoporteRouteImport.update({
   path: '/soporte',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiIaRoute = ApiIaRouteImport.update({
+  id: '/api/ia',
+  path: '/api/ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
@@ -490,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/api/ia': typeof ApiIaRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
@@ -564,6 +571,7 @@ export interface FileRoutesByTo {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/api/ia': typeof ApiIaRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
@@ -640,6 +648,7 @@ export interface FileRoutesById {
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
+  '/api/ia': typeof ApiIaRoute
   '/c/$slug': typeof CSlugRoute
   '/demo_/accesos': typeof DemoAccesosRoute
   '/demo_/admin': typeof DemoAdminRoute
@@ -717,6 +726,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/api/ia'
     | '/c/$slug'
     | '/demo/accesos'
     | '/demo/admin'
@@ -791,6 +801,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/api/ia'
     | '/c/$slug'
     | '/demo/accesos'
     | '/demo/admin'
@@ -866,6 +877,7 @@ export interface FileRouteTypes {
     | '/admin/reportes'
     | '/admin/restablecer'
     | '/admin/soporte'
+    | '/api/ia'
     | '/c/$slug'
     | '/demo_/accesos'
     | '/demo_/admin'
@@ -921,6 +933,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRoute
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
+  ApiIaRoute: typeof ApiIaRoute
   CSlugRoute: typeof CSlugRoute
   DemoAccesosRoute: typeof DemoAccesosRoute
   DemoAdminRoute: typeof DemoAdminRoute
@@ -1225,6 +1238,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/soporte'
       preLoaderRoute: typeof AdminSoporteRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/ia': {
+      id: '/api/ia'
+      path: '/api/ia'
+      fullPath: '/api/ia'
+      preLoaderRoute: typeof ApiIaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/': {
       id: '/app/'
@@ -1543,6 +1563,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRoute,
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
+  ApiIaRoute: ApiIaRoute,
   CSlugRoute: CSlugRoute,
   DemoAccesosRoute: DemoAccesosRoute,
   DemoAdminRoute: DemoAdminRoute,
@@ -1585,6 +1606,7 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
 
 import type { getRouter } from './router.tsx'
 import type { startInstance } from './start.ts'

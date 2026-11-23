@@ -35,6 +35,8 @@ import {
   type SolicitudGuardada,
 } from "@/lib/contratacion";
 import { PAISES_DEMO } from "@/lib/cloud-esther/demo-servidor";
+import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
+import type { PlanId } from "@/lib/cloud-esther/data";
 import { PAGO_EN_LINEA } from "@/lib/pago-en-linea";
 
 /* La ruta se mantiene en /demostracion para no romper enlaces existentes, pero la página es
@@ -86,7 +88,11 @@ const PASOS = [
 const SELECT =
   "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none";
 
+/** Planes del sitio → planes de la app */
+const ID_APP: Record<string, PlanId> = { esencial: "inicial", profesional: "profesional", avanzado: "avanzada", enterprise: "grupo" };
+
 function Contratacion() {
+  const configPlanes = useConfigPlanes();
   const { plan: planInicial, ciclo: cicloInicial } = Route.useSearch();
   const [plan, setPlan] = useState(
     plans.some((p) => p.id === planInicial)
@@ -236,7 +242,11 @@ function Contratacion() {
                             {p.tagline}
                           </span>
                           <span className="mt-2 block text-[11px] font-medium text-primary">
-                            {p.branches} · {p.users}
+                            {(() => {
+                              // Límites reales: los que fija el Dueño en Planes y precios
+                              const t = textoLimites(configPlanes[ID_APP[p.id] ?? "inicial"]);
+                              return `${t.sucursales} · ${t.usuarios}`;
+                            })()}
                           </span>
                         </button>
                       );

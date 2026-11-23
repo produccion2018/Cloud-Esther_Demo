@@ -542,6 +542,19 @@ export async function actualizarPerfil(datos: { nombre: string; telefono: string
   return copia(u);
 }
 
+/** Mi perfil: cuánto tiempo sin usar el panel hasta que se cierra la sesión (5 min a 12 h). */
+export async function guardarInactividad(minutos: number) {
+  if (CON_BACKEND) return http<AdminUser>("PUT", "/admin/perfil/inactividad", { minutos });
+  await espera();
+  const b = await db();
+  const id = leerSesion()?.usuario.id;
+  const u = b.admins.find((a) => a.id === id);
+  if (!u) throw new ErrorApi("No se encontró tu usuario.");
+  u.inactividadMinutos = minutos;
+  guardar();
+  return copia(u);
+}
+
 /* ───────────── Equipo interno ───────────── */
 
 export async function obtenerEquipo(): Promise<AdminUser[]> {

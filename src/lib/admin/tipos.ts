@@ -37,6 +37,8 @@ export type AdminUser = {
   activo: boolean;
   ultimoAcceso: string | null; // ISO
   creado: string; // ISO
+  /** Minutos sin usar el panel hasta que se cierra la sesión (lo elige cada persona, 5 a 720). */
+  inactividadMinutos?: number;
 };
 
 export type SesionAdmin = {

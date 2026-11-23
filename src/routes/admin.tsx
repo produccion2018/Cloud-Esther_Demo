@@ -13,7 +13,7 @@ import {
 } from "@/lib/admin/api";
 import { aplicarPreferencias, leerPreferencias } from "@/lib/admin/preferencias";
 import {
-  INACTIVIDAD_MS,
+  inactividadMs,
   actualizarUsuarioSesion,
   cerrarSesionAdmin,
   inactivoDesde,
@@ -81,7 +81,7 @@ function AdminLayout() {
     if (sesion && !publica) void registrarSeccionSesion(pathname);
   }, [sesion, publica, pathname]);
 
-  // Cierre por inactividad (30 minutos sin usar el panel).
+  // Cierre por inactividad (el tiempo que cada persona eligió en Mi perfil; 30 minutos si no eligió).
   useEffect(() => {
     if (!sesion) return;
     let ultimo = 0;
@@ -101,7 +101,7 @@ function AdminLayout() {
     const eventos = ["pointerdown", "keydown", "scroll", "mousemove"] as const;
     eventos.forEach((e) => window.addEventListener(e, actividad, { passive: true }));
     const t = window.setInterval(() => {
-      if (Date.now() - inactivoDesde() > INACTIVIDAD_MS) {
+      if (Date.now() - inactivoDesde() > inactividadMs()) {
         void registrarSalida("Inactividad").finally(() => cerrarSesionAdmin("inactividad"));
       }
     }, 30_000);

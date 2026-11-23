@@ -343,7 +343,7 @@ function AdminLogin() {
       {inactividad && (
         <p className="mt-5 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/15 px-3 py-2.5 text-xs font-medium text-warning-foreground">
           <TimerOff className="mt-0.5 h-4 w-4 shrink-0" />
-          Tu sesión se cerró después de 30 minutos sin actividad. Volvé a ingresar.
+          Tu sesión se cerró por inactividad (el tiempo lo elegís en Mi perfil). Volvé a ingresar.
         </p>
       )}
 

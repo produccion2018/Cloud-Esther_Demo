@@ -10,7 +10,7 @@ import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { actualizarPerfil, cambiarClave, problemaClave } from "@/lib/admin/api";
+import { actualizarPerfil, cambiarClave, guardarInactividad, problemaClave } from "@/lib/admin/api";
 import { fecha } from "@/lib/admin/formato";
 import {
   COLORES_LATERAL,
@@ -19,6 +19,7 @@ import {
   type Tema,
 } from "@/lib/admin/preferencias";
 import { INACTIVIDAD_MS, actualizarUsuarioSesion, useSesionAdmin } from "@/lib/admin/sesion";
+import { Seleccion } from "@/components/ui/seleccion";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/cuenta")({
@@ -126,6 +127,8 @@ function AccountPage() {
           </form>
         </Seccion>
 
+        <CierrePorInactividad />
+
         <Seccion titulo="Mi acceso">
           <div className="space-y-3 text-sm">
             <div className="flex items-start gap-3 rounded-2xl bg-primary/[0.06] p-3">
@@ -140,7 +143,6 @@ function AccountPage() {
                 [
                   ["Ingreso actual", fecha(sesion?.inicio ?? null, true)],
                   ["Cuenta creada", fecha(u?.creado ?? null)],
-                  ["Cierre por inactividad", `${INACTIVIDAD_MS / 60000} minutos`],
                 ] as const
               ).map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3 px-3 py-2">
@@ -256,6 +258,116 @@ function Apariencia() {
             ))}
           </div>
         </div>
+      </div>
+    </Seccion>
+  );
+}
+
+/* Cierre por inactividad: cada persona elige cuánto tiempo sin usar el panel tolera antes de
+   que se cierre su sesión (de 5 minutos a 12 horas, lo máximo que dura una sesión). */
+const ATAJOS_INACTIVIDAD = [
+  [15, "15 min"],
+  [30, "30 min"],
+  [60, "1 h"],
+  [120, "2 h"],
+  [240, "4 h"],
+  [480, "8 h"],
+  [720, "12 h"],
+] as const;
+
+function textoMinutos(m: number) {
+  if (m % 60 === 0) return m === 60 ? "1 hora" : `${m / 60} horas`;
+  return m > 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} minutos`;
+}
+
+function CierrePorInactividad() {
+  const sesion = useSesionAdmin();
+  const actual = sesion?.usuario.inactividadMinutos ?? INACTIVIDAD_MS / 60000;
+  const [cantidad, setCantidad] = useState(String(actual % 60 === 0 && actual >= 60 ? actual / 60 : actual));
+  const [unidad, setUnidad] = useState<"min" | "h">(actual % 60 === 0 && actual >= 60 ? "h" : "min");
+  const [guardando, setGuardando] = useState(false);
+  const n = Number(cantidad.replace(",", "."));
+  const minutos = Number.isFinite(n) ? Math.round(n * (unidad === "h" ? 60 : 1)) : NaN;
+  const valido = Number.isInteger(minutos) && minutos >= 5 && minutos <= 720;
+
+  const elegir = (m: number) => {
+    if (m % 60 === 0) {
+      setCantidad(String(m / 60));
+      setUnidad("h");
+    } else {
+      setCantidad(String(m));
+      setUnidad("min");
+    }
+  };
+
+  const guardar = async () => {
+    if (!valido) return;
+    setGuardando(true);
+    try {
+      const u = await guardarInactividad(minutos);
+      actualizarUsuarioSesion({ inactividadMinutos: u.inactividadMinutos ?? minutos });
+      toast.success(`Listo: tu sesión se cierra después de ${textoMinutos(minutos)} sin usar el panel`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Seccion
+      titulo="Cierre por inactividad"
+      descripcion="Cuánto tiempo puede quedar abierto el panel sin que lo uses. Pasado ese tiempo se cierra solo, por seguridad."
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {ATAJOS_INACTIVIDAD.map(([m, t]) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => elegir(m)}
+              className={cn(
+                "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition",
+                minutos === m
+                  ? "border-transparent bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]"
+                  : "border-primary/15 bg-card text-muted-foreground hover:border-primary/35 hover:text-foreground",
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-2">
+            <Label htmlFor="inactividad">Otro tiempo</Label>
+            <div className="flex gap-2">
+              <Input
+                id="inactividad"
+                inputMode="decimal"
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value.replace(/[^0-9.,]/g, ""))}
+                className="h-11 w-24"
+              />
+              <Seleccion
+                value={unidad}
+                onChange={(e) => setUnidad(e.target.value as "min" | "h")}
+                className="h-11 w-32 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="min">minutos</option>
+                <option value="h">horas</option>
+              </Seleccion>
+            </div>
+          </div>
+          <Button type="button" onClick={() => void guardar()} disabled={!valido || minutos === actual || guardando}>
+            {guardando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Guardar
+          </Button>
+        </div>
+        <p className={cn("text-xs", valido ? "text-muted-foreground" : "text-destructive")}>
+          {valido
+            ? `Ahora: se cierra después de ${textoMinutos(actual)} sin usar el panel.`
+            : "Elegí entre 5 minutos y 12 horas."}
+        </p>
       </div>
     </Seccion>
   );

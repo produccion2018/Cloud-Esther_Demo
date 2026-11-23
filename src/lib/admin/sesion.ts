@@ -8,6 +8,12 @@ import type { SesionAdmin } from "./tipos";
 
 export const INACTIVIDAD_MS = 30 * 60 * 1000;
 
+/** Tiempo de inactividad que eligió la persona en Mi perfil (30 minutos si no eligió). */
+export function inactividadMs(): number {
+  const m = leerSesion()?.usuario.inactividadMinutos;
+  return m && m >= 5 && m <= 720 ? m * 60_000 : INACTIVIDAD_MS;
+}
+
 const KEY = "cloud-esther-admin:sesion";
 const KEY_ACTIVIDAD = "cloud-esther-admin:ultima-actividad";
 const KEY_MOTIVO = "cloud-esther-admin:motivo-cierre";

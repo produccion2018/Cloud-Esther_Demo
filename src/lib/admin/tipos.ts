@@ -39,6 +39,8 @@ export type AdminUser = {
   creado: string; // ISO
   /** Minutos sin usar el panel hasta que se cierra la sesión (lo elige cada persona, 5 a 720). */
   inactividadMinutos?: number;
+  /** Máximo que le fijó el Dueño (null o ausente = sin tope; el Dueño no tiene tope). */
+  inactividadMaxMinutos?: number | null;
 };
 
 export type SesionAdmin = {

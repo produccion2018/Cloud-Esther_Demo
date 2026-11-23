@@ -49,6 +49,16 @@ export const Route = createFileRoute("/admin/accesos")({
 const SELECT =
   "h-9 rounded-lg border border-input bg-card px-2 text-xs font-semibold outline-none focus:border-primary/50 disabled:opacity-60";
 
+/** Topes de cierre por inactividad que el Dueño le puede fijar a cada empleado. */
+const TOPES_INACTIVIDAD = [
+  [15, "15 min"],
+  [30, "30 min"],
+  [60, "1 hora"],
+  [120, "2 horas"],
+  [240, "4 horas"],
+  [480, "8 horas"],
+] as const;
+
 function AccessPage() {
   const { role } = useRole();
   const sesion = useSesionAdmin();
@@ -99,12 +109,13 @@ function AccessPage() {
           <Cargando />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="bg-primary/[0.035] text-left text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                   <th className="px-5 py-2.5">Persona</th>
                   <th className="px-3 py-2.5">Perfil</th>
                   <th className="px-3 py-2.5">Permisos</th>
+                  <th className="px-3 py-2.5">Cierre por inactividad</th>
                   <th className="px-3 py-2.5">Último ingreso</th>
                   <th className="px-5 py-2.5 text-right">Acceso</th>
                 </tr>
@@ -159,6 +170,31 @@ function AccessPage() {
                           </Button>
                         )}
                       </td>
+                      <td className="px-3 py-3">
+                        {a.rol === "owner" ? (
+                          <span className="text-xs text-muted-foreground">Lo elige en su perfil</span>
+                        ) : (
+                          <Seleccion
+                            className={SELECT}
+                            aria-label={`Cierre por inactividad de ${a.nombre}`}
+                            value={a.inactividadMaxMinutos ? String(a.inactividadMaxMinutos) : ""}
+                            disabled={cambiar.isPending}
+                            onChange={(e) =>
+                              cambiar.mutate({
+                                id: a.id,
+                                c: { inactividadMaxMinutos: e.target.value ? Number(e.target.value) : null },
+                              })
+                            }
+                          >
+                            <option value="">Sin tope (hasta 12 h)</option>
+                            {TOPES_INACTIVIDAD.map(([m, t]) => (
+                              <option key={m} value={String(m)}>
+                                Máximo {t}
+                              </option>
+                            ))}
+                          </Seleccion>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-xs text-muted-foreground">
                         {haceCuanto(a.ultimoAcceso)}
                       </td>
@@ -195,6 +231,10 @@ function AccessPage() {
           <li>
             A cada persona le tildás lo que puede usar (por ejemplo: una asistente para Demos y Atención,
             otra para Nómina y Atención). El perfil solo elige las casillas iniciales.
+          </li>
+          <li>
+            <b className="text-foreground">Cierre por inactividad:</b> a cada empleado le fijás el máximo de tiempo que
+            puede quedar abierto su panel sin usarlo. En su perfil puede elegir menos, nunca más.
           </li>
           <li>
             Si le quitás un permiso a alguien, lo pierde <b className="text-foreground">al instante</b>.

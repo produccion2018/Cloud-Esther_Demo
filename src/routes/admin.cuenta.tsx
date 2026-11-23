@@ -283,12 +283,15 @@ function textoMinutos(m: number) {
 function CierrePorInactividad() {
   const sesion = useSesionAdmin();
   const actual = sesion?.usuario.inactividadMinutos ?? INACTIVIDAD_MS / 60000;
+  // Tope que le fijó el Dueño (Dueño y Socio no tienen)
+  const tope = sesion?.usuario.inactividadMaxMinutos ?? null;
+  const limite = tope ?? 720;
   const [cantidad, setCantidad] = useState(String(actual % 60 === 0 && actual >= 60 ? actual / 60 : actual));
   const [unidad, setUnidad] = useState<"min" | "h">(actual % 60 === 0 && actual >= 60 ? "h" : "min");
   const [guardando, setGuardando] = useState(false);
   const n = Number(cantidad.replace(",", "."));
   const minutos = Number.isFinite(n) ? Math.round(n * (unidad === "h" ? 60 : 1)) : NaN;
-  const valido = Number.isInteger(minutos) && minutos >= 5 && minutos <= 720;
+  const valido = Number.isInteger(minutos) && minutos >= 5 && minutos <= limite;
 
   const elegir = (m: number) => {
     if (m % 60 === 0) {
@@ -321,7 +324,7 @@ function CierrePorInactividad() {
     >
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          {ATAJOS_INACTIVIDAD.map(([m, t]) => (
+          {ATAJOS_INACTIVIDAD.filter(([m]) => m <= limite).map(([m, t]) => (
             <button
               key={m}
               type="button"
@@ -366,8 +369,13 @@ function CierrePorInactividad() {
         <p className={cn("text-xs", valido ? "text-muted-foreground" : "text-destructive")}>
           {valido
             ? `Ahora: se cierra después de ${textoMinutos(actual)} sin usar el panel.`
-            : "Elegí entre 5 minutos y 12 horas."}
+            : `Elegí entre 5 minutos y ${textoMinutos(limite)}.`}
         </p>
+        {tope && (
+          <p className="text-xs text-muted-foreground">
+            Tu máximo es {textoMinutos(tope)}: lo fija el Dueño desde Equipo y accesos.
+          </p>
+        )}
       </div>
     </Seccion>
   );

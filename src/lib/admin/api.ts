@@ -550,6 +550,8 @@ export async function guardarInactividad(minutos: number) {
   const id = leerSesion()?.usuario.id;
   const u = b.admins.find((a) => a.id === id);
   if (!u) throw new ErrorApi("No se encontró tu usuario.");
+  if (u.inactividadMaxMinutos && u.rol !== "owner" && minutos > u.inactividadMaxMinutos)
+    throw new ErrorApi("Tu máximo lo fija el Dueño desde Equipo y accesos.");
   u.inactividadMinutos = minutos;
   guardar();
   return copia(u);
@@ -594,7 +596,7 @@ export async function invitarAdmin(datos: {
 
 export async function actualizarAdmin(
   id: string,
-  cambios: { rol?: AdminRole; activo?: boolean; permisos?: Permiso[] },
+  cambios: { rol?: AdminRole; activo?: boolean; permisos?: Permiso[]; inactividadMaxMinutos?: number | null },
 ) {
   if (CON_BACKEND) return http<AdminUser>("PATCH", `/admin/equipo/${id}`, cambios);
   await espera();
@@ -604,6 +606,8 @@ export async function actualizarAdmin(
   if (u.rol === "owner" && cambios.activo === false)
     throw new ErrorApi("No se puede desactivar al Dueño.");
   Object.assign(u, cambios);
+  if (cambios.inactividadMaxMinutos && (u.inactividadMinutos ?? 30) > cambios.inactividadMaxMinutos)
+    u.inactividadMinutos = cambios.inactividadMaxMinutos;
   guardar();
   await registrar(
     cambios.activo === false

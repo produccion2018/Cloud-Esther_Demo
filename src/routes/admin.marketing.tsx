@@ -46,6 +46,7 @@ import type {
   RedSocial,
 } from "@/lib/admin/tipos-empresa";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/routes/admin.marketing.tsx
    REDES Y MARKETING de Cloud Esther (para dar a conocer el sistema):
@@ -229,12 +230,12 @@ function Calendario({ editable }: { editable: boolean }) {
       descripcion="Planificá qué se publica en cada red. Tocá un día para agregar una publicación o una publicación para editarla."
       acciones={
         <div className="flex flex-wrap gap-2">
-          <select value={red} onChange={(e) => setRed(e.target.value as typeof red)} className={`${INPUT} w-auto`} aria-label="Red">
+          <Seleccion value={red} onChange={(e) => setRed(e.target.value as typeof red)} className={`${INPUT} w-auto`} aria-label="Red">
             <option value="">Todas las redes</option>
             {REDES.map((r) => (
               <option key={r}>{r}</option>
             ))}
-          </select>
+          </Seleccion>
           <BotonExcel onClick={exportar} />
           {editable && (
             <Button size="sm" onClick={() => setEditando({ nueva: hoy })}>
@@ -406,11 +407,11 @@ function DialogoPublicacion({
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <Campo label="Red">
-          <select value={f.red} onChange={(e) => set("red", e.target.value as RedSocial)} className={INPUT}>
+          <Seleccion value={f.red} onChange={(e) => set("red", e.target.value as RedSocial)} className={INPUT}>
             {REDES.map((r) => (
               <option key={r}>{r}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Día">
           <input type="date" value={f.fecha} onChange={(e) => set("fecha", e.target.value)} className={INPUT} />
@@ -422,11 +423,11 @@ function DialogoPublicacion({
           <input value={f.titulo} onChange={(e) => set("titulo", e.target.value)} maxLength={200} className={INPUT} placeholder="Ej.: Video: la agenda en 30 segundos" />
         </Campo>
         <Campo label="Estado">
-          <select value={f.estado} onChange={(e) => set("estado", e.target.value as Publicacion["estado"])} className={INPUT}>
+          <Seleccion value={f.estado} onChange={(e) => set("estado", e.target.value as Publicacion["estado"])} className={INPUT}>
             {ESTADOS_PUB.map((e) => (
               <option key={e}>{e}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Texto de la publicación" className="sm:col-span-3">
           <Textarea value={f.texto} onChange={(e) => set("texto", e.target.value)} rows={5} maxLength={4000} />
@@ -441,14 +442,14 @@ function DialogoPublicacion({
           </Button>
         </div>
         <Campo label="Campaña">
-          <select value={f.campanaId ?? ""} onChange={(e) => set("campanaId", e.target.value || null)} className={INPUT}>
+          <Seleccion value={f.campanaId ?? ""} onChange={(e) => set("campanaId", e.target.value || null)} className={INPUT}>
             <option value="">Sin campaña</option>
             {(campanas ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Responsable">
           <input value={f.responsable ?? ""} onChange={(e) => set("responsable", e.target.value || null)} className={INPUT} />
@@ -527,12 +528,12 @@ function Contactos({ editable }: { editable: boolean }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, clínica, teléfono…" className={`${INPUT} pl-9`} />
         </div>
-        <select value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)} className={`${INPUT} w-auto`} aria-label="Estado">
+        <Seleccion value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)} className={`${INPUT} w-auto`} aria-label="Estado">
           <option value="">Todos los estados</option>
           {ESTADOS_CONTACTO.map((e) => (
             <option key={e}>{e}</option>
           ))}
-        </select>
+        </Seleccion>
       </div>
       {isLoading ? (
         <div className="p-5">
@@ -650,11 +651,11 @@ function DialogoContacto({ inicial, editable, onCerrar }: { inicial: ContactoRed
           <input value={f.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={120} className={INPUT} />
         </Campo>
         <Campo label="Red">
-          <select value={f.red} onChange={(e) => set("red", e.target.value as RedSocial)} className={INPUT}>
+          <Seleccion value={f.red} onChange={(e) => set("red", e.target.value as RedSocial)} className={INPUT}>
             {REDES.map((r) => (
               <option key={r}>{r}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Usuario en la red">
           <input value={f.usuario} onChange={(e) => set("usuario", e.target.value)} maxLength={120} className={INPUT} placeholder="@clinica" />
@@ -678,24 +679,24 @@ function DialogoContacto({ inicial, editable, onCerrar }: { inicial: ContactoRed
           <Textarea value={f.mensaje} onChange={(e) => set("mensaje", e.target.value)} rows={2} maxLength={2000} />
         </Campo>
         <Campo label="Estado">
-          <select value={f.estado} onChange={(e) => set("estado", e.target.value as ContactoRed["estado"])} className={INPUT}>
+          <Seleccion value={f.estado} onChange={(e) => set("estado", e.target.value as ContactoRed["estado"])} className={INPUT}>
             {ESTADOS_CONTACTO.map((e) => (
               <option key={e}>{e}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Volver a contactar el">
           <input type="date" value={f.proximoContacto ?? ""} onChange={(e) => set("proximoContacto", e.target.value || null)} className={INPUT} />
         </Campo>
         <Campo label="Campaña">
-          <select value={f.campanaId ?? ""} onChange={(e) => set("campanaId", e.target.value || null)} className={INPUT}>
+          <Seleccion value={f.campanaId ?? ""} onChange={(e) => set("campanaId", e.target.value || null)} className={INPUT}>
             <option value="">Sin campaña</option>
             {(campanas ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
       </div>
       <div className="mt-4">
@@ -858,11 +859,11 @@ function DialogoCampana({ inicial, editable, onCerrar }: { inicial: Campana | nu
           <input value={f.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={160} className={INPUT} />
         </Campo>
         <Campo label="Estado">
-          <select value={f.estado} onChange={(e) => set("estado", e.target.value as Campana["estado"])} className={INPUT}>
+          <Seleccion value={f.estado} onChange={(e) => set("estado", e.target.value as Campana["estado"])} className={INPUT}>
             <option>Planificada</option>
             <option>Activa</option>
             <option>Terminada</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Desde">
           <input type="date" value={f.desde} onChange={(e) => set("desde", e.target.value)} className={INPUT} />
@@ -872,10 +873,10 @@ function DialogoCampana({ inicial, editable, onCerrar }: { inicial: Campana | nu
         </Campo>
         <Campo label="Presupuesto">
           <div className="flex gap-2">
-            <select value={f.moneda} onChange={(e) => set("moneda", e.target.value as Campana["moneda"])} className={`${INPUT} w-24`}>
+            <Seleccion value={f.moneda} onChange={(e) => set("moneda", e.target.value as Campana["moneda"])} className={`${INPUT} w-24`}>
               <option>USD</option>
               <option>ARS</option>
-            </select>
+            </Seleccion>
             <input
               type="number"
               min={0}
@@ -957,13 +958,13 @@ function Biblioteca({ editable }: { editable: boolean }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar" className={`${INPUT} pl-9`} />
         </div>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)} className={`${INPUT} w-auto`} aria-label="Tipo">
+        <Seleccion value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)} className={`${INPUT} w-auto`} aria-label="Tipo">
           <option value="">Todo</option>
           <option>Texto</option>
           <option>Hashtags</option>
           <option>Idea</option>
           <option>Imagen / video</option>
-        </select>
+        </Seleccion>
       </div>
       {isLoading ? (
         <Cargando />
@@ -1023,20 +1024,20 @@ function DialogoIdea({ inicial, onCerrar }: { inicial: IdeaMarketing | null; onC
           <input value={f.titulo} onChange={(e) => setF({ ...f, titulo: e.target.value })} maxLength={160} className={INPUT} />
         </Campo>
         <Campo label="Tipo">
-          <select value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value as IdeaMarketing["tipo"] })} className={INPUT}>
+          <Seleccion value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value as IdeaMarketing["tipo"] })} className={INPUT}>
             <option>Texto</option>
             <option>Hashtags</option>
             <option>Idea</option>
             <option>Imagen / video</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Red">
-          <select value={f.red ?? ""} onChange={(e) => setF({ ...f, red: (e.target.value || null) as RedSocial | null })} className={INPUT}>
+          <Seleccion value={f.red ?? ""} onChange={(e) => setF({ ...f, red: (e.target.value || null) as RedSocial | null })} className={INPUT}>
             <option value="">Cualquiera</option>
             {REDES.map((r) => (
               <option key={r}>{r}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Contenido" className="sm:col-span-2">
           <Textarea value={f.contenido} onChange={(e) => setF({ ...f, contenido: e.target.value })} rows={5} maxLength={4000} />

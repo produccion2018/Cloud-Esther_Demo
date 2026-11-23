@@ -4,6 +4,7 @@ import { Check, ChevronDown, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Piezas compartidas del módulo de Recursos Humanos (mismo lenguaje visual que Marketing e Inventario). */
 
@@ -142,7 +143,7 @@ export function Sel<T extends string>({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         aria-label={etiqueta}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -159,7 +160,7 @@ export function Sel<T extends string>({
             </option>
           ),
         )}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );

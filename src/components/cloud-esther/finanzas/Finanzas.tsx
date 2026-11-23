@@ -221,7 +221,7 @@ export function Finanzas() {
                   caja y los sueldos entran solos desde sus módulos.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 {nivel >= 2 && (
                   <div className="w-44">
                     <Sel

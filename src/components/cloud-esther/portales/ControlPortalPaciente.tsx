@@ -42,6 +42,7 @@ import {
   type SeccionPortalPaciente,
   type TipoPublicable,
 } from "@/lib/cloud-esther/portal-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/ControlPortalPaciente.tsx
    CONTROL DEL PORTAL DEL PACIENTE (Enterprise, o el adicional «Portal del paciente»).
@@ -251,7 +252,7 @@ export function ControlPortalPaciente({
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-3">
           <Eye className="size-4 shrink-0 text-primary" />
           <span className="text-[12.5px] font-semibold">Ver como el paciente</span>
-          <select
+          <Seleccion
             value={verComo}
             onChange={(e) => setVerComo(e.target.value)}
             aria-label="Paciente para ver su portal"
@@ -266,7 +267,7 @@ export function ControlPortalPaciente({
                   {accesos[p.id] ? ` · ${accesos[p.id]!.estado}` : " · sin acceso"}
                 </option>
               ))}
-          </select>
+          </Seleccion>
           <a
             href={verComo ? `/portal?vista=${verComo}` : undefined}
             target="_blank"
@@ -415,7 +416,7 @@ export function ControlPortalPaciente({
               {puedeConfigurar && (
                 <div className="mt-2.5 space-y-2">
                   {equipo.some((x) => !personas.includes(x.email)) && (
-                    <select
+                    <Seleccion
                       value=""
                       onChange={(ev) => ev.target.value && agregarPersona(ev.target.value)}
                       aria-label="Elegir una persona del equipo"
@@ -429,7 +430,7 @@ export function ControlPortalPaciente({
                             {x.nombre} · {x.email}
                           </option>
                         ))}
-                    </select>
+                    </Seleccion>
                   )}
                   <form
                     className="flex gap-2"

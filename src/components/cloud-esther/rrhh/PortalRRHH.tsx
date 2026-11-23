@@ -17,6 +17,7 @@ import {
 import { imprimirRecibo } from "./Nomina";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { ars, fecha, hace } from "./ui";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Bloques de RRHH dentro del portal del equipo: comunicados, vacaciones y recibos de sueldo. */
 
@@ -174,7 +175,7 @@ export function MiRRHHPortal({
               onToast("Solicitud enviada a RRHH: te avisamos cuando la respondan");
             }}
           >
-            <select
+            <Seleccion
               aria-label="Tipo de licencia"
               value={tipo}
               onChange={(e) => setTipo(e.target.value as TipoAusencia)}
@@ -183,7 +184,7 @@ export function MiRRHHPortal({
               {TIPOS_AUSENCIA.map((t) => (
                 <option key={t}>{t}</option>
               ))}
-            </select>
+            </Seleccion>
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="date"

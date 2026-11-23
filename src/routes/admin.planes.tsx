@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { useAccion, useClinicas, useCupones, usePlanes } from "@/lib/admin/consultas";
 import { limiteTexto, precio, precioAnual } from "@/lib/admin/formato";
 import type { CambiosPlan, Cupon, NuevoCupon, PlanConfig, PlanId } from "@/lib/admin/tipos";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/planes")({
   head: () => ({
@@ -512,14 +513,14 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
         </Campo>
         <div className="grid grid-cols-2 gap-3">
           <Campo label="Tipo">
-            <select
+            <Seleccion
               className={INPUT}
               value={f.tipo}
               onChange={(e) => setF({ ...f, tipo: e.target.value as FormCupon["tipo"] })}
             >
               <option value="porcentaje">Porcentaje (%)</option>
               <option value="monto">Monto fijo (USD)</option>
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label={f.tipo === "porcentaje" ? "Descuento (%)" : "Descuento (USD)"}>
             <input
@@ -533,7 +534,7 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Campo label="¿En qué cobros?">
-            <select
+            <Seleccion
               className={INPUT}
               value={f.duracion}
               onChange={(e) => setF({ ...f, duracion: e.target.value as FormCupon["duracion"] })}
@@ -541,7 +542,7 @@ function CuponesDescuento({ planes }: { planes: PlanConfig[] }) {
               <option value="primer-pago">Solo el primer pago</option>
               <option value="meses">Los primeros N cobros</option>
               <option value="siempre">Todos los cobros</option>
-            </select>
+            </Seleccion>
           </Campo>
           {f.duracion === "meses" && (
             <Campo label="Cantidad de cobros">

@@ -29,6 +29,7 @@ import { NOMBRE_ROL } from "@/lib/clinica/permisos";
 import { HeroParallax } from "@/components/cloud-esther/HeroParallax";
 import { GraficoBarras } from "@/components/cloud-esther/graficos-premium";
 import { descargarPDFdeElemento } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createLazyFileRoute("/demo")({
   component: DashboardPage,
@@ -236,7 +237,7 @@ function SelectField({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         required={required}
         onChange={(e) => onChange(e.target.value)}
@@ -248,7 +249,7 @@ function SelectField({
             {o}
           </option>
         ))}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );

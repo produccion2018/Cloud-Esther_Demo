@@ -52,6 +52,7 @@ import {
 } from "@/lib/cloud-esther/notificaciones-store";
 import { useNotificaciones, type Notif } from "@/components/cloud-esther/useNotificaciones";
 import { normalizarBusqueda } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Notificaciones.tsx
 
@@ -197,7 +198,7 @@ function Select<T extends string>({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <select
+      <Seleccion
         aria-label={etiqueta}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -208,7 +209,7 @@ function Select<T extends string>({
             {o.label}
           </option>
         ))}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
@@ -501,7 +502,7 @@ function NotificacionesInner() {
                     equipo.
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                   {conReglas && (
                     <button className={BTN_SECUNDARIO} onClick={() => setSeccion("preferencias")}>
                       <Settings2 className="size-4" />
@@ -813,7 +814,7 @@ function Bandeja({
             </div>
             <Select
               etiqueta="Responsable"
-              className="w-44"
+              className="w-full sm:w-56"
               value={asignado}
               onChange={setAsignado}
               opciones={[

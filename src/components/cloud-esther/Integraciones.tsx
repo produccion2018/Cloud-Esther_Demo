@@ -38,6 +38,7 @@ import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
 import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Integraciones.tsx
    Conectores externos por empresa. Cada uno tiene su configuración (credenciales, cuenta,
@@ -537,7 +538,7 @@ function ConfigConector({
                 {f.opcional ? " (opcional)" : ""}
               </span>
               {f.tipo === "select" ? (
-                <select
+                <Seleccion
                   value={valores[f.k] ?? ""}
                   onChange={(e) => setValores((v) => ({ ...v, [f.k]: e.target.value }))}
                   className="h-10 w-full rounded-xl border border-primary/15 bg-white px-3 text-sm outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
@@ -545,7 +546,7 @@ function ConfigConector({
                   {f.opciones?.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
-                </select>
+                </Seleccion>
               ) : (
                 <input
                   type={f.tipo === "password" ? "password" : "text"}

@@ -39,6 +39,7 @@ import {
   setEquipoPortal,
   storeEquipoPortal,
 } from "@/lib/cloud-esther/portal-equipo-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/EquipoPaneles.tsx
 
@@ -539,7 +540,7 @@ function AusenciaForm({
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Integrante">
-          <select
+          <Seleccion
             value={miembroId}
             onChange={(e) => setMiembroId(e.target.value)}
             className={INPUT}
@@ -549,10 +550,10 @@ function AusenciaForm({
                 {nombreDe(m)}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
         <Field label="Tipo">
-          <select
+          <Seleccion
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoAusencia)}
             className={INPUT}
@@ -560,7 +561,7 @@ function AusenciaForm({
             {TIPOS_AUSENCIA.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
         <Field label="Desde">
           <input
@@ -675,7 +676,7 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
           />
         </Field>
         <Field label="Rol">
-          <select
+          <Seleccion
             value={rol}
             onChange={(e) => setRol(e.target.value as TeamRole)}
             className={INPUT}
@@ -685,7 +686,7 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
                 {r.label}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <button type="submit" className={`${BTN_PRIMARIO} w-full`}>

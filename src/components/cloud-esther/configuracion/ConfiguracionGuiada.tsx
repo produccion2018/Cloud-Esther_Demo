@@ -33,6 +33,7 @@ import {
 } from "@/lib/cloud-esther/settings-store";
 import { tenantActual } from "@/lib/cloud-esther/tenant-store";
 import { PAISES_SOPORTADOS, bandera } from "@/lib/paises";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/configuracion/ConfiguracionGuiada.tsx
    CONFIGURACIÓN GUIADA (todos los planes, solo el Administrador):
@@ -357,7 +358,7 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
                     {campo("email", "Correo de la clínica", "turnos@tuclinica.com")}
                     <label className="text-xs font-semibold">
                       País
-                      <select
+                      <Seleccion
                         value={datos.pais}
                         onChange={(e) => setDatos((x) => ({ ...x, pais: e.target.value }))}
                         className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm"
@@ -368,11 +369,11 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
                             {bandera(p.codigo)} {p.nombre}
                           </option>
                         ))}
-                      </select>
+                      </Seleccion>
                     </label>
                     <label className="text-xs font-semibold">
                       Formato de hora
-                      <select
+                      <Seleccion
                         value={formatoHora}
                         onChange={(e) => setFormatoHora(e.target.value as "auto" | "12h" | "24h")}
                         className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm"
@@ -380,7 +381,7 @@ function AsistenteConfiguracion({ pasos, onCerrar }: { pasos: Paso[]; onCerrar: 
                         <option value="auto">Automático (según el país)</option>
                         <option value="12h">12 horas (a. m. / p. m.)</option>
                         <option value="24h">24 horas</option>
-                      </select>
+                      </Seleccion>
                     </label>
                     <div className="sm:col-span-2">
                       <button type="button" onClick={guardarDatos} disabled={!datos.nombre.trim()} className="btn-ce !min-h-11 disabled:opacity-50">

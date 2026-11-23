@@ -764,11 +764,24 @@ function CampanaMovil() {
   const { sinLeer } = useNotificaciones();
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
+  // Si ya estás en Notificaciones, tocar la campana la cierra y te devuelve a donde estabas.
+  const ruta = useRouterState({ select: (s) => s.location.pathname });
+  const abierta = ruta.endsWith("/notificaciones");
   return (
     <Link
-      to={"/demo/notificaciones" as never}
+      to={(abierta ? "/demo" : "/demo/notificaciones") as never}
+      aria-pressed={abierta}
+      onClick={(e) => {
+        if (abierta && typeof window !== "undefined" && window.history.length > 1) {
+          e.preventDefault();
+          window.history.back();
+        }
+      }}
       aria-label={montado && sinLeer > 0 ? `Notificaciones: ${sinLeer} sin leer` : "Notificaciones"}
-      className="relative grid size-9 shrink-0 place-items-center rounded-full bg-card text-muted-foreground shadow-sm ring-1 ring-primary/15 transition-colors hover:text-primary"
+      className={cn(
+        "relative grid size-9 shrink-0 place-items-center rounded-full shadow-sm ring-1 transition-colors",
+        abierta ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-muted-foreground ring-primary/15 hover:text-primary",
+      )}
     >
       <Bell className="size-[18px]" />
       {montado && sinLeer > 0 && (

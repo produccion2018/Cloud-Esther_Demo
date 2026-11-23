@@ -5,6 +5,7 @@ import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus } from "lucid
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther, usa3D } from "@/lib/cloud-esther/data";
 import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 // La boca 3D realista se descarga solo en el cliente, cuando se muestra (igual que el odontograma):
 // así three.js no entra al paquete del servidor (SSR).
@@ -644,16 +645,16 @@ export function PeriodonciaPieza({
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
           Movilidad
-          <select value={pieza.movilidad} onChange={(e) => editar((x) => ({ ...x, movilidad: Number(e.target.value) }))} className="bg-transparent outline-none">
+          <Seleccion value={pieza.movilidad} onChange={(e) => editar((x) => ({ ...x, movilidad: Number(e.target.value) }))} className="bg-transparent outline-none">
             {[0, 1, 2, 3].map((n) => <option key={n}>{n}</option>)}
-          </select>
+          </Seleccion>
         </label>
         {molar && (
           <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">
             Furca
-            <select value={pieza.furca} onChange={(e) => editar((x) => ({ ...x, furca: Number(e.target.value) }))} className="bg-transparent outline-none">
+            <Seleccion value={pieza.furca} onChange={(e) => editar((x) => ({ ...x, furca: Number(e.target.value) }))} className="bg-transparent outline-none">
               {[0, 1, 2, 3].map((n) => <option key={n}>{n}</option>)}
-            </select>
+            </Seleccion>
           </label>
         )}
         <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 font-semibold">

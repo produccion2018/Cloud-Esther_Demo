@@ -12,6 +12,7 @@ import {
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/pacientes/ImportarPacientes.tsx
    IMPORTAR PACIENTES desde Excel (.xlsx) o CSV, para migrar desde otro sistema sin cargar de a uno:
@@ -344,7 +345,7 @@ export function ImportarPacientes({
                     <label key={c.id} className="flex items-center gap-2 rounded-xl border border-primary/10 bg-card px-3 py-2 text-xs">
                       <span className={`size-2 shrink-0 rounded-full ${mapa[c.id] ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
                       <span className="w-28 shrink-0 font-semibold">{c.label}</span>
-                      <select
+                      <Seleccion
                         value={mapa[c.id] ?? ""}
                         onChange={(e) =>
                           setMapa((m) => {
@@ -362,7 +363,7 @@ export function ImportarPacientes({
                             {h}
                           </option>
                         ))}
-                      </select>
+                      </Seleccion>
                     </label>
                   ))}
                 </div>

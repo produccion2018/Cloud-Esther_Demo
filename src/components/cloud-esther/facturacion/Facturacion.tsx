@@ -100,6 +100,7 @@ import {
   useSuscripcion,
 } from "@/components/cloud-esther/facturacion/MiPlan";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
    Facturación electrónica según el país fiscal de la clínica, cobros (se registran en la cuenta
@@ -436,7 +437,7 @@ export function Facturacion() {
                   sociales. Cada cobro queda en la cuenta corriente del paciente.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 <button
                   type="button"
                   className={BTN_SECUNDARIO}
@@ -1312,7 +1313,7 @@ function Emitir({
                       />
                     </td>
                     <td className="p-1.5">
-                      <select
+                      <Seleccion
                         value={it.ivaPct}
                         onChange={(e) =>
                           setItems((p) =>
@@ -1329,7 +1330,7 @@ function Emitir({
                             {t === 0 ? "Exento" : `${t}%`}
                           </option>
                         ))}
-                      </select>
+                      </Seleccion>
                     </td>
                     <td className="p-1.5 text-right font-semibold">
                       {ctx.$(it.cantidad * it.precio)}

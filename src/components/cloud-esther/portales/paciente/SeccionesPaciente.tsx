@@ -27,6 +27,7 @@ import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { cargarSettings } from "@/lib/cloud-esther/settings-store";
 import { KpiPortal, PestanasPortal, TarjetaPortal } from "../PortalShell";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/paciente/SeccionesPaciente.tsx
    Secciones nuevas del Portal del paciente (Plan 4): Estado de cuenta (pagos, cuotas,
@@ -483,7 +484,7 @@ export function SoporteAyuda({
         <TarjetaPortal titulo="Nueva consulta" detalle="Te responden en Mensajes" icon={Send}>
           <label className="block text-xs font-semibold">
             Tema
-            <select
+            <Seleccion
               value={tema}
               onChange={(e) => setTema(e.target.value)}
               className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-base sm:h-10 sm:text-sm"
@@ -491,7 +492,7 @@ export function SoporteAyuda({
               {TEMAS.map((t) => (
                 <option key={t}>{t}</option>
               ))}
-            </select>
+            </Seleccion>
           </label>
           <label className="mt-3 block text-xs font-semibold">
             Tu consulta

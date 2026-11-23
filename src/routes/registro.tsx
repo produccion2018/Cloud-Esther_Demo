@@ -19,6 +19,7 @@ import {
   usePaisesVenta,
 } from "@/lib/cloud-esther/demo-servidor";
 import { textoLimites, useConfigPlanes } from "@/lib/cloud-esther/planes-config";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/registro")({
   validateSearch: (search: Record<string, unknown>): { plan?: string } => {
@@ -192,7 +193,7 @@ function Registro() {
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="pais">País</Label>
-                          <select
+                          <Seleccion
                             id="pais"
                             name="pais"
                             required
@@ -208,7 +209,7 @@ function Registro() {
                                 {p.nombre}
                               </option>
                             ))}
-                          </select>
+                          </Seleccion>
                           <p className="text-[11px] text-muted-foreground">
                             Tenés que estar en este país: lo verificamos por tu conexión.
                           </p>

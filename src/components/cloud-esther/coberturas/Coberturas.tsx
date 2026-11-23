@@ -33,6 +33,7 @@ import {
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { PAISES_SOPORTADOS, bandera } from "@/lib/paises";
 import { normalizarBusqueda } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/coberturas/Coberturas.tsx
    COBERTURAS Y NOMENCLADOR (Facturación → Obras sociales y Administración), desde el plan Pro.
@@ -247,14 +248,14 @@ function ListaCoberturas({ editable, pais, onToast }: { editable: boolean; pais:
             <p className="flex items-center gap-2 font-display text-sm font-bold">
               <CaraEsther className="size-4 text-primary" /> Sumar las de un país
             </p>
-            <select value={paisSug} onChange={(e) => setPaisSug(e.target.value)} className={`${INPUT} mt-3`}>
+            <Seleccion value={paisSug} onChange={(e) => setPaisSug(e.target.value)} className={`${INPUT} mt-3`}>
               {PAISES_SOPORTADOS.map((p) => (
                 <option key={p.codigo} value={p.codigo}>
                   {bandera(p.codigo)} {p.nombre}
                   {COBERTURAS_SUGERIDAS[p.codigo] ? "" : " (cargá las tuyas)"}
                 </option>
               ))}
-            </select>
+            </Seleccion>
             {sugeridas.length ? (
               <>
                 <ul className="mt-3 max-h-56 space-y-1 overflow-y-auto text-xs">
@@ -300,11 +301,11 @@ function ListaCoberturas({ editable, pais, onToast }: { editable: boolean; pais:
               }}
             >
               <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre de la cobertura" className={INPUT} />
-              <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoCobertura)} className={INPUT}>
+              <Seleccion value={tipo} onChange={(e) => setTipo(e.target.value as TipoCobertura)} className={INPUT}>
                 {TIPOS.map((t) => (
                   <option key={t}>{t}</option>
                 ))}
-              </select>
+              </Seleccion>
               <button type="submit" disabled={!nombre.trim()} className="btn-ce !min-h-10 w-full justify-center disabled:opacity-50">
                 <Plus className="size-4" /> Agregar
               </button>
@@ -409,14 +410,14 @@ function Nomenclador({ editable, onToast }: { editable: boolean; onToast: (m: st
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex items-center gap-2 rounded-2xl border border-primary/12 bg-card py-1 pl-3 pr-1 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
           Valores de
-          <select value={cob?.id ?? ""} onChange={(e) => setCobId(e.target.value)} className="h-9 rounded-xl bg-primary/[0.06] px-2 text-sm font-semibold normal-case tracking-normal text-foreground outline-none">
+          <Seleccion value={cob?.id ?? ""} onChange={(e) => setCobId(e.target.value)} className="h-9 rounded-xl bg-primary/[0.06] px-2 text-sm font-semibold normal-case tracking-normal text-foreground outline-none">
             {activas.length === 0 && <option value="">Sin coberturas</option>}
             {activas.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <label className="relative min-w-[180px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary/70" />
@@ -612,13 +613,13 @@ function PlanillaMensual({ onToast }: { onToast: (m: string) => void }) {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select value={cob?.id ?? ""} onChange={(e) => setCobId(e.target.value)} className={`${INPUT} !w-auto min-w-[200px]`}>
+        <Seleccion value={cob?.id ?? ""} onChange={(e) => setCobId(e.target.value)} className={`${INPUT} !w-auto min-w-[200px]`}>
           {activas.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nombre}
             </option>
           ))}
-        </select>
+        </Seleccion>
         <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5">
           <CalendarDays className="size-4 text-primary" />
           <input type="month" value={mes} onChange={(e) => e.target.value && setMes(e.target.value)} className="h-10 bg-transparent text-sm font-semibold outline-none" />

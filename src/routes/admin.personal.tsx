@@ -20,6 +20,7 @@ import { nuevoIdLocal } from "@/lib/admin/api";
 import { useBorrarDe, useColeccion, useGuardarEn } from "@/lib/admin/consultas";
 import { diasHasta, fecha, hoyISO, importe } from "@/lib/admin/formato";
 import type { Asistencia, Ausencia, DocumentoInterno, Empleado } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/personal")({
   head: () => ({
@@ -97,7 +98,7 @@ function SelectEmpleado({
 }) {
   const { lista } = useNombres();
   return (
-    <select
+    <Seleccion
       className={INPUT}
       value={valor}
       onChange={(e) => onCambiar(e.target.value)}
@@ -113,7 +114,7 @@ function SelectEmpleado({
             {e.nombre}
           </option>
         ))}
-    </select>
+    </Seleccion>
   );
 }
 
@@ -335,7 +336,7 @@ function FormEmpleado({
           />
         </Campo>
         <Campo label="Área">
-          <select
+          <Seleccion
             className={INPUT}
             value={e.area}
             onChange={(x) => set("area", x.target.value as Empleado["area"])}
@@ -345,7 +346,7 @@ function FormEmpleado({
             ).map((a) => (
               <option key={a}>{a}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Email">
           <input
@@ -371,7 +372,7 @@ function FormEmpleado({
           />
         </Campo>
         <Campo label="Tipo de contratación">
-          <select
+          <Seleccion
             className={INPUT}
             value={e.contratacion}
             onChange={(x) => set("contratacion", x.target.value as Empleado["contratacion"])}
@@ -381,7 +382,7 @@ function FormEmpleado({
             ).map((a) => (
               <option key={a}>{a}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Horas por semana">
           <input
@@ -412,7 +413,7 @@ function FormEmpleado({
               />
             </Campo>
             <Campo label="Moneda">
-              <select
+              <Seleccion
                 className={INPUT}
                 value={e.moneda}
                 onChange={(x) => set("moneda", x.target.value as Empleado["moneda"])}
@@ -420,12 +421,12 @@ function FormEmpleado({
                 {(["ARS", "USD", "UYU", "CLP"] as const).map((a) => (
                   <option key={a}>{a}</option>
                 ))}
-              </select>
+              </Seleccion>
             </Campo>
           </>
         )}
         <Campo label="Estado">
-          <select
+          <Seleccion
             className={INPUT}
             value={e.estado}
             onChange={(x) => set("estado", x.target.value as Empleado["estado"])}
@@ -433,7 +434,7 @@ function FormEmpleado({
             {(["Activo", "Licencia", "Baja"] as const).map((a) => (
               <option key={a}>{a}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
       </div>
     </DialogoFormulario>
@@ -614,7 +615,7 @@ function FormAsistencia({ inicial, onCerrar }: { inicial: Asistencia; onCerrar: 
           />
         </Campo>
         <Campo label="Tipo">
-          <select
+          <Seleccion
             className={INPUT}
             value={a.tipo}
             onChange={(x) => set("tipo", x.target.value as Asistencia["tipo"])}
@@ -622,7 +623,7 @@ function FormAsistencia({ inicial, onCerrar }: { inicial: Asistencia; onCerrar: 
             {(Object.keys(TONO_ASISTENCIA) as Asistencia["tipo"][]).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Entrada">
           <input
@@ -804,7 +805,7 @@ function FormAusencia({ inicial, onCerrar }: { inicial: Ausencia; onCerrar: () =
           <SelectEmpleado valor={a.empleadoId} onCambiar={(v) => set("empleadoId", v)} />
         </Campo>
         <Campo label="Tipo">
-          <select
+          <Seleccion
             className={INPUT}
             value={a.tipo}
             onChange={(x) => set("tipo", x.target.value as Ausencia["tipo"])}
@@ -820,10 +821,10 @@ function FormAusencia({ inicial, onCerrar }: { inicial: Ausencia; onCerrar: () =
             ).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Estado">
-          <select
+          <Seleccion
             className={INPUT}
             value={a.estado}
             onChange={(x) => set("estado", x.target.value as Ausencia["estado"])}
@@ -831,7 +832,7 @@ function FormAusencia({ inicial, onCerrar }: { inicial: Ausencia; onCerrar: () =
             {(["Solicitada", "Aprobada", "Rechazada"] as const).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Desde">
           <input
@@ -993,7 +994,7 @@ function FormDocumento({ inicial, onCerrar }: { inicial: DocumentoInterno; onCer
           />
         </Campo>
         <Campo label="Categoría">
-          <select
+          <Seleccion
             className={INPUT}
             value={d.categoria}
             onChange={(x) => set("categoria", x.target.value as DocumentoInterno["categoria"])}
@@ -1010,7 +1011,7 @@ function FormDocumento({ inicial, onCerrar }: { inicial: DocumentoInterno; onCer
             ).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Persona">
           <SelectEmpleado

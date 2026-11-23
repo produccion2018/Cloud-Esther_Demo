@@ -71,6 +71,7 @@ import type {
   TicketSoporte,
 } from "@/lib/admin/tipos-empresa";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/soporte")({
   head: () => ({
@@ -275,7 +276,7 @@ function Tickets({ abrirId, onAbierto }: { abrirId: string | null; onAbierto: ()
         descripcion="Tocá un ticket para ver el detalle, cambiar el estado y agregar notas internas."
         acciones={
           <>
-            <select
+            <Seleccion
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as typeof filtro)}
               className="h-9 rounded-xl border border-input bg-card px-3 text-xs font-semibold"
@@ -287,7 +288,7 @@ function Tickets({ abrirId, onAbierto }: { abrirId: string | null; onAbierto: ()
               {ESTADOS.map((e) => (
                 <option key={e}>{e}</option>
               ))}
-            </select>
+            </Seleccion>
             <BotonExcel onClick={() => exportarTickets(filas)} />
             {editable && (
               <Button size="sm" onClick={() => setNuevo(true)}>
@@ -408,7 +409,7 @@ function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: 
       <div className="space-y-5 p-6">
         <div className="grid grid-cols-2 gap-3 text-xs">
           <Campo label="Estado">
-            <select
+            <Seleccion
               disabled={!editable}
               value={ticket.estado}
               className={SELECT}
@@ -419,10 +420,10 @@ function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: 
               {ESTADOS.map((e) => (
                 <option key={e}>{e}</option>
               ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Responsable">
-            <select
+            <Seleccion
               disabled={!editable}
               value={ticket.responsable ?? ""}
               className={SELECT}
@@ -439,10 +440,10 @@ function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: 
                 .map((a) => (
                   <option key={a.id}>{a.nombre}</option>
                 ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Prioridad">
-            <select
+            <Seleccion
               disabled={!editable}
               value={ticket.prioridad}
               className={SELECT}
@@ -456,10 +457,10 @@ function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: 
               {(["Alta", "Media", "Baja"] as const).map((p) => (
                 <option key={p}>{p}</option>
               ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Categoría">
-            <select
+            <Seleccion
               disabled={!editable}
               value={ticket.categoria}
               className={SELECT}
@@ -473,7 +474,7 @@ function DetalleTicket({ ticket, editable }: { ticket: TicketSoporte; editable: 
               {CATEGORIAS.map((c) => (
                 <option key={c}>{c}</option>
               ))}
-            </select>
+            </Seleccion>
           </Campo>
         </div>
         <div>
@@ -622,7 +623,7 @@ function NuevoTicket({
       </Campo>
       <div className="grid grid-cols-2 gap-3">
         <Campo label="Categoría">
-          <select
+          <Seleccion
             className={INPUT}
             value={f.categoria}
             onChange={(e) =>
@@ -632,10 +633,10 @@ function NuevoTicket({
             {CATEGORIAS.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Prioridad">
-          <select
+          <Seleccion
             className={INPUT}
             value={f.prioridad}
             onChange={(e) =>
@@ -645,7 +646,7 @@ function NuevoTicket({
             {(["Alta", "Media", "Baja"] as const).map((p) => (
               <option key={p}>{p}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
       </div>
       <Campo label="Descripción del problema">
@@ -716,7 +717,7 @@ function Incidentes() {
               <td className="px-3 py-3 text-xs">{fecha(i.inicio, true)}</td>
               <td className="px-3 py-3 text-xs">{i.fin ? fecha(i.fin, true) : "—"}</td>
               <td className="py-3 pl-3 pr-5">
-                <select
+                <Seleccion
                   disabled={!editable}
                   className={SELECT}
                   value={i.estado}
@@ -732,7 +733,7 @@ function Incidentes() {
                   {(["Abierto", "Mitigado", "Resuelto"] as const).map((x) => (
                     <option key={x}>{x}</option>
                   ))}
-                </select>
+                </Seleccion>
               </td>
             </tr>
           ))}
@@ -772,7 +773,7 @@ function Incidentes() {
           />
         </Campo>
         <Campo label="Impacto">
-          <select
+          <Seleccion
             className={INPUT}
             value={f.impacto}
             onChange={(e) => setF({ ...f, impacto: e.target.value as Incidente["impacto"] })}
@@ -780,7 +781,7 @@ function Incidentes() {
             {(["Crítico", "Alto", "Medio", "Bajo"] as const).map((x) => (
               <option key={x}>{x}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Detalle">
           <Textarea
@@ -826,7 +827,7 @@ function Tareas() {
           onChange={(e) => setTitulo(e.target.value)}
           placeholder="Nueva tarea"
         />
-        <select
+        <Seleccion
           className={INPUT}
           value={responsable}
           onChange={(e) => setResponsable(e.target.value)}
@@ -838,7 +839,7 @@ function Tareas() {
             .map((a) => (
               <option key={a.id}>{a.nombre}</option>
             ))}
-        </select>
+        </Seleccion>
         <input
           type="date"
           className={INPUT}
@@ -871,7 +872,7 @@ function Tareas() {
                   {t.vence ? ` · vence ${fecha(t.vence)}` : ""}
                 </span>
               </span>
-              <select
+              <Seleccion
                 className={SELECT}
                 value={t.estado}
                 onChange={(e) =>
@@ -881,7 +882,7 @@ function Tareas() {
                 {(["Pendiente", "En curso", "Hecha"] as const).map((x) => (
                   <option key={x}>{x}</option>
                 ))}
-              </select>
+              </Seleccion>
             </li>
           ))}
         </ul>

@@ -313,8 +313,10 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
   );
   const haySwitch = !tres3DPorPlan(plan);
   const precioTexto = precioDe;
-  const cadaTexto = mios?.ciclo === "anual" ? "por año" : "por mes";
-  const totalModulos = mios?.activos.reduce((t, a) => t + a.importe, 0) ?? 0;
+  // Demo y clínica real muestran lo mismo: en el demo, los datos salen de la factura simulada.
+  const datos = mios ?? facturaDemo;
+  const cadaTexto = datos?.ciclo === "anual" ? "por año" : "por mes";
+  const totalModulos = datos?.activos.reduce((t, a) => t + a.importe, 0) ?? 0;
   return (
     <div className="space-y-4">
       {(mios ?? facturaDemo) && <ProximaFactura datos={(mios ?? facturaDemo)!} />}
@@ -333,18 +335,18 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
                   : mios?.cobroAutomatico
                     ? " Se activan al instante y van en tu próxima factura (cobro automático con tu tarjeta); después se renuevan con tu plan."
                     : " Se activan al instante y el cargo se agrega a tu próxima factura de Cloud Esther."}
-                {mios && (
+                {datos && (
                   <>
                     {" "}
-                    Tu plan es <b>{mios.ciclo === "anual" ? "anual" : "mensual"}</b>, así que los precios son {cadaTexto}
-                    {mios.ciclo === "anual" && mios.descuentoAnual > 0
-                      ? ` (con ${Math.round(mios.descuentoAnual * 100)} % de descuento anual)`
+                    Tu plan es <b>{datos.ciclo === "anual" ? "anual" : "mensual"}</b>, así que los precios son {cadaTexto}
+                    {datos.ciclo === "anual" && datos.descuentoAnual > 0
+                      ? ` (con ${Math.round(datos.descuentoAnual * 100)} % de descuento anual)`
                       : ""}
                     . Precios sin impuestos.
                   </>
                 )}
               </p>
-              {mios && mios.activos.length > 0 && (
+              {datos && datos.activos.length > 0 && totalModulos > 0 && (
                 <p className="mt-1 text-[12px] font-semibold text-primary">
                   Hoy pagás por módulos adicionales: USD {totalModulos.toFixed(totalModulos % 1 ? 2 : 0)} {cadaTexto}
                 </p>
@@ -354,7 +356,7 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
               {activos.filter((a) => comprables.some((m) => m.id === a.id)).length} activos
             </span>
           </div>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-4">
+          <ul data-movil="1col" className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-4">
             {comprables.map((m) => {
               const activo = activos.some((a) => a.id === m.id);
               const precio = precioTexto(m.id);

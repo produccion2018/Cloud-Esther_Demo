@@ -24,6 +24,7 @@ import { INACTIVIDAD_MS } from "@/lib/admin/sesion";
 import type { EventoActividad } from "@/lib/admin/tipos";
 import type { SesionPanel } from "@/lib/admin/tipos-empresa";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/auditoria")({
   head: () => ({
@@ -256,7 +257,7 @@ function Sesiones({ sesiones }: { sesiones: SesionPanel[] }) {
         sinPadding
         acciones={
           <>
-            <select
+            <Seleccion
               className={SELECT}
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}
@@ -266,8 +267,8 @@ function Sesiones({ sesiones }: { sesiones: SesionPanel[] }) {
               {usuarios.map((u) => (
                 <option key={u}>{u}</option>
               ))}
-            </select>
-            <select
+            </Seleccion>
+            <Seleccion
               className={SELECT}
               value={estado}
               onChange={(e) => setEstado(e.target.value as EstadoSesion | "")}
@@ -277,7 +278,7 @@ function Sesiones({ sesiones }: { sesiones: SesionPanel[] }) {
               {(Object.keys(TONO_ESTADO) as EstadoSesion[]).map((e) => (
                 <option key={e}>{e}</option>
               ))}
-            </select>
+            </Seleccion>
             <input
               type="date"
               className={SELECT}
@@ -525,7 +526,7 @@ function Acciones({ lista }: { lista: EventoActividad[] }) {
             onChange={(e) => (setBuscar(e.target.value), setPagina(0))}
             aria-label="Buscar"
           />
-          <select
+          <Seleccion
             className={SELECT}
             value={tipo}
             onChange={(e) => (
@@ -540,8 +541,8 @@ function Acciones({ lista }: { lista: EventoActividad[] }) {
                 {TIPOS[t].label}
               </option>
             ))}
-          </select>
-          <select
+          </Seleccion>
+          <Seleccion
             className={SELECT}
             value={actor}
             onChange={(e) => (setActor(e.target.value), setPagina(0))}
@@ -551,7 +552,7 @@ function Acciones({ lista }: { lista: EventoActividad[] }) {
             {actores.map((a) => (
               <option key={a}>{a}</option>
             ))}
-          </select>
+          </Seleccion>
           <Button
             size="sm"
             variant="outline"

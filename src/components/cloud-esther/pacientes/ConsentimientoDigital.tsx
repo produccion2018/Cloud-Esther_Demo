@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, Eraser, FileSignature, PenLine, ShieldCheck, X } from "lucide-react";
 
 import { descargarPDF } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/pacientes/ConsentimientoDigital.tsx
    CONSENTIMIENTOS DIGITALES con firma en pantalla (todos los planes):
@@ -243,13 +244,13 @@ export function FirmarConsentimiento({
         <div className="space-y-4 p-5 sm:p-7">
           <label className="block text-xs font-semibold">
             Modelo
-            <select value={modeloId} onChange={(e) => setModeloId(e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm">
+            <Seleccion value={modeloId} onChange={(e) => setModeloId(e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-sm">
               {MODELOS.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.titulo}
                 </option>
               ))}
-            </select>
+            </Seleccion>
           </label>
           <label className="block text-xs font-semibold">
             Procedimiento o pieza (opcional)

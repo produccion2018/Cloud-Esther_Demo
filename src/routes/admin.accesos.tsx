@@ -34,6 +34,7 @@ import { haceCuanto } from "@/lib/admin/formato";
 import { useSesionAdmin } from "@/lib/admin/sesion";
 import type { AdminUser, Permiso } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/accesos")({
   head: () => ({
@@ -126,7 +127,7 @@ function AccessPage() {
                         <p className="text-xs text-muted-foreground">{a.email}</p>
                       </td>
                       <td className="px-3 py-3">
-                        <select
+                        <Seleccion
                           className={SELECT}
                           value={a.rol}
                           disabled={yo || a.rol === "owner" || cambiar.isPending}
@@ -139,7 +140,7 @@ function AccessPage() {
                               {roleLabel[r]}
                             </option>
                           ))}
-                        </select>
+                        </Seleccion>
                       </td>
                       <td className="px-3 py-3">
                         {accesoTotal(a.rol) ? (

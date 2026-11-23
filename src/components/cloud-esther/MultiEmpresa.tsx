@@ -26,6 +26,7 @@ import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/da
 import { leerConfigPlanes, MENSAJE_LIMITE, mostrarLimite } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
 function registrarEvento(evento: {
@@ -888,7 +889,7 @@ function ModalClinica({
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Plan
-          <select
+          <Seleccion
             value={plan}
             onChange={(e) => setPlan(e.target.value as PlanId)}
             className={`${campo} mt-1`}
@@ -898,11 +899,11 @@ function ModalClinica({
                 {p}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <label className="text-xs font-medium text-foreground/80">
           Estado
-          <select
+          <Seleccion
             value={estado}
             onChange={(e) => setEstado(e.target.value as EstadoClinica)}
             className={`${campo} mt-1`}
@@ -910,7 +911,7 @@ function ModalClinica({
             {ESTADOS.map((s) => (
               <option key={s}>{s}</option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <div className="text-xs font-medium text-foreground/80 sm:col-span-2">
           Color de marca
@@ -1506,7 +1507,7 @@ export function MultiEmpresa() {
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 py-1 pl-4 pr-1 text-xs font-medium text-muted-foreground backdrop-blur">
               Clínica activa
-              <select
+              <Seleccion
                 value={activa.id}
                 onChange={(e) => {
                   const c = clinicas.find((x) => x.id === e.target.value);
@@ -1519,7 +1520,7 @@ export function MultiEmpresa() {
                     {c.nombre}
                   </option>
                 ))}
-              </select>
+              </Seleccion>
             </label>
             <button onClick={() => setModalClinica({})} className="btn-ce">
               <Plus className="h-4 w-4" />
@@ -1732,7 +1733,7 @@ export function MultiEmpresa() {
                   className="w-52 rounded-full border border-primary/20 bg-card py-2 pl-9 pr-3 text-sm outline-none focus:border-primary"
                 />
               </div>
-              <select
+              <Seleccion
                 value={filtroPlan}
                 onChange={(e) => setFiltroPlan(e.target.value as "Todos" | PlanId)}
                 className="rounded-full border border-primary/20 bg-card px-3 py-2 text-xs font-medium text-foreground/80"
@@ -1741,8 +1742,8 @@ export function MultiEmpresa() {
                 {PLANES.map((p) => (
                   <option key={p}>{p}</option>
                 ))}
-              </select>
-              <select
+              </Seleccion>
+              <Seleccion
                 value={filtroEstado}
                 onChange={(e) => setFiltroEstado(e.target.value as "Todos" | EstadoClinica)}
                 className="rounded-full border border-primary/20 bg-card px-3 py-2 text-xs font-medium text-foreground/80"
@@ -1751,7 +1752,7 @@ export function MultiEmpresa() {
                 {ESTADOS.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
-              </select>
+              </Seleccion>
             </div>
           }
         >

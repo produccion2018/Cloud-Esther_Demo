@@ -87,6 +87,7 @@ import {
 } from "@/components/cloud-esther/pacientes/FichasEspecialidad";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* ───────────── Catálogos ─────────────
    Sugerencias para practicar. Los profesionales salen del equipo de la empresa
@@ -1677,7 +1678,7 @@ function SelectField({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${INPUT} appearance-none pr-9 ${value === "" ? "text-muted-foreground" : ""}`}
@@ -1688,7 +1689,7 @@ function SelectField({
             {o}
           </option>
         ))}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
@@ -1707,7 +1708,7 @@ function SelectId({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
         className={`${INPUT} appearance-none pr-9 ${value === null ? "text-muted-foreground" : ""}`}
@@ -1718,7 +1719,7 @@ function SelectId({
             {o.label}
           </option>
         ))}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
     </div>
   );

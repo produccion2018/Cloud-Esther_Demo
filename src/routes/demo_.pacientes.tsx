@@ -65,6 +65,7 @@ import type {
   Paciente,
   EstadoPaciente,
 } from "@/lib/cloud-esther/pacientes";
+import { Seleccion } from "@/components/ui/seleccion";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/pacientes")({
@@ -409,7 +410,7 @@ function SelectField({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${INPUT} appearance-none pr-9 ${
@@ -427,7 +428,7 @@ function SelectField({
             {o}
           </option>
         ))}
-      </select>
+      </Seleccion>
 
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
     </div>
@@ -1588,7 +1589,7 @@ function PacientesInner() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
           <button
             onClick={exportar}
             className={BTN_SECUNDARIO}

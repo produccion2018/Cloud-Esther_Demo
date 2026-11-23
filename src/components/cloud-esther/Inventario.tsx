@@ -70,6 +70,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Inventario.tsx
    Inventario por empresa: stock por sucursal, movimientos, alertas, órdenes de compra,
@@ -194,7 +195,7 @@ function Sel<T extends string>({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         aria-label={etiqueta}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -211,7 +212,7 @@ function Sel<T extends string>({
             </option>
           ),
         )}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
@@ -617,7 +618,7 @@ export function Inventario() {
                   cuánto consume cada tratamiento. Todo queda registrado con quién y cuándo.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 <button type="button" className={BTN_SECUNDARIO} onClick={() => setMov({})}>
                   <ArrowLeftRight className="size-4" />
                   Registrar movimiento

@@ -44,6 +44,7 @@ import {
   titulo,
   type Ctx,
 } from "./ui";
+import { Seleccion } from "@/components/ui/seleccion";
 
 const ESTADO_CURSO: Record<EstadoCurso, string> = {
   Pendiente: "bg-amber-100 text-amber-700",
@@ -278,7 +279,7 @@ export function Desarrollo({ ctx }: { ctx: Ctx }) {
                             {fecha(a.completada)}
                           </span>
                         )}
-                        <select
+                        <Seleccion
                           aria-label={`Estado de ${nombre(a.miembroId)} en ${c.titulo}`}
                           value={a.estado}
                           onChange={(e) =>
@@ -289,7 +290,7 @@ export function Desarrollo({ ctx }: { ctx: Ctx }) {
                           {(["Pendiente", "En curso", "Completada"] as const).map((x) => (
                             <option key={x}>{x}</option>
                           ))}
-                        </select>
+                        </Seleccion>
                       </li>
                     ))}
                   </ul>

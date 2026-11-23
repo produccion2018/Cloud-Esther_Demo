@@ -18,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { descargarPDF } from "@/lib/descargas";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/pacientes/FichasEspecialidad.tsx
    FICHAS CLÍNICAS POR ESPECIALIDAD (desde el plan Pro): Ortodoncia, Periodoncia, Endodoncia,
@@ -437,7 +438,7 @@ export function FichasEspecialidadSec({
             {deEsta.length > 1 && (
               <label className="inline-flex items-center gap-2 rounded-xl border border-primary/12 bg-card px-2.5 py-1.5 text-xs font-semibold">
                 <ArrowLeftRight className="size-4 text-primary" /> Comparar con
-                <select value={comparar ?? ""} onChange={(e) => setComparar(e.target.value ? Number(e.target.value) : null)} className="h-8 rounded-lg bg-transparent outline-none">
+                <Seleccion value={comparar ?? ""} onChange={(e) => setComparar(e.target.value ? Number(e.target.value) : null)} className="h-8 rounded-lg bg-transparent outline-none">
                   <option value="">—</option>
                   {deEsta
                     .filter((f) => f.id !== actual.id)
@@ -446,7 +447,7 @@ export function FichasEspecialidadSec({
                         {fechaCorta(f.fecha)}
                       </option>
                     ))}
-                </select>
+                </Seleccion>
               </label>
             )}
             <button type="button" onClick={() => void pdf(actual)} className="btn-ce-outline !min-h-10">
@@ -497,12 +498,12 @@ export function FichasEspecialidadSec({
                           {c.unidad && <span className="text-[10px] font-normal">{c.unidad}</span>}
                         </span>
                         {c.tipo === "opciones" ? (
-                          <select value={v} onChange={(e) => set(e.target.value)} className={`${CAMPO} ${cambio ? "!border-amber-400 !bg-amber-50 dark:!bg-amber-500/10" : ""}`}>
+                          <Seleccion value={v} onChange={(e) => set(e.target.value)} className={`${CAMPO} ${cambio ? "!border-amber-400 !bg-amber-50 dark:!bg-amber-500/10" : ""}`}>
                             <option value="">—</option>
                             {c.opciones!.map((o) => (
                               <option key={o}>{o}</option>
                             ))}
-                          </select>
+                          </Seleccion>
                         ) : c.tipo === "largo" ? (
                           <textarea value={v} onChange={(e) => set(e.target.value)} rows={2} className={`${CAMPO} !h-auto py-2 ${cambio ? "!border-amber-400 !bg-amber-50 dark:!bg-amber-500/10" : ""}`} />
                         ) : (

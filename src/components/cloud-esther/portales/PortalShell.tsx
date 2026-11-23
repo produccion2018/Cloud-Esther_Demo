@@ -575,7 +575,7 @@ export function EncabezadoSeccion({
             </h1>
             {detalle && <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/85">{detalle}</p>}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
             <span className="hidden items-center gap-2 rounded-full border border-white/25 bg-white/12 px-3.5 py-1.5 text-xs font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] backdrop-blur-md md:inline-flex">
               <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.95)]" />
               {fechaHoyLarga()}

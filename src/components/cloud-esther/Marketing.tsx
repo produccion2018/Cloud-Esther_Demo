@@ -57,6 +57,7 @@ import { TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/ag
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Marketing.tsx
 
@@ -182,7 +183,7 @@ function Sel<T extends string>({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         aria-label={etiqueta}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -199,7 +200,7 @@ function Sel<T extends string>({
             </option>
           ),
         )}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
@@ -401,7 +402,7 @@ export default function Marketing() {
                   leads, campañas, cupones, referidos y reseñas en un solo lugar.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 <button className={BTN_SECUNDARIO} onClick={() => setSeccion("campanias")}>
                   <Megaphone className="size-4" />
                   Campañas

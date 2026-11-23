@@ -121,7 +121,7 @@ export function CapacidadDeMiPlan({ onToast, alCambiar }: { onToast?: (m: string
           </p>
         )}
       </div>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <ul data-movil="1col" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {filas.map((f) => {
           const pct = f.usados !== null && f.limite ? Math.min(100, Math.round((f.usados / f.limite) * 100)) : null;
           return (
@@ -129,7 +129,7 @@ export function CapacidadDeMiPlan({ onToast, alCambiar }: { onToast?: (m: string
               <div className="flex items-center gap-2">
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">{f.icono}</span>
                 <div className="min-w-0 flex-1">
-                  <b className="block text-[13px] font-semibold capitalize leading-snug">{NOMBRE[f.tipo].plural}</b>
+                  <b className="block text-[13px] font-semibold leading-snug first-letter:uppercase">{NOMBRE[f.tipo].plural}</b>
                   <span className="block text-[11.5px] text-muted-foreground">
                     {f.limite === null
                       ? "Sin límite"

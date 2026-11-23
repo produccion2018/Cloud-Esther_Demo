@@ -68,6 +68,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { PAISES_BASE, bandera, usePaisesSeleccionados } from "@/lib/paises";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 const CARD =
   "rounded-2xl border border-primary/12 bg-gradient-to-br from-card to-primary/[0.03] shadow-[0_14px_34px_-26px_rgba(124,58,237,0.5)] backdrop-blur-sm transition-shadow duration-200 hover:shadow-[0_22px_44px_-26px_rgba(124,58,237,0.6)]";
@@ -693,14 +694,14 @@ function GeneralTab({
             <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               País
             </span>
-            <select value={datos.pais} onChange={set("pais")} className={CAMPO}>
+            <Seleccion value={datos.pais} onChange={set("pais")} className={CAMPO}>
               <option value="">Elegí el país</option>
               {paises.map((p) => (
                 <option key={p.id} value={p.codigo}>
                   {bandera(p.codigo)} {p.nombre}
                 </option>
               ))}
-            </select>
+            </Seleccion>
             {paisElegido && (
               <span className="mt-1 block text-[11px] text-muted-foreground">
                 {paisElegido.moneda} · {paisElegido.impuesto} · {paisElegido.facturacion}

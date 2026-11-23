@@ -33,6 +33,7 @@ import {
 import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 import { PAISES_SOPORTADOS, bandera } from "@/lib/paises";
 import { KpiPortal, PestanasPortal, TarjetaPortal, VacioPortal } from "../PortalShell";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/equipo/SeccionesEquipo.tsx
    Secciones compartidas por el Portal profesional y el Portal administrativo: Jornada (fichaje,
@@ -472,7 +473,7 @@ function ChatEquipo({
     <TarjetaPortal className="!p-0 overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-3">
         <Users className="size-4 text-primary" />
-        <select
+        <Seleccion
           value={para}
           onChange={(e) => setPara(e.target.value)}
           className="h-10 rounded-full border border-primary/15 bg-card px-3 text-sm"
@@ -486,7 +487,7 @@ function ChatEquipo({
                 {nombreDe(m)}
               </option>
             ))}
-        </select>
+        </Seleccion>
       </div>
       <div
         className="space-y-2 overflow-y-auto bg-primary/[0.02] p-4"
@@ -964,7 +965,7 @@ export function ConfiguracionProfesional({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-semibold">
           País
-          <select
+          <Seleccion
             value={p.pais}
             onChange={(e) => guardar({ ...p, pais: e.target.value })}
             className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-base sm:h-10 sm:text-sm"
@@ -974,7 +975,7 @@ export function ConfiguracionProfesional({
                 {bandera(x.codigo)} {x.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
           {elegido && (
             <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
               {elegido.zonaHoraria} · {elegido.moneda}
@@ -983,13 +984,13 @@ export function ConfiguracionProfesional({
         </label>
         <label className="text-xs font-semibold">
           Idioma
-          <select
+          <Seleccion
             value={p.idioma}
             onChange={(e) => guardar({ ...p, idioma: e.target.value })}
             className="mt-1 h-11 w-full rounded-xl border border-primary/15 bg-card px-3 text-base sm:h-10 sm:text-sm"
           >
             <option value="es">Español</option>
-          </select>
+          </Seleccion>
           <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
             Portugués: próximamente.
           </span>

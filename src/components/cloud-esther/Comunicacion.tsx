@@ -75,6 +75,7 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { ComunicacionInterna, ElegirFondo } from "@/components/clinica/comunicacion-interna";
 import { useFondoChat } from "@/lib/clinica/fondo-chat";
 import { useAvisosChat } from "@/lib/clinica/chat";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Comunicacion.tsx
 
@@ -293,7 +294,7 @@ function Select<T extends string>({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
         className={`${INPUT} appearance-none pr-8`}
@@ -303,7 +304,7 @@ function Select<T extends string>({
             {o.label}
           </option>
         ))}
-      </select>
+      </Seleccion>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
@@ -737,7 +738,7 @@ function ComunicacionInner() {
                     recordatorios que confirman turnos solos, usá plantillas y medí cada envío.
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                   <button className={BTN_SECUNDARIO} onClick={() => setSeccion("plantillas")}>
                     <FileText className="size-4" />
                     Plantillas
@@ -1343,7 +1344,7 @@ function Chat({
           </p>
         </div>
         <div className="ml-auto flex items-center gap-1">
-          <select
+          <Seleccion
             value={conv.asignado}
             onChange={(e) => {
               actualizarConversacion(conv.id, (c) => ({ ...c, asignado: e.target.value }));
@@ -1360,7 +1361,7 @@ function Chat({
                 {n}
               </option>
             ))}
-          </select>
+          </Seleccion>
           <div className="relative">
             <button
               className={BTN_ICONO}
@@ -2290,7 +2291,7 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
           ]}
         />
         <div className="ml-auto flex flex-wrap gap-1.5">
-          <select
+          <Seleccion
             value={canal}
             onChange={(e) => setCanal(e.target.value as "" | Canal)}
             className="h-9 rounded-full border border-primary/15 bg-white px-3 text-xs font-medium outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
@@ -2300,7 +2301,7 @@ function Plantillas({ ctx }: { ctx: Ctx }) {
             {CANALES.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Seleccion>
           <input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -3227,7 +3228,7 @@ function Historial({ ctx }: { ctx: Ctx }) {
             ],
           ] as [string, (v: never) => void, string[][], string][]
         ).map(([valor, set, opciones, etiqueta]) => (
-          <select
+          <Seleccion
             key={etiqueta}
             aria-label={etiqueta}
             value={valor}
@@ -3239,7 +3240,7 @@ function Historial({ ctx }: { ctx: Ctx }) {
                 {l}
               </option>
             ))}
-          </select>
+          </Seleccion>
         ))}
       </div>
 

@@ -57,6 +57,7 @@ import { fecha, haceCuanto, minutosTexto, resumenDemo, type Interes } from "@/li
 import type { CuentaDemo, EstadoDemo } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/demos")({
   head: () => ({
@@ -329,7 +330,7 @@ function DemosPage() {
                   className="h-10 rounded-xl pl-9"
                 />
               </div>
-              <select
+              <Seleccion
                 value={estado}
                 onChange={(e) => setEstado(e.target.value as EstadoDemo | "")}
                 className={SELECT}
@@ -339,8 +340,8 @@ function DemosPage() {
                 {ESTADOS.map((e) => (
                   <option key={e}>{e}</option>
                 ))}
-              </select>
-              <select
+              </Seleccion>
+              <Seleccion
                 value={interes}
                 onChange={(e) => setInteres(e.target.value as Interes | "")}
                 className={SELECT}
@@ -350,8 +351,8 @@ function DemosPage() {
                 <option value="Alto">Interés alto</option>
                 <option value="Medio">Interés medio</option>
                 <option value="Bajo">Interés bajo</option>
-              </select>
-              <select
+              </Seleccion>
+              <Seleccion
                 value={orden}
                 onChange={(e) => setOrden(e.target.value as "recientes" | "interes")}
                 className={SELECT}
@@ -359,7 +360,7 @@ function DemosPage() {
               >
                 <option value="recientes">Más recientes</option>
                 <option value="interes">Mayor interés</option>
-              </select>
+              </Seleccion>
             </div>
 
             {lista.length === 0 ? (
@@ -683,7 +684,7 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
               </div>
               <label className="mt-3 block text-xs font-semibold text-muted-foreground">
                 Responsable
-                <select
+                <Seleccion
                   value={
                     demo.responsableId ??
                     (equipo ?? []).find((a) => a.nombre === demo.responsable)?.id ??
@@ -706,7 +707,7 @@ function DetalleDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
                         {a.nombre}
                       </option>
                     ))}
-                </select>
+                </Seleccion>
               </label>
               <label className="mt-3 block text-xs font-semibold text-muted-foreground">
                 Notas

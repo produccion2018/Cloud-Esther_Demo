@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { CON_BACKEND, guardarConfigDemo } from "@/lib/admin/api";
 import { useAccion, useConfigDemo } from "@/lib/admin/consultas";
 import type { ConfigDemo } from "@/lib/admin/tipos";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/admin/limites-demo.tsx
    El dueño decide cómo funciona el período de prueba del SaaS: si hay límite, cuánto dura cada
@@ -104,7 +105,7 @@ function TiempoDemosNuevos() {
               value={cantidad}
               onChange={(e) => setCantidad(e.target.value.replace(/[^0-9.,]/g, ""))}
             />
-            <select
+            <Seleccion
               className={INPUT}
               disabled={!editable}
               value={unidad}
@@ -113,7 +114,7 @@ function TiempoDemosNuevos() {
               <option value="min">minutos</option>
               <option value="h">horas</option>
               <option value="d">días</option>
-            </select>
+            </Seleccion>
           </div>
           {!valido && (
             <span className="block text-xs text-destructive">
@@ -123,7 +124,7 @@ function TiempoDemosNuevos() {
         </label>
         <label className="space-y-1.5">
           <span className="text-xs font-semibold">Aviso antes de que termine</span>
-          <select
+          <Seleccion
             className={INPUT}
             disabled={!editable}
             value={aviso}
@@ -134,7 +135,7 @@ function TiempoDemosNuevos() {
                 {m === 0 ? "Sin aviso" : `${m} min antes`}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
       </div>
       {!editable && (
@@ -201,7 +202,7 @@ function LimitesDemoLocal() {
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="space-y-1.5">
               <span className="text-xs font-semibold">Duración de cada ingreso</span>
-              <select
+              <Seleccion
                 className={INPUT}
                 disabled={!editable || !c.limiteActivo}
                 value={c.minutos}
@@ -212,11 +213,11 @@ function LimitesDemoLocal() {
                     {m} minutos
                   </option>
                 ))}
-              </select>
+              </Seleccion>
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold">Espera para reingresar</span>
-              <select
+              <Seleccion
                 className={INPUT}
                 disabled={!editable || !c.limiteActivo}
                 value={c.esperaMinutos}
@@ -227,11 +228,11 @@ function LimitesDemoLocal() {
                     {x.t}
                   </option>
                 ))}
-              </select>
+              </Seleccion>
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold">Aviso antes del cierre</span>
-              <select
+              <Seleccion
                 className={INPUT}
                 disabled={!editable || !c.limiteActivo}
                 value={c.avisoMinutos}
@@ -242,7 +243,7 @@ function LimitesDemoLocal() {
                     {m} min antes
                   </option>
                 ))}
-              </select>
+              </Seleccion>
             </label>
           </div>
           <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 text-xs leading-relaxed text-muted-foreground">

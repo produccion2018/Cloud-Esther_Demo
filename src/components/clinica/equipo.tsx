@@ -52,6 +52,7 @@ import {
   type RolElegido,
   type RolPropio,
 } from "@/lib/clinica/api";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/clinica/equipo.tsx
    EQUIPO de la clínica (solo el Administrador).
@@ -955,7 +956,7 @@ function SumarPersonas({
                     maxLength={254}
                     className="h-9 bg-background"
                   />
-                  <select
+                  <Seleccion
                     value={f.rol}
                     onChange={(e) => cambiarFila(f.clave, { rol: e.target.value })}
                     aria-label={`Rol de la persona ${i + 1}`}
@@ -971,7 +972,7 @@ function SumarPersonas({
                         {r.nombre}
                       </option>
                     ))}
-                  </select>
+                  </Seleccion>
                 </div>
                 <button
                   type="button"

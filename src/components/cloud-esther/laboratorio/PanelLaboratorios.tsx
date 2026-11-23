@@ -36,6 +36,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { descargarPDF } from "@/lib/descargas";
 import { normalizarBusqueda } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/laboratorio/PanelLaboratorios.tsx
    LABORATORIOS DENTALES (desde el plan Pro): todos los trabajos de la clínica en un lugar.
@@ -241,12 +242,12 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary/70" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar paciente, trabajo o pieza" className={`${INPUT} pl-10`} />
         </label>
-        <select value={lab} onChange={(e) => setLab(e.target.value)} className={`${INPUT} !w-auto`} aria-label="Laboratorio">
+        <Seleccion value={lab} onChange={(e) => setLab(e.target.value)} className={`${INPUT} !w-auto`} aria-label="Laboratorio">
           <option value="">Todos los laboratorios</option>
           {[...new Set([...laboratorios.map((l) => l.nombre), ...filas.map((f) => f.t.proveedor).filter(Boolean)])].map((n) => (
             <option key={n}>{n}</option>
           ))}
-        </select>
+        </Seleccion>
         <div className="inline-flex gap-1 rounded-2xl border border-primary/10 bg-card p-1" role="tablist">
           {(
             [
@@ -419,11 +420,11 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
               {pagando === l.id && (
                 <div className="relative mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs">
                   <input inputMode="numeric" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="Importe" className="h-9 w-28 rounded-lg border border-emerald-200 bg-card px-2 text-right tabular-nums" />
-                  <select value={medio} onChange={(e) => setMedio(e.target.value)} className="h-9 rounded-lg border border-emerald-200 bg-card px-2">
+                  <Seleccion value={medio} onChange={(e) => setMedio(e.target.value)} className="h-9 rounded-lg border border-emerald-200 bg-card px-2">
                     {["Transferencia", "Efectivo", "Cheque", "Tarjeta"].map((m) => (
                       <option key={m}>{m}</option>
                     ))}
-                  </select>
+                  </Seleccion>
                   <button type="button" onClick={() => pagar(l)} className="btn-ce !min-h-9">Confirmar</button>
                   <button type="button" onClick={() => setPagando(null)} className="btn-ce-outline !min-h-9">Cancelar</button>
                   {aFinanzas && <span className="w-full text-[10.5px] text-emerald-800">Se registra también como egreso «Laboratorio» en Finanzas.</span>}

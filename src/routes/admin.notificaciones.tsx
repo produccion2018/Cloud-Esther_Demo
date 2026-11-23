@@ -16,6 +16,7 @@ import { accesoTotal, useRole } from "@/components/admin/role";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import type { CategoriaNotificacion, Notificacion } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/notificaciones")({
   head: () => ({
@@ -117,7 +118,7 @@ function NotificacionesPage() {
             },
           ]}
         />
-        <select
+        <Seleccion
           className={SELECT}
           value={categoria}
           onChange={(e) => setCategoria(e.target.value as CategoriaNotificacion | "")}
@@ -127,8 +128,8 @@ function NotificacionesPage() {
           {CATEGORIAS.map((c) => (
             <option key={c}>{c}</option>
           ))}
-        </select>
-        <select
+        </Seleccion>
+        <Seleccion
           className={SELECT}
           value={prioridad}
           onChange={(e) => setPrioridad(e.target.value as Notificacion["prioridad"] | "")}
@@ -138,7 +139,7 @@ function NotificacionesPage() {
           <option>Alta</option>
           <option>Media</option>
           <option>Baja</option>
-        </select>
+        </Seleccion>
       </div>
       <Seccion
         titulo="Bandeja"

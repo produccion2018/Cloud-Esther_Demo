@@ -12,6 +12,7 @@ import { borrarDe, guardarEn, nuevoIdLocal } from "@/lib/admin/api";
 import { useAccion, useClinicas, useColeccion } from "@/lib/admin/consultas";
 import { NOMBRE_PLAN, enlaceWhatsApp, fecha, haceCuanto } from "@/lib/admin/formato";
 import type { Guia, TicketSoporte } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/admin/herramientas-soporte.tsx
    Herramientas del técnico de Soporte:
@@ -74,14 +75,14 @@ export function FichaClinica({ onAbrirTicket }: { onAbrirTicket: (id: string) =>
   return (
     <>
       <Seccion titulo="Ficha técnica de una clínica" descripcion="Elegí la clínica: ves su plan, su estado, cómo contactarla y todo su historial de soporte.">
-        <select value={id} onChange={(e) => setId(e.target.value)} className={INPUT} aria-label="Clínica">
+        <Seleccion value={id} onChange={(e) => setId(e.target.value)} className={INPUT} aria-label="Clínica">
           <option value="">Elegí una clínica…</option>
           {lista.map((x) => (
             <option key={x.id} value={x.id}>
               {x.nombre} · {x.pais}
             </option>
           ))}
-        </select>
+        </Seleccion>
         {lista.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Todavía no hay clínicas clientes.</p>}
       </Seccion>
 
@@ -247,12 +248,12 @@ export function Guias({ editable }: { editable: boolean }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar: «no carga la agenda», «factura»…" className={`${INPUT} pl-9`} />
         </div>
-        <select value={cat} onChange={(e) => setCat(e.target.value as typeof cat)} className={`${INPUT} w-auto`} aria-label="Categoría">
+        <Seleccion value={cat} onChange={(e) => setCat(e.target.value as typeof cat)} className={`${INPUT} w-auto`} aria-label="Categoría">
           <option value="">Todas las categorías</option>
           {CATEGORIAS.map((c) => (
             <option key={c}>{c}</option>
           ))}
-        </select>
+        </Seleccion>
       </div>
       {isLoading ? (
         <Cargando />
@@ -372,11 +373,11 @@ function DialogoGuia({ inicial, onCerrar }: { inicial: Guia | null; onCerrar: ()
           <input value={f.titulo} onChange={(e) => setF({ ...f, titulo: e.target.value })} maxLength={200} className={INPUT} placeholder="Ej.: La agenda queda en blanco" />
         </Campo>
         <Campo label="Categoría">
-          <select value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value as Guia["categoria"] })} className={INPUT}>
+          <Seleccion value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value as Guia["categoria"] })} className={INPUT}>
             {CATEGORIAS.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Etiquetas" ayuda="Separadas por coma">
           <input value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} className={INPUT} placeholder="agenda, navegador" />

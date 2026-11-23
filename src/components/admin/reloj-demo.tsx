@@ -26,6 +26,7 @@ import { useAccion, useHistorialTiempoDemo } from "@/lib/admin/consultas";
 import { fecha } from "@/lib/admin/formato";
 import type { CuentaDemo } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/admin/reloj-demo.tsx
    El RELOJ de cada demo (con servidor). Dueño, Socio y Secretaría pueden:
@@ -156,7 +157,7 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
           </div>
 
           <div className="grid gap-2 sm:grid-cols-[auto_1fr_auto]">
-            <select
+            <Seleccion
               aria-label="Qué hacer"
               className={INPUT}
               value={modo}
@@ -164,7 +165,7 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
             >
               <option value="sumar">Darle más tiempo</option>
               <option value="dejar">Que le quede exactamente</option>
-            </select>
+            </Seleccion>
             <div className="flex gap-2">
               <input
                 aria-label="Cantidad"
@@ -173,7 +174,7 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value.replace(/[^0-9.,]/g, ""))}
               />
-              <select
+              <Seleccion
                 aria-label="Unidad"
                 className={cn(INPUT, "w-28")}
                 value={unidad}
@@ -182,7 +183,7 @@ export function RelojDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGes
                 <option value="min">minutos</option>
                 <option value="h">horas</option>
                 <option value="d">días</option>
-              </select>
+              </Seleccion>
             </div>
             <Button
               disabled={!valido || cambiar.isPending}
@@ -546,7 +547,7 @@ function PedidosDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
                     {p.tipo === "Más ingresos" ? (
                       <span>ingresos</span>
                     ) : (
-                      <select
+                      <Seleccion
                         aria-label="Unidad"
                         className={cn(INPUT, "h-8 w-24")}
                         value={unidad}
@@ -554,7 +555,7 @@ function PedidosDemo({ demo, puedeGestionar }: { demo: CuentaDemo; puedeGestiona
                       >
                         <option value="h">horas</option>
                         <option value="d">días</option>
-                      </select>
+                      </Seleccion>
                     )}
                   </div>
                   <input

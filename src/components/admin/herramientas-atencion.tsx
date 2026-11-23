@@ -30,6 +30,7 @@ import { clinicaProlija, enlaceWhatsApp, fecha, haceCuanto, nombreProlijo } from
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { useSesionAdmin } from "@/lib/admin/sesion";
 import type { Llamada, PedidoLlamada, Plantilla } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/admin/herramientas-atencion.tsx
    Piezas que comparten Atención a clínicas, Soporte técnico y Redes y marketing:
@@ -227,11 +228,11 @@ export function RegistroLlamadas({
               className={`${INPUT} pl-9`}
             />
           </div>
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)} className={`${INPUT} w-auto`}>
+          <Seleccion value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)} className={`${INPUT} w-auto`}>
             <option value="todas">Todas</option>
             <option value="seguimiento">Con seguimiento</option>
             <option value="sinAtender">No atendidas</option>
-          </select>
+          </Seleccion>
         </div>
       )}
       {isLoading ? (
@@ -413,24 +414,24 @@ export function DialogoLlamada({
           </div>
         )}
         <Campo label="Por dónde">
-          <select value={f.medio ?? "Teléfono"} onChange={(e) => set("medio", e.target.value as Llamada["medio"])} className={INPUT}>
+          <Seleccion value={f.medio ?? "Teléfono"} onChange={(e) => set("medio", e.target.value as Llamada["medio"])} className={INPUT}>
             <option>WhatsApp</option>
             <option>Teléfono</option>
             <option>Videollamada</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Dirección">
-          <select value={f.direccion} onChange={(e) => set("direccion", e.target.value as Llamada["direccion"])} className={INPUT}>
+          <Seleccion value={f.direccion} onChange={(e) => set("direccion", e.target.value as Llamada["direccion"])} className={INPUT}>
             <option>Saliente</option>
             <option>Entrante</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Resultado">
-          <select value={f.resultado} onChange={(e) => set("resultado", e.target.value as Llamada["resultado"])} className={INPUT}>
+          <Seleccion value={f.resultado} onChange={(e) => set("resultado", e.target.value as Llamada["resultado"])} className={INPUT}>
             {RESULTADOS.map((r) => (
               <option key={r}>{r}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Duración (minutos)">
           <input
@@ -613,11 +614,11 @@ function DialogoPlantilla({
           />
         </Campo>
         <Campo label="Canal">
-          <select value={f.canal} onChange={(e) => setF({ ...f, canal: e.target.value as Plantilla["canal"] })} className={INPUT}>
+          <Seleccion value={f.canal} onChange={(e) => setF({ ...f, canal: e.target.value as Plantilla["canal"] })} className={INPUT}>
             <option>WhatsApp</option>
             <option>Email</option>
             <option>General</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Etiquetas" ayuda="Separadas por coma">
           <input value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} className={INPUT} placeholder="pagos, bienvenida" />

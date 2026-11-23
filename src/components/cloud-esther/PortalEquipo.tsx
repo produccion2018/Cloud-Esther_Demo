@@ -150,6 +150,7 @@ import { cargarSettings } from "@/lib/cloud-esther/settings-store";
 import { refrescarSesionClinica } from "@/lib/clinica/api";
 import { salirYVolver, slugDeSesionGuardada, useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { hayCambiosSinGuardar } from "@/lib/clinica/sincronizar";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/PortalEquipo.tsx
 
@@ -1854,15 +1855,15 @@ function NuevaCitaForm({ ctx, onDone }: { ctx: Ctx; onDone: () => void }) {
       }}
     >
       <Field label="Paciente">
-        <select value={paciente} onChange={(e) => setPaciente(e.target.value)} className={INPUT}>
+        <Seleccion value={paciente} onChange={(e) => setPaciente(e.target.value)} className={INPUT}>
           {nombres.map((n) => (
             <option key={n}>{n}</option>
           ))}
-        </select>
+        </Seleccion>
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Profesional">
-          <select
+          <Seleccion
             value={odontologo}
             onChange={(e) => {
               setOdontologo(e.target.value);
@@ -1873,10 +1874,10 @@ function NuevaCitaForm({ ctx, onDone }: { ctx: Ctx; onDone: () => void }) {
             {odontologos.map((o) => (
               <option key={o}>{o}</option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
         <Field label="Motivo">
-          <select
+          <Seleccion
             value={tratamiento}
             onChange={(e) => setTratamiento(e.target.value)}
             className={INPUT}
@@ -1884,7 +1885,7 @@ function NuevaCitaForm({ ctx, onDone }: { ctx: Ctx; onDone: () => void }) {
             {PRACTICAS.map((p) => (
               <option key={p}>{p}</option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
       </div>
       <Field label="Día">
@@ -2185,13 +2186,13 @@ function FichaPaciente({
               />
             </Field>
             <Field label="Medio">
-              <select value={medio} onChange={(e) => setMedio(e.target.value)} className={INPUT}>
+              <Seleccion value={medio} onChange={(e) => setMedio(e.target.value)} className={INPUT}>
                 {["Efectivo", "Tarjeta de débito", "Tarjeta de crédito", "Transferencia"].map(
                   (m) => (
                     <option key={m}>{m}</option>
                   ),
                 )}
-              </select>
+              </Seleccion>
             </Field>
           </div>
           <button type="submit" className={`${BTN_PRIMARIO} w-full`} disabled={!Number(monto)}>
@@ -2469,7 +2470,7 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
             </p>
             <p className="mt-1 text-xs text-muted-foreground">Se descuenta del stock de {sede}.</p>
             <div className="mt-2 grid grid-cols-[1fr_72px] gap-2">
-              <select
+              <Seleccion
                 aria-label="Insumo usado"
                 value={uso.id}
                 onChange={(e) => setUso((u) => ({ ...u, id: e.target.value }))}
@@ -2480,7 +2481,7 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
                     {s.nombre} ({s.stock})
                   </option>
                 ))}
-              </select>
+              </Seleccion>
               <input
                 type="number"
                 min={1}

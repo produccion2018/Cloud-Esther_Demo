@@ -1333,6 +1333,7 @@ label {
 @media (max-width: 640px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,
+  [data-seleccion],
   textarea {
     font-size: 16px;
   }
@@ -1668,7 +1669,7 @@ label {
       [class~="grid-cols-4"],
       [data-movil="1col"]
     ):has(> :is([class*="rounded-"], .card-grad), > li > :is([class*="rounded-"], .card-grad)):not(
-      :has(input, select, textarea, table, canvas, .recharts-wrapper, [data-movil="1col"])
+      :has(input, select, [data-seleccion], textarea, table, canvas, .recharts-wrapper, [data-movil="1col"])
     ) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.625rem;
@@ -1882,6 +1883,7 @@ label {
 /* Campos: halo violeta suave al escribir */
 .ce-clinica input:not([type="checkbox"]),
 .ce-clinica select,
+.ce-clinica [data-seleccion],
 .ce-clinica textarea {
   transition:
     border-color 0.2s ease,
@@ -1890,6 +1892,8 @@ label {
 }
 .ce-clinica input:not([type="checkbox"]):focus-visible,
 .ce-clinica select:focus-visible,
+.ce-clinica [data-seleccion]:focus-visible,
+.ce-clinica [data-seleccion][aria-expanded="true"],
 .ce-clinica textarea:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--ce-violeta) 60%, var(--border));

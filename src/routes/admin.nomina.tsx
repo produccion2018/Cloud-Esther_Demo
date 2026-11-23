@@ -38,6 +38,7 @@ import type {
   Liquidacion,
   PagoNomina,
 } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/nomina")({
   head: () => ({
@@ -221,7 +222,7 @@ function Liquidaciones({ n }: { n: ReturnType<typeof useNomina> }) {
         sinPadding
         acciones={
           <>
-            <select
+            <Seleccion
               className="h-9 rounded-xl border border-input bg-card px-3 text-xs font-semibold"
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
@@ -233,7 +234,7 @@ function Liquidaciones({ n }: { n: ReturnType<typeof useNomina> }) {
                   {periodoTexto(p)}
                 </option>
               ))}
-            </select>
+            </Seleccion>
             <Button
               size="sm"
               onClick={() =>
@@ -431,7 +432,7 @@ function FormLiquidacion({
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <Campo label="Persona">
-          <select
+          <Seleccion
             className={INPUT}
             value={l.empleadoId}
             onChange={(e) => aplicarPlantilla({ empleadoId: e.target.value })}
@@ -444,7 +445,7 @@ function FormLiquidacion({
                   {e.nombre}
                 </option>
               ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Período">
           <input
@@ -455,14 +456,14 @@ function FormLiquidacion({
           />
         </Campo>
         <Campo label="Estado">
-          <select
+          <Seleccion
             className={INPUT}
             value={l.estado}
             onChange={(e) => setL({ ...l, estado: e.target.value as Liquidacion["estado"] })}
           >
             <option>Borrador</option>
             <option>Aprobada</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo
           label="País o régimen (plantilla)"
@@ -470,7 +471,7 @@ function FormLiquidacion({
           ayuda="Al cambiarla se recalculan los conceptos con el sueldo base y los anticipos del período."
         >
           <div className="flex gap-2">
-            <select
+            <Seleccion
               className={INPUT}
               value={
                 PLANTILLAS.some((p) => p.id === l.jurisdiccion) ? l.jurisdiccion : "Personalizada"
@@ -480,7 +481,7 @@ function FormLiquidacion({
               {PLANTILLAS.map((p) => (
                 <option key={p.id}>{p.id}</option>
               ))}
-            </select>
+            </Seleccion>
             <Button
               type="button"
               variant="outline"
@@ -511,7 +512,7 @@ function FormLiquidacion({
               aria-label="Concepto"
               onChange={(e) => setConcepto(c.id, { nombre: e.target.value })}
             />
-            <select
+            <Seleccion
               className={INPUT}
               value={c.tipo}
               aria-label="Tipo"
@@ -521,7 +522,7 @@ function FormLiquidacion({
             >
               <option>Haber</option>
               <option>Descuento</option>
-            </select>
+            </Seleccion>
             <input
               className={INPUT}
               type="number"
@@ -805,7 +806,7 @@ function FormPago({
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo label="Liquidación" className="sm:col-span-2">
-          <select
+          <Seleccion
             className={INPUT}
             value={liq}
             onChange={(e) => {
@@ -820,7 +821,7 @@ function FormPago({
                 {importe(f.saldo, f.moneda)}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Importe">
           <input
@@ -840,7 +841,7 @@ function FormPago({
           />
         </Campo>
         <Campo label="Método">
-          <select
+          <Seleccion
             className={INPUT}
             value={p.metodo}
             onChange={(e) => setP({ ...p, metodo: e.target.value as PagoNomina["metodo"] })}
@@ -848,7 +849,7 @@ function FormPago({
             {(["Transferencia", "Efectivo", "Cheque", "Otro"] as const).map((m) => (
               <option key={m}>{m}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Referencia" ayuda="N.º de transferencia o comprobante.">
           <input
@@ -1002,7 +1003,7 @@ function FormAnticipo({
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo label="Persona" className="sm:col-span-2">
-          <select
+          <Seleccion
             className={INPUT}
             value={a.empleadoId}
             onChange={(e) => setA({ ...a, empleadoId: e.target.value })}
@@ -1015,7 +1016,7 @@ function FormAnticipo({
                   {e.nombre}
                 </option>
               ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Importe">
           <input
@@ -1097,7 +1098,7 @@ function Reportes({ n }: { n: ReturnType<typeof useNomina> }) {
       sinPadding
       acciones={
         <>
-          <select
+          <Seleccion
             className="h-9 rounded-xl border border-input bg-card px-3 text-xs font-semibold"
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
@@ -1109,8 +1110,8 @@ function Reportes({ n }: { n: ReturnType<typeof useNomina> }) {
                 {periodoTexto(p)}
               </option>
             ))}
-          </select>
-          <select
+          </Seleccion>
+          <Seleccion
             className="h-9 rounded-xl border border-input bg-card px-3 text-xs font-semibold"
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
@@ -1122,7 +1123,7 @@ function Reportes({ n }: { n: ReturnType<typeof useNomina> }) {
                 {e.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
           <Button size="sm" variant="outline" onClick={exportar} disabled={!filas.length}>
             <Download className="mr-1 h-4 w-4" /> Exportar CSV
           </Button>

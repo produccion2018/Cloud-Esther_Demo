@@ -101,6 +101,7 @@ import {
 import { storeAutorizaciones } from "@/lib/cloud-esther/autorizaciones-store";
 import { descargarBlob, descargarPDF, documentoPDF } from "@/lib/descargas";
 import { volverSiEsPrueba } from "@/lib/acceso-prueba";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/PortalPaciente.tsx
 
@@ -848,7 +849,7 @@ function PortalInner({
               <Eye className="size-4 shrink-0" />
               <span className="font-semibold">Vista previa del equipo:</span>
               <span>así ve el portal</span>
-              <select
+              <Seleccion
                 value={paciente.id}
                 onChange={(e) => {
                   setPacienteId(Number(e.target.value));
@@ -862,7 +863,7 @@ function PortalInner({
                     {p.nombre} {p.apellido}
                   </option>
                 ))}
-              </select>
+              </Seleccion>
               <span className="ml-auto hidden text-amber-700/80 md:inline">
                 Lo que hagas acá queda registrado como si fuera el paciente.
               </span>
@@ -1464,13 +1465,13 @@ function CancelarForm({
         ¡Gracias!
       </p>
       <Field label="Motivo">
-        <select value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT}>
+        <Seleccion value={motivo} onChange={(e) => setMotivo(e.target.value)} className={INPUT}>
           {["No puedo asistir", "Me siento mejor", "Problemas de horario", "Otro motivo"].map(
             (m) => (
               <option key={m}>{m}</option>
             ),
           )}
-        </select>
+        </Seleccion>
       </Field>
       <div className="flex justify-end gap-2">
         <button type="button" className={BTN_SECUNDARIO} onClick={onCancel}>
@@ -1549,7 +1550,7 @@ function SolicitudForm({
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Motivo">
-          <select
+          <Seleccion
             value={tratamiento}
             onChange={(e) => setTratamiento(e.target.value)}
             className={INPUT}
@@ -1558,10 +1559,10 @@ function SolicitudForm({
             {PRACTICAS.map((p) => (
               <option key={p}>{p}</option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
         <Field label="Profesional">
-          <select
+          <Seleccion
             value={odontologo}
             onChange={(e) => {
               setOdontologo(e.target.value);
@@ -1572,7 +1573,7 @@ function SolicitudForm({
             {odontologos.map((o) => (
               <option key={o}>{o}</option>
             ))}
-          </select>
+          </Seleccion>
         </Field>
       </div>
       <Field label="Día">

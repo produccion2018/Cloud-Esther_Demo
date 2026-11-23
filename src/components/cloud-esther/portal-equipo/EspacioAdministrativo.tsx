@@ -40,6 +40,7 @@ import {
 import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
 import { HeroPortal, KpiPortal } from "@/components/cloud-esther/portales/PortalShell";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portal-equipo/EspacioAdministrativo.tsx
    Espacio de trabajo de la secretaria / administración dentro del Portal del equipo.
@@ -844,7 +845,7 @@ function Cobros({
         >
           <label className="block text-xs font-semibold">
             Paciente
-            <select
+            <Seleccion
               value={pacienteId}
               onChange={(e) => setPacienteId(e.target.value ? Number(e.target.value) : "")}
               className={`${INPUT} mt-1`}
@@ -855,7 +856,7 @@ function Cobros({
                   {nombreCompleto(p)}
                 </option>
               ))}
-            </select>
+            </Seleccion>
           </label>
           <label className="block text-xs font-semibold">
             Importe
@@ -1065,7 +1066,7 @@ function Documentos({
       >
         <label className="block text-xs font-semibold">
           Paciente
-          <select
+          <Seleccion
             value={pacienteId}
             onChange={(e) => setPacienteId(e.target.value ? Number(e.target.value) : "")}
             className={`${INPUT} mt-1`}
@@ -1076,7 +1077,7 @@ function Documentos({
                 {nombreCompleto(x)}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
           {(

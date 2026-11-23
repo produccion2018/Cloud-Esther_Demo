@@ -22,6 +22,7 @@ import type { ScheduleDay, TeamMember } from "@/lib/cloud-esther/equipo-profesio
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { registrarEventoEquipo } from "@/lib/cloud-esther/portal-equipo-store";
 import { AvatarPortal, PestanasPortal, TarjetaPortal, VacioPortal } from "../PortalShell";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/equipo/AgendaPortal.tsx
    Agenda completa de los portales del equipo: vista día, POR PROFESIONAL (columnas con la
@@ -292,7 +293,7 @@ export function AgendaPortal({
         />
         <div className="flex flex-wrap items-center gap-2">
           {profesionales.length > 1 && vista !== "profesionales" && (
-            <select
+            <Seleccion
               value={prof}
               onChange={(e) => setProf(e.target.value)}
               className="h-10 rounded-xl border border-primary/15 bg-card px-3 text-sm shadow-[0_10px_26px_-22px_rgba(76,29,149,0.6)]"
@@ -304,7 +305,7 @@ export function AgendaPortal({
                   {nombre(m)}
                 </option>
               ))}
-            </select>
+            </Seleccion>
           )}
           <button type="button" onClick={() => setPanelFeriados(true)} className="btn-ce-outline !min-h-10">
             <Palmtree className="size-4" /> Feriados y vacaciones

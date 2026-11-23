@@ -16,6 +16,7 @@ import {
 } from "@/lib/cloud-esther/autorizaciones-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { PestanasPortal, TarjetaPortal } from "./PortalShell";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/AutorizacionesPanel.tsx
    Autorizaciones en los tres portales, con la misma información y distinto rol:
@@ -227,7 +228,7 @@ export function AutorizacionesPanel({
 
                     {rol === "administracion" && puedeGestionar && (
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <select
+                        <Seleccion
                           value={a.gestion}
                           onChange={(e) => {
                             gestionarAutorizacion(
@@ -243,7 +244,7 @@ export function AutorizacionesPanel({
                           {(["Sin gestionar", "En gestión", "Finalizada"] as const).map((g) => (
                             <option key={g}>{g}</option>
                           ))}
-                        </select>
+                        </Seleccion>
                         {a.estado === "Pendiente" && a.origen !== "Paciente" && (
                           <button
                             type="button"
@@ -335,7 +336,7 @@ function NuevaSolicitud({
         {!paciente && (
           <label className="text-xs font-semibold sm:col-span-2">
             Paciente
-            <select
+            <Seleccion
               value={pacienteId}
               onChange={(e) => setPacienteId(e.target.value ? Number(e.target.value) : "")}
               className={`${INPUT} mt-1`}
@@ -346,12 +347,12 @@ function NuevaSolicitud({
                   {p.nombre} {p.apellido}
                 </option>
               ))}
-            </select>
+            </Seleccion>
           </label>
         )}
         <label className="text-xs font-semibold">
           Tipo
-          <select
+          <Seleccion
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoAutorizacion)}
             className={`${INPUT} mt-1`}
@@ -359,7 +360,7 @@ function NuevaSolicitud({
             {TIPOS_AUTORIZACION.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <label className="text-xs font-semibold">
           {rol === "paciente" ? "Para cuándo (opcional)" : "Responder antes del (opcional)"}

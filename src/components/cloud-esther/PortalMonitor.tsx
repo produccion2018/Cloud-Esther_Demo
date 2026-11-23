@@ -43,6 +43,7 @@ import {
 } from "@/lib/cloud-esther/portal-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { useTablasApilables } from "@/lib/tablas-movil";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/PortalMonitor.tsx
 
@@ -225,7 +226,7 @@ function PortalMonitor() {
                   documentación que suben.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 <button
                   className={BTN_SECUNDARIO}
                   onClick={() => {
@@ -613,7 +614,7 @@ export function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
         <div className="card-grad flex flex-wrap items-center gap-2 p-2.5">
-          <select
+          <Seleccion
             value={tipo}
             onChange={(e) => setTipo(e.target.value as "" | TipoEventoPortal)}
             aria-label="Acción"
@@ -623,8 +624,8 @@ export function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
             {tipos.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
-          <select
+          </Seleccion>
+          <Seleccion
             value={pacienteId}
             onChange={(e) => setPacienteId(e.target.value)}
             aria-label="Paciente"
@@ -636,7 +637,7 @@ export function ActividadPortal({ onToast }: { onToast: (m: string) => void }) {
                 {nombre(id)}
               </option>
             ))}
-          </select>
+          </Seleccion>
           <button className={`${BTN_SECUNDARIO} ml-auto`} onClick={exportar}>
             <Download className="size-3.5" />
             Exportar
@@ -945,7 +946,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
           <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Cancelación online hasta
           </span>
-          <select
+          <Seleccion
             value={config.horasMinimasCancelar}
             onChange={(e) => set({ horasMinimasCancelar: Number(e.target.value) })}
             className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
@@ -955,7 +956,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
                 {h} horas antes del turno
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -963,7 +964,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               Reprogramación online hasta
             </span>
-            <select
+            <Seleccion
               value={config.horasMinimasReprogramar ?? 24}
               onChange={(e) => set({ horasMinimasReprogramar: Number(e.target.value) })}
               className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
@@ -973,13 +974,13 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
                   {h} horas antes
                 </option>
               ))}
-            </select>
+            </Seleccion>
           </label>
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               Máximo de reprogramaciones
             </span>
-            <select
+            <Seleccion
               value={config.maxReprogramaciones ?? 2}
               onChange={(e) => set({ maxReprogramaciones: Number(e.target.value) })}
               className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
@@ -990,7 +991,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
                   {n} por turno
                 </option>
               ))}
-            </select>
+            </Seleccion>
           </label>
         </div>
 
@@ -1020,7 +1021,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               La oferta del turno liberado vence en
             </span>
-            <select
+            <Seleccion
               value={config.minutosVigenciaOferta ?? 120}
               onChange={(e) => set({ minutosVigenciaOferta: Number(e.target.value) })}
               className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none"
@@ -1030,7 +1031,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
               <option value={120}>2 horas</option>
               <option value={240}>4 horas</option>
               <option value={720}>12 horas</option>
-            </select>
+            </Seleccion>
           </label>
         )}
 

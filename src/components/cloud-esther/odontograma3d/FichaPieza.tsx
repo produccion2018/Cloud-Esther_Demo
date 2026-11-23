@@ -35,6 +35,7 @@ import {
   useRegistrosPacientes,
   type Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/odontograma3d/FichaPieza.tsx
    Ficha clínica de la pieza seleccionada en el Odontograma 3D.
@@ -760,7 +761,7 @@ function SeccionTratamientos({
               </button>
             ))}
           </div>
-          <select
+          <Seleccion
             value={estadoNuevo}
             onChange={(e) => setEstadoNuevo(e.target.value as EstadoTratamiento)}
             className={INPUT}
@@ -768,7 +769,7 @@ function SeccionTratamientos({
             {ESTADOS_TRAT.map((e) => (
               <option key={e}>{e}</option>
             ))}
-          </select>
+          </Seleccion>
           <textarea
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
@@ -798,7 +799,7 @@ function SeccionTratamientos({
           <div key={t.id} className={ITEM}>
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-bold text-foreground">{t.nombre}</p>
-              <select
+              <Seleccion
                 value={t.estado}
                 onChange={(e) => cambiarEstado(t.id, e.target.value as EstadoTratamiento)}
                 className="rounded-lg border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-primary outline-none"
@@ -806,7 +807,7 @@ function SeccionTratamientos({
                 {[...new Set([...ESTADOS_TRAT, t.estado])].map((e) => (
                   <option key={e}>{e}</option>
                 ))}
-              </select>
+              </Seleccion>
             </div>
             {(t.notas || t.diagnostico) && (
               <p className="mt-1 text-xs leading-relaxed text-foreground/80">
@@ -1325,11 +1326,11 @@ function SeccionEstudios({
       <div className={`${ITEM} space-y-2`}>
         <Titulo>Registrar estudio de la pieza {fdi}</Titulo>
         <div className="grid grid-cols-[1fr_auto] gap-2">
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={INPUT}>
+          <Seleccion value={tipo} onChange={(e) => setTipo(e.target.value)} className={INPUT}>
             {TIPOS_ESTUDIO.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
           <input
             type="date"
             value={fecha}

@@ -48,6 +48,7 @@ import {
 import type { Clinica, EstadoPago, PlanConfig, PlanId } from "@/lib/admin/tipos";
 import { cn } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/clinicas")({
   head: () => ({
@@ -141,7 +142,7 @@ function ClinicsPage() {
                   className="h-10 rounded-xl pl-9"
                 />
               </div>
-              <select
+              <Seleccion
                 value={plan}
                 onChange={(e) => setPlan(e.target.value as PlanId | "")}
                 className={SELECT}
@@ -153,8 +154,8 @@ function ClinicsPage() {
                     {NOMBRE_PLAN[p]}
                   </option>
                 ))}
-              </select>
-              <select
+              </Seleccion>
+              <Seleccion
                 value={estado}
                 onChange={(e) => setEstado(e.target.value as EstadoPago | "")}
                 className={SELECT}
@@ -166,7 +167,7 @@ function ClinicsPage() {
                     {ETIQUETA_PAGO[e]}
                   </option>
                 ))}
-              </select>
+              </Seleccion>
             </div>
             {filtradas.length === 0 ? (
               <div className="p-5">

@@ -29,6 +29,7 @@ import {
   periodoTexto,
 } from "@/lib/admin/formato";
 import type { Contrato, Gasto, Proveedor } from "@/lib/admin/tipos-empresa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export const Route = createFileRoute("/admin/gastos")({
   head: () => ({
@@ -155,7 +156,7 @@ function Gastos() {
                 onChange={(e) => setPeriodo(e.target.value)}
                 aria-label="Mes"
               />
-              <select
+              <Seleccion
                 className="h-9 rounded-xl border border-input bg-card px-3 text-xs font-semibold"
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
@@ -165,7 +166,7 @@ function Gastos() {
                 {CATEGORIAS.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
-              </select>
+              </Seleccion>
               <Button
                 size="sm"
                 variant="outline"
@@ -350,7 +351,7 @@ function FormGasto({
           />
         </Campo>
         <Campo label="Categoría">
-          <select
+          <Seleccion
             className={INPUT}
             value={g.categoria}
             onChange={(e) => set("categoria", e.target.value as Gasto["categoria"])}
@@ -358,10 +359,10 @@ function FormGasto({
             {CATEGORIAS.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Proveedor">
-          <select
+          <Seleccion
             className={INPUT}
             value={g.proveedorId ?? ""}
             onChange={(e) => set("proveedorId", e.target.value || null)}
@@ -372,7 +373,7 @@ function FormGasto({
                 {p.nombre}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Importe">
           <input
@@ -384,14 +385,14 @@ function FormGasto({
           />
         </Campo>
         <Campo label="Moneda">
-          <select
+          <Seleccion
             className={INPUT}
             value={g.moneda}
             onChange={(e) => set("moneda", e.target.value as Gasto["moneda"])}
           >
             <option>ARS</option>
             <option>USD</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Fecha">
           <input
@@ -402,14 +403,14 @@ function FormGasto({
           />
         </Campo>
         <Campo label="Estado">
-          <select
+          <Seleccion
             className={INPUT}
             value={g.estado}
             onChange={(e) => set("estado", e.target.value as Gasto["estado"])}
           >
             <option>Pendiente</option>
             <option>Pagado</option>
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Comprobante" className="sm:col-span-2" ayuda="N.º de factura o recibo.">
           <input
@@ -717,7 +718,7 @@ function FormContrato({ inicial, onCerrar }: { inicial: Contrato; onCerrar: () =
           />
         </Campo>
         <Campo label="Tipo">
-          <select
+          <Seleccion
             className={INPUT}
             value={c.tipo}
             onChange={(e) => set("tipo", e.target.value as Contrato["tipo"])}
@@ -725,7 +726,7 @@ function FormContrato({ inicial, onCerrar }: { inicial: Contrato; onCerrar: () =
             {(["Proveedor", "Cliente", "Laboral", "Otro"] as const).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Inicio">
           <input
@@ -753,7 +754,7 @@ function FormContrato({ inicial, onCerrar }: { inicial: Contrato; onCerrar: () =
           />
         </Campo>
         <Campo label="Estado">
-          <select
+          <Seleccion
             className={INPUT}
             value={c.estado}
             onChange={(e) => set("estado", e.target.value as Contrato["estado"])}
@@ -761,7 +762,7 @@ function FormContrato({ inicial, onCerrar }: { inicial: Contrato; onCerrar: () =
             {(["Vigente", "Por renovar", "Finalizado"] as const).map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
       </div>
     </DialogoFormulario>

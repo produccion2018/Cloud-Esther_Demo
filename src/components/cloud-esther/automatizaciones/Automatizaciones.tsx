@@ -74,6 +74,7 @@ import {
   fechaHora,
   hace,
 } from "@/components/cloud-esther/rrhh/ui";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/automatizaciones/Automatizaciones.tsx
    Automatizaciones con n8n (plan Enterprise). Cloud Esther emite eventos, n8n orquesta el
@@ -314,7 +315,7 @@ export function Automatizaciones() {
                   resultado vuelve a la ficha del paciente, la Agenda o Notificaciones.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                 <button
                   type="button"
                   className={BTN_SECUNDARIO}
@@ -869,7 +870,7 @@ function Flujos({
               {lista.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <div className="relative min-w-0 flex-1">
-                    <select
+                    <Seleccion
                       aria-label="Registro para la prueba"
                       value={disparo}
                       onChange={(e) => setDisparo(Number(e.target.value))}
@@ -880,7 +881,7 @@ function Flujos({
                           {d.titulo}
                         </option>
                       ))}
-                    </select>
+                    </Seleccion>
                     <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
                   <button type="button" className={BTN_SECUNDARIO} onClick={probar}>

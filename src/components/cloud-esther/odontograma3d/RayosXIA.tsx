@@ -39,6 +39,7 @@ import {
   type Severidad,
   type TipoHallazgoRX,
 } from "@/lib/cloud-esther/rayos-x";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/odontograma3d/RayosXIA.tsx
    Análisis de rayos X (pestaña del Odontograma 3D y herramienta de Esther Infinity): detección
@@ -282,7 +283,7 @@ export function RayosXIA({
       {pacienteFijo === undefined && (
         <label className="block max-w-xs text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Paciente
-          <select
+          <Seleccion
             value={pacienteId ?? ""}
             onChange={(e) => setPacienteId(Number(e.target.value))}
             className="mt-1 h-9 w-full rounded-xl border border-primary/15 bg-white px-2 text-sm font-normal normal-case tracking-normal text-foreground"
@@ -292,7 +293,7 @@ export function RayosXIA({
                 {p.nombre} {p.apellido}
               </option>
             ))}
-          </select>
+          </Seleccion>
         </label>
       )}
 
@@ -324,7 +325,7 @@ export function RayosXIA({
             <>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <select
+                  <Seleccion
                     value={tipoEstudio}
                     onChange={(e) => setTipoEstudio(e.target.value)}
                     className={SEL}
@@ -333,7 +334,7 @@ export function RayosXIA({
                     {ESTUDIOS.map((t) => (
                       <option key={t}>{t}</option>
                     ))}
-                  </select>
+                  </Seleccion>
                   {origen === "demo" && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                       Caso de demostración
@@ -496,7 +497,7 @@ export function RayosXIA({
                         >
                           {n || "–"}
                         </span>
-                        <select
+                        <Seleccion
                           value={h.tipo}
                           onChange={(e) =>
                             cambiar(h.id, { tipo: e.target.value as TipoHallazgoRX })
@@ -509,7 +510,7 @@ export function RayosXIA({
                               {TIPOS_RX[t].nombre}
                             </option>
                           ))}
-                        </select>
+                        </Seleccion>
                         <input
                           value={h.pieza}
                           onChange={(e) =>
@@ -521,7 +522,7 @@ export function RayosXIA({
                         />
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <select
+                        <Seleccion
                           value={h.severidad}
                           onChange={(e) =>
                             cambiar(h.id, { severidad: e.target.value as Severidad })
@@ -532,7 +533,7 @@ export function RayosXIA({
                           {(["Leve", "Moderada", "Severa"] as const).map((x) => (
                             <option key={x}>{x}</option>
                           ))}
-                        </select>
+                        </Seleccion>
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] text-muted-foreground">
                             {h.origen === "manual"

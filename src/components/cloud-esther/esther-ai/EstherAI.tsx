@@ -40,6 +40,7 @@ import { useEstherAI, vozDisponible } from "./useEstherAI";
 import { useMicrofono } from "./microfono";
 import { primerNombreDe, saludoHora, useClima } from "@/lib/cloud-esther/saludo-clima";
 import "./esther-ai.css";
+import { Seleccion } from "@/components/ui/seleccion";
 
 export type EstherAIProps = {
   state?: EstherState;
@@ -71,14 +72,14 @@ function Selector({
         {etiqueta}
       </span>
       <span className="relative block">
-        <select
+        <Seleccion
           aria-label={etiqueta}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={SEL}
         >
           {children}
-        </select>
+        </Seleccion>
         <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       </span>
     </label>

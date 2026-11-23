@@ -55,6 +55,7 @@ import {
   TarjetaPortal,
   VacioPortal,
 } from "../PortalShell";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/portales/equipo/SeccionesAdministrativas.tsx
    Secciones propias del Portal administrativo (Administración): Caja del día, Pacientes (alta,
@@ -600,7 +601,7 @@ function AltaPaciente({
         {campo("email", "Email", "email")}
         <label className="text-xs font-semibold">
           Obra social
-          <select
+          <Seleccion
             value={f.obraSocial}
             onChange={(e) => setF((x) => ({ ...x, obraSocial: e.target.value }))}
             className={`${INPUT} mt-1`}
@@ -608,11 +609,11 @@ function AltaPaciente({
             {obrasCatalogo.map((o) => (
               <option key={o}>{o}</option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         <label className="text-xs font-semibold">
           Sucursal
-          <select
+          <Seleccion
             value={f.sucursal}
             onChange={(e) => setF((x) => ({ ...x, sucursal: e.target.value }))}
             className={`${INPUT} mt-1`}
@@ -620,7 +621,7 @@ function AltaPaciente({
             {["Clínica Centro", "Clínica Norte", "Clínica Sur"].map((o) => (
               <option key={o}>{o}</option>
             ))}
-          </select>
+          </Seleccion>
         </label>
         {error && <p className="text-xs text-destructive sm:col-span-2">{error}</p>}
         <div className="flex gap-2 sm:col-span-2">
@@ -732,14 +733,14 @@ export function TareasAdministrativas({
             }}
           >
             <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="¿Qué hay que hacer?" className={INPUT} />
-            <select value={responsable} onChange={(e) => setResponsable(e.target.value)} className={INPUT} aria-label="Responsable">
+            <Seleccion value={responsable} onChange={(e) => setResponsable(e.target.value)} className={INPUT} aria-label="Responsable">
               {asignables.map((n) => (
                 <option key={n} value={n}>
                   {n === nombreDe(yo) ? `${n} (yo)` : n}
                 </option>
               ))}
               <option value="">Sin responsable</option>
-            </select>
+            </Seleccion>
             <input type="date" value={vence} onChange={(e) => setVence(e.target.value)} className={INPUT} aria-label="Vence" />
             <button type="submit" disabled={!texto.trim()} className="btn-ce !min-h-11 justify-center disabled:opacity-50">
               <Plus className="size-4" /> Crear
@@ -800,7 +801,7 @@ export function TareasAdministrativas({
                       {t.responsable && <AvatarPortal nombre={t.responsable} tam="sm" className="!size-5 !rounded-md !text-[8px]" />}
                       {puedeCrear && !vista && !t.hecha ? (
                         // Reasignar en el momento (o dejarla sin responsable)
-                        <select
+                        <Seleccion
                           value={t.responsable ?? ""}
                           onChange={(e) => reasignar(t.id, e.target.value, t.texto)}
                           aria-label={`Responsable de «${t.texto}»`}
@@ -812,7 +813,7 @@ export function TareasAdministrativas({
                               {n}
                             </option>
                           ))}
-                        </select>
+                        </Seleccion>
                       ) : (
                         <span>{t.responsable || "Sin responsable"}</span>
                       )}
@@ -1125,11 +1126,11 @@ export function LiquidacionesPortal({
                 {pagando === f.m.id && (
                   <div className="relative mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs dark:border-emerald-500/30 dark:bg-emerald-500/5">
                     <span className="font-semibold">Pagado con</span>
-                    <select value={medio} onChange={(e) => setMedio(e.target.value)} className="h-9 rounded-lg border border-emerald-200 bg-card px-2">
+                    <Seleccion value={medio} onChange={(e) => setMedio(e.target.value)} className="h-9 rounded-lg border border-emerald-200 bg-card px-2">
                       {MEDIOS_PAGO_LIQ.map((m) => (
                         <option key={m}>{m}</option>
                       ))}
-                    </select>
+                    </Seleccion>
                     <button
                       type="button"
                       className="btn-ce !min-h-9"

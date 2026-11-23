@@ -28,6 +28,7 @@ import {
   type TipoEventoAuditoria,
 } from "@/lib/cloud-esther/auditoria-store";
 import { InicioSesionCorporativo } from "@/components/cloud-esther/InicioSesionCorporativo";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/configuracion/SeguridadAuditoria.tsx
    Configuración → Seguridad (Plus y Enterprise): todo lo de auditoría en un solo lugar.
@@ -511,7 +512,7 @@ function HistorialAccesos({ sesiones }: { sesiones: SesionAuditoria[] }) {
             className={`${INPUT} w-full pl-8`}
           />
         </label>
-        <select
+        <Seleccion
           value={rol}
           onChange={(e) => {
             setRol(e.target.value);
@@ -524,8 +525,8 @@ function HistorialAccesos({ sesiones }: { sesiones: SesionAuditoria[] }) {
           {roles.map((r) => (
             <option key={r}>{r}</option>
           ))}
-        </select>
-        <select
+        </Seleccion>
+        <Seleccion
           value={estado}
           onChange={(e) => {
             setEstado(e.target.value);
@@ -538,7 +539,7 @@ function HistorialAccesos({ sesiones }: { sesiones: SesionAuditoria[] }) {
           <option>Activa</option>
           <option>Cerrada</option>
           <option>Vencida</option>
-        </select>
+        </Seleccion>
         <input
           type="date"
           value={desde}
@@ -698,7 +699,7 @@ function RegistroActividad({ eventos }: { eventos: EventoAuditoria[] }) {
             className={`${INPUT} w-full pl-8`}
           />
         </label>
-        <select
+        <Seleccion
           value={tipo}
           onChange={(e) => {
             setTipo(e.target.value);
@@ -711,8 +712,8 @@ function RegistroActividad({ eventos }: { eventos: EventoAuditoria[] }) {
           {TIPOS.map((t) => (
             <option key={t}>{t}</option>
           ))}
-        </select>
-        <select
+        </Seleccion>
+        <Seleccion
           value={resultado}
           onChange={(e) => {
             setResultado(e.target.value);
@@ -725,7 +726,7 @@ function RegistroActividad({ eventos }: { eventos: EventoAuditoria[] }) {
           <option>Correcto</option>
           <option>Fallido</option>
           <option>Denegado</option>
-        </select>
+        </Seleccion>
         <input
           type="date"
           value={desde}
@@ -873,7 +874,7 @@ function Ajustes({ plan, settings, actualizar, onToast, clinicId }: Props & { cl
             elegir uno corto.
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <select
+            <Seleccion
               value={settings.auditRetentionDays}
               onChange={(e) => actualizar("auditRetentionDays", Number(e.target.value))}
               className={INPUT}
@@ -884,7 +885,7 @@ function Ajustes({ plan, settings, actualizar, onToast, clinicId }: Props & { cl
                   {d >= 365 ? `${d / 365} ${d === 365 ? "año" : "años"}` : `${d} días`}
                 </option>
               ))}
-            </select>
+            </Seleccion>
             <button
               type="button"
               className="btn-ce-outline"

@@ -63,6 +63,7 @@ import {
   type Tarea,
   type Turno,
 } from "@/lib/cloud-esther/agenda-store";
+import { Seleccion } from "@/components/ui/seleccion";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/agenda")({
@@ -487,7 +488,7 @@ function SelectField({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${compact ? INPUT_SM : INPUT} appearance-none ${compact ? "pr-9" : "pr-10"}`}
@@ -499,7 +500,7 @@ function SelectField({
             {o}
           </option>
         ))}
-      </select>
+      </Seleccion>
 
       <ChevronDown
         className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground ${
@@ -2420,7 +2421,7 @@ function AgendaInner() {
                         : "Organizá los turnos del día y de la semana de cada profesional."}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                     {agendaAvanzada && (
                     <button
                       onClick={() => setModal({ tipo: "bloqueo" })}

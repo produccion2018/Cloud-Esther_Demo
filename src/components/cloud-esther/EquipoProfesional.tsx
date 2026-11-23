@@ -42,6 +42,7 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
 import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
+import { Seleccion } from "@/components/ui/seleccion";
 
 type VistaEquipo = "integrantes" | "desempeno" | "ausencias" | "invitaciones" | "portal"
 
@@ -264,7 +265,7 @@ function SelectField({
 }) {
   return (
     <div className="relative">
-      <select
+      <Seleccion
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${INPUT} appearance-none pr-10`}
@@ -276,7 +277,7 @@ function SelectField({
             {o}
           </option>
         ))}
-      </select>
+      </Seleccion>
 
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
@@ -654,7 +655,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
                 ausencias y accesos.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
               <button onClick={exportarEquipo} className="btn-ce-outline">
                 <Download className="size-4" />
                 Exportar

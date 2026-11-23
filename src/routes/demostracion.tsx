@@ -19,6 +19,7 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { TelefonoPais } from "@/components/site/TelefonoPais";
 import { additionalModules, plans } from "@/lib/site-data";
 import { formatearPrecioModulo, usePreciosModulos } from "@/lib/cloud-esther/precios-modulos";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /** Los módulos del formulario de la web y su id en la app (donde el Dueño pone el precio) */
 const ID_EN_APP: Record<string, string> = {
@@ -324,7 +325,7 @@ function Contratacion() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pais">País</Label>
-                      <select
+                      <Seleccion
                         id="pais"
                         name="pais"
                         required
@@ -340,7 +341,7 @@ function Contratacion() {
                             {p.nombre}
                           </option>
                         ))}
-                      </select>
+                      </Seleccion>
                       <p className="text-[11px] text-muted-foreground">
                         Tenés que estar en este país: lo verificamos por tu conexión.
                       </p>
@@ -353,19 +354,19 @@ function Contratacion() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="sucursales">Sucursales</Label>
-                      <select id="sucursales" name="sucursales" className={SELECT}>
+                      <Seleccion id="sucursales" name="sucursales" className={SELECT}>
                         {["1", "2", "3–4", "5–6", "7–15", "Más de 15"].map((o) => (
                           <option key={o}>{o}</option>
                         ))}
-                      </select>
+                      </Seleccion>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="profesionales">Profesionales</Label>
-                      <select id="profesionales" name="profesionales" className={SELECT}>
+                      <Seleccion id="profesionales" name="profesionales" className={SELECT}>
                         {["1–5", "6–15", "16–40", "41–100", "Más de 100"].map((o) => (
                           <option key={o}>{o}</option>
                         ))}
-                      </select>
+                      </Seleccion>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contacto">Nombre de contacto</Label>

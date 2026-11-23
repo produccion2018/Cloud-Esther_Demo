@@ -13,6 +13,7 @@ import { descargarExcel } from "@/lib/admin/excel";
 import { fecha } from "@/lib/admin/formato";
 import type { ConsumoIA, HerramientaIA, PresupuestoIA } from "@/lib/admin/tipos-empresa";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/admin/uso-ia-equipo.tsx
    USO DE IA DEL EQUIPO — SOLO Dueño y Socio (el servidor no se lo muestra a nadie más,
@@ -275,11 +276,11 @@ function DialogoPresupuesto({
           <SelectorPersona personas={personas} valor={f.persona} onCambiar={(v) => setF({ ...f, persona: v })} />
         </Campo>
         <Campo label="Herramienta">
-          <select value={f.herramienta} onChange={(e) => setF({ ...f, herramienta: e.target.value as HerramientaIA })} className={INPUT}>
+          <Seleccion value={f.herramienta} onChange={(e) => setF({ ...f, herramienta: e.target.value as HerramientaIA })} className={INPUT}>
             {HERRAMIENTAS.map((h) => (
               <option key={h}>{h}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Mes">
           <input type="month" value={f.periodo} onChange={(e) => setF({ ...f, periodo: e.target.value })} className={INPUT} />
@@ -356,11 +357,11 @@ function DialogoConsumo({ personas, inicial, onCerrar }: { personas: string[]; i
           <input type="date" value={f.fecha} onChange={(e) => setF({ ...f, fecha: e.target.value })} className={INPUT} />
         </Campo>
         <Campo label="Herramienta">
-          <select value={f.herramienta} onChange={(e) => setF({ ...f, herramienta: e.target.value as HerramientaIA })} className={INPUT}>
+          <Seleccion value={f.herramienta} onChange={(e) => setF({ ...f, herramienta: e.target.value as HerramientaIA })} className={INPUT}>
             {HERRAMIENTAS.map((h) => (
               <option key={h}>{h}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Costo (USD)">
           <input type="number" min={0} step={0.01} value={f.costoUSD} onChange={(e) => setF({ ...f, costoUSD: Number(e.target.value) })} className={INPUT} />
@@ -369,11 +370,11 @@ function DialogoConsumo({ personas, inicial, onCerrar }: { personas: string[]; i
           <input type="number" min={0} value={f.cantidad} onChange={(e) => setF({ ...f, cantidad: Number(e.target.value) })} className={INPUT} />
         </Campo>
         <Campo label="Unidad">
-          <select value={f.unidad} onChange={(e) => setF({ ...f, unidad: e.target.value as ConsumoIA["unidad"] })} className={INPUT}>
+          <Seleccion value={f.unidad} onChange={(e) => setF({ ...f, unidad: e.target.value as ConsumoIA["unidad"] })} className={INPUT}>
             {UNIDADES.map((u) => (
               <option key={u}>{u}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Para qué lo usó" className="sm:col-span-2">
           <input value={f.para} onChange={(e) => setF({ ...f, para: e.target.value })} maxLength={300} className={INPUT} placeholder="Ej.: 2 videos de la agenda para Instagram" />

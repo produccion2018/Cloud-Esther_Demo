@@ -47,6 +47,7 @@ import {
   type ZonaSonrisa,
   ZONA_INICIAL,
 } from "@/lib/cloud-esther/simulador-sonrisa";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/simulador/SimuladorSonrisa.tsx
    Simulador de Sonrisa con IA: carga de fotos, elección de tratamientos estéticos,
@@ -450,7 +451,7 @@ export function SimuladorSonrisa({
                     Paciente
                   </span>
                   <span className="relative block">
-                    <select
+                    <Seleccion
                       aria-label="Paciente"
                       value={pacienteId ?? ""}
                       onChange={(e) => {
@@ -464,7 +465,7 @@ export function SimuladorSonrisa({
                           {p.nombre} {p.apellido}
                         </option>
                       ))}
-                    </select>
+                    </Seleccion>
                     <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   </span>
                 </label>

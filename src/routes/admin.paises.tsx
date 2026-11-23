@@ -31,6 +31,7 @@ import { NOMBRE_PLAN, fecha, miles } from "@/lib/admin/formato";
 import type { Clinica, CuentaDemo, PlanId } from "@/lib/admin/tipos";
 import type { EstadoPais, PaisOperacion } from "@/lib/admin/tipos-empresa";
 import { PAISES_SIN_PAGOS, bandera, estaSeleccionado } from "@/lib/paises";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/routes/admin.paises.tsx
    Países donde se vende Cloud Esther: clínicas contratadas y demos por país, y los datos de cada
@@ -492,11 +493,11 @@ function FormularioPais({
         </Campo>
       </div>
       <Campo label="Estado">
-        <select {...campo("estado")}>
+        <Seleccion {...campo("estado")}>
           {ESTADOS.map((e) => (
             <option key={e}>{e}</option>
           ))}
-        </select>
+        </Seleccion>
       </Campo>
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo label="Moneda">

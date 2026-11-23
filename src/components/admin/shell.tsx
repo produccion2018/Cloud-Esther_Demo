@@ -42,6 +42,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useTablasApilables } from "@/lib/tablas-movil";
 import { cn } from "@/lib/utils";
 import { volverSiEsPrueba } from "@/lib/acceso-prueba";
+import { Seleccion } from "@/components/ui/seleccion";
 
 // El acceso por rol de cada ítem se define en role.tsx (sectionAccess).
 type NavItem = { to: string; label: string; icon: LucideIcon };
@@ -375,7 +376,7 @@ export function AdminShell({
                 <label className="hidden items-center gap-2 text-[11px] text-muted-foreground sm:flex">
                   <Eye className="h-3.5 w-3.5" />
                   Ver como
-                  <select
+                  <Seleccion
                     value={role}
                     onChange={(e) => setRole(e.target.value as AdminRole)}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs font-semibold text-foreground outline-none focus:border-primary/50"
@@ -385,7 +386,7 @@ export function AdminShell({
                         {roleLabel[r]}
                       </option>
                     ))}
-                  </select>
+                  </Seleccion>
                 </label>
               )}
             </div>

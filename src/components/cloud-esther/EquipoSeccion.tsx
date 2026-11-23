@@ -29,6 +29,7 @@ import { verEquipo, type PersonaEquipo, type RolClinica } from "@/lib/clinica/ap
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { registrarEventoAuditoria } from "@/lib/cloud-esther/auditoria-store";
 import { PermisosPortalEditor } from "@/components/cloud-esther/portales/PermisosPortalEditor";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /** Los cambios de permisos quedan siempre en la auditoría de la clínica. */
 function auditarPermiso(accion: string) {
@@ -1251,7 +1252,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
             <div className="flex flex-wrap items-end gap-2">
               <label className="block">
                 <span className="text-xs font-semibold text-muted-foreground">Rol</span>
-                <select
+                <Seleccion
                   value={miembro.role}
                   onChange={(e) => cambiarRol(e.target.value as TeamRole)}
                   className={`${INPUT} mt-1 w-48`}
@@ -1261,7 +1262,7 @@ function Permisos({ onToast }: { onToast: (m: string) => void }) {
                       {ROLE_LABEL[r]}
                     </option>
                   ))}
-                </select>
+                </Seleccion>
               </label>
               <button
                 type="button"

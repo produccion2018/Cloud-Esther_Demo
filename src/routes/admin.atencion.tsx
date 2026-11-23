@@ -57,6 +57,7 @@ import type {
   TipoAtencion,
 } from "@/lib/admin/tipos-empresa";
 import { cn } from "@/lib/utils";
+import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/routes/admin.atencion.tsx
    Atención a clínicas: la secretaría / mesa de atención de CLOUD ESTHER. Nuestro equipo registra
@@ -373,7 +374,7 @@ function Bandeja({ lista, onAbrir }: { lista: CasoAtencion[]; onAbrir: (id: stri
       descripcion="Tocá un caso para conversar, dejar notas internas, cambiar el estado o derivarlo."
       acciones={
         <>
-          <select
+          <Seleccion
             value={tipo}
             onChange={(e) => setTipo(e.target.value as typeof tipo)}
             className={SELECT}
@@ -383,8 +384,8 @@ function Bandeja({ lista, onAbrir }: { lista: CasoAtencion[]; onAbrir: (id: stri
             {TIPOS.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
-          <select
+          </Seleccion>
+          <Seleccion
             value={estado}
             onChange={(e) => setEstado(e.target.value as typeof estado)}
             className={SELECT}
@@ -395,7 +396,7 @@ function Bandeja({ lista, onAbrir }: { lista: CasoAtencion[]; onAbrir: (id: stri
             {ESTADOS.map((e) => (
               <option key={e}>{e}</option>
             ))}
-          </select>
+          </Seleccion>
         </>
       }
       sinPadding
@@ -453,7 +454,7 @@ function PorClinica({
       <Seccion
         titulo="Estado de la clínica"
         acciones={
-          <select
+          <Seleccion
             value={actual.nombre}
             onChange={(e) => onClinica(e.target.value)}
             className={cn(SELECT, "max-w-[220px]")}
@@ -462,7 +463,7 @@ function PorClinica({
             {todas.map((c) => (
               <option key={c.id}>{c.nombre}</option>
             ))}
-          </select>
+          </Seleccion>
         }
       >
         <div className="flex items-center gap-3">
@@ -694,7 +695,7 @@ function DetalleCaso({ caso, editable }: { caso: CasoAtencion; editable: boolean
         </p>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <Campo label="Estado">
-            <select
+            <Seleccion
               disabled={!editable}
               value={caso.estado}
               className={cn(SELECT, "w-full")}
@@ -705,10 +706,10 @@ function DetalleCaso({ caso, editable }: { caso: CasoAtencion; editable: boolean
               {ESTADOS.map((e) => (
                 <option key={e}>{e}</option>
               ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Responsable">
-            <select
+            <Seleccion
               disabled={!editable}
               value={caso.responsable ?? ""}
               className={cn(SELECT, "w-full")}
@@ -728,10 +729,10 @@ function DetalleCaso({ caso, editable }: { caso: CasoAtencion; editable: boolean
                 .map((a) => (
                   <option key={a.id}>{a.nombre}</option>
                 ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Prioridad">
-            <select
+            <Seleccion
               disabled={!editable}
               value={caso.prioridad}
               className={cn(SELECT, "w-full")}
@@ -745,7 +746,7 @@ function DetalleCaso({ caso, editable }: { caso: CasoAtencion; editable: boolean
               {(["Alta", "Media", "Baja"] as const).map((p) => (
                 <option key={p}>{p}</option>
               ))}
-            </select>
+            </Seleccion>
           </Campo>
           <Campo label="Próximo seguimiento">
             <input
@@ -953,7 +954,7 @@ function FormNuevoCaso({
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo label="Clínica" className="sm:col-span-2">
-          <select
+          <Seleccion
             value={f.clinica}
             onChange={(e) => set("clinica", e.target.value)}
             className={INPUT}
@@ -961,10 +962,10 @@ function FormNuevoCaso({
             {(clinicas ?? []).map((c) => (
               <option key={c.id}>{c.nombre}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Tipo">
-          <select
+          <Seleccion
             value={f.tipo}
             onChange={(e) => set("tipo", e.target.value as TipoAtencion)}
             className={INPUT}
@@ -972,10 +973,10 @@ function FormNuevoCaso({
             {TIPOS.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Canal">
-          <select
+          <Seleccion
             value={f.canal}
             onChange={(e) => set("canal", e.target.value as CasoAtencion["canal"])}
             className={INPUT}
@@ -983,7 +984,7 @@ function FormNuevoCaso({
             {CANALES.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Asunto" className="sm:col-span-2">
           <input
@@ -1004,7 +1005,7 @@ function FormNuevoCaso({
           />
         </Campo>
         <Campo label="Prioridad">
-          <select
+          <Seleccion
             value={f.prioridad}
             onChange={(e) => set("prioridad", e.target.value as CasoAtencion["prioridad"])}
             className={INPUT}
@@ -1012,7 +1013,7 @@ function FormNuevoCaso({
             {(["Alta", "Media", "Baja"] as const).map((p) => (
               <option key={p}>{p}</option>
             ))}
-          </select>
+          </Seleccion>
         </Campo>
         <Campo label="Próximo seguimiento">
           <input

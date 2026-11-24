@@ -1284,6 +1284,7 @@ function CarpetaPaciente({
               onToast={onToast}
               contexto={{
                 paciente: nombreCompleto(paciente),
+                telefono: paciente.telefono,
                 email: paciente.email,
               }}
             />

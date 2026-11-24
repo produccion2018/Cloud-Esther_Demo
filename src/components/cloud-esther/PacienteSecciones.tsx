@@ -1,3 +1,4 @@
+import { numeroWhatsApp } from "@/lib/clinica/whatsapp";
 import { ElegirPlantilla, fechaDesdeTexto } from "@/components/cloud-esther/pacientes/PlantillasEvolucion";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
@@ -67,6 +68,7 @@ import {
   UserRound,
   ShieldAlert,
   PencilLine,
+  MessageCircle,
   Lock,
   Ban,
 } from "lucide-react";
@@ -631,7 +633,7 @@ export type SeccionRegistros =
 
 /* Datos opcionales del contexto (paciente / clínica) para la receta digital y el resumen de estudios.
    TODO backend: completarlos desde la ficha del paciente y la configuración de la clínica. */
-export type ContextoPaciente = { paciente?: string; email?: string; clinica?: string };
+export type ContextoPaciente = { paciente?: string; email?: string; clinica?: string; telefono?: string };
 
 const VACIO: Registros = {
   antecedentes: ANTECEDENTES_VACIOS,
@@ -5325,12 +5327,14 @@ function RecetaVisor({
   onClose,
   onImprimir,
   onEnviar,
+  onWhatsApp,
 }: {
   receta: RecetaPaciente;
   contexto?: ContextoPaciente;
   onClose: () => void;
   onImprimir: () => void;
   onEnviar: () => void;
+  onWhatsApp?: () => void;
 }) {
   const [zoom, setZoom] = useState(1);
 
@@ -5343,6 +5347,7 @@ function RecetaVisor({
             <BotonMini icon={Download} label="Descargar PDF" onClick={onImprimir} />
             <BotonMini icon={Printer} label="Imprimir" onClick={onImprimir} />
             <BotonMini icon={Mail} label="Enviar por correo" onClick={onEnviar} />
+            {onWhatsApp && <BotonMini icon={MessageCircle} label="Enviar por WhatsApp" onClick={onWhatsApp} />}
           </div>
         )}
       </div>
@@ -5418,7 +5423,47 @@ function EnviarRecetaForm({
   );
 }
 
+/* Receta por WhatsApp: en el celular se comparte el PDF directo a WhatsApp (menú de compartir);
+   en la computadora se abre WhatsApp con la receta escrita (medicamentos y cómo tomarlos). */
+async function enviarRecetaWhatsApp(
+  r: RecetaPaciente,
+  contexto: ContextoPaciente | undefined,
+  membrete: string,
+  onToast: (m: string) => void,
+) {
+  const nombre = (contexto?.paciente ?? "").split(" ")[0] || "";
+  const lineas = r.medicamentos
+    .map((m) => `• ${m.nombre}${m.cantidad ? ` (x${m.cantidad})` : ""}${m.posologia ? `: ${m.posologia}` : ""}`)
+    .join("\n");
+  const texto = `Hola${nombre ? ` ${nombre}` : ""} 👋 Te enviamos tu receta ${r.numero} de ${contexto?.clinica || "la clínica"}:\n\n${lineas}${r.indicaciones ? `\n\nIndicaciones: ${r.indicaciones}` : ""}${r.vencimiento ? `\n\nVálida hasta el ${formatearFecha(r.vencimiento)}.` : ""}\n\nProfesional: ${r.profesional}${r.matricula ? ` (${r.matricula})` : ""}.`;
+  // 1) Celular: compartir el PDF (WhatsApp aparece en el menú)
+  try {
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (typeof nav.share === "function" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) {
+      const blob = await pdfBlobDeHtml(htmlReceta(r, contexto, membrete), "a5");
+      if (blob) {
+        const archivo = new File([blob], `receta-${r.numero}.pdf`, { type: "application/pdf" });
+        if (nav.canShare?.({ files: [archivo] })) {
+          await nav.share({ files: [archivo], text: texto, title: `Receta ${r.numero}` });
+          return;
+        }
+      }
+    }
+  } catch (e) {
+    if ((e as Error)?.name === "AbortError") return; // canceló el menú de compartir
+  }
+  // 2) Computadora (o sin compartir archivos): WhatsApp con la receta escrita
+  const numero = numeroWhatsApp(contexto?.telefono);
+  window.open(
+    `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+  if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+}
+
 function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
+  const { clinica: clinicaRx } = useSesion();
   const [abierto, setAbierto] = useState(false);
   const [verId, setVerId] = useState<number | null>(null);
   const [enviarId, setEnviarId] = useState<number | null>(null);
@@ -5519,6 +5564,13 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       label="Enviar por correo"
                       onClick={() => setEnviarId(r.id)}
                     />
+                    <BotonMini
+                      icon={MessageCircle}
+                      label="Enviar por WhatsApp"
+                      onClick={() =>
+                        void enviarRecetaWhatsApp(r, { ...contexto, clinica: contexto?.clinica || clinicaRx?.nombre || "" }, membreteHTML(marca, contexto?.clinica || "Clínica"), onToast)
+                      }
+                    />
                   </>
                 )}
                 {r.estado === "Borrador" && (
@@ -5581,6 +5633,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             setVerId(null);
             setEnviarId(recetaVista.id);
           }}
+          onWhatsApp={() =>
+            void enviarRecetaWhatsApp(recetaVista, { ...contexto, clinica: contexto?.clinica || clinicaRx?.nombre || "" }, membreteHTML(marca, contexto?.clinica || "Clínica"), onToast)
+          }
         />
       )}
 

@@ -666,6 +666,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     onToast={show}
                     contexto={{
                       paciente: `${activo.nombre} ${activo.apellido}`.trim(),
+                      telefono: activo.telefono,
                       email: activo.email,
                     }}
                   />

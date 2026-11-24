@@ -389,7 +389,7 @@ export function PacientesAdministracion({
                   : onToast("Tu usuario solo puede consultar")
               }
               onToast={onToast}
-              contexto={{ paciente: nombre, email: paciente.email }}
+              contexto={{ paciente: nombre, email: paciente.email, telefono: paciente.telefono }}
             />
           )}
         </div>

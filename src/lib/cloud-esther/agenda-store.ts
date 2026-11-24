@@ -20,6 +20,10 @@ export type Turno = {
   gabinete: string;
   estado: EstadoTurno;
   notas: string;
+  /** Hora en que el paciente llegó a la clínica (ISO). Mientras no lo atienden, está "en sala". */
+  llegada?: string;
+  /** Hora en que pasó al consultorio (ISO), para saber cuánto esperó. */
+  atendidoEn?: string;
 };
 
 export type NuevaCita = Omit<Turno, "id" | "estado">;

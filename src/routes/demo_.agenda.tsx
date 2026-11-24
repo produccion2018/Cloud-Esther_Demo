@@ -27,6 +27,8 @@ import {
   Sunset,
   MapPin,
   Stethoscope,
+  DoorOpen,
+  Hourglass,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -1063,15 +1065,25 @@ function TurnoCard({
   onEstado,
   onRecordar,
   onEditar,
+  onLlegada,
 }: {
   turno: Turno;
   canalesActivos: string[];
   onEstado: (turno: Turno, estado: EstadoTurno) => void;
   onRecordar: (turno: Turno) => void;
   onEditar: (turno: Turno) => void;
+  onLlegada?: (turno: Turno, llego: boolean) => void;
 }) {
   const accent = ESTADO_ACCENT[turno.estado];
   const activo = turno.estado === "Pendiente" || turno.estado === "Confirmada";
+  const ahora = useAhora();
+  const esHoy = turno.fecha === hoyISO();
+  const enSala = activo && !!turno.llegada;
+  const minSala = turno.llegada ? minutosDesde(turno.llegada, ahora) : 0;
+  const espero =
+    turno.estado === "Atendida" && turno.llegada && turno.atendidoEn
+      ? Math.max(0, Math.round((new Date(turno.atendidoEn).getTime() - new Date(turno.llegada).getTime()) / 60000))
+      : null;
   const { clinica } = useSesion();
   // Recordatorio por WhatsApp con un toque (todos los planes): se abre el WhatsApp de la clínica
   const recordarPorWhatsApp = () => {
@@ -1103,6 +1115,21 @@ function TurnoCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[15px] font-semibold tracking-tight">{turno.paciente}</p>
             <EstadoBadge estado={turno.estado} />
+            {enSala && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tonoEspera(minSala)}`}
+                title="Está en la sala de espera"
+              >
+                <Hourglass className="size-3" />
+                En sala · {textoEspera(minSala)}
+              </span>
+            )}
+            {espero !== null && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <Hourglass className="size-3" />
+                Esperó {espero} min
+              </span>
+            )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="font-medium text-foreground/80">{turno.tratamiento}</span>
@@ -1139,7 +1166,27 @@ function TurnoCard({
 
         {/* Acciones: la principal con texto, el resto como íconos */}
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-          {turno.estado === "Pendiente" && (
+          {/* Recepción: marcar que el paciente llegó (solo turnos de hoy) */}
+          {activo && esHoy && onLlegada && !turno.llegada && (
+            <button
+              type="button"
+              onClick={() => onLlegada(turno, true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-md dark:bg-amber-500/10 dark:text-amber-300"
+            >
+              <DoorOpen className="size-3.5" /> Llegó
+            </button>
+          )}
+          {enSala && onLlegada && (
+            <button
+              type="button"
+              onClick={() => onLlegada(turno, false)}
+              className="rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:bg-primary/5 hover:text-primary"
+              title="Se marcó por error"
+            >
+              Deshacer
+            </button>
+          )}
+          {turno.estado === "Pendiente" && !turno.llegada && (
             <button
               type="button"
               onClick={() => onEstado(turno, "Confirmada")}
@@ -1315,6 +1362,83 @@ function finDeSlot(slot: string) {
   const [h = 0, m = 0] = slot.split(":").map(Number);
   const t = h * 60 + m + 30;
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/* Sala de espera: minutos desde que llegó el paciente (se actualiza solo cada 30 s). */
+function useAhora(cadaMs = 30000) {
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setAhora(Date.now()), cadaMs);
+    return () => window.clearInterval(id);
+  }, [cadaMs]);
+  return ahora;
+}
+function minutosDesde(iso: string, ahora: number) {
+  return Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 60000));
+}
+function textoEspera(min: number) {
+  if (min < 1) return "recién llegó";
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  return `hace ${h} h ${min % 60} min`;
+}
+/* Verde hasta 15 min, ámbar hasta 30, rojo después */
+function tonoEspera(min: number) {
+  if (min > 30) return "border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300";
+  if (min > 15) return "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300";
+  return "border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300";
+}
+
+/* Sala de espera: quién llegó y hace cuánto espera, con "Pasa" para atenderlo */
+function SalaDeEspera({ turnos, onPasa }: { turnos: Turno[]; onPasa: (t: Turno) => void }) {
+  const ahora = useAhora();
+  const enSala = turnos
+    .filter((t) => t.llegada && (t.estado === "Pendiente" || t.estado === "Confirmada"))
+    .sort((a, b) => (a.llegada ?? "").localeCompare(b.llegada ?? ""));
+  if (!enSala.length) return null;
+  return (
+    <div className="mb-4 rounded-2xl border border-amber-300/50 bg-gradient-to-br from-amber-50/80 to-white p-3 dark:from-amber-500/10 dark:to-card">
+      <div className="mb-2 flex items-center gap-2 px-1">
+        <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+          <DoorOpen className="size-3.5" />
+        </span>
+        <p className="text-sm font-semibold tracking-tight">Sala de espera</p>
+        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+          {enSala.length}
+        </span>
+      </div>
+      <ul className="space-y-1.5">
+        {enSala.map((t) => {
+          const min = minutosDesde(t.llegada!, ahora);
+          return (
+            <li
+              key={t.id}
+              className="flex items-center gap-2.5 rounded-xl border border-primary/10 bg-white/90 px-2.5 py-2 dark:bg-card"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{t.paciente}</p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  Turno {t.hora} · {t.odontologo}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${tonoEspera(min)}`}
+              >
+                {min < 1 ? "recién" : `${min} min`}
+              </span>
+              <button
+                type="button"
+                onClick={() => onPasa(t)}
+                className="shrink-0 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                Atendido
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 function horaActual() {
@@ -2266,8 +2390,29 @@ function AgendaInner() {
 
   /* Acciones */
 
+  // Sala de espera: al llegar queda confirmado; al deshacer, vuelve como estaba
+  const marcarLlegada = (t: Turno, llego: boolean) => {
+    setTurnos((prev) =>
+      prev.map((x) => {
+        if (x.id !== t.id) return x;
+        if (!llego) {
+          const { llegada: _l, ...resto } = x;
+          return resto;
+        }
+        return { ...x, llegada: new Date().toISOString(), estado: "Confirmada" };
+      }),
+    );
+    show(llego ? `${t.paciente} llegó: está en la sala de espera` : `${t.paciente}: se quitó la llegada`);
+  };
+
   const cambiarEstado = (t: Turno, estado: EstadoTurno) => {
-    setTurnos((prev) => prev.map((x) => (x.id === t.id ? { ...x, estado } : x)));
+    setTurnos((prev) =>
+      prev.map((x) =>
+        x.id === t.id
+          ? { ...x, estado, ...(estado === "Atendida" && x.llegada ? { atendidoEn: new Date().toISOString() } : {}) }
+          : x,
+      ),
+    );
 
     // Al cancelar: si la recuperación automática está activa y la clínica tiene Automatizaciones,
     // el horario liberado se ofrece a los compatibles de la lista de espera.
@@ -2660,6 +2805,10 @@ function AgendaInner() {
 
                     <div className="my-4 border-t border-primary/10" />
 
+                    {fechaVista === hoy && (
+                      <SalaDeEspera turnos={turnosDia} onPasa={(t) => cambiarEstado(t, "Atendida")} />
+                    )}
+
                     <DiaTimeline
                       fecha={fechaVista}
                       hoy={hoy}
@@ -2674,6 +2823,7 @@ function AgendaInner() {
                           turno={turno}
                           canalesActivos={canalesActivos}
                           onEstado={cambiarEstado}
+                          onLlegada={marcarLlegada}
                           onRecordar={recordarLlamada}
                           onEditar={(t) =>
                             setModal({

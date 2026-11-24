@@ -102,7 +102,12 @@ export const SUCURSALES = ["Sede principal"];
 export const ODONTOLOGOS = TEAM_MEMBERS.filter((m) => m.role === "odontologo").map((m) =>
   `${m.firstName} ${m.lastName}`.trim(),
 );
-export const GABINETES = ["Gabinete 1", "Gabinete 2", "Gabinete 3", "Gabinete 4"];
+/* Consultorios (antes "gabinetes"): el box o sillón donde se atiende el turno. */
+export const GABINETES = ["Consultorio 1", "Consultorio 2", "Consultorio 3", "Consultorio 4"];
+/* Los turnos guardados con el nombre viejo ("Gabinete 2") se muestran como "Consultorio 2". */
+export function nombreConsultorio(g: string) {
+  return (g ?? "").replace(/^Gabinete\b/i, "Consultorio");
+}
 
 /* Clínica real (Etapa 8b): sin sucursales ni odontólogos de ejemplo. La sucursal es la clínica
    y los odontólogos son los que cargue en Equipo. (Se ajusta al abrir las pantallas.) */
@@ -180,7 +185,15 @@ function nombresProlijosAgenda(e: EstadoAgenda): EstadoAgenda {
   const [turnos, a] = arreglarLista(e.turnos, "paciente");
   const [espera, b] = arreglarLista(e.espera, "nombre");
   const [tareas, c] = arreglarLista(e.tareas, "paciente");
-  return a || b || c ? ({ ...e, turnos, espera, tareas } as EstadoAgenda) : e;
+  // "Gabinete N" pasa a llamarse "Consultorio N"
+  let d = false;
+  const turnosFinal = turnos?.map((t) => {
+    const g = nombreConsultorio(t.gabinete);
+    if (g === t.gabinete) return t;
+    d = true;
+    return { ...t, gabinete: g };
+  });
+  return a || b || c || d ? ({ ...e, turnos: turnosFinal, espera, tareas } as EstadoAgenda) : e;
 }
 
 type Actualizar<T> = T | ((prev: T) => T);

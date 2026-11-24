@@ -1278,7 +1278,7 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
                 tratamiento: l.interes,
                 odontologo,
                 sucursal: "Clínica Centro",
-                gabinete: "Gabinete 1",
+                gabinete: "Consultorio 1",
                 estado: "Pendiente",
                 notas: `Lead de ${l.fuente}`,
               },

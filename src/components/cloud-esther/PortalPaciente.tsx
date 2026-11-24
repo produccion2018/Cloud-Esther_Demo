@@ -1782,7 +1782,7 @@ function Turnos({ ctx }: { ctx: Ctx }) {
                   tratamiento: d.tratamiento,
                   odontologo: d.odontologo,
                   sucursal: ctx.paciente.sucursal || "Clínica Centro",
-                  gabinete: "Gabinete 1",
+                  gabinete: "Consultorio 1",
                   estado: "Pendiente",
                   notas: `Pedido desde el portal del paciente${d.notas ? `: ${d.notas}` : ""}`,
                 },

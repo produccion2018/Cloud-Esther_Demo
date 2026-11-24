@@ -63,6 +63,7 @@ import {
   type Tarea,
   type Turno,
   leerProfesionalVisto,
+  nombreConsultorio,
   guardarProfesionalVisto,
 } from "@/lib/cloud-esther/agenda-store";
 import { normalizarBusqueda } from "@/lib/utils";
@@ -625,7 +626,7 @@ function CitaForm({
           <SelectField value={odontologo} onChange={setOdontologo} options={odontologos} />
         </Field>
 
-        <Field label="Gabinete">
+        <Field label="Consultorio (sillón)">
           <SelectField value={gabinete} onChange={setGabinete} options={GABINETES} />
         </Field>
 
@@ -660,7 +661,7 @@ function CitaForm({
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
           className={TEXTAREA}
-          placeholder="Indicaciones para el gabinete o el paciente"
+          placeholder="Indicaciones para el consultorio o el paciente"
         />
       </Field>
 
@@ -1093,7 +1094,7 @@ function TurnoCard({
         >
           <span className="text-[17px] font-bold leading-none tabular-nums">{turno.hora}</span>
           <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider opacity-75">
-            {turno.gabinete.replace("Gabinete", "Gab.")}
+            {nombreConsultorio(turno.gabinete).replace("Consultorio", "Cons.")}
           </span>
         </div>
 
@@ -1309,6 +1310,13 @@ function slotDe(hora: string) {
   return `${h.padStart(2, "0")}:${Number(m) < 30 ? "00" : "30"}`;
 }
 
+/* Fin de una franja de 30 min: "10:30" → "11:00" */
+function finDeSlot(slot: string) {
+  const [h = 0, m = 0] = slot.split(":").map(Number);
+  const t = h * 60 + m + 30;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
 function horaActual() {
   return new Date().toTimeString().slice(0, 5);
 }
@@ -1316,8 +1324,8 @@ function horaActual() {
 type FilaDia =
   | { tipo: "turnos"; slot: string; turnos: Turno[] }
   | { tipo: "bloqueo"; slot: string; bloqueo: Bloqueo; inicio: boolean }
-  | { tipo: "libre"; slot: string }
-  | { tipo: "ocupado"; slot: string }
+  | { tipo: "libre"; slot: string; slots: string[] }
+  | { tipo: "ocupado"; slot: string; hasta: string }
   | { tipo: "pasado"; slot: string; hasta: string };
 
 function DiaTimeline({
@@ -1356,13 +1364,21 @@ function DiaTimeline({
       const prev = filas[filas.length - 1];
       const inicio = !(prev?.tipo === "bloqueo" && prev.bloqueo.id === bloqueo.id);
       filas.push({ tipo: "bloqueo", slot, bloqueo, inicio });
-    } else if (libres.includes(slot)) filas.push({ tipo: "libre", slot });
-    else if (pasado) {
+    } else if (libres.includes(slot)) {
+      // Los horarios libres seguidos van en una sola fila con botones de hora (menos scroll)
+      const prev = filas[filas.length - 1];
+      if (prev?.tipo === "libre") prev.slots.push(slot);
+      else filas.push({ tipo: "libre", slot, slots: [slot] });
+    } else if (pasado) {
       // Los horarios pasados sin actividad se agrupan en una sola fila.
       const prev = filas[filas.length - 1];
       if (prev?.tipo === "pasado") prev.hasta = slot;
       else filas.push({ tipo: "pasado", slot, hasta: slot });
-    } else filas.push({ tipo: "ocupado", slot });
+    } else {
+      const prev = filas[filas.length - 1];
+      if (prev?.tipo === "ocupado") prev.hasta = slot;
+      else filas.push({ tipo: "ocupado", slot, hasta: slot });
+    }
   }
 
   const activos = turnos.filter((t) => t.estado !== "Cancelada").length;
@@ -1458,22 +1474,35 @@ function DiaTimeline({
                     <div className="h-6 rounded-xl bg-[repeating-linear-gradient(135deg,transparent,transparent_8px,rgba(124,58,237,0.05)_8px,rgba(124,58,237,0.05)_16px)]" />
                   ))}
                 {f.tipo === "libre" && (
-                  <button
-                    type="button"
-                    onClick={() => onAgendar(f.slot)}
-                    className="group flex h-9 w-full items-center gap-2 rounded-xl border border-dashed border-transparent px-3 text-[11px] font-semibold text-muted-foreground/70 transition-all hover:border-primary/35 hover:bg-primary/[0.05] hover:text-primary"
-                  >
-                    <span className="size-1.5 rounded-full bg-emerald-500/70" />
-                    Disponible
-                    <span className="ml-auto inline-flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                      <Plus className="size-3" />
-                      Agendar a las {f.slot}
-                    </span>
-                  </button>
+                  <div className="rounded-2xl border border-dashed border-emerald-500/25 bg-emerald-500/[0.035] px-3 py-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                      {f.slots.length > 1
+                        ? `Libre de ${f.slot} a ${finDeSlot(f.slots[f.slots.length - 1]!)}`
+                        : "Disponible"}
+                      <span className="hidden font-medium text-muted-foreground sm:inline">· tocá una hora para agendar</span>
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {f.slots.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => onAgendar(s)}
+                          aria-label={`Agendar a las ${s}`}
+                          className="inline-flex h-7 items-center gap-0.5 rounded-full border border-emerald-500/30 bg-white px-2 text-[11.5px] font-semibold sm:h-8 sm:gap-1 sm:px-3 sm:text-xs tabular-nums text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-primary-foreground dark:bg-card dark:text-emerald-400"
+                        >
+                          <Plus className="hidden size-3 sm:block" />
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {f.tipo === "ocupado" && (
                   <p className="flex h-9 items-center px-3 text-[11px] text-muted-foreground/60">
-                    Sin profesionales disponibles
+                    {f.hasta !== f.slot
+                      ? `Hasta las ${finDeSlot(f.hasta)} · sin profesionales disponibles`
+                      : "Sin profesionales disponibles"}
                   </p>
                 )}
                 {f.tipo === "pasado" && (
@@ -2437,7 +2466,7 @@ function AgendaInner() {
                     </h1>
                     <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                       {agendaAvanzada
-                        ? "Gestioná turnos, disponibilidad, profesionales, gabinetes y lista de espera desde una única agenda."
+                        ? "Gestioná turnos, disponibilidad, profesionales, consultorios y lista de espera desde una única agenda."
                         : "Organizá los turnos del día y de la semana de cada profesional."}
                     </p>
                   </div>
@@ -2559,7 +2588,7 @@ function AgendaInner() {
                         }))
                       }
                       options={GABINETES}
-                      placeholder="Todos los gabinetes"
+                      placeholder="Todos los consultorios"
                     />
 
                     <SelectField
@@ -3088,7 +3117,7 @@ function AgendaInner() {
         {modalCita && (
           <Modal
             title={modalCita.turno ? "Editar turno" : "Nuevo turno"}
-            subtitle="Asigná paciente, odontólogo, gabinete y horario."
+            subtitle="Asigná paciente, odontólogo, consultorio y horario."
             onClose={cerrarModal}
           >
             <CitaForm

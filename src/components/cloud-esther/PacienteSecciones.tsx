@@ -8000,7 +8000,7 @@ function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
                   tratamiento: nuevo.motivo,
                   odontologo: nuevo.profesional,
                   sucursal: nuevo.sucursal || SUCURSALES[0] || "",
-                  gabinete: "Gabinete 1",
+                  gabinete: "Consultorio 1",
                   estado: "Pendiente",
                   notas: "",
                 },

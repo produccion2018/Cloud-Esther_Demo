@@ -218,7 +218,7 @@ export function ProbadorAgente({ usuario: _usuario, onToast }: { usuario: string
       tratamiento: "Consulta general",
       odontologo: slotElegido.odon,
       sucursal: SUCURSALES[0] ?? "Sede principal",
-      gabinete: GABINETES[0] ?? "Gabinete 1",
+      gabinete: GABINETES[0] ?? "Consultorio 1",
       estado: "Confirmada",
       notas: "Agendado por el Agente IA (prueba del probador)",
     };

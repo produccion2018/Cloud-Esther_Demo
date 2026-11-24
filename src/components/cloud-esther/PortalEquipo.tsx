@@ -267,7 +267,7 @@ function seccionesDe(rol: TeamRole): { id: Seccion; label: string; icon: LucideI
       ];
   if (rol !== "asistente") base.push({ id: "pacientes", label: "Pacientes", icon: Users });
   if (rol === "asistente" || rol === "odontologo")
-    base.push({ id: "gabinete", label: "Gabinete", icon: ClipboardCheck });
+    base.push({ id: "gabinete", label: "Consultorio", icon: ClipboardCheck });
   base.push(
     { id: "avisos", label: "Avisos", icon: Bell },
     { id: "perfil", label: "Mi perfil", icon: UserRound },
@@ -1059,7 +1059,7 @@ function AppEquipo({
               ...item("tratamientos", "Tratamientos", Stethoscope, puede("tratamientos")),
               ...item("recetas", "Recetas y órdenes", PillIcon, puede("recetas")),
               ...item("estudios", "Estudios", ScanLine, puede("estudios")),
-              ...item("gabinete", "Gabinete", ClipboardCheck),
+              ...item("gabinete", "Consultorio", ClipboardCheck),
             ],
           },
           {
@@ -1844,7 +1844,7 @@ function NuevaCitaForm({ ctx, onDone }: { ctx: Ctx; onDone: () => void }) {
             tratamiento,
             odontologo,
             sucursal: p?.sucursal || "Clínica Centro",
-            gabinete: "Gabinete 1",
+            gabinete: "Consultorio 1",
             estado: "Pendiente",
             notas: `Cargado desde el portal del equipo por ${nombreDe(ctx.yo)}`,
           },
@@ -2366,13 +2366,13 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
     const sig = hechas.includes(tarea) ? hechas.filter((x) => x !== tarea) : [...hechas, tarea];
     setEquipoPortal("checklist", (prev) => ({ ...prev, [clave]: sig }));
     if (sig.length === CHECKLIST_GABINETE.length) {
-      registrarEventoEquipo(ctx.yo.id, "Gabinete listo", "Completó el checklist del día");
-      ctx.onToast("¡Gabinete listo para atender!");
+      registrarEventoEquipo(ctx.yo.id, "Consultorio listo", "Completó el checklist del día");
+      ctx.onToast("¡Consultorio listo para atender!");
     }
   };
   return (
     <div className="space-y-3">
-      <h1 className="font-display text-xl font-semibold">Gabinete</h1>
+      <h1 className="font-display text-xl font-semibold">Consultorio</h1>
       <Tarjeta>
         <div className="flex items-center justify-between text-sm">
           <span className="font-semibold">Checklist de hoy</span>
@@ -2438,7 +2438,7 @@ function Gabinete({ ctx }: { ctx: Ctx }) {
                 if (ctx.vista) return ctx.onToast("En la vista previa no se envían pedidos.");
                 const detalle = bajos.length
                   ? `Reponer: ${bajos.map((s) => s.nombre).join(", ")}`
-                  : "Revisar insumos del gabinete";
+                  : "Revisar insumos del consultorio";
                 registrarPedidoEquipo(nombreYo, sede, detalle);
                 registrarEventoEquipo(ctx.yo.id, "Pidió reposición", detalle);
                 ctx.onToast("Pedido de reposición enviado a administración");

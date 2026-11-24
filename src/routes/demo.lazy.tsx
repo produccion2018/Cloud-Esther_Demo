@@ -357,7 +357,7 @@ function NuevaCitaForm({
             required
           />
         </Field>
-        <Field label="Gabinete">
+        <Field label="Consultorio (sillón)">
           <SelectField value={gabinete} onChange={setGabinete} options={GABINETES} />
         </Field>
         <Field label="Tratamiento">
@@ -377,7 +377,7 @@ function NuevaCitaForm({
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
           className={TEXTAREA}
-          placeholder="Indicaciones para el gabinete o el paciente"
+          placeholder="Indicaciones para el consultorio o el paciente"
         />
       </Field>
 
@@ -1580,7 +1580,7 @@ function DashboardInner() {
       </div>
 
       {modal === "cita" && (
-        <Modal title="Nuevo turno" subtitle="Asigná paciente, odontólogo, gabinete y horario." onClose={cerrarModal}>
+        <Modal title="Nuevo turno" subtitle="Asigná paciente, odontólogo, consultorio y horario." onClose={cerrarModal}>
           <NuevaCitaForm
             onSubmit={agregarCita}
             onCancel={cerrarModal}

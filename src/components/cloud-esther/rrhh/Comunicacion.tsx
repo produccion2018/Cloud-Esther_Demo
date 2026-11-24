@@ -49,7 +49,7 @@ export function redactarComunicado(tema: string, autor: string) {
   if (/feriado|cierre|cerrad/.test(t))
     return `Les recordamos que la clínica permanecerá cerrada por ${tema.replace(/^cierre (por )?/i, "")}. Revisen sus agendas y reprogramen los turnos de esa fecha con tiempo. Recepción va a avisar a los pacientes por WhatsApp.${firma}`;
   if (/protocolo|bioseg|esteril/.test(t))
-    return `A partir del próximo lunes empieza a regir el nuevo protocolo de ${tema}. Pedimos que todos lo lean y lo apliquen en cada gabinete. Cualquier duda, consúltenla con coordinación.${firma}`;
+    return `A partir del próximo lunes empieza a regir el nuevo protocolo de ${tema}. Pedimos que todos lo lean y lo apliquen en cada consultorio. Cualquier duda, consúltenla con coordinación.${firma}`;
   if (/reuni|capacit|curso/.test(t))
     return `Los invitamos a ${tema}. Es importante contar con la presencia de todo el equipo; si no pueden asistir, avisen por el portal del equipo.${firma}`;
   if (/bienven|ingres|nuev/.test(t))

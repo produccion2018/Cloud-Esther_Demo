@@ -218,7 +218,7 @@ export function responderPaciente(texto: string, e0: EstadoDialogo): Resultado {
       tratamiento: e.motivo || (pac ? "Control" : "Primera consulta"),
       odontologo: op.profesional,
       sucursal: op.sucursal,
-      gabinete: "Gabinete 1",
+      gabinete: "Consultorio 1",
       estado: "Confirmada",
       notas: "Agendado por Esther (Contact Center IA)",
     };

@@ -939,14 +939,14 @@ function ConfigForm({
             >
               <span className="text-[13px] font-medium">{s}</span>
               <label className="text-[11px] text-muted-foreground">
-                Gabinetes
+                Consultorios
                 <input
                   type="number"
                   min={0}
                   value={c.capacidad[s]?.gabinetes ?? 1}
                   onChange={(e) => setCap(s, "gabinetes", Number(e.target.value))}
                   className={`${INPUT} h-8`}
-                  aria-label={`Gabinetes de ${s}`}
+                  aria-label={`Consultorios de ${s}`}
                 />
               </label>
               <label className="text-[11px] text-muted-foreground">

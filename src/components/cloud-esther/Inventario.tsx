@@ -1009,7 +1009,7 @@ function Stock({ ctx, onEditar }: { ctx: Ctx; onEditar: (i: Insumo) => void }) {
                         insumoId: i.id,
                         tipo: "Salida",
                         cantidad: -1,
-                        motivo: "Uso en gabinete",
+                        motivo: "Uso en consultorio",
                         usuario: ctx.usuario,
                         referencia: "",
                       });
@@ -1495,7 +1495,7 @@ function MovimientoForm({
   const ins = ctx.insumos.find((i) => i.id === insumoId);
   const MOTIVOS: Record<TipoMovimiento, string[]> = {
     Entrada: ["Compra a proveedor", "Devolución", "Muestra gratis"],
-    Salida: ["Uso en gabinete", "Tratamiento de paciente", "Uso en esterilización"],
+    Salida: ["Uso en consultorio", "Tratamiento de paciente", "Uso en esterilización"],
     Ajuste: ["Conteo físico", "Error de carga"],
     Transferencia: ["Falta en la sede destino", "Redistribución de stock"],
     Merma: ["Vencido", "Roto o dañado", "Contaminado"],

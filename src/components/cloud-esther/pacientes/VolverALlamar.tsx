@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CalendarPlus, Check, ChevronDown, PhoneCall, Settings2, Sparkles, Zap } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, PhoneCall, Settings2, BrainCircuit, Zap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { PLANTILLAS, setN8n, storeN8n } from "@/lib/cloud-esther/n8n-store";
@@ -233,7 +233,7 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
                 automatico ? "bg-gradient-to-br from-emerald-500 to-teal-600" : "bg-gradient-to-br from-primary to-fuchsia-500"
               }`}
             >
-              {automatico ? <Zap className="size-4" /> : <Sparkles className="size-4" />}
+              {automatico ? <Zap className="size-4" /> : <BrainCircuit className="size-4" />}
             </span>
             <div className="min-w-0 flex-1 basis-48">
               <p className="text-sm font-semibold">

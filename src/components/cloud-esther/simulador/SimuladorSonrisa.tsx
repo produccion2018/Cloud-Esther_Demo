@@ -21,7 +21,7 @@ import {
   Smile,
   SplitSquareHorizontal,
   Trash2,
-  Wand2,
+  Palette,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -59,7 +59,7 @@ type Estado = "vacio" | "lista" | "procesando" | "resultado" | "error";
 const ICONO: Record<TratamientoEstetico, LucideIcon> = {
   blanqueamiento: CaraEsther,
   carillas: Smile,
-  diseno: Wand2,
+  diseno: Palette,
   alineacion: Columns2,
   forma: Brush,
   restauraciones: ShieldCheck,

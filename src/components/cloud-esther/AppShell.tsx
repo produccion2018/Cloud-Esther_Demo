@@ -1141,7 +1141,7 @@ type AvisoParaClinica = {
 type AccesoSoporteClinica = { id: string; fecha: string; quien: string; motivo: string; hasta: string };
 
 const ESTILO_AVISO: Record<AvisoParaClinica["tipo"], { icono: string; clase: string }> = {
-  novedad: { icono: "✨", clase: "border-primary/25 bg-primary/[0.07] text-foreground" },
+  novedad: { icono: "📢", clase: "border-primary/25 bg-primary/[0.07] text-foreground" },
   mantenimiento: {
     icono: "🛠️",
     clase: "border-amber-500/35 bg-amber-500/10 text-amber-950 dark:text-amber-100",

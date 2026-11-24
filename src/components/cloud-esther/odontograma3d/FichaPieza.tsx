@@ -8,7 +8,7 @@ import {
   History,
   ImagePlus,
   Mic,
-  Sparkles,
+  BrainCircuit,
   Pencil,
   Plus,
   ScanSearch,
@@ -1040,7 +1040,7 @@ function SeccionNotas({
                   onClick={() => void armarConIA(v.transcripcion)}
                   className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-primary/20 px-2 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
                 >
-                  <Sparkles className="size-3" /> {armando ? "Armando…" : "Armar nota clínica con Esther"}
+                  <BrainCircuit className="size-3" /> {armando ? "Armando…" : "Armar nota clínica con Esther"}
                 </button>
               )}
             </>

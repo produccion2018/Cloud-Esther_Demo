@@ -18,7 +18,7 @@ import {
   Repeat2,
   Rocket,
   ShieldCheck,
-  Star,
+  Sprout,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -830,7 +830,7 @@ function MedioForm({
 
 /** Ícono y degradé por nivel de plan (de menor a mayor), para darle jerarquía visual. */
 const TIER_PLAN: Record<PlanId, { Icono: typeof Crown; grad: string }> = {
-  inicial: { Icono: Star, grad: "from-violet-300 to-violet-400" },
+  inicial: { Icono: Sprout, grad: "from-violet-300 to-violet-400" },
   profesional: { Icono: Zap, grad: "from-violet-400 to-violet-500" },
   avanzada: { Icono: Rocket, grad: "from-violet-500 to-fuchsia-500" },
   grupo: { Icono: Crown, grad: "from-[#5b21b6] to-[#7c3aed]" },

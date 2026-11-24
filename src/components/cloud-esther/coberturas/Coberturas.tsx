@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
-  Wand2,
+  Calculator,
 } from "lucide-react";
 
 import {
@@ -426,7 +426,7 @@ function Nomenclador({ editable, onToast }: { editable: boolean; onToast: (m: st
         {editable && (
           <>
             <button type="button" onClick={desdeAranceles} className="btn-ce-outline !min-h-10">
-              <Wand2 className="size-4" /> Desde mis aranceles
+              <Calculator className="size-4" /> Desde mis aranceles
             </button>
             <button type="button" onClick={() => archivo.current?.click()} className="btn-ce-outline !min-h-10">
               <Upload className="size-4" /> Importar

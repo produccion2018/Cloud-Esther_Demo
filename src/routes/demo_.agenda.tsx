@@ -28,6 +28,7 @@ import {
   MapPin,
   Stethoscope,
   DoorOpen,
+  Repeat,
   Hourglass,
   ChevronLeft,
   ChevronRight,
@@ -65,6 +66,8 @@ import {
   type Tarea,
   type Turno,
   leerProfesionalVisto,
+  fechasDeSerie,
+  type Repeticion,
   tiemposAgenda,
   horariosDelDia,
   aMinutos,
@@ -655,10 +658,15 @@ function CitaForm({
   inicial?: Turno | undefined;
   prefill?: Partial<NuevaCita> | undefined;
   pacientes: string[];
-  onSubmit: (c: NuevaCita) => void;
+  onSubmit: (c: NuevaCita, repetir?: Repeticion) => void;
   onCancel: () => void;
 }) {
   const { odontologos, duracion: duracionHabitual } = useOpcionesAgenda();
+  // Turnos repetidos (solo al crear): cada N días/semanas/meses, X veces. A criterio de la clínica.
+  const [repetir, setRepetir] = useState(false);
+  const [cada, setCada] = useState("1");
+  const [unidad, setUnidad] = useState<Repeticion["unidad"]>("meses");
+  const [veces, setVeces] = useState("6");
   const [duracion, setDuracion] = useState(String(inicial?.duracion ?? prefill?.duracion ?? duracionHabitual));
   const [paciente, setPaciente] = useState(inicial?.paciente ?? prefill?.paciente ?? "");
   const [sucursal, setSucursal] = useState(inicial?.sucursal ?? prefill?.sucursal ?? SUCURSALES[0]);
@@ -673,6 +681,16 @@ function CitaForm({
   const [hora, setHora] = useState(inicial?.hora ?? prefill?.hora ?? "");
   const [notas, setNotas] = useState(inicial?.notas ?? "");
 
+  const repeticion: Repeticion | undefined =
+    !inicial && repetir
+      ? {
+          cada: Math.min(365, Math.max(1, Math.round(Number(cada) || 1))),
+          unidad,
+          veces: Math.min(52, Math.max(2, Math.round(Number(veces) || 2))),
+        }
+      : undefined;
+  const fechasSerie = repeticion && fecha ? fechasDeSerie(fecha, repeticion) : [];
+
   const enviar = (e: FormEvent) => {
     e.preventDefault();
 
@@ -686,7 +704,7 @@ function CitaForm({
       hora,
       notas: notas.trim(),
       duracion: Math.min(480, Math.max(5, Math.round(Number(duracion) || duracionHabitual))),
-    });
+    }, repeticion);
   };
 
   return (
@@ -784,6 +802,83 @@ function CitaForm({
           </p>
         )}
       </Field>
+
+      {!inicial && (
+        <div className="rounded-2xl border border-primary/12 bg-primary/[0.03] p-3">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span>
+              <span className="block text-sm font-semibold">Repetir este turno</span>
+              <span className="block text-[11px] text-muted-foreground">
+                Para controles, ortodoncia o tratamientos en varias sesiones
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={repetir}
+              onChange={(e) => setRepetir(e.target.checked)}
+              className="size-5 accent-[var(--primary)]"
+              aria-label="Repetir este turno"
+            />
+          </label>
+          {repetir && (
+            <div className="mt-3 space-y-3">
+              <div className="grid max-w-sm gap-2 text-sm" data-movil="1col">
+                <div className="flex items-center gap-2">
+                  <span className="w-20 shrink-0 text-muted-foreground">Cada</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={365}
+                    value={cada}
+                    onChange={(e) => setCada(e.target.value)}
+                    className={`${INPUT_SM} !w-20`}
+                    aria-label="Cada cuánto"
+                  />
+                  <Seleccion
+                    aria-label="Unidad"
+                    value={unidad}
+                    onChange={(e) => setUnidad(e.target.value as Repeticion["unidad"])}
+                    className={`${INPUT_SM} min-w-0 flex-1`}
+                  >
+                    <option value="dias">días</option>
+                    <option value="semanas">semanas</option>
+                    <option value="meses">meses</option>
+                  </Seleccion>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-20 shrink-0 text-muted-foreground">Cantidad</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={2}
+                    max={52}
+                    value={veces}
+                    onChange={(e) => setVeces(e.target.value)}
+                    className={`${INPUT_SM} !w-20`}
+                    aria-label="Cantidad de turnos"
+                  />
+                  <span className="text-muted-foreground">turnos</span>
+                </div>
+              </div>
+              {fechasSerie.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {fechasSerie.map((f, i) => (
+                    <span
+                      key={f}
+                      className="rounded-full border border-primary/15 bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-foreground/80 dark:bg-card"
+                    >
+                      {i + 1}. {formatearFecha(f)}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">Elegí la fecha del primer turno para ver las fechas.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <Field label="Notas">
         <textarea
@@ -1255,6 +1350,15 @@ function TurnoCard({
               >
                 <Hourglass className="size-3" />
                 En sala · {textoEspera(minSala)}
+              </span>
+            )}
+            {turno.serie && turno.serieN && turno.serieTotal && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                title="Turno repetido"
+              >
+                <Repeat className="size-3" />
+                {turno.serieN} de {turno.serieTotal}
               </span>
             )}
             {espero !== null && (
@@ -2589,33 +2693,71 @@ function AgendaInner() {
     show(`${t.paciente}: ${estado.toLowerCase()}`);
   };
 
-  const guardarCita = (c: NuevaCita) => {
-    const editando = modal?.tipo === "cita" ? modal.turno : undefined;
-
+  /* Motivo por el que no se puede dar ese turno (o null si está libre) */
+  const conflictoCita = (c: NuevaCita, excluirId?: number): string | null => {
     // Se superpone con otro turno del mismo profesional (según la duración de cada uno)
     const c0 = aMinutos(c.hora);
     const c1 = c0 + (c.duracion ?? duracionHabitual);
     const choqueTurno = turnos.find(
       (t) =>
-        t.id !== editando?.id &&
+        t.id !== excluirId &&
         t.estado !== "Cancelada" &&
         t.fecha === c.fecha &&
         t.odontologo === c.odontologo &&
         turnoSolapa(t, c0, c1, duracionHabitual),
     );
-
     if (choqueTurno) {
       const fin = aHora(aMinutos(choqueTurno.hora) + (choqueTurno.duracion ?? duracionHabitual));
-      show(`${c.odontologo} ya tiene un turno de ${choqueTurno.hora} a ${fin}`);
-      return;
+      return `${c.odontologo} ya tiene un turno de ${choqueTurno.hora} a ${fin}`;
     }
-
     const choqueBloqueo = bloqueos.some(
       (b) => b.fecha === c.fecha && c0 < aMinutos(b.hasta) && c1 > aMinutos(b.desde),
     );
+    return choqueBloqueo ? "Ese horario está bloqueado" : null;
+  };
 
-    if (choqueBloqueo) {
-      show("Ese horario está bloqueado");
+  const guardarCita = (c: NuevaCita, repetir?: Repeticion) => {
+    const editando = modal?.tipo === "cita" ? modal.turno : undefined;
+
+    // Serie de turnos repetidos: se crean los que están libres y se avisa cuáles no
+    if (!editando && repetir) {
+      const fechas = fechasDeSerie(c.fecha, repetir);
+      const serie = `s${Date.now()}`;
+      const base = Date.now();
+      const nuevos: Turno[] = [];
+      const salteados: string[] = [];
+      fechas.forEach((f, i) => {
+        const cf = { ...c, fecha: f };
+        if (conflictoCita(cf)) salteados.push(formatearFecha(f));
+        else
+          nuevos.push({
+            ...cf,
+            id: base + i,
+            estado: "Pendiente",
+            serie,
+            serieN: i + 1,
+            serieTotal: fechas.length,
+          });
+      });
+      if (!nuevos.length) {
+        show("Ninguna fecha está libre a esa hora. Probá otro horario.");
+        return;
+      }
+      setTurnos((prev) => [...prev, ...nuevos]);
+      show(
+        salteados.length
+          ? `Se crearon ${nuevos.length} de ${fechas.length} turnos. Ocupado: ${salteados.join(", ")}`
+          : `Se crearon ${nuevos.length} turnos para ${c.paciente}`,
+      );
+      const esperaId = modal?.tipo === "cita" ? modal.esperaId : undefined;
+      if (esperaId) setEspera((prev) => prev.filter((e) => e.id !== esperaId));
+      cerrarModal();
+      return;
+    }
+
+    const motivo = conflictoCita(c, editando?.id);
+    if (motivo) {
+      show(motivo);
       return;
     }
 

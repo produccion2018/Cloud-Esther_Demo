@@ -26,7 +26,30 @@ export type Turno = {
   atendidoEn?: string;
   /** Minutos que dura el turno (si falta, la duración habitual de la clínica). */
   duracion?: number;
+  /** Turnos repetidos (p. ej. ortodoncia cada 30 días): misma serie, número y total. */
+  serie?: string;
+  serieN?: number;
+  serieTotal?: number;
 };
+
+export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };
+/* Fechas de una serie a partir de la primera (incluida). Los meses respetan el día (31 → último día). */
+export function fechasDeSerie(desde: string, r: Repeticion): string[] {
+  const [y = 2000, m = 1, d = 1] = desde.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < r.veces; i++) {
+    let f: Date;
+    if (r.unidad === "meses") {
+      const mes = m - 1 + i * r.cada;
+      const ultimo = new Date(y, mes + 1, 0).getDate();
+      f = new Date(y, mes, Math.min(d, ultimo));
+    } else {
+      f = new Date(y, m - 1, d + i * r.cada * (r.unidad === "semanas" ? 7 : 1));
+    }
+    out.push(`${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`);
+  }
+  return out;
+}
 
 /* Tiempos de la agenda: los define cada clínica a su criterio (profesionales o administración). */
 export type AjustesAgenda = {

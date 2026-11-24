@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import {
   AlertTriangle,
   CalendarCheck,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Clock3,
   Droplets,
@@ -106,6 +108,11 @@ export function NavCarpeta({
     ItemCarpeta
   >;
   const saldo = saldoCuenta(datos);
+  // Celular: en vez de una fila que se desliza hacia la derecha, un botón con la sección actual
+  // que abre la lista vertical agrupada (igual que en la computadora)
+  const [abiertaMovil, setAbiertaMovil] = useState(false);
+  const actual = porId[activa];
+  const IconoActual = actual?.icon;
   return (
     <nav
       aria-label="Secciones de la carpeta"
@@ -115,13 +122,26 @@ export function NavCarpeta({
         <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/70">
           Carpeta del paciente
         </p>
-        <div className="flex gap-1 overflow-x-auto md:block md:space-y-3 md:overflow-visible">
+        <button
+          type="button"
+          onClick={() => setAbiertaMovil((v) => !v)}
+          aria-expanded={abiertaMovil}
+          className="flex w-full items-center gap-2.5 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 px-2.5 py-2 text-left text-[14px] font-semibold text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)] md:hidden"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/20">
+            {IconoActual && <IconoActual className="size-3.5" />}
+          </span>
+          <span className="min-w-0 flex-1 truncate">{actual?.label ?? "Secciones"}</span>
+          <span className="shrink-0 text-[11px] font-medium text-white/85">{abiertaMovil ? "Cerrar" : "Cambiar"}</span>
+          <ChevronDown className={`size-4 shrink-0 transition ${abiertaMovil ? "rotate-180" : ""}`} />
+        </button>
+        <div className={`${abiertaMovil ? "mt-2 block" : "hidden"} space-y-2 md:mt-0 md:block md:space-y-3`}>
           {GRUPOS.map((g) => (
-            <div key={g.titulo} className="flex shrink-0 gap-1 md:block">
-              <p className="hidden px-2 pb-1 pt-2 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80 md:block">
+            <div key={g.titulo}>
+              <p className="px-2 pb-1 pt-2 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
                 {g.titulo}
               </p>
-              <div className="flex gap-1 md:flex-col md:gap-0.5">
+              <div className="grid grid-cols-2 gap-1 md:flex md:flex-col md:gap-0.5" data-movil="1col">
                 {g.ids
                   .map((id) => porId[id])
                   .filter(Boolean)
@@ -134,9 +154,12 @@ export function NavCarpeta({
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => onElegir(s.id)}
+                        onClick={() => {
+                          onElegir(s.id);
+                          setAbiertaMovil(false);
+                        }}
                         aria-current={on ? "page" : undefined}
-                        className={`group relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:pointer-events-none disabled:opacity-50 ${
+                        className={`group relative flex shrink-0 items-center gap-2 rounded-xl px-2 py-2 md:gap-2.5 md:px-2.5 text-left text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:pointer-events-none disabled:opacity-50 ${
                           on
                             ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-[0_10px_22px_-12px_rgba(124,58,237,0.9)]"
                             : "text-foreground/70 hover:bg-card hover:text-foreground hover:shadow-[0_6px_16px_-12px_rgba(124,58,237,0.5)]"
@@ -151,7 +174,7 @@ export function NavCarpeta({
                         >
                           <Icon className="size-3.5" />
                         </span>
-                        <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                        <span className="min-w-0 flex-1 text-[12.5px] leading-tight md:truncate md:text-[13px]">{s.label}</span>
                         {alerta ? (
                           <span
                             className={`size-2 rounded-full ${on ? "bg-white" : "bg-rose-500"}`}

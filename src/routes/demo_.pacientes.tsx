@@ -1346,6 +1346,24 @@ function PacientesInner() {
   const [filtroSucursal, setFiltroSucursal] =
     useState("");
 
+  // Orden y obra social (se recuerdan mientras dura la sesión)
+  const [orden, setOrdenState] = useState<string>(() => {
+    try {
+      return (typeof window !== "undefined" && sessionStorage.getItem("cloud-esther:pacientes-orden")) || "A a Z";
+    } catch {
+      return "A a Z";
+    }
+  });
+  const setOrden = (v: string) => {
+    setOrdenState(v);
+    try {
+      sessionStorage.setItem("cloud-esther:pacientes-orden", v);
+    } catch {
+      /* nada */
+    }
+  };
+  const [filtroObra, setFiltroObra] = useState("");
+
   const cerrarModal = () =>
     setModal(null);
 
@@ -1370,19 +1388,63 @@ function PacientesInner() {
           .replace(/\D/g, "")
           .includes(qDigitos)));
 
-  const filtrados = pacientes.filter(
-    (p) =>
-      coincide(p) &&
-      (!filtroEstado ||
-        p.estado === filtroEstado) &&
-      (!filtroSucursal ||
-        p.sucursal === filtroSucursal),
+  const etiquetaCobertura = (p: Paciente) =>
+    !p.obraSocial || p.obraSocial.startsWith("No aplica") ? "Particular" : p.obraSocial;
+  const OBRAS = Array.from(new Set(pacientes.map(etiquetaCobertura))).sort((a, b) =>
+    a === "Particular" ? -1 : b === "Particular" ? 1 : a.localeCompare(b),
   );
+
+  // Última visita atendida y próximo turno de cada paciente (para ordenar)
+  const visitas = new Map<string, { ultima: string; proximo: string }>();
+  for (const t of turnosAgenda) {
+    if (t.estado === "Cancelada") continue;
+    const k = normalizarBusqueda(t.paciente);
+    const v = visitas.get(k) ?? { ultima: "", proximo: "" };
+    if (t.estado === "Atendida" && t.fecha <= hoyAgenda && t.fecha > v.ultima) v.ultima = t.fecha;
+    const cuando = `${t.fecha} ${t.hora}`;
+    if (t.fecha >= hoyAgenda && t.estado !== "Atendida" && t.estado !== "Ausente" && (!v.proximo || cuando < v.proximo))
+      v.proximo = cuando;
+    visitas.set(k, v);
+  }
+  const visitaDe = (p: Paciente) => visitas.get(normalizarBusqueda(`${p.nombre} ${p.apellido}`));
+  const porNombre = (a: Paciente, b: Paciente) =>
+    `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`, "es", { sensitivity: "base" });
+
+  const filtrados = pacientes
+    .filter(
+      (p) =>
+        coincide(p) &&
+        (!filtroEstado || p.estado === filtroEstado) &&
+        (!filtroSucursal || p.sucursal === filtroSucursal) &&
+        (!filtroObra || etiquetaCobertura(p) === filtroObra),
+    )
+    .sort((a, b) => {
+      switch (orden) {
+        case "Z a A":
+          return porNombre(b, a);
+        case "Últimos cargados":
+          return b.id - a.id;
+        case "Hace más que no vienen": {
+          // Primero los que hace más que no vienen; los que nunca vinieron, al final
+          const ua = visitaDe(a)?.ultima || "9999";
+          const ub = visitaDe(b)?.ultima || "9999";
+          return ua.localeCompare(ub) || porNombre(a, b);
+        }
+        case "Próximo turno": {
+          const pa = visitaDe(a)?.proximo || "9999";
+          const pb = visitaDe(b)?.proximo || "9999";
+          return pa.localeCompare(pb) || porNombre(a, b);
+        }
+        default:
+          return porNombre(a, b);
+      }
+    });
 
   const hayFiltros = Boolean(
     q ||
       filtroEstado ||
-      filtroSucursal,
+      filtroSucursal ||
+      filtroObra,
   );
 
   const cantidadActivos = pacientes.filter(
@@ -1700,8 +1762,8 @@ function PacientesInner() {
               {/* Filtros */}
 
               <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.025] p-2.5 shadow-inner shadow-primary/[0.025]">
-                <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1.5fr)_1fr_1fr]">
-                  <div className="relative">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="relative sm:col-span-2 lg:col-span-4">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
 
                     <input
@@ -1733,6 +1795,19 @@ function PacientesInner() {
                     options={SUCURSALES}
                     placeholder="Todas las sucursales"
                   />
+
+                  <SelectField
+                    value={filtroObra}
+                    onChange={setFiltroObra}
+                    options={OBRAS}
+                    placeholder="Todas las coberturas"
+                  />
+
+                  <SelectField
+                    value={orden}
+                    onChange={setOrden}
+                    options={["A a Z", "Z a A", "Últimos cargados", "Hace más que no vienen", "Próximo turno"]}
+                  />
                 </div>
 
                 {hayFiltros && (
@@ -1741,6 +1816,7 @@ function PacientesInner() {
                       setBusqueda("");
                       setFiltroEstado("");
                       setFiltroSucursal("");
+                      setFiltroObra("");
                     }}
                     className="px-1 pt-2 text-xs font-semibold text-primary hover:underline"
                   >

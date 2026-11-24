@@ -41,6 +41,7 @@ import { cargarTratamientos, registrarCambio } from "@/lib/odontogram/historial"
 import { RadiografiasPanel } from "./RadiografiasPanel";
 import { leerRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { FichaPieza } from "@/components/cloud-esther/odontograma3d/FichaPieza";
+import { PresupuestoDesdeOdontograma } from "@/components/cloud-esther/odontograma3d/PresupuestoDesdeOdontograma";
 import { Cargando3D, Limite3D } from "@/components/odontogram/Carga3D";
 import { HistorialEvolucion } from "@/components/odontogram/HistorialEvolucion";
 import { ImagenesClinicas } from "@/components/odontogram/ImagenesClinicas";
@@ -171,6 +172,9 @@ function Odontograma2DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
         onToast={onToast}
         onSelectTooth={setFdiSeleccionado}
       />
+
+      {/* Lo marcado (caries, fracturas, extracciones) y lo planificado → presupuesto */}
+      <PresupuestoDesdeOdontograma pacienteId={pacienteId} clavePaciente={clavePaciente} chart3D={null} onToast={onToast} />
 
       <ImagenesClinicas
         pacienteId={clavePaciente}
@@ -324,6 +328,10 @@ function Odontograma3DModulo({ pacienteId, pacienteNombre, onToast }: Props) {
           ) : null
         }
       />
+
+      {herramienta === "odontograma" && (
+        <PresupuestoDesdeOdontograma pacienteId={pacienteId} clavePaciente={clavePaciente} chart3D={chart} onToast={onToast} />
+      )}
 
       {herramienta === "rayosx" || herramienta === "sonrisa" ? (
         !tieneIA ? (

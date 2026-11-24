@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FlaskConical,
   ListTodo,
+  PhoneCall,
   PackageMinus,
   ReceiptText,
   type LucideIcon,
@@ -18,6 +19,7 @@ import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { storeInventario } from "@/lib/cloud-esther/inventario-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
+import { pacientesParaLlamar, textoTiempo } from "@/components/cloud-esther/pacientes/VolverALlamar";
 
 /* Ubicación: src/components/cloud-esther/dashboard/PendientesHoy.tsx
    PENDIENTES DE HOY (Dashboard, demo y clínica): en una sola tarjeta, lo que hay que atender hoy.
@@ -51,7 +53,7 @@ const lista = (xs: string[], max = 3) => (xs.length > max ? [...xs.slice(0, max)
 
 export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
   const { plan } = useCloudEsther();
-  const { turnos } = storeAgenda.usar();
+  const { turnos, ajustes } = storeAgenda.usar();
   const { pacientes } = usePacientes();
   const registros = useTodosLosRegistros();
   const { insumos } = storeInventario.usar();
@@ -102,6 +104,21 @@ export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
         ir: "/demo/comunicaciones",
         accion: "Saludar",
       });
+
+    // 2b) Para volver a llamar (todos los planes): no vienen hace X meses y no tienen turno
+    if (!profesional) {
+      const llamar = pacientesParaLlamar(pacientes, turnos, ajustes).filter((x) => !x.avisado);
+      if (llamar.length)
+        out.push({
+          id: "volver",
+          icon: PhoneCall,
+          tono: "from-fuchsia-500 to-primary",
+          titulo: `${llamar.length} paciente${llamar.length > 1 ? "s" : ""} para volver a llamar`,
+          detalle: lista(llamar.map((x) => `${x.p.nombre} ${x.p.apellido} · hace ${textoTiempo(x.sin)}`)),
+          ir: "/demo/pacientes",
+          accion: "Invitar",
+        });
+    }
 
     // 3) Presupuestos enviados sin respuesta (3 días o más)
     if (tiene("presupuestos")) {
@@ -159,7 +176,7 @@ export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turnos, pacientes, registros, insumos, plan, profesional]);
+  }, [turnos, pacientes, registros, insumos, plan, profesional, ajustes]);
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-primary/12 bg-card p-4 shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)] sm:p-5">

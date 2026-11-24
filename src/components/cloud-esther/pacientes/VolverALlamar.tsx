@@ -6,8 +6,8 @@ import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { PLANTILLAS, setN8n, storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
-import { setAjustesAgendaStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
-import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { setAjustesAgendaStore, storeAgenda, type AjustesAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { numeroWhatsApp } from "@/lib/clinica/whatsapp";
 
@@ -30,11 +30,39 @@ function mesesEntre(desde: string, hasta: string) {
   const [a2 = 0, m2 = 0, d2 = 0] = hasta.split("-").map(Number);
   return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
 }
-function textoTiempo(meses: number) {
+export function textoTiempo(meses: number) {
   if (meses < 12) return `${meses} ${meses === 1 ? "mes" : "meses"}`;
   const a = Math.floor(meses / 12);
   const r = meses % 12;
   return `${a} ${a === 1 ? "año" : "años"}${r ? ` y ${r} ${r === 1 ? "mes" : "meses"}` : ""}`;
+}
+
+/* Cálculo compartido (Pacientes, Dashboard y el recordatorio diario de todos los planes) */
+export function pacientesParaLlamar(
+  pacientes: Paciente[],
+  turnos: Turno[],
+  ajustes: AjustesAgenda | undefined,
+): { p: Paciente; ultima: string; sin: number; avisado: string }[] {
+  const hoy = hoyISO();
+  const meses = Math.min(60, Math.max(1, Math.round(ajustes?.recallMeses ?? 6)));
+  const avisados = ajustes?.recallAvisados ?? {};
+  return pacientes
+    .filter((p) => p.estado === "Activo")
+    .flatMap((p) => {
+      const nombre = `${p.nombre} ${p.apellido}`.trim().toLowerCase();
+      const suyos = turnos.filter((t) => t.paciente.trim().toLowerCase() === nombre);
+      if (suyos.some((t) => t.fecha >= hoy && t.estado !== "Cancelada")) return [];
+      const ultima = suyos
+        .filter((t) => t.estado === "Atendida" && t.fecha <= hoy)
+        .map((t) => t.fecha)
+        .sort()
+        .pop();
+      if (!ultima) return [];
+      const sin = mesesEntre(ultima, hoy);
+      if (sin < meses) return [];
+      return [{ p, ultima, sin, avisado: avisados[String(p.id)] ?? "" }];
+    })
+    .sort((a, b) => b.sin - a.sin);
 }
 
 export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
@@ -88,24 +116,7 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
     onToast("Listo: los pacientes para volver a llamar se invitan solos por WhatsApp");
   };
 
-  const lista = useMemo(() => {
-    const hoy = hoyISO();
-    return pacientes
-      .filter((p) => p.estado === "Activo")
-      .map((p) => {
-        const nombre = `${p.nombre} ${p.apellido}`.trim().toLowerCase();
-        const suyos = turnos.filter((t) => t.paciente.trim().toLowerCase() === nombre);
-        const tieneTurno = suyos.some((t) => t.fecha >= hoy && t.estado !== "Cancelada");
-        const ultima = suyos
-          .filter((t) => t.estado === "Atendida" && t.fecha <= hoy)
-          .map((t) => t.fecha)
-          .sort()
-          .pop();
-        return { p, ultima, tieneTurno, sin: ultima ? mesesEntre(ultima, hoy) : 0 };
-      })
-      .filter((x) => x.ultima && !x.tieneTurno && x.sin >= meses)
-      .sort((a, b) => b.sin - a.sin);
-  }, [pacientes, turnos, meses]);
+  const lista = useMemo(() => pacientesParaLlamar(pacientes, turnos, ajustes), [pacientes, turnos, ajustes]);
 
   const pendientes = lista.filter((x) => !avisados[String(x.p.id)]);
   const yaAvisados = lista.filter((x) => avisados[String(x.p.id)]);
@@ -226,14 +237,14 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
             </span>
             <div className="min-w-0 flex-1 basis-48">
               <p className="text-sm font-semibold">
-                {automatico ? "Automático activado" : "Que se haga solo"}
+                {automatico ? "Automático activado" : autoDisponible ? "Que se haga solo" : "Te lo recordamos todos los días"}
               </p>
               <p className="text-[11.5px] leading-snug text-muted-foreground">
                 {automatico
                   ? `Esther los invita sola por WhatsApp al cumplir ${textoTiempo(meses)} sin venir (una vez por período). Si no responden, queda una tarea para llamarlos.`
                   : autoDisponible
                     ? "Esther invita sola por WhatsApp a cada paciente cuando cumple el tiempo sin venir. Nadie tiene que acordarse."
-                    : "Con el módulo Automatizaciones, Esther los invita sola por WhatsApp sin que nadie tenga que hacer nada."}
+                    : "Cada día te avisamos en Notificaciones y en el Inicio a quién invitar; el WhatsApp sale con un toque. Con Automatizaciones, Esther los invita sola."}
               </p>
             </div>
             {autoDisponible ? (

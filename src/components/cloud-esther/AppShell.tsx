@@ -1,3 +1,4 @@
+import { useRecordatoriosBasicos } from "@/lib/clinica/recordatorios-basicos";
 import { useEffect, useId, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
@@ -1303,6 +1304,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // automatizaciones (tareas, avisos, seguimientos) se guarda en la Agenda y en Notificaciones
   useSincronizarAutomatizaciones();
   useBandejaAutomatizaciones();
+  // Recordatorios básicos de todos los planes (una vez por día, en Notificaciones)
+  useRecordatoriosBasicos();
   // Las sucursales (sedes) salen de lo que cargó el dueño en Configuración. Si no cargó ninguna,
   // la sede es el nombre de la clínica. Vale para el demo y para la clínica real.
   ajustarCatalogosClinica(

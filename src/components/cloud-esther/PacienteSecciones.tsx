@@ -1,3 +1,4 @@
+import { ElegirPlantilla, fechaDesdeTexto } from "@/components/cloud-esther/pacientes/PlantillasEvolucion";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
@@ -1866,6 +1867,16 @@ function EvolucionForm({
 
   return (
     <form onSubmit={enviar} className="space-y-2.5">
+      <ElegirPlantilla
+        actual={{ motivo, detalle }}
+        onUsar={(p) => {
+          setMotivo(p.motivo);
+          const texto = [p.detalle, p.indicaciones ? `Indicaciones: ${p.indicaciones}` : "", p.proximoControl ? `Próximo control: ${p.proximoControl}` : ""]
+            .filter(Boolean)
+            .join("\n\n");
+          setDetalle((d) => (d.trim() ? `${d.trim()}\n\n${texto}` : texto));
+        }}
+      />
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
         <Field label="Fecha *">
           <input
@@ -1984,6 +1995,17 @@ function NotaClinicaForm({
 
   return (
     <form onSubmit={enviar} className="space-y-3">
+      <ElegirPlantilla
+        actual={{ motivo: motivoConsulta, detalle: procedimiento, indicaciones }}
+        onUsar={(p) => {
+          setMotivoConsulta(p.motivo);
+          setProcedimiento((d) => (d.trim() ? `${d.trim()}\n\n${p.detalle}` : p.detalle));
+          if (p.indicaciones) setIndicaciones(p.indicaciones);
+          // «En 6 meses» → la fecha del próximo control
+          const f = fechaDesdeTexto(p.proximoControl);
+          if (f) setProximoControl(f);
+        }}
+      />
       <div className="rounded-xl border border-primary/10 bg-primary/[0.035] p-3">
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-primary">
           <ClipboardList className="size-4" /> Registro clínico

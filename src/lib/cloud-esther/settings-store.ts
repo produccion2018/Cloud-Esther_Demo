@@ -81,6 +81,18 @@ export interface ClinicSettings {
   sucursales: string[];
   /** Marca propia (white label, Plus y Enterprise): logo y color de la clínica */
   marca?: MarcaClinica;
+  /** Plantillas de evolución propias de la clínica (se suman a las de Cloud Esther). */
+  plantillasEvolucion?: PlantillaEvolucion[];
+}
+
+/** Texto listo para cargar una evolución con un toque. */
+export interface PlantillaEvolucion {
+  id: string;
+  nombre: string;
+  motivo: string;
+  detalle: string;
+  indicaciones?: string;
+  proximoControl?: string;
 }
 
 /** Marca propia de la clínica. El logo viaja como imagen chica (máx. 256 px);

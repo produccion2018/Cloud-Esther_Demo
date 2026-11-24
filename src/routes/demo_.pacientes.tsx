@@ -64,9 +64,10 @@ import { UsoDelPlan } from "@/components/clinica/pedir-capacidad";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { VolverALlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
+import { EtiquetasPaciente } from "@/components/cloud-esther/pacientes/EtiquetasPaciente";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
-import { contarPacientesActivos, usePacientes } from "@/lib/cloud-esther/pacientes";
+import { contarPacientesActivos, useEtiquetas, usePacientes } from "@/lib/cloud-esther/pacientes";
 import type {
   Paciente,
   EstadoPaciente,
@@ -1370,6 +1371,8 @@ function PacientesInner() {
     }
   };
   const [filtroObra, setFiltroObra] = useState("");
+  const [filtroEtiqueta, setFiltroEtiqueta] = useState("");
+  const { catalogo: etiquetasClinica } = useEtiquetas();
 
   const cerrarModal = () =>
     setModal(null);
@@ -1425,7 +1428,8 @@ function PacientesInner() {
         coincide(p) &&
         (!filtroEstado || p.estado === filtroEstado) &&
         (!filtroSucursal || p.sucursal === filtroSucursal) &&
-        (!filtroObra || etiquetaCobertura(p) === filtroObra),
+        (!filtroObra || etiquetaCobertura(p) === filtroObra) &&
+        (!filtroEtiqueta || (p.etiquetas ?? []).includes(filtroEtiqueta)),
     )
     .sort((a, b) => {
       switch (orden) {
@@ -1453,7 +1457,8 @@ function PacientesInner() {
     q ||
       filtroEstado ||
       filtroSucursal ||
-      filtroObra,
+      filtroObra ||
+      filtroEtiqueta,
   );
 
   const cantidadActivos = pacientes.filter(
@@ -1771,8 +1776,8 @@ function PacientesInner() {
               {/* Filtros */}
 
               <div className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.025] p-2.5 shadow-inner shadow-primary/[0.025]">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="relative sm:col-span-2 lg:col-span-4">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                  <div className="relative sm:col-span-2 lg:col-span-3 2xl:col-span-5">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
 
                     <input
@@ -1813,6 +1818,13 @@ function PacientesInner() {
                   />
 
                   <SelectField
+                    value={filtroEtiqueta}
+                    onChange={setFiltroEtiqueta}
+                    options={etiquetasClinica.map((e) => e.nombre)}
+                    placeholder="Todas las etiquetas"
+                  />
+
+                  <SelectField
                     value={orden}
                     onChange={setOrden}
                     options={["A a Z", "Z a A", "Últimos cargados", "Hace más que no vienen", "Próximo turno"]}
@@ -1826,6 +1838,7 @@ function PacientesInner() {
                       setFiltroEstado("");
                       setFiltroSucursal("");
                       setFiltroObra("");
+                      setFiltroEtiqueta("");
                     }}
                     className="px-1 pt-2 text-xs font-semibold text-primary hover:underline"
                   >
@@ -1926,6 +1939,7 @@ function PacientesInner() {
                                 </span>
                                 <BadgeEstado estado={p.estado} />
                                 <AlertaMedica a={registros.de(p.id).antecedentes} />
+                                <EtiquetasPaciente paciente={p} />
                               </div>
                             </div>
                           </div>

@@ -35,12 +35,27 @@ export type Paciente = {
   /** Responsable / tutor (para pacientes menores de edad). Opcional. */
   tutor?: string;
   tutorTelefono?: string;
+  /** Etiquetas propias de la clínica (VIP, Debe dinero, Miedo al dentista…). */
+  etiquetas?: string[];
 };
+
+/* Catálogo de etiquetas de cada clínica (nombre y color). Lo arma la clínica a su criterio. */
+export type Etiqueta = { nombre: string; color: string };
+export const COLORES_ETIQUETA = ["violeta", "rosa", "rojo", "ambar", "verde", "azul", "gris"] as const;
+export const ETIQUETAS_SUGERIDAS: Etiqueta[] = [
+  { nombre: "VIP", color: "violeta" },
+  { nombre: "Debe dinero", color: "rojo" },
+  { nombre: "Miedo al dentista", color: "ambar" },
+  { nombre: "Ortodoncia", color: "azul" },
+  { nombre: "Recomienda pacientes", color: "verde" },
+];
 
 type Estado = {
   pacientes: Paciente[];
   /** Paciente elegido en las páginas de acceso directo; se mantiene al pasar de una sección a otra. */
   activoId: number | null;
+  /** Etiquetas de la clínica (opcional en datos viejos: se usan las sugeridas). */
+  etiquetas?: Etiqueta[];
 };
 
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes.
@@ -82,4 +97,45 @@ export function usePacientes() {
   const setActivoId = (id: number | null) => store.poner({ ...store.leer(), activoId: id });
 
   return { pacientes: actual.pacientes, activoId: actual.activoId, setPacientes, setActivoId };
+}
+
+/** Etiquetas de la clínica y de cada paciente */
+export function useEtiquetas() {
+  const actual = store.usar();
+  const catalogo = actual.etiquetas ?? ETIQUETAS_SUGERIDAS;
+  const setCatalogo = (fn: (prev: Etiqueta[]) => Etiqueta[]) => {
+    const e = store.leer();
+    store.poner({ ...e, etiquetas: fn(e.etiquetas ?? ETIQUETAS_SUGERIDAS) });
+  };
+  const crear = (nombre: string, color: string) => {
+    const n = nombre.trim().slice(0, 30);
+    if (!n) return "";
+    const existe = catalogo.find((x) => x.nombre.toLowerCase() === n.toLowerCase());
+    if (existe) return existe.nombre;
+    setCatalogo((prev) => [...prev, { nombre: n, color }]);
+    return n;
+  };
+  const borrar = (nombre: string) => {
+    const e = store.leer();
+    store.poner({
+      ...e,
+      etiquetas: (e.etiquetas ?? ETIQUETAS_SUGERIDAS).filter((x) => x.nombre !== nombre),
+      pacientes: e.pacientes.map((p) =>
+        p.etiquetas?.includes(nombre) ? { ...p, etiquetas: p.etiquetas.filter((x) => x !== nombre) } : p,
+      ),
+    });
+  };
+  const alternar = (pacienteId: number, nombre: string) => {
+    const e = store.leer();
+    store.poner({
+      ...e,
+      pacientes: e.pacientes.map((p) => {
+        if (p.id !== pacienteId) return p;
+        const ya = p.etiquetas ?? [];
+        return { ...p, etiquetas: ya.includes(nombre) ? ya.filter((x) => x !== nombre) : [...ya, nombre] };
+      }),
+    });
+  };
+  const colorDe = (nombre: string) => catalogo.find((x) => x.nombre === nombre)?.color ?? "gris";
+  return { catalogo, crear, borrar, alternar, colorDe };
 }

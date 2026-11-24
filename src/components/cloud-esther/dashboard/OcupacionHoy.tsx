@@ -31,7 +31,7 @@ const hoyISO = () => {
 
 type Hueco = { hora: string; odontologo: string; sucursal: string; candidatos: number };
 
-export function OcupacionHoy({ onToast }: { onToast: (m: string) => void }) {
+export function OcupacionHoy({ onToast, profesional = "" }: { onToast: (m: string) => void; profesional?: string }) {
   const { turnos, bloqueos, espera, ofertas } = storeAgenda.usar();
   const { miembros } = useEquipo();
   const [verTodos, setVerTodos] = useState(false);
@@ -40,13 +40,16 @@ export function OcupacionHoy({ onToast }: { onToast: (m: string) => void }) {
     const hoy = hoyISO();
     const dia = DIAS[new Date().getDay()];
     const ahora = new Date().toTimeString().slice(0, 5);
-    const delDia = turnos.filter((t) => t.fecha === hoy && t.estado !== "Cancelada");
+    const delDia = turnos.filter(
+      (t) => t.fecha === hoy && t.estado !== "Cancelada" && (!profesional || t.odontologo === profesional),
+    );
     const odonto = miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
     // Sin equipo cargado: se usan los odontólogos que aparecen en la agenda (o una agenda general)
     const nombres = odonto.length
       ? odonto.map((m) => `${m.firstName} ${m.lastName}`.trim())
       : Array.from(new Set(turnos.map((t) => t.odontologo).filter(Boolean)));
-    const columnas = nombres.length ? nombres : [""];
+    // Con un profesional elegido, solo cuenta su agenda
+    const columnas = profesional ? [profesional] : nombres.length ? nombres : [""];
     const atiende = (nombre: string, hora: string) => {
       const m = odonto.find((x) => `${x.firstName} ${x.lastName}`.trim() === nombre);
       if (!m || !m.schedule?.length) return true;
@@ -82,7 +85,7 @@ export function OcupacionHoy({ onToast }: { onToast: (m: string) => void }) {
     }
     const ocupacion = capacidad ? Math.min(100, Math.round((delDia.length / capacidad) * 100)) : 0;
     return { hoy, ocupacion, turnosHoy: delDia.length, huecos, capacidad };
-  }, [turnos, bloqueos, espera, miembros]);
+  }, [turnos, bloqueos, espera, miembros, profesional]);
 
   const yaOfrecido = (h: Hueco) =>
     (ofertas ?? []).some(

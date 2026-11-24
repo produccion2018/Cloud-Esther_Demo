@@ -49,7 +49,7 @@ const haceDias = (n: number) => {
 };
 const lista = (xs: string[], max = 3) => (xs.length > max ? [...xs.slice(0, max), `y ${xs.length - max} más`] : xs);
 
-export function PendientesHoy() {
+export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
   const { plan } = useCloudEsther();
   const { turnos } = storeAgenda.usar();
   const { pacientes } = usePacientes();
@@ -68,7 +68,9 @@ export function PendientesHoy() {
 
     // 1) Alertas médicas de los pacientes con turno hoy
     const alertas: string[] = [];
-    for (const t of turnos.filter((x) => x.fecha === hoy && x.estado !== "Cancelada").sort((a, b) => a.hora.localeCompare(b.hora))) {
+    for (const t of turnos
+      .filter((x) => x.fecha === hoy && x.estado !== "Cancelada" && (!profesional || x.odontologo === profesional))
+      .sort((a, b) => a.hora.localeCompare(b.hora))) {
       const p = porNombre.get(normalizarBusqueda(t.paciente));
       const a = p ? registros[p.id]?.antecedentes : undefined;
       const que = [...(a?.alergias ?? []).map((x) => `alergia a ${x}`), ...(a?.enfermedades ?? [])];
@@ -157,7 +159,7 @@ export function PendientesHoy() {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turnos, pacientes, registros, insumos, plan]);
+  }, [turnos, pacientes, registros, insumos, plan, profesional]);
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-primary/12 bg-card p-4 shadow-[0_18px_40px_-32px_rgba(76,29,149,0.7)] sm:p-5">

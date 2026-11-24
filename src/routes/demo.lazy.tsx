@@ -1,7 +1,7 @@
 import { PendientesHoy } from "@/components/cloud-esther/dashboard/PendientesHoy";
 import { OcupacionHoy } from "@/components/cloud-esther/dashboard/OcupacionHoy";
 import { PresupuestosMes } from "@/components/cloud-esther/dashboard/PresupuestosMes";
-import { capitalizarNombre } from "@/lib/utils";
+import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { PrimerosPasos } from "@/components/cloud-esther/configuracion/ConfiguracionGuiada";
@@ -1199,8 +1199,25 @@ function DashboardInner() {
     .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
     .map((m) => `${m.firstName} ${m.lastName}`.trim());
   const hoy = hoyISO();
+  // Filtro por profesional: cada odontólogo ve su día; el dueño puede ver todo o elegir a uno.
+  const [profesional, setProfesional] = useState("");
+  const profesionalesDelDia = Array.from(
+    new Set([
+      ...odontologosEquipo,
+      ...turnosAgenda.filter((t) => t.fecha === hoy && t.odontologo).map((t) => t.odontologo),
+    ]),
+  ).sort((a, b) => a.localeCompare(b));
+  // Un odontólogo de una clínica real arranca viendo su propio día
+  useEffect(() => {
+    if (real?.rol !== "odontologo") return;
+    const yo = normalizarBusqueda(real.sesion.usuario.nombre ?? "");
+    const mio = profesionalesDelDia.find((p) => normalizarBusqueda(p) === yo || normalizarBusqueda(p).includes(yo));
+    if (mio) setProfesional(mio);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [real?.rol, profesionalesDelDia.join("|")]);
   const turnos: Turno[] = turnosAgenda
     .filter((t) => t.fecha === hoy && t.estado !== "Cancelada")
+    .filter((t) => !profesional || t.odontologo === profesional)
     .sort((a, b) => a.hora.localeCompare(b.hora))
     .map((t) => ({
       id: t.id,
@@ -1422,6 +1439,24 @@ function DashboardInner() {
           clinica={clinica?.nombre}
         />
         <SearchBar value={query} onChange={setQuery} inputRef={searchRef} />
+        {profesionalesDelDia.length > 1 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
+            <span className="text-xs font-semibold text-muted-foreground">Ver el día de</span>
+            <Seleccion
+              aria-label="Profesional"
+              value={profesional}
+              onChange={(e) => setProfesional(e.target.value)}
+              className="h-9 min-w-[13rem] rounded-full border border-primary/15 bg-card px-3.5 text-sm font-semibold"
+            >
+              <option value="">Todos los profesionales</option>
+              {profesionalesDelDia.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </Seleccion>
+          </div>
+        )}
         {/* Configuración guiada: checklist de primeros pasos (solo el Administrador) */}
         {(!real || real.rol === "admin") && <PrimerosPasos />}
         {q && (
@@ -1454,10 +1489,10 @@ function DashboardInner() {
 
         <div className="mb-5 space-y-4">
         {/* Lo que hay que atender hoy: alertas médicas, cumpleaños, presupuestos, laboratorio y stock */}
-        <PendientesHoy />
+        <PendientesHoy profesional={profesional} />
 
         {/* Ocupación de hoy y horarios libres para ofrecer a la lista de espera */}
-        <OcupacionHoy onToast={show} />
+        <OcupacionHoy onToast={show} profesional={profesional} />
 
         {/* Presupuestos del mes: presupuestado, aprobado, esperando respuesta y aceptación */}
         <PresupuestosMes />

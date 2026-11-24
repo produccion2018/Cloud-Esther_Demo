@@ -4,6 +4,7 @@ import { Activity, ArrowDownRight, ArrowUpRight, Copy, Minus, Plus } from "lucid
 
 import type { Cambiar, ContextoPaciente, Registros } from "@/components/cloud-esther/PacienteSecciones";
 import { useCloudEsther, usa3D } from "@/lib/cloud-esther/data";
+import { DiagnosticoCard, DictadoSondaje, GraficoPerio } from "./perio-extras";
 import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 import { Seleccion } from "@/components/ui/seleccion";
 
@@ -229,6 +230,19 @@ export function PeriodontogramaSec({
     onToast(copiar ? "Nueva evaluación (con las piezas ausentes e implantes de la anterior)" : "Nueva evaluación creada");
   };
 
+  // Color de cada pieza de la boca 3D según su estado periodontal (las cordales van aparte).
+  // Va antes de cualquier return para que los hooks sean siempre los mismos.
+  const estadosPerio = useMemo(() => {
+    const out: Record<number, string> = {};
+    if (!actual) return out;
+    for (const n of [...SUP, ...INF]) {
+      if ((SIN_3D as readonly number[]).includes(n)) continue;
+      const c = colorPerio(actual.piezas[n]);
+      if (c !== "#ffffff") out[n] = c;
+    }
+    return out;
+  }, [actual]);
+
   if (!actual)
     return (
       <div className="space-y-4">
@@ -297,16 +311,6 @@ export function PeriodontogramaSec({
   const ind = indices(actual);
   const indAnt = anterior ? indices(anterior) : null;
   const pieza = (n: number) => actual.piezas[n] ?? piezaVacia();
-  // Color de cada pieza de la boca 3D según su estado periodontal (las cordales van aparte).
-  const estadosPerio = useMemo(() => {
-    const out: Record<number, string> = {};
-    for (const n of [...SUP, ...INF]) {
-      if ((SIN_3D as readonly number[]).includes(n)) continue;
-      const c = colorPerio(actual.piezas[n]);
-      if (c !== "#ffffff") out[n] = c;
-    }
-    return out;
-  }, [actual]);
 
   return (
     <div className="space-y-4">
@@ -375,6 +379,15 @@ export function PeriodontogramaSec({
         })}
       </div>
 
+      {/* Diagnóstico orientativo (estadio y extensión AAP/EFP 2017) */}
+      <DiagnosticoCard
+        ev={actual}
+        onCopiar={(t) => {
+          guardar({ ...actual, notas: (actual.notas ? `${actual.notas} · ${t}` : t).slice(0, 300) });
+          onToast("Diagnóstico agregado a las notas de la evaluación");
+        }}
+      />
+
       {/* Datos de la evaluación */}
       <div className="grid gap-2 sm:grid-cols-[160px_1fr_1fr]">
         <label className="text-[11px] font-semibold text-muted-foreground">
@@ -405,6 +418,9 @@ export function PeriodontogramaSec({
           />
         </label>
       </div>
+
+      {/* Sondaje dictado por voz: carga los sitios en orden y va solo de pieza en pieza */}
+      <DictadoSondaje ev={actual} guardar={guardar} onPieza={setSeleccion} onToast={onToast} />
 
       {/* Boca 3D realista (misma del odontograma) + edición periodontal de la pieza elegida */}
       <div className="grid gap-4">
@@ -478,6 +494,9 @@ export function PeriodontogramaSec({
           )}
         </div>
       </div>
+
+      {/* Gráfico clásico (rojo: margen, azul: fondo de bolsa) + PDF para el paciente */}
+      <GraficoPerio ev={actual} paciente={contexto?.paciente} onToast={onToast} />
 
       <p className="flex items-start gap-2 rounded-2xl bg-primary/[0.05] px-3 py-2 text-[11px] text-muted-foreground">
         <CaraEsther className="mt-0.5 size-3.5 shrink-0 text-primary" />

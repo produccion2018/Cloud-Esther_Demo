@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
+  AlertTriangle,
   Search,
   ChevronDown,
   ChevronUp,
@@ -947,6 +948,36 @@ function Avatar({
   );
 }
 
+/* Alerta médica en la lista: alergias, enfermedades y medicación, sin entrar a la ficha */
+function AlertaMedica({ a }: { a?: { alergias?: string[]; enfermedades?: string[]; medicacion?: string } }) {
+  const alergias = (a?.alergias ?? []).filter(Boolean);
+  const enfermedades = (a?.enfermedades ?? []).filter(Boolean);
+  const medicacion = (a?.medicacion ?? "").trim();
+  const items = [
+    ...alergias.map((x) => `Alergia a ${x}`),
+    ...enfermedades,
+    ...(medicacion ? [`Medicación: ${medicacion}`] : []),
+  ];
+  const [ver, setVer] = useState(false);
+  if (!items.length) return null;
+  const principal = items[0]!;
+  // Tocándola se ven todas (en el celular no hay "pasar el mouse")
+  return (
+    <button
+      type="button"
+      onClick={() => setVer((v) => !v)}
+      title={items.join(" · ")}
+      aria-label={`Alerta médica: ${items.join(", ")}`}
+      aria-expanded={ver}
+      className={`inline-flex items-center gap-1 rounded-2xl border border-rose-300 bg-rose-50 px-2 py-0.5 text-left text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300 ${ver ? "max-w-full" : "max-w-[14rem]"}`}
+    >
+      <AlertTriangle className="size-3 shrink-0" />
+      <span className={ver ? "" : "truncate"}>{ver ? items.join(" · ") : principal}</span>
+      {!ver && items.length > 1 && <span className="shrink-0 opacity-80">+{items.length - 1}</span>}
+    </button>
+  );
+}
+
 function BadgeEstado({
   estado,
   largo = false,
@@ -1809,6 +1840,7 @@ function PacientesInner() {
                                   DNI {formatearDocumento(p.documento)}
                                 </span>
                                 <BadgeEstado estado={p.estado} />
+                                <AlertaMedica a={registros.de(p.id).antecedentes} />
                               </div>
                             </div>
                           </div>

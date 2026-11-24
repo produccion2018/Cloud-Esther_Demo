@@ -28,6 +28,7 @@ import {
   MapPin,
   Stethoscope,
   DoorOpen,
+  AlertTriangle,
   FileDown,
   Repeat,
   Hourglass,
@@ -47,6 +48,8 @@ import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { recuperarTurno, vencerOfertas } from "@/lib/cloud-esther/recuperacion-turnos";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { normalizarBusqueda as normBusq } from "@/lib/utils";
 import {
   GABINETES,
   ODONTOLOGOS,
@@ -1304,6 +1307,13 @@ function TurnoCard({
   const activo = turno.estado === "Pendiente" || turno.estado === "Confirmada";
   const ahora = useAhora();
   const { duracion: duracionHabitual } = useOpcionesAgenda();
+  // Alerta médica del paciente (alergias, enfermedades): se ve en el turno, sin abrir la ficha
+  const { pacientes: listaPac } = usePacientes();
+  const regs = useTodosLosRegistros();
+  const pacTurno = listaPac.find((p) => normBusq(`${p.nombre} ${p.apellido}`) === normBusq(turno.paciente));
+  const ant = pacTurno ? regs[pacTurno.id]?.antecedentes : undefined;
+  const alertasMed = [...(ant?.alergias ?? []).filter(Boolean).map((x) => `Alergia a ${x}`), ...(ant?.enfermedades ?? []).filter(Boolean)];
+  const [verAlertas, setVerAlertas] = useState(false);
   const finTurno = aHora(aMinutos(turno.hora) + (turno.duracion ?? duracionHabitual));
   const esHoy = turno.fecha === hoyISO();
   const enSala = activo && !!turno.llegada;
@@ -1346,6 +1356,19 @@ function TurnoCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[15px] font-semibold tracking-tight">{turno.paciente}</p>
             <EstadoBadge estado={turno.estado} />
+            {alertasMed.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setVerAlertas((v) => !v)}
+                title={alertasMed.join(" · ")}
+                aria-expanded={verAlertas}
+                className={`inline-flex items-center gap-1 rounded-2xl border border-rose-300 bg-rose-50 px-2 py-0.5 text-left text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300 ${verAlertas ? "max-w-full" : "max-w-[14rem]"}`}
+              >
+                <AlertTriangle className="size-3 shrink-0" />
+                <span className={verAlertas ? "" : "truncate"}>{verAlertas ? alertasMed.join(" · ") : alertasMed[0]}</span>
+                {!verAlertas && alertasMed.length > 1 && <span className="shrink-0 opacity-80">+{alertasMed.length - 1}</span>}
+              </button>
+            )}
             {enSala && (
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tonoEspera(minSala)}`}

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CalendarClock, Send, Users } from "lucide-react";
 
-import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { storeAgenda, tiemposAgenda, horariosDelDia, turnoSolapa } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { candidatosEspera, recuperarTurno } from "@/lib/cloud-esther/recuperacion-turnos";
 
@@ -12,13 +12,9 @@ import { candidatosEspera, recuperarTurno } from "@/lib/cloud-esther/recuperacio
    · Los próximos horarios libres de hoy y, para cada uno, cuántos pacientes de la lista de
      espera encajan. Con un toque se les ofrece el horario (usa la misma recuperación de turnos
      de la Agenda: el primero que acepta se lo queda).
-   Los horarios son los de la Agenda (08:00 a 19:30, cada 30 min) y respetan el horario de cada
+   Los horarios son los de la Agenda (08:00 a 20:00, cada los minutos que defina la clínica) y respetan el horario de cada
    odontólogo cargado en Equipo, sus pausas y los bloqueos del día. */
 
-const SLOTS = Array.from({ length: 24 }, (_, i) => {
-  const m = 8 * 60 + i * 30;
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${m % 60 === 0 ? "00" : "30"}`;
-});
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const aMin = (h?: string) => {
   const [x = 0, y = 0] = (h ?? "").split(":").map(Number);
@@ -32,7 +28,8 @@ const hoyISO = () => {
 type Hueco = { hora: string; odontologo: string; sucursal: string; candidatos: number };
 
 export function OcupacionHoy({ onToast, profesional = "" }: { onToast: (m: string) => void; profesional?: string }) {
-  const { turnos, bloqueos, espera, ofertas } = storeAgenda.usar();
+  const { turnos, bloqueos, espera, ofertas, ajustes } = storeAgenda.usar();
+  const { intervalo, duracion } = tiemposAgenda(ajustes);
   const { miembros } = useEquipo();
   const [verTodos, setVerTodos] = useState(false);
 
@@ -60,16 +57,21 @@ export function OcupacionHoy({ onToast, profesional = "" }: { onToast: (m: strin
       return t >= aMin(d.start) && t < aMin(d.end) && !pausa;
     };
     const bloqueado = (hora: string) =>
-      bloqueos.some((b) => b.fecha === hoy && hora >= b.desde && hora < b.hasta);
+      bloqueos.some((b) => b.fecha === hoy && aMin(hora) < aMin(b.hasta) && aMin(hora) + intervalo > aMin(b.desde));
 
     let capacidad = 0;
+    let huecosTotales = 0;
     const huecos: Hueco[] = [];
-    for (const hora of SLOTS) {
+    for (const hora of horariosDelDia(intervalo)) {
       if (bloqueado(hora)) continue;
       for (const o of columnas) {
         if (!atiende(o, hora)) continue;
         capacidad++;
-        const ocupado = delDia.some((t) => t.hora === hora && (!o || t.odontologo === o));
+        const h0 = aMin(hora);
+        const ocupado = delDia.some(
+          (t) => turnoSolapa(t, h0, h0 + intervalo, duracion) && (!o || t.odontologo === o),
+        );
+        if (!ocupado) huecosTotales++;
         if (!ocupado && hora > ahora) {
           const m = odonto.find((x) => `${x.firstName} ${x.lastName}`.trim() === o);
           const sucursal = m?.office ?? "";
@@ -83,9 +85,9 @@ export function OcupacionHoy({ onToast, profesional = "" }: { onToast: (m: strin
         }
       }
     }
-    const ocupacion = capacidad ? Math.min(100, Math.round((delDia.length / capacidad) * 100)) : 0;
+    const ocupacion = capacidad ? Math.min(100, Math.round(((capacidad - huecosTotales) / capacidad) * 100)) : 0;
     return { hoy, ocupacion, turnosHoy: delDia.length, huecos, capacidad };
-  }, [turnos, bloqueos, espera, miembros, profesional]);
+  }, [turnos, bloqueos, espera, miembros, profesional, intervalo, duracion]);
 
   const yaOfrecido = (h: Hueco) =>
     (ofertas ?? []).some(

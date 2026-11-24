@@ -24,7 +24,42 @@ export type Turno = {
   llegada?: string;
   /** Hora en que pasó al consultorio (ISO), para saber cuánto esperó. */
   atendidoEn?: string;
+  /** Minutos que dura el turno (si falta, la duración habitual de la clínica). */
+  duracion?: number;
 };
+
+/* Tiempos de la agenda: los define cada clínica a su criterio (profesionales o administración). */
+export type AjustesAgenda = {
+  /** Cada cuántos minutos se ofrecen horarios (5, 10, 15, 20, 30…). */
+  intervaloMin?: number;
+  /** Duración habitual de un turno, en minutos. */
+  duracionMin?: number;
+};
+export const INTERVALO_DEFECTO = 30;
+export function tiemposAgenda(a?: AjustesAgenda) {
+  const intervalo = Math.min(240, Math.max(5, Math.round(a?.intervaloMin ?? INTERVALO_DEFECTO)));
+  const duracion = Math.min(480, Math.max(5, Math.round(a?.duracionMin ?? intervalo)));
+  return { intervalo, duracion };
+}
+export function aMinutos(hora: string) {
+  const [h = 0, m = 0] = (hora ?? "").split(":").map(Number);
+  return h * 60 + m;
+}
+export function aHora(min: number) {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+/* Horarios del día (08:00 a 20:00) cada `intervalo` minutos */
+export function horariosDelDia(intervalo: number) {
+  const out: string[] = [];
+  for (let m = 8 * 60; m < 20 * 60; m += intervalo) out.push(aHora(m));
+  return out;
+}
+/* ¿El turno ocupa algo entre [desde, hasta)? (minutos del día) */
+export function turnoSolapa(t: Turno, desde: number, hasta: number, duracionDefecto: number) {
+  const ini = aMinutos(t.hora);
+  const fin = ini + (t.duracion ?? duracionDefecto);
+  return ini < hasta && fin > desde;
+}
 
 export type NuevaCita = Omit<Turno, "id" | "estado">;
 export type Bloqueo = {
@@ -155,6 +190,8 @@ export type EstadoAgenda = {
   feriados?: Feriado[];
   /** Ofertas de recuperación de turnos liberados (opcional en datos viejos). */
   ofertas?: Oferta[];
+  /** Tiempos de la agenda de la clínica (opcional en datos viejos). */
+  ajustes?: AjustesAgenda;
 };
 
 /* Arranca vacío (sin turnos, lista de espera ni tareas de ejemplo), igual que producción. */
@@ -216,6 +253,7 @@ export const setRecordatoriosStore = setterAgenda("recordatorios");
 export const setTareasStore = setterAgenda("tareas");
 export const setFeriadosStore = setterAgenda("feriados");
 export const setOfertasStore = setterAgenda("ofertas");
+export const setAjustesAgendaStore = setterAgenda("ajustes");
 
 const RECORDATORIOS_INICIAL: Recordatorio[] = [
   { id: 1, canal: "WhatsApp", cuando: "24 h antes del turno", activo: true },

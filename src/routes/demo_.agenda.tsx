@@ -65,6 +65,12 @@ import {
   type Tarea,
   type Turno,
   leerProfesionalVisto,
+  tiemposAgenda,
+  horariosDelDia,
+  aMinutos,
+  aHora,
+  turnoSolapa,
+  setAjustesAgendaStore,
   nombreConsultorio,
   guardarProfesionalVisto,
 } from "@/lib/cloud-esther/agenda-store";
@@ -87,23 +93,24 @@ type ModalActivo =
   | { tipo: "bloqueo" }
   | { tipo: "espera" }
   | { tipo: "tarea" }
+  | { tipo: "tiempos" }
   | null;
 /* ───────────── Datos ───────────── */
 
-/* Horario de atención usado para mostrar los turnos libres del día. */
-const HORARIOS_DEL_DIA = Array.from({ length: 24 }, (_, i) => {
-  const minutos = 8 * 60 + i * 30;
-  return `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${minutos % 60 === 0 ? "00" : "30"}`;
-});
 
 /* Opciones de los formularios y filtros (equipo y pacientes de la empresa). */
 type OpcionesAgenda = {
   odontologos: string[];
   pacientes: string[];
+  /** Cada cuántos minutos se dan turnos y cuánto dura uno habitual (los define la clínica). */
+  intervalo: number;
+  duracion: number;
 };
 const OpcionesAgendaCtx = createContext<OpcionesAgenda>({
   odontologos: ODONTOLOGOS,
   pacientes: [],
+  intervalo: 30,
+  duracion: 30,
 });
 const useOpcionesAgenda = () => useContext(OpcionesAgendaCtx);
 const FRANJAS = ["Mañanas", "Tardes", "Hoy"];
@@ -557,6 +564,87 @@ function BotonAccion({
 
 /* ───────────── Formularios ───────────── */
 
+/* Tiempos de la agenda: libres, a criterio de cada clínica (5 a 240 min) */
+function TiemposForm({
+  intervalo,
+  duracion,
+  onSubmit,
+  onCancel,
+}: {
+  intervalo: number;
+  duracion: number;
+  onSubmit: (a: { intervaloMin: number; duracionMin: number }) => void;
+  onCancel: () => void;
+}) {
+  const [cada, setCada] = useState(String(intervalo));
+  const [dura, setDura] = useState(String(duracion));
+  const chips = (valor: string, set: (v: string) => void, lista: number[]) => (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {lista.map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => set(String(m))}
+          className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${
+            Number(valor) === m
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-primary/15 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary dark:bg-card"
+          }`}
+        >
+          {m} min
+        </button>
+      ))}
+    </div>
+  );
+  const limpiar = (v: string, max: number) => Math.min(max, Math.max(5, Math.round(Number(v) || 0)));
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ intervaloMin: limpiar(cada, 240), duracionMin: limpiar(dura, 480) });
+      }}
+      className="space-y-5"
+    >
+      <Field label="Cada cuántos minutos se dan turnos">
+        <input
+          required
+          type="number"
+          inputMode="numeric"
+          min={5}
+          max={240}
+          value={cada}
+          onChange={(e) => setCada(e.target.value)}
+          className={`${INPUT} w-32`}
+          aria-label="Intervalo en minutos"
+        />
+        {chips(cada, setCada, [5, 10, 15, 20, 30, 45, 60])}
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Son los horarios que ofrece la agenda: con {limpiar(cada, 240)} min → 08:00, {aHora(8 * 60 + limpiar(cada, 240))},{" "}
+          {aHora(8 * 60 + 2 * limpiar(cada, 240))}…
+        </p>
+      </Field>
+      <Field label="Duración habitual de un turno (minutos)">
+        <input
+          required
+          type="number"
+          inputMode="numeric"
+          min={5}
+          max={480}
+          value={dura}
+          onChange={(e) => setDura(e.target.value)}
+          className={`${INPUT} w-32`}
+          aria-label="Duración en minutos"
+        />
+        {chips(dura, setDura, [10, 15, 20, 30, 45, 60, 90])}
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Se propone al crear cada turno; en cada turno se puede cambiar (por ejemplo, una cirugía más larga).
+        </p>
+      </Field>
+      <FormActions submitLabel="Guardar tiempos" onCancel={onCancel} />
+    </form>
+  );
+}
+
 function CitaForm({
   inicial,
   prefill,
@@ -570,7 +658,8 @@ function CitaForm({
   onSubmit: (c: NuevaCita) => void;
   onCancel: () => void;
 }) {
-  const { odontologos } = useOpcionesAgenda();
+  const { odontologos, duracion: duracionHabitual } = useOpcionesAgenda();
+  const [duracion, setDuracion] = useState(String(inicial?.duracion ?? prefill?.duracion ?? duracionHabitual));
   const [paciente, setPaciente] = useState(inicial?.paciente ?? prefill?.paciente ?? "");
   const [sucursal, setSucursal] = useState(inicial?.sucursal ?? prefill?.sucursal ?? SUCURSALES[0]);
   const [odontologo, setOdontologo] = useState(
@@ -596,6 +685,7 @@ function CitaForm({
       fecha,
       hora,
       notas: notas.trim(),
+      duracion: Math.min(480, Math.max(5, Math.round(Number(duracion) || duracionHabitual))),
     });
   };
 
@@ -656,6 +746,44 @@ function CitaForm({
           />
         </Field>
       </div>
+
+      <Field label="Duración del turno (minutos)">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            required
+            type="number"
+            inputMode="numeric"
+            min={5}
+            max={480}
+            step={5}
+            value={duracion}
+            onChange={(e) => setDuracion(e.target.value)}
+            className={`${INPUT} w-28`}
+            aria-label="Duración en minutos"
+          />
+          {Array.from(new Set([duracionHabitual, 15, 30, 45, 60, 90]))
+            .sort((a, b) => a - b)
+            .map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setDuracion(String(m))}
+                className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${
+                  Number(duracion) === m
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-primary/15 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary dark:bg-card"
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+        </div>
+        {hora && Number(duracion) > 0 && (
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            De {hora} a {aHora(aMinutos(hora) + Math.round(Number(duracion)))} h
+          </p>
+        )}
+      </Field>
 
       <Field label="Notas">
         <textarea
@@ -1077,6 +1205,8 @@ function TurnoCard({
   const accent = ESTADO_ACCENT[turno.estado];
   const activo = turno.estado === "Pendiente" || turno.estado === "Confirmada";
   const ahora = useAhora();
+  const { duracion: duracionHabitual } = useOpcionesAgenda();
+  const finTurno = aHora(aMinutos(turno.hora) + (turno.duracion ?? duracionHabitual));
   const esHoy = turno.fecha === hoyISO();
   const enSala = activo && !!turno.llegada;
   const minSala = turno.llegada ? minutosDesde(turno.llegada, ahora) : 0;
@@ -1105,6 +1235,9 @@ function TurnoCard({
           className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2 sm:w-[92px] sm:flex-col sm:gap-0.5 ${accent.tile}`}
         >
           <span className="text-[17px] font-bold leading-none tabular-nums">{turno.hora}</span>
+          <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums opacity-75" title="Hasta">
+            a {finTurno}
+          </span>
           <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider opacity-75">
             {nombreConsultorio(turno.gabinete).replace("Consultorio", "Cons.")}
           </span>
@@ -1352,16 +1485,15 @@ function PeriodNavigator({
 
 /* ───────────── Vista diaria: línea de tiempo ───────────── */
 
-function slotDe(hora: string) {
-  const [h = "00", m = "00"] = hora.split(":");
-  return `${h.padStart(2, "0")}:${Number(m) < 30 ? "00" : "30"}`;
+/* Franja a la que pertenece una hora, según cada cuánto se dan turnos en la clínica */
+function slotDe(hora: string, intervalo = 30) {
+  const m = aMinutos(hora);
+  return aHora(m - ((m - 8 * 60) % intervalo + intervalo) % intervalo);
 }
 
-/* Fin de una franja de 30 min: "10:30" → "11:00" */
-function finDeSlot(slot: string) {
-  const [h = 0, m = 0] = slot.split(":").map(Number);
-  const t = h * 60 + m + 30;
-  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+/* Fin de una franja: "10:30" + 30 min → "11:00" */
+function finDeSlot(slot: string, intervalo = 30) {
+  return aHora(aMinutos(slot) + intervalo);
 }
 
 /* Sala de espera: minutos desde que llegó el paciente (se actualiza solo cada 30 s). */
@@ -1461,6 +1593,8 @@ function DiaTimeline({
   renderTurno,
   onAgendar,
   onDesbloquear,
+  intervalo = 30,
+  duracionDefecto = 30,
 }: {
   fecha: string;
   hoy: string;
@@ -1470,18 +1604,28 @@ function DiaTimeline({
   renderTurno: (t: Turno) => ReactNode;
   onAgendar: (hora: string) => void;
   onDesbloquear: (id: number) => void;
+  intervalo?: number;
+  duracionDefecto?: number;
 }) {
   const ahora = fecha === hoy ? horaActual() : null;
+  // Bloques libres largos (p. ej. agenda cada 5 min) se muestran resumidos hasta tocar "Ver todos"
+  const [abiertos, setAbiertos] = useState<string[]>([]);
+  const base = horariosDelDia(intervalo);
   const slots = Array.from(
-    new Set([...HORARIOS_DEL_DIA, ...turnos.map((t) => slotDe(t.hora))]),
+    new Set([...base, ...turnos.map((t) => slotDe(t.hora, intervalo))]),
   ).sort();
+  const vivos = turnos.filter((t) => t.estado !== "Cancelada");
 
   const filas: FilaDia[] = [];
   for (const slot of slots) {
     const ts = turnos
-      .filter((t) => slotDe(t.hora) === slot)
+      .filter((t) => slotDe(t.hora, intervalo) === slot)
       .sort((a, b) => a.hora.localeCompare(b.hora));
-    const bloqueo = bloqueos.find((b) => slot >= slotDe(b.desde) && slot < b.hasta);
+    // Franja tapada por un turno largo que empezó antes: no se muestra (el turno ya la ocupa)
+    const s0 = aMinutos(slot);
+    if (!ts.length && vivos.some((t) => aMinutos(t.hora) < s0 && turnoSolapa(t, s0, s0 + intervalo, duracionDefecto)))
+      continue;
+    const bloqueo = bloqueos.find((b) => slot >= slotDe(b.desde, intervalo) && slot < b.hasta);
     const pasado = fecha < hoy || (ahora !== null && slot < ahora);
     if (ts.length) filas.push({ tipo: "turnos", slot, turnos: ts });
     else if (bloqueo) {
@@ -1505,11 +1649,10 @@ function DiaTimeline({
     }
   }
 
-  const activos = turnos.filter((t) => t.estado !== "Cancelada").length;
-  const ocupacion = Math.min(
-    100,
-    Math.round((activos / Math.max(1, HORARIOS_DEL_DIA.length)) * 100),
-  );
+  const activos = vivos.length;
+  // Ocupación según el tiempo reservado sobre la jornada (08 a 20 h)
+  const minutosReservados = vivos.reduce((s, t) => s + (t.duracion ?? duracionDefecto), 0);
+  const ocupacion = Math.min(100, Math.round((minutosReservados / (12 * 60)) * 100));
   const indiceAhora = ahora ? filas.findIndex((f) => f.slot > ahora) : -1;
 
   return (
@@ -1602,12 +1745,12 @@ function DiaTimeline({
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
                       {f.slots.length > 1
-                        ? `Libre de ${f.slot} a ${finDeSlot(f.slots[f.slots.length - 1]!)}`
+                        ? `Libre de ${f.slot} a ${finDeSlot(f.slots[f.slots.length - 1]!, intervalo)}`
                         : "Disponible"}
                       <span className="hidden font-medium text-muted-foreground sm:inline">· tocá una hora para agendar</span>
                     </p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {f.slots.map((s) => (
+                      {(f.slots.length > 16 && !abiertos.includes(f.slot) ? f.slots.slice(0, 12) : f.slots).map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -1619,13 +1762,22 @@ function DiaTimeline({
                           {s}
                         </button>
                       ))}
+                      {f.slots.length > 16 && !abiertos.includes(f.slot) && (
+                        <button
+                          type="button"
+                          onClick={() => setAbiertos((a) => [...a, f.slot])}
+                          className="inline-flex h-7 items-center rounded-full border border-dashed border-emerald-500/40 px-2.5 text-[11.5px] font-semibold text-emerald-700 transition hover:bg-emerald-500/10 sm:h-8 sm:px-3 sm:text-xs dark:text-emerald-400"
+                        >
+                          Ver todos ({f.slots.length})
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
                 {f.tipo === "ocupado" && (
                   <p className="flex h-9 items-center px-3 text-[11px] text-muted-foreground/60">
                     {f.hasta !== f.slot
-                      ? `Hasta las ${finDeSlot(f.hasta)} · sin profesionales disponibles`
+                      ? `Hasta las ${finDeSlot(f.hasta, intervalo)} · sin profesionales disponibles`
                       : "Sin profesionales disponibles"}
                   </p>
                 )}
@@ -2210,7 +2362,9 @@ function AgendaInner() {
   const [fechaVista, setFechaVista] = useState(hoyISO);
 
   // Agenda de la empresa de la sesión (se conserva al navegar; no se cruza entre empresas).
-  const { turnos, bloqueos, espera, recordatorios, tareas } = storeAgenda.usar();
+  const { turnos, bloqueos, espera, recordatorios, tareas, ajustes } = storeAgenda.usar();
+  // Tiempos de la agenda: los define la clínica (cada cuántos minutos y duración habitual)
+  const { intervalo, duracion: duracionHabitual } = tiemposAgenda(ajustes);
   const setTurnos = setTurnosStore;
   const setBloqueos = setBloqueosStore;
   const setEspera = setEsperaStore;
@@ -2295,6 +2449,8 @@ function AgendaInner() {
   const opcionesAgenda: OpcionesAgenda = {
     odontologos: odontologosConAdmin.length ? odontologosConAdmin : ODONTOLOGOS,
     pacientes: nombresPacientes,
+    intervalo,
+    duracion: duracionHabitual,
   };
 
   /* Odontólogos que atienden en esa fecha y hora según su horario cargado en Equipo.
@@ -2322,15 +2478,17 @@ function AgendaInner() {
   };
 
   /* Horarios libres del día visto (según filtros de odontólogo/gabinete si hay). */
-  const horariosLibres = HORARIOS_DEL_DIA.filter((hora) => {
+  const horariosLibres = horariosDelDia(intervalo).filter((hora) => {
+    const h0 = aMinutos(hora);
     const bloqueado = bloqueos.some(
-      (b) => b.fecha === fechaVista && hora >= b.desde && hora < b.hasta,
+      (b) => b.fecha === fechaVista && h0 < aMinutos(b.hasta) && h0 + intervalo > aMinutos(b.desde),
     );
     if (bloqueado) return false;
+    // Ocupa la franja cualquier turno que se superponga (según su duración)
     const ocupados = turnos.filter(
       (t) =>
         t.fecha === fechaVista &&
-        t.hora === hora &&
+        turnoSolapa(t, h0, h0 + intervalo, duracionHabitual) &&
         t.estado !== "Cancelada" &&
         (!filtros.odontologo || t.odontologo === filtros.odontologo) &&
         (!filtros.gabinete || t.gabinete === filtros.gabinete),
@@ -2434,22 +2592,26 @@ function AgendaInner() {
   const guardarCita = (c: NuevaCita) => {
     const editando = modal?.tipo === "cita" ? modal.turno : undefined;
 
-    const choqueTurno = turnos.some(
+    // Se superpone con otro turno del mismo profesional (según la duración de cada uno)
+    const c0 = aMinutos(c.hora);
+    const c1 = c0 + (c.duracion ?? duracionHabitual);
+    const choqueTurno = turnos.find(
       (t) =>
         t.id !== editando?.id &&
         t.estado !== "Cancelada" &&
         t.fecha === c.fecha &&
-        t.hora === c.hora &&
-        t.odontologo === c.odontologo,
+        t.odontologo === c.odontologo &&
+        turnoSolapa(t, c0, c1, duracionHabitual),
     );
 
     if (choqueTurno) {
-      show(`${c.odontologo} ya tiene un turno a las ${c.hora}`);
+      const fin = aHora(aMinutos(choqueTurno.hora) + (choqueTurno.duracion ?? duracionHabitual));
+      show(`${c.odontologo} ya tiene un turno de ${choqueTurno.hora} a ${fin}`);
       return;
     }
 
     const choqueBloqueo = bloqueos.some(
-      (b) => b.fecha === c.fecha && c.hora >= b.desde && c.hora < b.hasta,
+      (b) => b.fecha === c.fecha && c0 < aMinutos(b.hasta) && c1 > aMinutos(b.desde),
     );
 
     if (choqueBloqueo) {
@@ -2616,6 +2778,14 @@ function AgendaInner() {
                     </p>
                   </div>
                   <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+                    <button
+                      onClick={() => setModal({ tipo: "tiempos" })}
+                      className="btn-ce-outline"
+                      title="Cada cuántos minutos se dan turnos y cuánto dura uno"
+                    >
+                      <Clock className="size-3.5" />
+                      Tiempos · {intervalo} min
+                    </button>
                     {agendaAvanzada && (
                     <button
                       onClick={() => setModal({ tipo: "bloqueo" })}
@@ -2817,6 +2987,8 @@ function AgendaInner() {
                       libres={horariosLibres}
                       onDesbloquear={quitarBloqueo}
                       onAgendar={(hora) => abrirCitaEn(fechaVista, hora)}
+                      intervalo={intervalo}
+                      duracionDefecto={duracionHabitual}
                       renderTurno={(turno) => (
                         <TurnoCard
                           key={`t-${turno.id}`}
@@ -3276,6 +3448,25 @@ function AgendaInner() {
               pacientes={nombresPacientes}
               onSubmit={guardarCita}
               onCancel={cerrarModal}
+            />
+          </Modal>
+        )}
+
+        {modal?.tipo === "tiempos" && (
+          <Modal
+            title="Tiempos de la agenda"
+            subtitle="Cada clínica decide cada cuánto da turnos y cuánto dura cada uno."
+            onClose={cerrarModal}
+          >
+            <TiemposForm
+              intervalo={intervalo}
+              duracion={duracionHabitual}
+              onCancel={cerrarModal}
+              onSubmit={(a) => {
+                setAjustesAgendaStore(a);
+                cerrarModal();
+                show(`Agenda cada ${a.intervaloMin} min · turnos de ${a.duracionMin} min`);
+              }}
             />
           </Modal>
         )}

@@ -67,6 +67,8 @@ import {
   UserRound,
   ShieldAlert,
   PencilLine,
+  Lock,
+  Ban,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { audioATexto } from "@/lib/cloud-esther/esther-llm";
@@ -256,7 +258,28 @@ type Evolucion = {
   motivo: string;
   pieza: string;
   detalle: string;
+} & ProteccionLegal;
+
+/* PROTECCIÓN LEGAL de la historia clínica: pasadas 24 h de cargada, una evolución o nota
+   clínica ya no se edita ni se borra. Se agrega una CORRECCIÓN (queda con fecha y autor) o se
+   ANULA con un motivo (queda visible, tachada). Así la historia es un documento confiable. */
+type Correccion = { fecha: string; autor: string; texto: string };
+type ProteccionLegal = {
+  /** Cuándo se cargó (ISO). Los registros viejos sin esta fecha ya están protegidos. */
+  creada?: string;
+  autor?: string;
+  correcciones?: Correccion[];
+  anulada?: { fecha: string; autor: string; motivo: string };
 };
+const HORAS_EDICION = 24;
+function protegido(r: ProteccionLegal) {
+  if (!r.creada) return true;
+  return Date.now() - new Date(r.creada).getTime() > HORAS_EDICION * 3_600_000;
+}
+function horasRestantes(r: ProteccionLegal) {
+  if (!r.creada) return 0;
+  return Math.max(0, Math.ceil(HORAS_EDICION - (Date.now() - new Date(r.creada).getTime()) / 3_600_000));
+}
 
 type TratamientoPaciente = {
   id: number;
@@ -333,7 +356,7 @@ type NotaClinica = {
   recetaId: number | null;
   odontogramaRef: string;
   odontograma3DRef: string;
-};
+} & ProteccionLegal;
 
 type NotaVoz = {
   id: number;
@@ -1592,6 +1615,131 @@ function EstadoVacio({
   );
 }
 
+/* Correcciones y anulación (protección legal) de evoluciones y notas clínicas */
+function RegistroLegal({ r }: { r: ProteccionLegal }) {
+  if (!r.correcciones?.length && !r.anulada) return null;
+  return (
+    <div className="mt-2 space-y-1.5">
+      {r.anulada && (
+        <p className="rounded-lg border border-rose-300/60 bg-rose-50 px-2.5 py-1.5 text-[11.5px] text-rose-800 dark:bg-rose-500/10 dark:text-rose-300">
+          <b>Anulada</b> el {formatearFecha(r.anulada.fecha.slice(0, 10))} por {r.anulada.autor}: {r.anulada.motivo}
+        </p>
+      )}
+      {(r.correcciones ?? []).map((c, i) => (
+        <p
+          key={i}
+          className="rounded-lg border border-amber-300/60 bg-amber-50 px-2.5 py-1.5 text-[11.5px] text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"
+        >
+          <b>Corrección</b> del {formatearFecha(c.fecha.slice(0, 10))} · {c.autor}: <span className="whitespace-pre-line">{c.texto}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function AccionesLegales({
+  r,
+  etiqueta,
+  onBorrar,
+  onCorregir,
+  onAnular,
+}: {
+  r: ProteccionLegal;
+  etiqueta: string;
+  onBorrar: () => void;
+  onCorregir: (c: Correccion) => void;
+  onAnular: (a: NonNullable<ProteccionLegal["anulada"]>) => void;
+}) {
+  const { usuario } = useSesion();
+  const autor = usuario?.nombre ?? "Usuario";
+  const [modo, setModo] = useState<"" | "corregir" | "anular">("");
+  const [texto, setTexto] = useState("");
+  if (!protegido(r))
+    return (
+      <span className="flex items-center gap-1">
+        <span
+          title={`Se puede borrar o cambiar por ${horasRestantes(r)} h más. Después queda protegida.`}
+          className="hidden rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 sm:inline dark:text-emerald-300"
+        >
+          Editable {horasRestantes(r)} h
+        </span>
+        <BotonBorrar etiqueta={etiqueta} onClick={onBorrar} />
+      </span>
+    );
+  if (r.anulada)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-700 dark:text-rose-300">
+        <Ban className="size-3" /> Anulada
+      </span>
+    );
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex items-center gap-1">
+        <span
+          title="Pasaron más de 24 h: ya no se edita ni se borra. Se agrega una corrección o se anula con un motivo (queda registrado)."
+          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10.5px] font-semibold text-primary"
+        >
+          <Lock className="size-3" /> Protegida
+        </span>
+        <button
+          type="button"
+          onClick={() => setModo(modo === "corregir" ? "" : "corregir")}
+          className="rounded-full px-2 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
+        >
+          Corregir
+        </button>
+        <button
+          type="button"
+          onClick={() => setModo(modo === "anular" ? "" : "anular")}
+          className="rounded-full px-2 py-1 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-500/10"
+        >
+          Anular
+        </button>
+      </div>
+      {modo && (
+        <div className="w-full min-w-[15rem] max-w-sm rounded-xl border border-primary/15 bg-white p-2 shadow-sm dark:bg-card">
+          <textarea
+            autoFocus
+            rows={2}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={modo === "corregir" ? "Qué se corrige o agrega…" : "Motivo de la anulación (ej: cargada en el paciente equivocado)"}
+            className={TEXTAREA}
+          />
+          <div className="mt-1.5 flex justify-end gap-1.5">
+            <button type="button" onClick={() => { setModo(""); setTexto(""); }} className="rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-primary/5">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={texto.trim().length < 3}
+              onClick={() => {
+                const fecha = new Date().toISOString();
+                if (modo === "corregir") onCorregir({ fecha, autor, texto: texto.trim() });
+                else onAnular({ fecha, autor, motivo: texto.trim() });
+                setModo("");
+                setTexto("");
+              }}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-40 ${modo === "anular" ? "bg-rose-600" : "bg-primary"}`}
+            >
+              {modo === "corregir" ? "Guardar corrección" : "Anular"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Deja en el historial de cambios de la ficha cada corrección o anulación */
+function auditarLegal(cambiar: Cambiar, usuario: string, accion: string) {
+  const ahora = new Date();
+  cambiar("auditoria", (prev) => [
+    ...prev,
+    { id: Date.now(), usuario, accion, fecha: hoyISO(), hora: ahora.toTimeString().slice(0, 5) },
+  ]);
+}
+
 function BotonBorrar({
   onClick,
   etiqueta,
@@ -2456,6 +2604,7 @@ function NotaRapidaForm({
 }
 
 function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
+  const { usuario: usuarioNotas } = useSesion();
   // Notas de voz (grabación y transcripción): solo en planes con IA (Plus y Enterprise).
   const conIA = useConIA();
   const [abierto, setAbierto] = useState(false);
@@ -2477,11 +2626,14 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
   const guardar = (nota: Omit<NotaClinica, "id">) => {
     if (editar) {
       cambiar("notasClinicas", (prev) =>
-        prev.map((n) => (n.id === editar.id ? { ...nota, id: editar.id } : n)),
+        prev.map((n) => (n.id === editar.id ? { ...editar, ...nota, id: editar.id } : n)),
       );
       onToast("Nota clínica actualizada");
     } else {
-      cambiar("notasClinicas", (prev) => [...prev, { ...nota, id: Date.now() }]);
+      cambiar("notasClinicas", (prev) => [
+        ...prev,
+        { ...nota, id: Date.now(), creada: new Date().toISOString(), autor: usuarioNotas?.nombre ?? "" },
+      ]);
       onToast("Nota clínica guardada");
     }
     setAbierto(false);
@@ -2566,7 +2718,7 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold">{n.motivoConsulta}</p>
+                    <p className={`text-sm font-semibold ${n.anulada ? "text-muted-foreground line-through" : ""}`}>{n.motivoConsulta}</p>
                     {n.piezas && <Badge tono="primary">Pieza {n.piezas}</Badge>}
                     <span className="whitespace-nowrap text-[11px] text-muted-foreground">
                       {formatearFecha(n.fecha)} · {n.hora}
@@ -2576,21 +2728,34 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                     {n.profesional || "Profesional"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <BotonMini
-                    icon={Eye}
-                    label="Consultar"
-                    onClick={() => {
-                      setEditarId(n.id);
-                      setAbierto(true);
-                    }}
-                  />
-                  <BotonBorrar
+                <div className="flex items-start gap-1">
+                  {/* Pasadas 24 h ya no se edita: se corrige o se anula (protección legal) */}
+                  {!protegido(n) && (
+                    <BotonMini
+                      icon={PencilLine}
+                      label="Editar"
+                      onClick={() => {
+                        setEditarId(n.id);
+                        setAbierto(true);
+                      }}
+                    />
+                  )}
+                  <AccionesLegales
+                    r={n}
                     etiqueta="Eliminar nota clínica"
-                    onClick={() => {
-                      if (!window.confirm("¿Eliminar esta nota clínica?")) return;
+                    onBorrar={() => {
                       cambiar("notasClinicas", (prev) => prev.filter((x) => x.id !== n.id));
                       onToast("Nota clínica eliminada");
+                    }}
+                    onCorregir={(c) => {
+                      cambiar("notasClinicas", (prev) => prev.map((x) => (x.id === n.id ? { ...x, correcciones: [...(x.correcciones ?? []), c] } : x)));
+                      auditarLegal(cambiar, c.autor, `Corrigió la nota clínica del ${formatearFecha(n.fecha)} (${n.motivoConsulta})`);
+                      onToast("Corrección agregada");
+                    }}
+                    onAnular={(a) => {
+                      cambiar("notasClinicas", (prev) => prev.map((x) => (x.id === n.id ? { ...x, anulada: a } : x)));
+                      auditarLegal(cambiar, a.autor, `Anuló la nota clínica del ${formatearFecha(n.fecha)} (${n.motivoConsulta}): ${a.motivo}`);
+                      onToast("Nota anulada (queda registrada)");
                     }}
                   />
                 </div>
@@ -2613,10 +2778,11 @@ function NotasClinicasPanel({ datos, cambiar, onToast }: PropsSeccion) {
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         {label}
                       </p>
-                      <p className="mt-0.5 whitespace-pre-line text-xs">{value}</p>
+                      <p className={`mt-0.5 whitespace-pre-line text-xs ${n.anulada ? "line-through opacity-70" : ""}`}>{value}</p>
                     </div>
                   ))}
               </div>
+              <RegistroLegal r={n} />
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
                 {n.tratamientoId && <Badge tono="primary">Tratamiento vinculado</Badge>}
                 {n.estudioIds.length > 0 && (
@@ -3048,6 +3214,11 @@ type FirmanteDoc = { nombre: string; matricula?: string; firmaUrl?: string; sell
 function imprimirHistoria(datos: Registros, paciente: string, firmante?: FirmanteDoc) {
   const a = datos.antecedentes ?? ANTECEDENTES_VACIOS;
   const lista = (xs: string[]) => (xs.length ? xs.map(escapar).join(", ") : "—");
+  // Correcciones y anulaciones también salen en la historia impresa
+  const legalHtml = (r: ProteccionLegal) =>
+    `${r.anulada ? `<p class="alerta">ANULADA el ${escapar(formatearFecha(r.anulada.fecha.slice(0, 10)))} por ${escapar(r.anulada.autor)}: ${escapar(r.anulada.motivo)}</p>` : ""}${(r.correcciones ?? [])
+      .map((c) => `<p class="meta"><b>Corrección</b> del ${escapar(formatearFecha(c.fecha.slice(0, 10)))} · ${escapar(c.autor)}: ${escapar(c.texto)}</p>`)
+      .join("")}`;
   const notas = [...datos.notasClinicas]
     .sort((x, y) => `${y.fecha}${y.hora}`.localeCompare(`${x.fecha}${x.hora}`))
     .map(
@@ -3065,7 +3236,7 @@ function imprimirHistoria(datos: Registros, paciente: string, firmante?: Firmant
       ]
         .filter(([, v]) => v)
         .map(([k, v]) => `<p><b>${k}:</b> ${escapar(v ?? "")}</p>`)
-        .join("")}</div>`,
+        .join("")}${legalHtml(n)}</div>`,
     )
     .join("");
   const evoluciones = [...datos.historia]
@@ -3074,7 +3245,7 @@ function imprimirHistoria(datos: Registros, paciente: string, firmante?: Firmant
       (
         e,
       ) => `<div class="item"><h3>${escapar(formatearFecha(e.fecha))} · ${escapar(e.motivo)}${e.pieza ? ` · Pieza ${escapar(e.pieza)}` : ""}</h3>
-      <p>${escapar(e.detalle)}</p><p class="meta">${escapar(e.profesional)}</p></div>`,
+      <p>${escapar(e.detalle)}</p><p class="meta">${escapar(e.profesional)}</p>${legalHtml(e)}</div>`,
     )
     .join("");
   const firma =
@@ -3324,32 +3495,43 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         ) : (
           <ul className="space-y-2.5">
             {lista.map((e) => (
-              <li key={e.id} className={`${ITEM} flex items-start gap-3`}>
+              <li key={e.id} className={`${ITEM} flex flex-wrap items-start gap-3`}>
                 <div className="hidden w-20 shrink-0 sm:block">
                   <p className="text-sm font-bold">{formatearFecha(e.fecha)}</p>
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[13rem]">
                   {/* En el celular la fecha va arriba, en la misma línea del registro. */}
                   <p className="whitespace-nowrap text-xs font-bold text-primary sm:hidden">
                     {formatearFecha(e.fecha)}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold">{e.motivo}</p>
+                    <p className={`text-sm font-semibold ${e.anulada ? "text-muted-foreground line-through" : ""}`}>{e.motivo}</p>
                     {e.pieza && <Badge tono="primary">Pieza {e.pieza}</Badge>}
                   </div>
-                  <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">
+                  <p className={`mt-0.5 whitespace-pre-line text-sm text-muted-foreground ${e.anulada ? "line-through opacity-70" : ""}`}>
                     {e.detalle}
                   </p>
                   {e.profesional && (
                     <p className="mt-1 text-[11px] text-muted-foreground">{e.profesional}</p>
                   )}
+                  <RegistroLegal r={e} />
                 </div>
-                <BotonBorrar
+                <AccionesLegales
+                  r={e}
                   etiqueta="Eliminar evolución"
-                  onClick={() => {
-                    // TODO backend: DELETE /pacientes/:id/historia/:evolucionId
+                  onBorrar={() => {
                     cambiar("historia", (prev) => prev.filter((x) => x.id !== e.id));
                     onToast("Evolución eliminada");
+                  }}
+                  onCorregir={(c) => {
+                    cambiar("historia", (prev) => prev.map((x) => (x.id === e.id ? { ...x, correcciones: [...(x.correcciones ?? []), c] } : x)));
+                    auditarLegal(cambiar, c.autor, `Corrigió la evolución del ${formatearFecha(e.fecha)} (${e.motivo})`);
+                    onToast("Corrección agregada");
+                  }}
+                  onAnular={(a) => {
+                    cambiar("historia", (prev) => prev.map((x) => (x.id === e.id ? { ...x, anulada: a } : x)));
+                    auditarLegal(cambiar, a.autor, `Anuló la evolución del ${formatearFecha(e.fecha)} (${e.motivo}): ${a.motivo}`);
+                    onToast("Evolución anulada (queda registrada)");
                   }}
                 />
               </li>
@@ -3362,7 +3544,10 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
               onCancel={() => setAbierto(false)}
               onSubmit={(nueva) => {
                 // TODO backend: POST /pacientes/:id/historia
-                cambiar("historia", (prev) => [...prev, { ...nueva, id: Date.now() }]);
+                cambiar("historia", (prev) => [
+                  ...prev,
+                  { ...nueva, id: Date.now(), creada: new Date().toISOString(), autor: usuario?.nombre ?? "" },
+                ]);
                 setAbierto(false);
                 onToast("Evolución guardada");
               }}

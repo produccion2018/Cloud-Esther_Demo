@@ -65,6 +65,7 @@ import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
 import { VolverALlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { EtiquetasPaciente } from "@/components/cloud-esther/pacientes/EtiquetasPaciente";
+import { UnirDuplicados } from "@/components/cloud-esther/pacientes/UnirDuplicados";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
 import { contarPacientesActivos, useEtiquetas, usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -1330,6 +1331,8 @@ function PacientesInner() {
   const { message, show } = useToast();
   const real = useClinicaReal();
   const [importando, setImportando] = useState(false);
+  // Unir duplicados: lo hace el administrador o recepción (en el demo, siempre)
+  const puedeUnir = !real || ["admin", "secretaria"].includes(real.rol);
 
   const registros =
     useRegistrosPacientes();
@@ -1772,6 +1775,11 @@ function PacientesInner() {
 
               {/* Pacientes que no vienen hace tiempo y no tienen turno */}
               <VolverALlamar onToast={show} />
+
+              {/* Fichas que parecen la misma persona: se unen sin perder nada */}
+              {puedeUnir && (
+                <UnirDuplicados onToast={show} onAuditar={(t) => auditarPaciente("Modificación", t)} />
+              )}
 
               {/* Filtros */}
 

@@ -1305,6 +1305,38 @@ const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REG
 });
 
 /** Lectura y escritura sin hooks (la usan Esther Infinity y las automatizaciones). */
+/** Une los registros de dos pacientes (al juntar duplicados): todo pasa a «queda». */
+export function unirRegistros(queda: number, sale: number) {
+  const todos = storeRegistros.leer();
+  const a = (todos[queda] ?? VACIO) as Registros;
+  const b = todos[sale];
+  if (!b) return;
+  const unido = { ...a } as Record<string, unknown>;
+  for (const [k, vb] of Object.entries(b)) {
+    const va = (a as Record<string, unknown>)[k];
+    if (Array.isArray(vb)) unido[k] = [...(Array.isArray(va) ? va : []), ...vb];
+    else if (k === "antecedentes" && vb && typeof vb === "object") {
+      const x = (va ?? {}) as Antecedentes;
+      const y = vb as Antecedentes;
+      const juntar = (p: string[] = [], q: string[] = []) => Array.from(new Set([...p, ...q].filter(Boolean)));
+      const texto = (p = "", q = "") => (p && q && p !== q ? `${p} · ${q}` : p || q);
+      unido[k] = {
+        ...y,
+        ...x,
+        alergias: juntar(x.alergias, y.alergias),
+        enfermedades: juntar(x.enfermedades, y.enfermedades),
+        habitos: juntar(x.habitos, y.habitos),
+        medicacion: texto(x.medicacion, y.medicacion),
+        observaciones: texto(x.observaciones, y.observaciones),
+        grupoSanguineo: x.grupoSanguineo || y.grupoSanguineo,
+      };
+    } else if (va === undefined || va === null || (typeof va === "object" && !Array.isArray(va) && !Object.keys(va as object).length))
+      unido[k] = vb;
+  }
+  const { [sale]: _fuera, ...resto } = todos;
+  storeRegistros.poner({ ...resto, [queda]: unido as Registros });
+}
+
 export function leerRegistros(): Record<number, Registros> {
   return storeRegistros.leer();
 }

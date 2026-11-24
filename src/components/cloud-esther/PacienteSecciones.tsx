@@ -3113,8 +3113,139 @@ function imprimirHistoria(datos: Registros, paciente: string, firmante?: Firmant
   return true;
 }
 
+/* ───────────── Línea de tiempo del paciente ─────────────
+   Todo lo que pasó con el paciente en una sola cronología: turnos, evoluciones, notas clínicas,
+   tratamientos, recetas, estudios, presupuestos, pagos, documentos, laboratorio y fotos. */
+type EventoLinea = {
+  id: string;
+  fecha: string;
+  tipo: "Turnos" | "Clínico" | "Tratamientos" | "Recetas" | "Estudios" | "Presupuestos" | "Pagos" | "Documentos";
+  icon: LucideIcon;
+  tono: string;
+  titulo: string;
+  detalle?: string;
+};
+const TIPOS_LINEA: EventoLinea["tipo"][] = ["Turnos", "Clínico", "Tratamientos", "Recetas", "Estudios", "Presupuestos", "Pagos", "Documentos"];
+const MESES_LINEA = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+function LineaDeTiempo({ datos, paciente }: { datos: Registros; paciente: string }) {
+  const { turnos } = storeAgenda.usar();
+  const [filtro, setFiltro] = useState<EventoLinea["tipo"] | "">("");
+  const [verMas, setVerMas] = useState(40);
+  const hoy = hoyISO();
+  const nombre = normalizarBusqueda(paciente);
+  const eventos: EventoLinea[] = [];
+  const corto = (t: string, n = 140) => (t && t.length > n ? `${t.slice(0, n).trim()}…` : t);
+
+  for (const t of turnos.filter((x) => normalizarBusqueda(x.paciente) === nombre))
+    eventos.push({
+      id: `t${t.id}`,
+      fecha: t.fecha,
+      tipo: "Turnos",
+      icon: CalendarDays,
+      tono: t.estado === "Cancelada" || t.estado === "Ausente" ? "from-slate-400 to-slate-500" : t.fecha > hoy ? "from-sky-500 to-indigo-500" : "from-primary to-fuchsia-500",
+      titulo: `${t.fecha > hoy ? "Turno agendado" : "Turno"} · ${t.tratamiento}`,
+      detalle: `${t.hora} · ${t.odontologo} · ${t.estado}`,
+    });
+  for (const e of datos.historia)
+    eventos.push({ id: `e${e.id}`, fecha: e.fecha, tipo: "Clínico", icon: History, tono: "from-violet-500 to-purple-600", titulo: `Evolución · ${e.motivo}${e.pieza ? ` (pieza ${e.pieza})` : ""}`, detalle: corto(e.detalle) });
+  for (const n of datos.notasClinicas)
+    eventos.push({ id: `n${n.id}`, fecha: n.fecha, tipo: "Clínico", icon: ClipboardList, tono: "from-violet-500 to-purple-600", titulo: `Nota clínica · ${n.motivoConsulta || "Consulta"}`, detalle: corto([n.diagnostico, n.procedimiento].filter(Boolean).join(" · ")) });
+  for (const t of datos.tratamientos)
+    eventos.push({ id: `tr${t.id}`, fecha: t.inicio, tipo: "Tratamientos", icon: Stethoscope, tono: "from-emerald-500 to-teal-600", titulo: `Tratamiento · ${t.nombre}${t.pieza ? ` (pieza ${t.pieza})` : ""}`, detalle: `${t.estado}${t.profesional ? ` · ${t.profesional}` : ""}` });
+  for (const r of datos.recetas)
+    eventos.push({ id: `r${r.id}`, fecha: r.fecha, tipo: "Recetas", icon: Pill, tono: "from-pink-500 to-rose-500", titulo: `Receta ${r.numero}`, detalle: corto(r.medicamentos.map((m) => m.nombre).join(", ")) });
+  for (const e of datos.estudios)
+    eventos.push({ id: `s${e.id}`, fecha: e.fecha, tipo: "Estudios", icon: ScanLine, tono: "from-cyan-500 to-sky-600", titulo: `Estudio · ${e.tipo}${e.zona ? ` (${e.zona})` : ""}`, detalle: corto(e.diagnostico) });
+  for (const p of datos.presupuestos) {
+    const total = p.lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
+    eventos.push({ id: `p${p.id}`, fecha: p.fecha, tipo: "Presupuestos", icon: ReceiptText, tono: "from-amber-500 to-orange-500", titulo: `Presupuesto ${p.numero} · ${formatearMonto(total)}`, detalle: p.estado });
+  }
+  for (const m of datos.cuenta)
+    eventos.push({ id: `c${m.id}`, fecha: m.fecha, tipo: "Pagos", icon: m.tipo === "Pago" ? CircleDollarSign : Wallet, tono: m.tipo === "Pago" ? "from-emerald-500 to-green-600" : "from-slate-500 to-slate-600", titulo: `${m.tipo} · ${formatearMonto(m.monto)}`, detalle: [m.concepto, m.medio].filter(Boolean).join(" · ") });
+  for (const d of datos.documentos)
+    eventos.push({ id: `d${d.id}`, fecha: d.fecha, tipo: "Documentos", icon: d.firma ? FileSignature : FileText, tono: "from-indigo-500 to-violet-500", titulo: `${d.firma ? "Consentimiento firmado" : "Documento"} · ${d.titulo}`, detalle: d.categoria });
+  for (const l of datos.laboratorio)
+    eventos.push({ id: `l${l.id}`, fecha: l.fechaEnvio, tipo: "Tratamientos", icon: FlaskConical, tono: "from-sky-500 to-indigo-500", titulo: `Laboratorio · ${l.tipo}${l.pieza ? ` (pieza ${l.pieza})` : ""}`, detalle: `${l.estado}${l.proveedor ? ` · ${l.proveedor}` : ""}` });
+  for (const f of datos.fotografias)
+    eventos.push({ id: `f${f.id}`, fecha: f.fecha, tipo: "Estudios", icon: Camera, tono: "from-cyan-500 to-sky-600", titulo: `Fotografía · ${f.tipo}`, detalle: corto(f.observacion) });
+
+  const lista = eventos
+    .filter((e) => e.fecha && (!filtro || e.tipo === filtro))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
+  const visibles = lista.slice(0, verMas);
+  const conteo = (t: EventoLinea["tipo"]) => eventos.filter((e) => e.tipo === t && e.fecha).length;
+  let mesAnterior = "";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setFiltro("")}
+          className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${!filtro ? "border-primary bg-primary text-primary-foreground" : "border-primary/15 bg-white text-muted-foreground hover:text-primary dark:bg-card"}`}
+        >
+          Todo ({eventos.filter((e) => e.fecha).length})
+        </button>
+        {TIPOS_LINEA.filter((t) => conteo(t) > 0).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setFiltro(t)}
+            className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${filtro === t ? "border-primary bg-primary text-primary-foreground" : "border-primary/15 bg-white text-muted-foreground hover:text-primary dark:bg-card"}`}
+          >
+            {t} ({conteo(t)})
+          </button>
+        ))}
+      </div>
+      {visibles.length === 0 ? (
+        <EstadoVacio icon={History} titulo="Todavía no hay movimientos" texto="Acá vas a ver todo lo que pase con el paciente, en orden de fecha." />
+      ) : (
+        <ol className="relative space-y-2 border-l-2 border-primary/15 pl-4 sm:pl-5">
+          {visibles.map((e) => {
+            const [y = "", m = "1"] = e.fecha.split("-");
+            const mes = `${MESES_LINEA[Number(m) - 1] ?? ""} ${y}`;
+            const cabecera = mes !== mesAnterior;
+            mesAnterior = mes;
+            const Icon = e.icon;
+            return (
+              <li key={e.id}>
+                {cabecera && (
+                  <p className="-ml-4 mb-2 mt-3 inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold capitalize text-primary first:mt-0 sm:-ml-5">
+                    {mes}
+                  </p>
+                )}
+                <div className="relative flex items-start gap-3 rounded-2xl border border-primary/10 bg-white/90 p-3 shadow-sm dark:bg-card">
+                  <span className={`absolute -left-[27px] top-4 size-2.5 rounded-full bg-gradient-to-br ring-4 ring-white dark:ring-card sm:-left-[31px] ${e.tono}`} />
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm ${e.tono}`}>
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {formatearFecha(e.fecha)}
+                      {e.fecha > hoy && <span className="ml-1.5 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-sky-700 dark:text-sky-300">próximo</span>}
+                    </p>
+                    <p className="text-sm font-semibold leading-snug">{e.titulo}</p>
+                    {e.detalle && <p className="mt-0.5 text-xs text-muted-foreground">{e.detalle}</p>}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {lista.length > visibles.length && (
+        <button type="button" onClick={() => setVerMas((v) => v + 40)} className={`${BTN_SECUNDARIO} w-full justify-center`}>
+          Ver más ({lista.length - visibles.length})
+        </button>
+      )}
+    </div>
+  );
+}
+
 function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
+  const [vista, setVista] = useState<"historia" | "linea">("historia");
   // El profesional logueado firma el documento con su firma/sello/matrícula.
   const { usuario } = useSesion();
   const { miembros } = useEquipo();
@@ -3153,6 +3284,28 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           </button>
         </div>
       </div>
+      {/* Historia (antecedentes, notas y evoluciones) o la línea de tiempo con todo */}
+      <div className="inline-flex rounded-full border border-primary/15 bg-card p-1 shadow-sm">
+        {(
+          [
+            ["historia", "Historia clínica"],
+            ["linea", "Línea de tiempo"],
+          ] as const
+        ).map(([id, l]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setVista(id)}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${vista === id ? "bg-gradient-to-r from-primary to-fuchsia-500 text-white shadow-sm" : "text-muted-foreground hover:text-primary"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {vista === "linea" ? (
+        <LineaDeTiempo datos={datos} paciente={contexto?.paciente ?? ""} />
+      ) : (
+      <>
       <AntecedentesCard datos={datos} cambiar={cambiar} onToast={onToast} />
       <NotasClinicasPanel datos={datos} cambiar={cambiar} onToast={onToast} contexto={undefined} />
       <div className="border-t border-border pt-3">
@@ -3217,6 +3370,8 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           </Modal>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

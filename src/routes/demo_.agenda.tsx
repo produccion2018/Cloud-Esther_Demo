@@ -62,7 +62,10 @@ import {
   type Recordatorio,
   type Tarea,
   type Turno,
+  leerProfesionalVisto,
+  guardarProfesionalVisto,
 } from "@/lib/cloud-esther/agenda-store";
+import { normalizarBusqueda } from "@/lib/utils";
 import { Seleccion } from "@/components/ui/seleccion";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
@@ -2112,6 +2115,20 @@ function AgendaInner() {
     tratamiento: "",
   });
 
+  // Filtro por profesional: se recuerda (compartido con el Dashboard) y un odontólogo
+  // de una clínica real arranca viendo su propia agenda.
+  useEffect(() => {
+    const guardado = leerProfesionalVisto();
+    let elegido = guardado && (odontologosConAdmin.includes(guardado) || turnos.some((t) => t.odontologo === guardado)) ? guardado : "";
+    if (!guardado && real?.rol === "odontologo") {
+      const yo = normalizarBusqueda(real.sesion.usuario.nombre ?? "");
+      elegido =
+        odontologosConAdmin.find((p) => normalizarBusqueda(p) === yo || normalizarBusqueda(p).includes(yo)) ?? "";
+    }
+    if (elegido) setFiltros((f) => (f.odontologo ? f : { ...f, odontologo: elegido }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [odontologosConAdmin.join("|"), real?.rol, turnos.length]);
+
   const cerrarModal = () => setModal(null);
 
   const nombresPacientes = Array.from(
@@ -2187,7 +2204,10 @@ function AgendaInner() {
 
   const hayFiltros = Object.values(filtros).some(Boolean);
 
-  const turnosHoy = turnos.filter((t) => t.fecha === hoy);
+  // Las tarjetas de hoy siguen al profesional elegido
+  const turnosHoy = turnos.filter(
+    (t) => t.fecha === hoy && (!filtros.odontologo || t.odontologo === filtros.odontologo),
+  );
 
   const contar = (estado: EstadoTurno) => turnosHoy.filter((t) => t.estado === estado).length;
 
@@ -2443,14 +2463,14 @@ function AgendaInner() {
                     label="Turnos de hoy"
                     value={turnosHoy.length}
                     icon={CalendarDays}
-                    sub="en la agenda"
+                    sub={filtros.odontologo ? `de ${filtros.odontologo}` : "en la agenda"}
                     tono="violeta"
                   />
                   <StatCard
                     label="Confirmados"
                     value={contar("Confirmada")}
                     icon={Check}
-                    sub={`de ${turnosHoy.length} turnos`}
+                    sub={`de ${turnosHoy.length} ${turnosHoy.length === 1 ? "turno" : "turnos"}`}
                     tono="verde"
                   />
                   <StatCard
@@ -2477,14 +2497,15 @@ function AgendaInner() {
                     </p>
                     {hayFiltros && (
                       <button
-                        onClick={() =>
+                        onClick={() => {
+                          guardarProfesionalVisto("");
                           setFiltros({
                             sucursal: "",
                             odontologo: "",
                             gabinete: "",
                             tratamiento: "",
-                          })
-                        }
+                          });
+                        }}
                         className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
                       >
                         Limpiar filtros
@@ -2510,13 +2531,19 @@ function AgendaInner() {
                     <SelectField
                       compact
                       value={filtros.odontologo}
-                      onChange={(v) =>
+                      onChange={(v) => {
+                        guardarProfesionalVisto(v);
                         setFiltros((f) => ({
                           ...f,
                           odontologo: v,
-                        }))
-                      }
-                      options={opcionesAgenda.odontologos}
+                        }));
+                      }}
+                      options={Array.from(
+                        new Set([
+                          ...opcionesAgenda.odontologos,
+                          ...turnos.map((t) => t.odontologo).filter(Boolean),
+                        ]),
+                      ).sort((a, b) => a.localeCompare(b))}
                       placeholder="Todos los odontólogos"
                     />
 

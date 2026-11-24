@@ -12,6 +12,8 @@ import {
   setTurnosStore,
   storeAgenda,
   type EstadoTurno,
+  leerProfesionalVisto,
+  guardarProfesionalVisto,
 } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
@@ -1209,10 +1211,14 @@ function DashboardInner() {
   ).sort((a, b) => a.localeCompare(b));
   // Un odontólogo de una clínica real arranca viendo su propio día
   useEffect(() => {
-    if (real?.rol !== "odontologo") return;
-    const yo = normalizarBusqueda(real.sesion.usuario.nombre ?? "");
-    const mio = profesionalesDelDia.find((p) => normalizarBusqueda(p) === yo || normalizarBusqueda(p).includes(yo));
-    if (mio) setProfesional(mio);
+    // Lo elegido en la Agenda o el Dashboard se recuerda durante la sesión
+    const guardado = leerProfesionalVisto();
+    if (guardado && profesionalesDelDia.includes(guardado)) setProfesional(guardado);
+    else if (!guardado && real?.rol === "odontologo") {
+      const yo = normalizarBusqueda(real.sesion.usuario.nombre ?? "");
+      const mio = profesionalesDelDia.find((p) => normalizarBusqueda(p) === yo || normalizarBusqueda(p).includes(yo));
+      if (mio) setProfesional(mio);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [real?.rol, profesionalesDelDia.join("|")]);
   const turnos: Turno[] = turnosAgenda
@@ -1445,7 +1451,10 @@ function DashboardInner() {
             <Seleccion
               aria-label="Profesional"
               value={profesional}
-              onChange={(e) => setProfesional(e.target.value)}
+              onChange={(e) => {
+                guardarProfesionalVisto(e.target.value);
+                setProfesional(e.target.value);
+              }}
               className="h-9 min-w-[13rem] rounded-full border border-primary/15 bg-card px-3.5 text-sm font-semibold"
             >
               <option value="">Todos los profesionales</option>

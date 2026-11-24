@@ -205,3 +205,21 @@ const RECORDATORIOS_INICIAL: Recordatorio[] = [
   { id: 2, canal: "SMS", cuando: "2 h antes del turno", activo: true },
   { id: 3, canal: "Correo", cuando: "Al confirmar el turno", activo: true },
 ];
+/* Profesional elegido para "ver el día de…": se comparte entre el Dashboard y la Agenda
+   mientras dure la sesión del navegador, así no hay que elegirlo dos veces. */
+const CLAVE_PROFESIONAL = "cloud-esther:profesional-visto";
+export function leerProfesionalVisto(): string {
+  try {
+    return typeof window === "undefined" ? "" : (window.sessionStorage.getItem(CLAVE_PROFESIONAL) ?? "");
+  } catch {
+    return "";
+  }
+}
+export function guardarProfesionalVisto(nombre: string) {
+  try {
+    if (nombre) window.sessionStorage.setItem(CLAVE_PROFESIONAL, nombre);
+    else window.sessionStorage.removeItem(CLAVE_PROFESIONAL);
+  } catch {
+    /* sin almacenamiento: no pasa nada */
+  }
+}

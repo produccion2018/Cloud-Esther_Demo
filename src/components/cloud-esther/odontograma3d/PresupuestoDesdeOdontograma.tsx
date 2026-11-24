@@ -32,7 +32,18 @@ type Item = {
   tratamientoId?: number;
   incluido: boolean;
 };
-type Tipo = "restauracion" | "extraccion" | "endodoncia" | "corona" | "implante" | "protesis" | "control" | "otro";
+type Tipo =
+  | "restauracion"
+  | "extraccion"
+  | "endodoncia"
+  | "corona"
+  | "implante"
+  | "protesis"
+  | "perno"
+  | "carilla"
+  | "sellante"
+  | "control"
+  | "otro";
 
 const PALABRAS: Record<Exclude<Tipo, "otro">, RegExp> = {
   restauracion: /restaur|obtura|resina|composite|amalgama|caries/i,
@@ -41,6 +52,9 @@ const PALABRAS: Record<Exclude<Tipo, "otro">, RegExp> = {
   corona: /corona/i,
   implante: /implante/i,
   protesis: /pr[oó]tesis|puente/i,
+  perno: /perno|mu[nñ][oó]n/i,
+  carilla: /carilla/i,
+  sellante: /sellante|sellador/i,
   control: /control|consulta|revisi/i,
 };
 const tipoDe = (texto: string): Tipo =>
@@ -105,6 +119,29 @@ function armarItems(
       if (caras.length && !(t.whole ?? []).includes("ausente") && !yaPlanificado(fdi, "restauracion"))
         agregar(`Restauración ${caras.length > 1 ? `${caras.length} caras` : "1 cara"} (${caras.map((c) => SURFACE_LABELS[c].split(" ")[0]).join(", ")})`, fdi);
       if ((t.whole ?? []).includes("extraccion") && !yaPlanificado(fdi, "extraccion")) agregar("Extracción", fdi);
+      else if ((t.whole ?? []).includes("resto") && !yaPlanificado(fdi, "extraccion"))
+        agregar("Extracción de resto radicular", fdi);
+      // Lo marcado como "a realizar" (rojo) en la convención rojo/azul
+      const pend = new Set(t.aRealizar ?? []);
+      const obturar = (Object.entries(t.surfaces ?? {}) as [Surface, string][])
+        .filter(([c, h]) => h === "obturacion" && pend.has(`s:${c}`))
+        .map(([c]) => c);
+      if (obturar.length && !caras.length && !yaPlanificado(fdi, "restauracion"))
+        agregar(`Restauración ${obturar.length > 1 ? `${obturar.length} caras` : "1 cara"} (${obturar.map((c) => SURFACE_LABELS[c].split(" ")[0]).join(", ")})`, fdi);
+      if (Object.entries(t.surfaces ?? {}).some(([c, h]) => h === "sellante" && pend.has(`s:${c}`)) && !yaPlanificado(fdi, "sellante"))
+        agregar("Sellante", fdi);
+      const NOMBRES: Partial<Record<string, string>> = {
+        corona: "Corona",
+        endodoncia: "Endodoncia",
+        implante: "Implante",
+        perno: "Perno-muñón",
+        carilla: "Carilla",
+        puente: "Puente (prótesis fija)",
+      };
+      for (const w of t.whole ?? []) {
+        const nombre = NOMBRES[w];
+        if (nombre && pend.has(`w:${w}`) && !yaPlanificado(fdi, tipoDe(nombre))) agregar(nombre, fdi);
+      }
     }
   }
   // Orden por pieza

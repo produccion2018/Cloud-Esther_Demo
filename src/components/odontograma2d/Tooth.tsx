@@ -1,11 +1,16 @@
 import { GEOMETRY } from "@/lib/odontograma2d/anatomy";
 import type { ToothDef } from "@/lib/odontograma2d/teeth";
 import {
+  AZUL_EXISTENTE,
   FINDING_COLOR_VAR,
   FINDING_LABELS,
+  ROJO_A_REALIZAR,
   SURFACE_LABELS,
+  esARealizar,
   type Surface,
+  type SurfaceFinding,
   type ToothState,
+  type WholeFinding,
 } from "@/lib/odontograma2d/types";
 
 const EMPTY: ToothState = { surfaces: {}, whole: [] };
@@ -15,6 +20,8 @@ interface ToothProps {
   state?: ToothState;
   onSurface: (fdi: string, surface: Surface) => void;
   onWhole: (fdi: string) => void;
+  /** Convención rojo (a realizar) / azul (existente) en lugar de un color por hallazgo. */
+  convencion?: boolean;
 }
 
 /** reparte las 5 superficies dentro de la caja de la corona */
@@ -35,7 +42,7 @@ function surfaceShapes(box: [number, number, number, number]) {
   };
 }
 
-export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) {
+export function Tooth({ tooth, state = EMPTY, onSurface, onWhole, convencion = false }: ToothProps) {
   const geo = GEOMETRY[tooth.type];
   const shapes = surfaceShapes(geo.crownBox);
   const clipId = `crown-${tooth.fdi}`;
@@ -47,10 +54,21 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
   const hasImplant = state.whole.includes("implante");
   const hasEndo = state.whole.includes("endodoncia");
   const extraction = state.whole.includes("extraccion");
+  const hasPerno = state.whole.includes("perno");
+  const hasCarilla = state.whole.includes("carilla");
+  const hasPuente = state.whole.includes("puente");
+  const isResto = state.whole.includes("resto");
+  const retenido = state.whole.includes("retenido");
+
+  // Color de un hallazgo: el suyo propio, o rojo/azul con la convención (a realizar / existente)
+  const colorW = (w: WholeFinding) =>
+    !convencion || w === "ausente" ? FINDING_COLOR_VAR[w] : esARealizar(state, "w", w, w) ? ROJO_A_REALIZAR : AZUL_EXISTENTE;
+  const colorS = (s: Surface, f: SurfaceFinding) =>
+    !convencion ? FINDING_COLOR_VAR[f] : esARealizar(state, "s", s, f) ? ROJO_A_REALIZAR : AZUL_EXISTENTE;
 
   const fill = (s: Surface) => {
     const f = state.surfaces[s];
-    return f ? FINDING_COLOR_VAR[f] : "transparent";
+    return f ? colorS(s, f) : "transparent";
   };
 
   const surfaceProps = (s: Surface) => ({
@@ -117,7 +135,7 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
 
           {/* implante: tornillo en lugar de raíz */}
           {hasImplant && !isAbsent && (
-            <g stroke="var(--implante)" strokeWidth={3} fill="none">
+            <g stroke={colorW("implante")} strokeWidth={3} fill="none">
               <path d="M50 96 L50 18" />
               {[28, 40, 52, 64, 76, 88].map((y) => (
                 <path key={y} d={`M38 ${y} L62 ${y - 5}`} strokeWidth={2.4} />
@@ -127,7 +145,7 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
 
           {/* endodoncia: conducto marcado */}
           {hasEndo && !isAbsent && (
-            <g stroke="var(--endodoncia)" strokeWidth={3.2} fill="none">
+            <g stroke={colorW("endodoncia")} strokeWidth={3.2} fill="none">
               {geo.roots.map((_, i) => (
                 <path
                   key={i}
@@ -143,16 +161,21 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
             </g>
           )}
 
-          {/* corona */}
+          {/* perno-muñón: poste grueso dentro de la raíz */}
+          {hasPerno && !isAbsent && (
+            <path d="M50 112 L50 46" stroke={colorW("perno")} strokeWidth={7} strokeLinecap="round" />
+          )}
+
+          {/* corona (en resto radicular la corona no está: se ve el borde roto) */}
           <path
             d={geo.crown}
             fill={
-              isAbsent ? "transparent" : hasCrown ? "var(--corona)" : `url(#enamel-${tooth.fdi})`
+              isAbsent || isResto ? "transparent" : hasCrown ? colorW("corona") : `url(#enamel-${tooth.fdi})`
             }
             fillOpacity={hasCrown ? 0.75 : 1}
-            stroke={isAbsent ? "var(--ausente)" : "var(--tooth-line)"}
-            strokeWidth={1.6}
-            strokeDasharray={isAbsent ? "5 4" : undefined}
+            stroke={isAbsent ? "var(--ausente)" : isResto ? colorW("resto") : "var(--tooth-line)"}
+            strokeWidth={isResto ? 2.2 : 1.6}
+            strokeDasharray={isAbsent ? "5 4" : isResto ? "3 3" : undefined}
             strokeLinejoin="round"
           />
 
@@ -172,6 +195,10 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
               </g>
 
               {/* superficies clickeables */}
+              {/* carilla: cubre la cara vestibular */}
+              {hasCarilla && (
+                <polygon points={shapes.top} fill={colorW("carilla")} fillOpacity={0.7} pointerEvents="none" />
+              )}
               <polygon points={shapes.top} {...surfaceProps("V")} />
               <polygon points={shapes.bottom} {...surfaceProps("L")} />
               <polygon points={shapes.left} {...surfaceProps(left)} />
@@ -199,8 +226,37 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole }: ToothProps) 
         />
       </g>
 
+      {/* puente: barra que une la pieza con las vecinas, del lado de la corona */}
+      {hasPuente && (
+        <path
+          d={flip ? "M-4 18 L104 18" : "M-4 172 L104 172"}
+          stroke={colorW("puente")}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* no erupcionado / retenido: círculo alrededor de la pieza */}
+      {retenido && (
+        <ellipse cx={50} cy={95} rx={47} ry={90} fill="none" stroke={colorW("retenido")} strokeWidth={3.5} />
+      )}
+
+      {/* resto radicular: marca RR */}
+      {isResto && (
+        <text
+          x={50}
+          y={flip ? 40 : 158}
+          textAnchor="middle"
+          fontSize={26}
+          fontWeight={800}
+          fill={colorW("resto")}
+        >
+          RR
+        </text>
+      )}
+
       {extraction && (
-        <g stroke="var(--extraccion)" strokeWidth={5} strokeLinecap="round">
+        <g stroke={colorW("extraccion")} strokeWidth={5} strokeLinecap="round">
           <path d="M16 30 L84 160" />
           <path d="M84 30 L16 160" />
         </g>

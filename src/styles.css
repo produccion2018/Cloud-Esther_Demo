@@ -133,6 +133,11 @@
   --implante: oklch(0.72 0.12 210);
   --extraccion: oklch(0.62 0.21 22);
   --ausente: oklch(0.6 0.02 290);
+  --perno: oklch(0.55 0.08 250);
+  --carilla: oklch(0.78 0.11 200);
+  --puente: oklch(0.7 0.14 75);
+  --resto: oklch(0.55 0.15 40);
+  --retenido: oklch(0.6 0.13 280);
 }
 
 .dark {

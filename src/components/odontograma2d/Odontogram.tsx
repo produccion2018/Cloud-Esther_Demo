@@ -18,8 +18,13 @@ import {
   type ToothDef,
 } from "@/lib/odontograma2d/teeth";
 import {
+  AZUL_EXISTENTE,
   FINDING_COLOR_VAR,
   FINDING_LABELS,
+  ROJO_A_REALIZAR,
+  SIEMPRE_A_REALIZAR,
+  claveHallazgo,
+  esARealizar,
   SURFACE_FINDINGS,
   SURFACE_LABELS,
   WHOLE_FINDINGS,
@@ -200,6 +205,30 @@ export function Odontogram({
   const [nota, setNota] = useState("");
   const completo = nivelModulo("odontograma", plan) !== "basico";
   const [denticion, setDenticion] = useState<Denticion>("permanente");
+  // Convención rojo/azul: lo nuevo se marca como "a realizar" (rojo) o "existente" (azul).
+  // La preferencia de colores queda guardada en este navegador.
+  const [marcarComo, setMarcarComo] = useState<"realizar" | "existente">("realizar");
+  const [convencion, setConvencion] = useState(false);
+  useEffect(() => {
+    try {
+      setConvencion(window.localStorage.getItem("cloud-esther:odontograma2d:convencion") === "1");
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, []);
+  const cambiarConvencion = (v: boolean) => {
+    setConvencion(v);
+    try {
+      window.localStorage.setItem("cloud-esther:odontograma2d:convencion", v ? "1" : "0");
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
+  /** Agrega o quita un hallazgo de la lista "a realizar" de la pieza. */
+  const conPendiente = (t: ToothState, clave: string, pendiente: boolean): string[] => {
+    const resto = (t.aRealizar ?? []).filter((x) => x !== clave);
+    return pendiente ? [...resto, clave] : resto;
+  };
   // Dentición que corresponde por la edad (para avisar que es un paciente pediátrico).
   const denticionEdad = useMemo(() => denticionSugerida(patientId), [patientId]);
 
@@ -270,22 +299,31 @@ export function Odontogram({
     seleccionar(fdi);
     const previo = state[fdi]?.surfaces[surface];
     const zona = SURFACE_LABELS[surface];
+    const pendiente = tool !== "borrar" && (SIEMPRE_A_REALIZAR.has(tool) || marcarComo === "realizar");
+    const como = tool !== "borrar" && !SIEMPRE_A_REALIZAR.has(tool) ? (pendiente ? " · a realizar" : " · existente") : "";
     if (tool === "borrar" || previo === tool) {
       if (previo) registrar(fdi, `Quitó ${FINDING_LABELS[previo]} (${zona})`);
     } else {
       registrar(
         fdi,
         previo
-          ? `${FINDING_LABELS[previo]} → ${FINDING_LABELS[tool]} (${zona})`
-          : `Marcó ${FINDING_LABELS[tool]} (${zona})`,
+          ? `${FINDING_LABELS[previo]} → ${FINDING_LABELS[tool]} (${zona})${como}`
+          : `Marcó ${FINDING_LABELS[tool]} (${zona})${como}`,
       );
     }
     update((prev) => {
       const t = prev[fdi] ?? EMPTY;
       const surfaces = { ...t.surfaces };
-      if (tool === "borrar" || surfaces[surface] === tool) delete surfaces[surface];
-      else surfaces[surface] = tool;
-      return { ...prev, [fdi]: { ...t, surfaces } };
+      const clave = claveHallazgo("s", surface);
+      let aRealizar: string[];
+      if (tool === "borrar" || surfaces[surface] === tool) {
+        delete surfaces[surface];
+        aRealizar = conPendiente(t, clave, false);
+      } else {
+        surfaces[surface] = tool;
+        aRealizar = conPendiente(t, clave, pendiente && !SIEMPRE_A_REALIZAR.has(tool));
+      }
+      return { ...prev, [fdi]: { ...t, surfaces, aRealizar } };
     });
   };
 
@@ -296,19 +334,23 @@ export function Odontogram({
       if (actual.whole.length || Object.keys(actual.surfaces).length)
         registrar(fdi, "Limpió la pieza");
     } else if (isWholeFinding(tool)) {
+      const como =
+        tool === "ausente" || SIEMPRE_A_REALIZAR.has(tool) ? "" : marcarComo === "realizar" ? " · a realizar" : " · existente";
       registrar(
         fdi,
         actual.whole.includes(tool)
           ? `Quitó ${FINDING_LABELS[tool]} (pieza completa)`
-          : `Marcó ${FINDING_LABELS[tool]} (pieza completa)`,
+          : `Marcó ${FINDING_LABELS[tool]} (pieza completa)${como}`,
       );
     }
     update((prev) => {
       const t = prev[fdi] ?? EMPTY;
-      if (tool === "borrar") return { ...prev, [fdi]: { surfaces: {}, whole: [] } };
+      if (tool === "borrar") return { ...prev, [fdi]: { surfaces: {}, whole: [], aRealizar: [] } };
       if (!isWholeFinding(tool)) return prev;
-      const whole = t.whole.includes(tool) ? t.whole.filter((w) => w !== tool) : [...t.whole, tool];
-      return { ...prev, [fdi]: { ...t, whole } };
+      const quita = t.whole.includes(tool);
+      const whole = quita ? t.whole.filter((w) => w !== tool) : [...t.whole, tool];
+      const pendiente = !quita && tool !== "ausente" && !SIEMPRE_A_REALIZAR.has(tool) && marcarComo === "realizar";
+      return { ...prev, [fdi]: { ...t, whole, aRealizar: conPendiente(t, claveHallazgo("w", tool), pendiente) } };
     });
   };
 
@@ -337,18 +379,24 @@ export function Odontogram({
   };
 
   const findings = useMemo(() => {
-    const rows: { fdi: string; detail: string; finding: string }[] = [];
+    const rows: { fdi: string; detail: string; finding: string; pendiente?: boolean }[] = [];
     Object.entries(state)
       .sort(([a], [b]) => a.localeCompare(b))
       .forEach(([fdi, t]) => {
         t.whole.forEach((w) =>
-          rows.push({ fdi, detail: "Pieza completa", finding: FINDING_LABELS[w] }),
+          rows.push({
+            fdi,
+            detail: "Pieza completa",
+            finding: FINDING_LABELS[w],
+            ...(w === "ausente" ? {} : { pendiente: esARealizar(t, "w", w, w) }),
+          }),
         );
         (Object.keys(t.surfaces) as Surface[]).forEach((s) =>
           rows.push({
             fdi,
             detail: SURFACE_LABELS[s],
             finding: FINDING_LABELS[t.surfaces[s]!],
+            pendiente: esARealizar(t, "s", s, t.surfaces[s]!),
           }),
         );
       });
@@ -393,6 +441,7 @@ export function Odontogram({
               state={state[t.fdi] ?? EMPTY}
               onSurface={handleSurface}
               onWhole={handleWhole}
+              convencion={convencion}
             />
           </div>
           {t.arch === "upper" && (
@@ -416,12 +465,13 @@ export function Odontogram({
   const exportar = () => {
     const celda = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const csv = [
-      "Pieza,Ubicación,Hallazgo,Nota",
+      "Pieza,Ubicación,Hallazgo,Estado,Nota",
       ...findings.map((f) =>
         [
           f.fdi,
           f.detail,
           f.finding,
+          f.pendiente === undefined ? "" : f.pendiente ? "A realizar" : "Existente",
           cargarTratamientos(odontogramKey(tenantId, patientId))[Number(f.fdi)] ?? "",
         ]
           .map(celda)
@@ -443,7 +493,10 @@ export function Odontogram({
     const w = documentoPDF(`odontograma-2d-${patientName}`);
     onToast?.("Descargando el odontograma en PDF");
     const filas = findings
-      .map((f) => `<tr><td>${f.fdi}</td><td>${f.detail}</td><td>${f.finding}</td></tr>`)
+      .map(
+        (f) =>
+          `<tr><td>${f.fdi}</td><td>${f.detail}</td><td>${f.finding}</td><td style="color:${f.pendiente === undefined ? "#6b6280" : f.pendiente ? ROJO_A_REALIZAR : AZUL_EXISTENTE};font-weight:600">${f.pendiente === undefined ? "—" : f.pendiente ? "A realizar" : "Existente"}</td></tr>`,
+      )
       .join("");
     w.document
       .write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Odontograma 2D</title>
@@ -451,7 +504,7 @@ export function Odontogram({
       p{color:#6b6280;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
       th,td{border-bottom:1px solid #e7e3f0;padding:8px;text-align:left}th{background:#f6f3ff}</style></head>
       <body><h1>Odontograma 2D · ${patientName}</h1><p>${new Date().toLocaleDateString("es-AR")} · ${stats.total} hallazgos en ${stats.teethAffected} piezas</p>
-      <table><thead><tr><th>Pieza</th><th>Ubicación</th><th>Hallazgo</th></tr></thead><tbody>${filas || '<tr><td colspan="3">Sin hallazgos registrados.</td></tr>'}</tbody></table>
+      <table><thead><tr><th>Pieza</th><th>Ubicación</th><th>Hallazgo</th><th>Estado</th></tr></thead><tbody>${filas || '<tr><td colspan="4">Sin hallazgos registrados.</td></tr>'}</tbody></table>
       <script>window.onload=()=>window.print()</script></body></html>`);
     w.document.close();
   };
@@ -555,6 +608,35 @@ export function Odontogram({
 
       {/* Odontograma */}
       <div className="card-clinic p-3 sm:p-5 lg:p-6">
+        {completo && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex rounded-full border border-primary/15 bg-card p-0.5" role="group" aria-label="Marcar como">
+              {(
+                [
+                  ["realizar", "A realizar", ROJO_A_REALIZAR],
+                  ["existente", "Existente", AZUL_EXISTENTE],
+                ] as const
+              ).map(([v, t, c]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setMarcarComo(v)}
+                  aria-pressed={marcarComo === v}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                    marcarComo === v ? "bg-foreground/90 text-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="size-2.5 rounded-full" style={{ backgroundColor: c }} />
+                  Marcar {t.toLowerCase()}
+                </button>
+              ))}
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+              <input type="checkbox" checked={convencion} onChange={(e) => cambiarConvencion(e.target.checked)} />
+              Colores rojo (a realizar) / azul (existente)
+            </label>
+          </div>
+        )}
         <div className="relative space-y-5 rounded-[20px] bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_7%,transparent),transparent_60%)] py-2">
           <ArchLabel>Arcada superior (Maxilar)</ArchLabel>
           {verPermanente && renderArch([...Q1, ...Q2], "Arcada superior permanente")}
@@ -605,6 +687,14 @@ export function Odontogram({
                   <span className="w-10 font-semibold text-primary">{f.fdi}</span>
                   <span className="flex-1 text-muted-foreground">{f.detail}</span>
                   <span className="font-medium">{f.finding}</span>
+                  {f.pendiente !== undefined && (
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                      style={{ backgroundColor: f.pendiente ? ROJO_A_REALIZAR : AZUL_EXISTENTE }}
+                    >
+                      {f.pendiente ? "A realizar" : "Existente"}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -633,6 +723,17 @@ export function Odontogram({
       {/* Referencias */}
       <section className="card-clinic p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold">Referencias / Leyenda</h2>
+        {completo && (
+          <p className="mb-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-full" style={{ backgroundColor: ROJO_A_REALIZAR }} /> A realizar
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-full" style={{ backgroundColor: AZUL_EXISTENTE }} /> Existente
+            </span>
+            <span>Con «Colores rojo/azul» activado, todo se pinta así. Caries, fractura, extracción y resto radicular siempre van en rojo.</span>
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {(Object.keys(FINDING_LABELS) as (keyof typeof FINDING_LABELS)[])
             .filter((k) => completo || HERRAMIENTAS_BASICAS.includes(k as Tool))

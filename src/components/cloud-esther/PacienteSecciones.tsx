@@ -1,6 +1,7 @@
 import { numeroWhatsApp } from "@/lib/clinica/whatsapp";
 import { ElegirPlantilla, fechaDesdeTexto } from "@/components/cloud-esther/pacientes/PlantillasEvolucion";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
@@ -95,6 +96,14 @@ import {
   type FichaEspecialidad,
 } from "@/components/cloud-esther/pacientes/FichasEspecialidad";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
+import { Autocompletar } from "@/components/ui/autocompletar";
+import {
+  buscarEnVademecum,
+  filtrarSugerencias,
+  sugerirDiagnostico,
+  vademecumDe,
+} from "@/lib/cloud-esther/vademecum";
 import {
   ElegirMedicamentoFrecuente,
   masRecetados,
@@ -110,23 +119,6 @@ import { Seleccion } from "@/components/ui/seleccion";
 
 const SUCURSALES = SUCURSALES_AGENDA;
 const PRACTICAS = TRATAMIENTOS_AGENDA;
-/* Vademécum odontológico: al elegir el medicamento, se completan solos la presentación, la vía y
-   la posología sugerida (así el profesional escribe lo mínimo). Son valores orientativos: el
-   profesional puede editarlos. */
-const VADEMECUM: { nombre: string; presentacion: string; via: string; posologia: string }[] = [
-  { nombre: "Amoxicilina 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 7 días" },
-  { nombre: "Amoxicilina + ácido clavulánico 875/125 mg", presentacion: "875/125 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 12 horas por 7 días" },
-  { nombre: "Ibuprofeno 400 mg", presentacion: "400 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
-  { nombre: "Ibuprofeno 600 mg", presentacion: "600 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
-  { nombre: "Ketorolac 10 mg", presentacion: "10 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas (máximo 5 días)" },
-  { nombre: "Paracetamol 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 6 a 8 horas si hay dolor" },
-  { nombre: "Diclofenac 50 mg", presentacion: "50 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 3 días" },
-  { nombre: "Metronidazol 500 mg", presentacion: "500 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 8 horas por 7 días" },
-  { nombre: "Clindamicina 300 mg", presentacion: "300 mg cápsulas", via: "Oral", posologia: "1 cápsula cada 8 horas por 7 días" },
-  { nombre: "Dexametasona 4 mg", presentacion: "4 mg comprimidos", via: "Oral", posologia: "1 comprimido cada 12 horas por 2 días" },
-  { nombre: "Clorhexidina 0,12 % (colutorio)", presentacion: "0,12 % solución", via: "Enjuague bucal", posologia: "Enjuagar 15 ml durante 30 segundos, 2 veces al día por 7 días" },
-];
-const MEDICAMENTOS = VADEMECUM.map((m) => m.nombre);
 /* ───────────── Opciones fijas del producto ───────────── */
 
 const TIPOS_DOCUMENTO = [
@@ -1818,16 +1810,19 @@ function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  // Se dibuja en <body>: así queda por encima del encabezado y de la barra inferior del
+  // celular (si no, el botón de guardar quedaba tapado).
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.32),rgba(15,5,30,0.5))] p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.32),rgba(15,5,30,0.5))] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4"
       onMouseDown={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative max-h-[92vh] w-full ${ancho} overflow-y-auto rounded-[26px] border border-primary/15 bg-card p-5 shadow-[0_40px_90px_-30px_rgba(76,29,149,0.75)] sm:p-6`}
+        className={`relative max-h-[calc(100dvh-1.5rem)] w-full ${ancho} overflow-y-auto overscroll-contain rounded-[26px] border border-primary/15 bg-card p-5 shadow-[0_40px_90px_-30px_rgba(76,29,149,0.75)] sm:p-6`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary via-fuchsia-500 to-pink-400" />
@@ -1844,7 +1839,8 @@ function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1970,6 +1966,7 @@ function useProfesionales() {
 function Datalists() {
   const profesionales = useProfesionales();
   const { propios: medsPropios } = useMedicamentosFrecuentes();
+  const paisDl = usePaisClinica();
   return (
     <>
       <datalist id="dl-profesionales">
@@ -1983,7 +1980,7 @@ function Datalists() {
         ))}
       </datalist>
       <datalist id="dl-medicamentos">
-        {[...new Set([...medsPropios.map((m) => m.nombre), ...MEDICAMENTOS])].map((n) => (
+        {[...new Set([...medsPropios.map((m) => m.nombre), ...vademecumDe(paisDl).map((m) => m.nombre)])].map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -4718,7 +4715,7 @@ const FAMILIAS_ALERGIA: { alergia: RegExp; droga: RegExp; familia: string }[] = 
   },
   {
     alergia: /aine|ibuprof|diclof|ketorol|aspirin|antiinflam/i,
-    droga: /ibuprof|diclof|ketorol|naprox|aspirin|meloxic|aine/i,
+    droga: /ibuprof|diclof|ketorol|naprox|aspirin|meloxic|nimesul|etoricox|celecox|aine/i,
     familia: "antiinflamatorios (AINES)",
   },
   { alergia: /sulfa/i, droga: /sulfa|trimetoprim|cotrimox/i, familia: "sulfas" },
@@ -4728,6 +4725,8 @@ const FAMILIAS_ALERGIA: { alergia: RegExp; droga: RegExp; familia: string }[] = 
     familia: "anestésicos locales",
   },
   { alergia: /metronid/i, droga: /metronid/i, familia: "metronidazol" },
+  { alergia: /dipiron|metamiz|pirazol/i, droga: /dipiron|metamiz/i, familia: "pirazolonas (dipirona / metamizol)" },
+  { alergia: /macrol|eritrom|azitro|claritro/i, droga: /azitro|claritro|eritrom|espiram/i, familia: "macrólidos" },
   { alergia: /clindam/i, droga: /clindam/i, familia: "clindamicina" },
 ];
 
@@ -4820,6 +4819,18 @@ function RecetaForm({
 
   // Medicamentos frecuentes de la clínica (propios + los más recetados): un toque y se agregan
   const frecuentes = useMedicamentosFrecuentes();
+  const paisRx = usePaisClinica();
+  const nombresMeds = useMemo(
+    () => [
+      ...frecuentes.propios.map((m) => m.nombre),
+      ...vademecumDe(paisRx).map((m) => m.nombre),
+    ],
+    [frecuentes.propios, paisRx],
+  );
+  const diagnosticosPrevios = useMemo(
+    () => [...new Set(recetasPrevias.map((r) => r.diagnostico.replace(/\s*\b(pieza|diente)\s*\d+.*$/i, "").trim()).filter(Boolean))],
+    [recetasPrevias],
+  );
   const todosLosRegistros = storeRegistros.usar();
   const usados = useMemo(
     () => masRecetados(Object.values(todosLosRegistros).flatMap((r) => r?.recetas ?? [])),
@@ -4851,8 +4862,7 @@ function RecetaForm({
   const elegirMedicamento = (i: number, nombre: string) => {
     const k = nombre.trim().toLowerCase();
     const vace =
-      frecuentes.propios.find((v) => v.nombre.toLowerCase() === k) ??
-      VADEMECUM.find((v) => v.nombre.toLowerCase() === k);
+      frecuentes.propios.find((v) => v.nombre.toLowerCase() === k) ?? buscarEnVademecum(nombre);
     setMedicamentos((prev) =>
       prev.map((m, idx) => {
         if (idx !== i) return m;
@@ -4994,11 +5004,13 @@ function RecetaForm({
       )}
 
       <Field label="Diagnóstico">
-        <input
+        <Autocompletar
           value={diagnostico}
-          onChange={(e) => setDiagnostico(e.target.value)}
+          onChange={setDiagnostico}
+          sugerir={(t) => sugerirDiagnostico(t, paisRx, diagnosticosPrevios)}
           className={INPUT}
           placeholder="Ej: Pericoronaritis pieza 38"
+          ariaLabel="Diagnóstico"
         />
       </Field>
 
@@ -5013,12 +5025,13 @@ function RecetaForm({
                   frecuentes.puedeEditar ? "grid-cols-[minmax(0,1fr)_28px_28px]" : "grid-cols-[minmax(0,1fr)_28px]"
                 }`}
               >
-                <input
-                  list="dl-medicamentos"
+                <Autocompletar
                   value={m.nombre}
-                  onChange={(e) => elegirMedicamento(i, e.target.value)}
+                  onChange={(v) => elegirMedicamento(i, v)}
+                  sugerir={(t) => filtrarSugerencias(nombresMeds, t)}
                   className={INPUT}
                   placeholder="Medicamento (droga o marca)"
+                  ariaLabel="Medicamento"
                 />
                 {frecuentes.puedeEditar &&
                   (() => {

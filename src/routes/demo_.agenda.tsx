@@ -28,6 +28,7 @@ import {
   MapPin,
   Stethoscope,
   DoorOpen,
+  FileDown,
   Repeat,
   Hourglass,
   ChevronLeft,
@@ -78,6 +79,7 @@ import {
   guardarProfesionalVisto,
 } from "@/lib/cloud-esther/agenda-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { descargarPDF } from "@/lib/descargas";
 import { Seleccion } from "@/components/ui/seleccion";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
@@ -1625,6 +1627,67 @@ function tonoEspera(min: number) {
   return "border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300";
 }
 
+/* PDF de la agenda del día: una sección por profesional, para imprimir o mandar */
+function escaparHtml(t: string) {
+  return (t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+async function pdfDelDia(opts: {
+  fecha: string;
+  turnos: Turno[];
+  clinica: string;
+  duracionDefecto: number;
+  bloqueos: Bloqueo[];
+}) {
+  const { fecha, clinica, duracionDefecto } = opts;
+  const vivos = opts.turnos
+    .filter((t) => t.estado !== "Cancelada")
+    .sort((a, b) => a.hora.localeCompare(b.hora));
+  const profesionales = Array.from(new Set(vivos.map((t) => t.odontologo || "Sin profesional"))).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const fila = (t: Turno) => {
+    const fin = aHora(aMinutos(t.hora) + (t.duracion ?? duracionDefecto));
+    return `<tr>
+      <td class="h">${escaparHtml(t.hora)}<span>a ${fin}</span></td>
+      <td><b>${escaparHtml(t.paciente)}</b>${t.serie && t.serieN ? `<span class="s">Sesión ${t.serieN} de ${t.serieTotal}</span>` : ""}${t.notas ? `<span class="n">${escaparHtml(t.notas)}</span>` : ""}</td>
+      <td>${escaparHtml(t.tratamiento)}</td>
+      <td>${escaparHtml(nombreConsultorio(t.gabinete))}</td>
+      <td><span class="e e-${t.estado}">${escaparHtml(t.estado)}</span></td>
+      <td class="c"><span class="box"></span></td>
+    </tr>`;
+  };
+  const bloqueos = opts.bloqueos
+    .filter((b) => b.fecha === fecha)
+    .map((b) => `<li>${escaparHtml(b.desde)} a ${escaparHtml(b.hasta)} · ${escaparHtml(b.motivo)}</li>`)
+    .join("");
+  const secciones = profesionales
+    .map((p) => {
+      const ts = vivos.filter((t) => (t.odontologo || "Sin profesional") === p);
+      const min = ts.reduce((s, t) => s + (t.duracion ?? duracionDefecto), 0);
+      return `<section><h2>${escaparHtml(p)} <small>${ts.length} turno${ts.length === 1 ? "" : "s"} · ${min >= 60 ? `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ""}` : `${min} min`}</small></h2>
+      <table><thead><tr><th>Hora</th><th>Paciente</th><th>Tratamiento</th><th>Consultorio</th><th>Estado</th><th>Llegó</th></tr></thead>
+      <tbody>${ts.map(fila).join("")}</tbody></table></section>`;
+    })
+    .join("");
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Agenda ${escaparHtml(fecha)}</title>
+  <style>body{font-family:system-ui,-apple-system,sans-serif;color:#1f1535;font-size:11.5px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #7c3aed;padding-bottom:8px;margin-bottom:6px}
+  h1{font-size:19px;margin:0}header p{margin:2px 0 0;color:#6b6480}.marca{color:#7c3aed;font-weight:700;font-size:12px;text-align:right}
+  h2{font-size:13.5px;color:#6d28d9;margin:18px 0 6px}h2 small{color:#6b6480;font-weight:500;font-size:11px;margin-left:6px}
+  table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6b6480;background:#f6f2ff;padding:6px 8px}
+  td{padding:7px 8px;border-bottom:1px solid #eee8fb;vertical-align:top}td.h{font-weight:700;white-space:nowrap;width:62px}td.h span{display:block;font-weight:500;color:#6b6480;font-size:10px}
+  td span.n,td span.s{display:block;color:#6b6480;font-size:10.5px;margin-top:2px}td span.s{color:#7c3aed}
+  .e{display:inline-block;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:600;background:#f1f0f5}
+  .e-Confirmada{background:#dcfce7;color:#166534}.e-Pendiente{background:#fef3c7;color:#92400e}.e-Atendida{background:#dbeafe;color:#1e40af}.e-Ausente{background:#fee2e2;color:#991b1b}
+  td.c{width:40px;text-align:center}.box{display:inline-block;width:13px;height:13px;border:1.5px solid #a78bfa;border-radius:3px}
+  .vacio{color:#6b6480;padding:18px 0}.bloq{color:#6b6480;font-size:11px}footer{margin-top:18px;color:#9d97b0;font-size:9.5px}</style></head><body>
+  <header><div><h1>Agenda del ${escaparHtml(nombreDiaLargo(fecha))} ${escaparHtml(formatearFecha(fecha))}</h1><p>${escaparHtml(clinica)} · ${vivos.length} turno${vivos.length === 1 ? "" : "s"}</p></div><div class="marca">Cloud Esther</div></header>
+  ${bloqueos ? `<p class="bloq"><b>Horarios bloqueados:</b></p><ul class="bloq">${bloqueos}</ul>` : ""}
+  ${secciones || `<p class="vacio">No hay turnos para este día.</p>`}
+  <footer>Impreso el ${escaparHtml(formatearFecha(hoyISO()))} a las ${new Date().toTimeString().slice(0, 5)}</footer></body></html>`;
+  return descargarPDF(html, `agenda-${fecha}`);
+}
+
 /* Sala de espera: quién llegó y hace cuánto espera, con "Pasa" para atenderlo */
 function SalaDeEspera({ turnos, onPasa }: { turnos: Turno[]; onPasa: (t: Turno) => void }) {
   const ahora = useAhora();
@@ -2489,7 +2552,7 @@ function AgendaInner() {
   const { miembros } = useEquipo();
   const { pacientes: listaPacientes } = usePacientes();
   const real = useClinicaReal();
-  const { usuario } = useSesion();
+  const { usuario, clinica: clinicaSesion } = useSesion();
   const odontologosEquipo = miembros
     .filter((m) => m.role === "odontologo" && m.status !== "inactivo")
     .map((m) => `${m.firstName} ${m.lastName}`.trim())
@@ -3114,6 +3177,28 @@ function AgendaInner() {
                 {vista === "dia" && (
                   <>
                     <PeriodNavigator vista={vista} fecha={fechaVista} onChange={setFechaVista} />
+
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          show("Armando el PDF del día…");
+                          const ok = await pdfDelDia({
+                            fecha: fechaVista,
+                            turnos: turnosDia,
+                            clinica: clinicaSesion?.nombre ?? "Mi clínica",
+                            duracionDefecto: duracionHabitual,
+                            bloqueos,
+                          });
+                          show(ok ? "PDF del día descargado" : "Se descargó para imprimir desde el navegador");
+                        }}
+                        className="btn-ce-outline"
+                        title={filtros.odontologo ? `Agenda de ${filtros.odontologo}` : "Agenda de todos los profesionales"}
+                      >
+                        <FileDown className="size-3.5" />
+                        PDF del día{filtros.odontologo ? ` · ${filtros.odontologo}` : ""}
+                      </button>
+                    </div>
 
                     <div className="my-4 border-t border-primary/10" />
 

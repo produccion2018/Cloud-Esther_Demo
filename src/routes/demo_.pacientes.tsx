@@ -58,6 +58,7 @@ import { fotoPaciente } from "@/lib/clinica/subir-imagen";
 import { UsoDelPlan } from "@/components/clinica/pedir-capacidad";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
 import { ImportarPacientes } from "@/components/cloud-esther/pacientes/ImportarPacientes";
+import { VolverALlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { puedeVerSeccionPaciente } from "@/lib/clinica/permisos";
 import { NavCarpeta, ResumenPaciente } from "@/components/cloud-esther/pacientes/ResumenPaciente";
 import { contarPacientesActivos, usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -1661,6 +1662,9 @@ function PacientesInner() {
                   detail="sin cobertura"
                 />
               </div>
+
+              {/* Pacientes que no vienen hace tiempo y no tienen turno */}
+              <VolverALlamar onToast={show} />
 
               {/* Filtros */}
 

@@ -80,6 +80,7 @@ import {
 } from "@/lib/cloud-esther/agenda-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { descargarPDF } from "@/lib/descargas";
+import { CLAVE_TURNO_PARA } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { Seleccion } from "@/components/ui/seleccion";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
@@ -2604,6 +2605,19 @@ function AgendaInner() {
   }, [odontologosConAdmin.join("|"), real?.rol, turnos.length]);
 
   const cerrarModal = () => setModal(null);
+
+  // Viene de Pacientes → "Dar turno": se abre Nuevo turno con ese paciente cargado
+  useEffect(() => {
+    try {
+      const para = sessionStorage.getItem(CLAVE_TURNO_PARA);
+      if (para) {
+        sessionStorage.removeItem(CLAVE_TURNO_PARA);
+        setModal({ tipo: "cita", prefill: { paciente: para } });
+      }
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, []);
 
   const nombresPacientes = Array.from(
     new Set([

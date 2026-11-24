@@ -57,6 +57,10 @@ export type AjustesAgenda = {
   intervaloMin?: number;
   /** Duración habitual de un turno, en minutos. */
   duracionMin?: number;
+  /** "Para volver a llamar": meses sin venir para sugerir un control (lo elige la clínica). */
+  recallMeses?: number;
+  /** Pacientes ya avisados para volver (id del paciente → fecha del aviso). */
+  recallAvisados?: Record<string, string>;
 };
 export const INTERVALO_DEFECTO = 30;
 export function tiemposAgenda(a?: AjustesAgenda) {

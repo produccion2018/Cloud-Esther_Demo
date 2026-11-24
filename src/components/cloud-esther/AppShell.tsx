@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
-import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, LifeBuoy, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMarca } from "@/lib/cloud-esther/marca";
 import {
@@ -410,6 +410,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
             {[
               ...(!real || real.rol === "admin" ? [{ to: "/demo/accesos", label: "Accesos del equipo", icon: ShieldCheck }] : []),
               ...(real ? [{ to: "/demo/mi-cuenta", label: "Mi cuenta", icon: UserRound }] : []),
+              { to: "/demo/soporte", label: "Soporte de Cloud Esther", icon: LifeBuoy },
             ].map((it) => {
               const activo = pathname === it.to;
               return (
@@ -819,11 +820,13 @@ function UsuarioMovil() {
     ? [
         { href: "/demo/mi-cuenta", titulo: "Mi cuenta", icon: UserRound },
         ...(real.rol === "admin" ? [{ href: "/demo/accesos", titulo: "Accesos del equipo", icon: ShieldCheck }] : []),
+        { href: "/demo/soporte", titulo: "Soporte de Cloud Esther", icon: LifeBuoy },
       ]
     : [
         { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },
         { href: "/equipo", titulo: "Portal del profesional", icon: Stethoscope, enterprise: true },
         { href: "/demo/configuracion", titulo: "Configuración", icon: Settings },
+        { href: "/demo/soporte", titulo: "Soporte de Cloud Esther", icon: LifeBuoy },
         { href: "/acceso-prueba", titulo: "Probar los 5 perfiles", icon: ShieldCheck },
       ];
   return (
@@ -1437,7 +1440,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ? "Accesos del equipo"
                 : pathname === "/demo/mi-cuenta"
                   ? "Mi cuenta"
-                  : "Inicio"
+                  : pathname === "/demo/soporte"
+                    ? "Soporte"
+                    : "Inicio"
           }
         />
         {/* En el celular se deja lugar para la barra inferior. */}

@@ -217,7 +217,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
       p: pregunta,
       r:
         r?.text ??
-        "No encontré esa respuesta en la ayuda. Probá con otras palabras (por ejemplo: «turno», «receta», «importar») o escribinos desde Soporte.",
+        "No encontré esa respuesta en la ayuda. Probá con otras palabras (por ejemplo: «turno», «receta», «importar») o tocá «Hablar con soporte» abajo y te responde el equipo de Cloud Esther.",
     });
   };
 
@@ -353,9 +353,16 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
               </>
             )}
           </div>
-          <p className="flex items-center gap-1.5 border-t border-primary/10 px-4 py-2.5 text-[10.5px] text-muted-foreground">
-            <LifeBuoy className="size-3.5 text-primary" /> Explica cómo usar el sistema; no ve datos de pacientes.
-          </p>
+          <div className="flex items-center justify-between gap-2 border-t border-primary/10 px-4 py-2.5">
+            <p className="text-[10.5px] text-muted-foreground">Explica cómo usar el sistema; no ve datos de pacientes.</p>
+            <Link
+              to={"/demo/soporte" as never}
+              onClick={() => setAbierto(false)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
+            >
+              <LifeBuoy className="size-3.5" /> Hablar con soporte
+            </Link>
+          </div>
         </div>
       )}
       <button

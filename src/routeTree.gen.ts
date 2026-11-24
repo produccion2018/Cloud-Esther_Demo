@@ -78,6 +78,7 @@ import { Route as DemoPortalPacienteRouteImport } from './routes/demo_.portal-pa
 import { Route as DemoPresupuestosRouteImport } from './routes/demo_.presupuestos'
 import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
+import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
@@ -429,6 +430,11 @@ const DemoRrhhRoute = DemoRrhhRouteImport.update({
   path: '/demo/rrhh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoSoporteRoute = DemoSoporteRouteImport.update({
+  id: '/demo_/soporte',
+  path: '/demo/soporte',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   id: '/demo_/tratamientos',
   path: '/demo/tratamientos',
@@ -526,6 +532,7 @@ export interface FileRoutesByFullPath {
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
+  '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -601,6 +608,7 @@ export interface FileRoutesByTo {
   '/demo/presupuestos': typeof DemoPresupuestosRoute
   '/demo/recetas': typeof DemoRecetasRoute
   '/demo/rrhh': typeof DemoRrhhRoute
+  '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
@@ -678,6 +686,7 @@ export interface FileRoutesById {
   '/demo_/presupuestos': typeof DemoPresupuestosRoute
   '/demo_/recetas': typeof DemoRecetasRoute
   '/demo_/rrhh': typeof DemoRrhhRoute
+  '/demo_/soporte': typeof DemoSoporteRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -756,6 +765,7 @@ export interface FileRouteTypes {
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/rrhh'
+    | '/demo/soporte'
     | '/demo/tratamientos'
     | '/admin/'
     | '/app/'
@@ -831,6 +841,7 @@ export interface FileRouteTypes {
     | '/demo/presupuestos'
     | '/demo/recetas'
     | '/demo/rrhh'
+    | '/demo/soporte'
     | '/demo/tratamientos'
     | '/admin'
     | '/app'
@@ -907,6 +918,7 @@ export interface FileRouteTypes {
     | '/demo_/presupuestos'
     | '/demo_/recetas'
     | '/demo_/rrhh'
+    | '/demo_/soporte'
     | '/demo_/tratamientos'
     | '/admin/'
     | '/app/'
@@ -963,6 +975,7 @@ export interface RootRouteChildren {
   DemoPresupuestosRoute: typeof DemoPresupuestosRoute
   DemoRecetasRoute: typeof DemoRecetasRoute
   DemoRrhhRoute: typeof DemoRrhhRoute
+  DemoSoporteRoute: typeof DemoSoporteRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   AppIndexRoute: typeof AppIndexRoute
   CSlugClaveRoute: typeof CSlugClaveRoute
@@ -1456,6 +1469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoRrhhRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo_/soporte': {
+      id: '/demo_/soporte'
+      path: '/demo/soporte'
+      fullPath: '/demo/soporte'
+      preLoaderRoute: typeof DemoSoporteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo_/tratamientos': {
       id: '/demo_/tratamientos'
       path: '/demo/tratamientos'
@@ -1593,6 +1613,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoPresupuestosRoute: DemoPresupuestosRoute,
   DemoRecetasRoute: DemoRecetasRoute,
   DemoRrhhRoute: DemoRrhhRoute,
+  DemoSoporteRoute: DemoSoporteRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
   AppIndexRoute: AppIndexRoute,
   CSlugClaveRoute: CSlugClaveRoute,

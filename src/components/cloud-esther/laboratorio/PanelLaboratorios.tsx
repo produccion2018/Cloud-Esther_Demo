@@ -553,7 +553,7 @@ function Reportes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorio
           <FileSpreadsheet className="size-4" /> Exportar todo a Excel
         </button>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div data-movil="1col" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {REPORTES.map((r) => {
           const max = Math.max(1, ...r.filas.map((f) => f.v));
           return (

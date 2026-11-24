@@ -1,6 +1,6 @@
 import { numeroWhatsApp } from "@/lib/clinica/whatsapp";
 import { ElegirPlantilla, fechaDesdeTexto } from "@/components/cloud-esther/pacientes/PlantillasEvolucion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useConIA, useNivel } from "@/lib/cloud-esther/niveles";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
@@ -39,6 +39,8 @@ import {
   ImagePlus,
   Pill,
   Copy,
+  BookmarkPlus,
+  BookmarkCheck,
   Printer,
   Images,
   GitCompare,
@@ -93,6 +95,12 @@ import {
   type FichaEspecialidad,
 } from "@/components/cloud-esther/pacientes/FichasEspecialidad";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import {
+  ElegirMedicamentoFrecuente,
+  masRecetados,
+  useMedicamentosFrecuentes,
+  type MedicamentoUso,
+} from "@/components/cloud-esther/pacientes/MedicamentosFrecuentes";
 import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 import { Seleccion } from "@/components/ui/seleccion";
 
@@ -1961,6 +1969,7 @@ function useProfesionales() {
 
 function Datalists() {
   const profesionales = useProfesionales();
+  const { propios: medsPropios } = useMedicamentosFrecuentes();
   return (
     <>
       <datalist id="dl-profesionales">
@@ -1974,7 +1983,7 @@ function Datalists() {
         ))}
       </datalist>
       <datalist id="dl-medicamentos">
-        {MEDICAMENTOS.map((n) => (
+        {[...new Set([...medsPropios.map((m) => m.nombre), ...MEDICAMENTOS])].map((n) => (
           <option key={n} value={n} />
         ))}
       </datalist>
@@ -4809,6 +4818,29 @@ function RecetaForm({
   );
   const [error, setError] = useState("");
 
+  // Medicamentos frecuentes de la clínica (propios + los más recetados): un toque y se agregan
+  const frecuentes = useMedicamentosFrecuentes();
+  const todosLosRegistros = storeRegistros.usar();
+  const usados = useMemo(
+    () => masRecetados(Object.values(todosLosRegistros).flatMap((r) => r?.recetas ?? [])),
+    [todosLosRegistros],
+  );
+  const [guardadoFrec, setGuardadoFrec] = useState<string | null>(null);
+  const usarFrecuente = (f: MedicamentoUso) => {
+    const nuevo: MedicamentoForm = {
+      nombre: f.nombre,
+      presentacion: f.presentacion,
+      via: f.via || VIAS_ADMINISTRACION[0] || "",
+      cantidad: "1",
+      posologia: f.posologia,
+    };
+    setMedicamentos((prev) => {
+      const vacio = prev.findIndex((m) => !m.nombre.trim());
+      return vacio >= 0 ? prev.map((m, idx) => (idx === vacio ? nuevo : m)) : [...prev, nuevo];
+    });
+    setError("");
+  };
+
   const cambiarMedicamento = (i: number, campo: keyof MedicamentoForm, valor: string) => {
     setMedicamentos((prev) => prev.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m)));
     setError("");
@@ -4817,7 +4849,10 @@ function RecetaForm({
   // Al elegir un medicamento conocido, completa solo presentación, vía y posología (si están
   // vacías, para no pisar lo que el profesional ya escribió). Así escribe lo mínimo.
   const elegirMedicamento = (i: number, nombre: string) => {
-    const vace = VADEMECUM.find((v) => v.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    const k = nombre.trim().toLowerCase();
+    const vace =
+      frecuentes.propios.find((v) => v.nombre.toLowerCase() === k) ??
+      VADEMECUM.find((v) => v.nombre.toLowerCase() === k);
     setMedicamentos((prev) =>
       prev.map((m, idx) => {
         if (idx !== i) return m;
@@ -4969,10 +5004,15 @@ function RecetaForm({
 
       <div>
         <span className="mb-1 block text-xs font-medium">Medicamentos *</span>
+        <ElegirMedicamentoFrecuente usados={usados} onUsar={usarFrecuente} />
         <div className="space-y-2">
           {medicamentos.map((m, i) => (
             <div key={i} className="rounded-lg border border-border bg-background/70 p-2.5">
-              <div className="grid grid-cols-[minmax(0,1fr)_28px] items-center gap-2">
+              <div
+                className={`grid items-center gap-2 ${
+                  frecuentes.puedeEditar ? "grid-cols-[minmax(0,1fr)_28px_28px]" : "grid-cols-[minmax(0,1fr)_28px]"
+                }`}
+              >
                 <input
                   list="dl-medicamentos"
                   value={m.nombre}
@@ -4980,6 +5020,34 @@ function RecetaForm({
                   className={INPUT}
                   placeholder="Medicamento (droga o marca)"
                 />
+                {frecuentes.puedeEditar &&
+                  (() => {
+                    const yaEsta = !!m.nombre.trim() && frecuentes.esPropio(m.nombre);
+                    return (
+                      <button
+                        type="button"
+                        disabled={!m.nombre.trim() || yaEsta}
+                        onClick={() => {
+                          frecuentes.guardar({
+                            nombre: m.nombre,
+                            presentacion: m.presentacion.trim(),
+                            via: m.via,
+                            posologia: m.posologia.trim(),
+                          });
+                          setGuardadoFrec(m.nombre.trim());
+                        }}
+                        aria-label={yaEsta ? "Ya está en los frecuentes" : "Guardar como frecuente de la clínica"}
+                        title={yaEsta ? "Ya está en los frecuentes" : "Guardar como frecuente de la clínica"}
+                        className={`grid size-7 place-items-center rounded-md transition-colors disabled:cursor-default ${
+                          yaEsta
+                            ? "text-fuchsia-600"
+                            : "text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+                        }`}
+                      >
+                        {yaEsta ? <BookmarkCheck className="size-3.5" /> : <BookmarkPlus className="size-3.5" />}
+                      </button>
+                    );
+                  })()}
                 <button
                   type="button"
                   onClick={() =>
@@ -5051,6 +5119,11 @@ function RecetaForm({
           <Plus className="size-3.5" />
           Agregar medicamento
         </button>
+        {guardadoFrec && (
+          <p className="mt-1 text-[11px] font-medium text-fuchsia-700 dark:text-fuchsia-300">
+            {guardadoFrec} quedó en los frecuentes de la clínica.
+          </p>
+        )}
         {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
         {medicamentos.some((m) => choqueAlergia(m.nombre, alergias)) && (
           <label className="mt-2 flex items-center gap-2 text-xs font-medium text-destructive">

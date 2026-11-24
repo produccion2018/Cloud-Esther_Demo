@@ -83,6 +83,17 @@ export interface ClinicSettings {
   marca?: MarcaClinica;
   /** Plantillas de evolución propias de la clínica (se suman a las de Cloud Esther). */
   plantillasEvolucion?: PlantillaEvolucion[];
+  /** Medicamentos frecuentes de la clínica (su propio vademécum para recetar con un toque). */
+  medicamentosFrecuentes?: MedicamentoFrecuente[];
+}
+
+/** Medicamento que la clínica receta seguido: se carga completo con un toque. */
+export interface MedicamentoFrecuente {
+  id: string;
+  nombre: string;
+  presentacion: string;
+  via: string;
+  posologia: string;
 }
 
 /** Texto listo para cargar una evolución con un toque. */

@@ -56,7 +56,6 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole, convencion = f
   const extraction = state.whole.includes("extraccion");
   const hasPerno = state.whole.includes("perno");
   const hasCarilla = state.whole.includes("carilla");
-  const hasPuente = state.whole.includes("puente");
   const isResto = state.whole.includes("resto");
   const retenido = state.whole.includes("retenido");
 
@@ -226,16 +225,7 @@ export function Tooth({ tooth, state = EMPTY, onSurface, onWhole, convencion = f
         />
       </g>
 
-      {/* puente: barra que une la pieza con las vecinas, del lado de la corona */}
-      {hasPuente && (
-        <path
-          d={flip ? "M-4 18 L104 18" : "M-4 172 L104 172"}
-          stroke={colorW("puente")}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-      )}
-
+      {/* puente: la barra la dibuja la arcada (Odontogram) para que quede alineada en todas las piezas */}
       {/* no erupcionado / retenido: círculo alrededor de la pieza */}
       {retenido && (
         <ellipse cx={50} cy={95} rx={47} ry={90} fill="none" stroke={colorW("retenido")} strokeWidth={3.5} />

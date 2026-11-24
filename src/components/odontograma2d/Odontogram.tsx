@@ -414,7 +414,9 @@ export function Odontogram({
 
   const renderArch = (teeth: ToothDef[], label: string, primary = false) => (
     <div
-      className={`mx-auto flex w-full items-end justify-center gap-[2px] sm:gap-1 md:gap-1.5 ${primary ? "max-w-[66%]" : "max-w-[1040px]"}`}
+      // Superior: coronas abajo (alineadas abajo). Inferior: coronas arriba (alineadas arriba),
+      // así el plano oclusal queda recto y la barra del puente queda a la misma altura.
+      className={`mx-auto flex w-full ${teeth[0]?.arch === "lower" ? "items-start" : "items-end"} justify-center gap-[2px] sm:gap-1 md:gap-1.5 ${primary ? "max-w-[66%]" : "max-w-[1040px]"}`}
       aria-label={label}
     >
       {teeth.map((t, i) => (
@@ -432,10 +434,26 @@ export function Odontogram({
             />
           )}
           <div
-            className={`w-full rounded-md ${primary ? "aspect-[100/150]" : "aspect-[100/190]"} ${
+            className={`relative w-full rounded-md ${primary ? "aspect-[100/150]" : "aspect-[100/190]"} ${
               seleccionada === t.fdi ? "bg-primary/10 ring-2 ring-primary/40" : ""
             }`}
           >
+            {/* Puente: barra del lado de la corona que se une con la de la pieza vecina */}
+            {(state[t.fdi]?.whole ?? []).includes("puente") && (
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute -inset-x-[3px] z-10 h-[5px] rounded-full sm:-inset-x-[4px] md:-inset-x-[5px] ${
+                  t.arch === "lower" ? "top-[6%]" : "bottom-[6%]"
+                }`}
+                style={{
+                  backgroundColor: !convencion
+                    ? "var(--puente)"
+                    : esARealizar(state[t.fdi] ?? EMPTY, "w", "puente", "puente")
+                      ? ROJO_A_REALIZAR
+                      : AZUL_EXISTENTE,
+                }}
+              />
+            )}
             <Tooth
               tooth={t}
               state={state[t.fdi] ?? EMPTY}

@@ -1,3 +1,4 @@
+import { PendientesHoy } from "@/components/cloud-esther/dashboard/PendientesHoy";
 import { capitalizarNombre } from "@/lib/utils";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
@@ -1448,6 +1449,9 @@ function DashboardInner() {
             </div>
           ))}
         </div>
+
+        {/* Lo que hay que atender hoy: alertas médicas, cumpleaños, presupuestos, laboratorio y stock */}
+        <PendientesHoy />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className={`${CARD} lg:col-span-2`}>

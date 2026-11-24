@@ -8,7 +8,7 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -36,46 +36,98 @@ function NotFoundComponent() {
   );
 }
 
+/* Recarga automática: cuando se publica una versión nueva, una pestaña abierta todavía pide los
+   archivos de la versión anterior (que ya no existen) → "Failed to fetch dynamically imported
+   module". En vez de mostrar un error, se recarga sola con la versión nueva. El mismo código corre
+   antes que la app (script del <head>) para atraparlo también al navegar entre páginas. */
+const PATRON_VERSION_VIEJA =
+  "Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS|ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported module";
+const SCRIPT_RECARGA = `(function(){var K='ce-recarga',M=new RegExp(${JSON.stringify(PATRON_VERSION_VIEJA)},'i');
+window.__ceEsVersionVieja=function(m){return M.test(String(m||''))};
+window.__ceRecargar=function(){try{var t=+(sessionStorage.getItem(K)||0);if(Date.now()-t<20000)return false;sessionStorage.setItem(K,String(Date.now()))}catch(e){}location.reload();return true};
+window.__ceAviso=function(){if(document.getElementById('ce-aviso')||!document.body)return;var d=document.createElement('div');d.id='ce-aviso';d.setAttribute('style','position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:1.5rem;background:rgba(250,248,255,.92);backdrop-filter:blur(6px);font-family:inherit');d.innerHTML='<div style="max-width:22rem;width:100%;text-align:center;padding:2rem 1.75rem;background:#fff;border:1px solid rgba(124,58,237,.15);border-radius:1.5rem;box-shadow:0 30px 60px -35px rgba(76,29,149,.55)"><img src="/favicon.svg" alt="" style="width:48px;height:48px;margin:0 auto"/><h1 style="font-size:1.1rem;font-weight:600;margin:1rem 0 .5rem;color:#1e1b2e">Estamos actualizando la página</h1><p style="color:#6b6880;margin:0 0 1.5rem;font-size:.92rem">Revisá tu conexión y tocá «Recargar». Tus datos están guardados.</p><button style="padding:.6rem 1.4rem;border-radius:999px;border:0;font-weight:600;color:#fff;background:linear-gradient(135deg,#7c3aed,#c026d3);cursor:pointer">Recargar</button></div>';d.querySelector('button').onclick=function(){try{sessionStorage.removeItem(K)}catch(e){}location.reload()};document.body.appendChild(d)};
+function vieja(){if(!window.__ceRecargar())window.__ceAviso()}
+window.addEventListener('vite:preloadError',function(e){if(e.preventDefault)e.preventDefault();vieja()});
+window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;if(window.__ceEsVersionVieja(r&&(r.message||r))){if(e.preventDefault)e.preventDefault();vieja()}});
+window.addEventListener('error',function(e){if(window.__ceEsVersionVieja(e&&e.message))vieja()},true);})();`;
+
+type VentanaRecarga = Window & { __ceRecargar?: () => boolean; __ceEsVersionVieja?: (m: unknown) => boolean };
+
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
+  const e = error as { message?: string; name?: string } | undefined;
+  const mensaje = `${e?.message ?? ""} ${e?.name ?? ""}`;
+  const versionVieja = new RegExp(PATRON_VERSION_VIEJA, "i").test(mensaje);
+  const [recargando, setRecargando] = useState(true);
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+    if (!versionVieja) reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    const w = window as VentanaRecarga;
+    // Versión nueva publicada: se recarga sola. Otro error: un reintento silencioso primero.
+    if (versionVieja) {
+      if (w.__ceRecargar?.() ?? (location.reload(), true)) return;
+      setRecargando(false);
+      return;
+    }
+    let clave = "ce-reintento";
+    try {
+      const t = Number(sessionStorage.getItem(clave) || 0);
+      if (Date.now() - t > 20000) {
+        sessionStorage.setItem(clave, String(Date.now()));
+        router.invalidate();
+        reset();
+        return;
+      }
+    } catch {
+      clave = "";
+    }
+    setRecargando(false);
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (recargando) return <PantallaCargando texto={versionVieja ? "Actualizando a la última versión…" : "Cargando…"} />;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.10),transparent_60%)] bg-background px-4">
+      <div className="w-full max-w-sm rounded-3xl border border-primary/15 bg-card/90 p-7 text-center shadow-[0_30px_60px_-35px_rgba(76,29,149,0.55)] backdrop-blur">
+        <img src="/favicon.svg" alt="" className="mx-auto size-12" />
+        <h1 className="mt-4 font-display text-lg font-semibold tracking-tight text-foreground">
+          Estamos actualizando la página
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Tocá «Recargar» y seguís donde estabas. Tus datos están guardados.
         </p>
-        {(error?.message || error?.stack) && (
-          <p className="mx-auto mt-4 max-w-md break-words rounded-lg bg-muted/60 px-3 py-2 text-left font-mono text-[11px] leading-snug text-muted-foreground">
-            Detalle: {error?.message || "error"}
-            {error?.stack ? ` · ${error.stack.split("\n").slice(1, 3).join(" ").trim()}` : ""}
-          </p>
-        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
-              router.invalidate();
-              reset();
+              try {
+                sessionStorage.removeItem("ce-recarga");
+                sessionStorage.removeItem("ce-reintento");
+              } catch {
+                /* nada */
+              }
+              location.reload();
             }}
             className="btn-ce"
           >
-            Try again
+            Recargar
           </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
+          <a href="/" className="btn-ce-outline">
+            Ir al inicio
           </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PantallaCargando({ texto }: { texto: string }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+      <div className="relative grid size-16 place-items-center">
+        <span className="absolute inset-0 animate-spin rounded-full border-[3px] border-primary/15 border-t-primary" />
+        <img src="/favicon.svg" alt="" className="size-8" />
+      </div>
+      <p className="text-sm font-medium text-muted-foreground">{texto}</p>
     </div>
   );
 }
@@ -153,6 +205,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // PWA: se guarda el aviso de instalación de Android/Chrome aunque llegue antes de que la
     // app termine de cargar (si no, el botón «Instalar app» no lo encontraría).
     scripts: [
+      // Antes que nada: si una versión nueva reemplazó los archivos, recarga sola (sin error).
+      { children: SCRIPT_RECARGA },
       {
         children:
           "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__ceInstalar=e;});",

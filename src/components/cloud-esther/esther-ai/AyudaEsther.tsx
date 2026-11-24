@@ -7,6 +7,7 @@ import { AvatarEsther } from "./AvatarEsther";
 import { POS_FLOTANTE, POS_FLOTANTE_CHAT, useHayComposer } from "@/lib/cloud-esther/composer-visible";
 import { normalizarBusqueda } from "@/lib/utils";
 import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 
 /* Ubicación: src/components/cloud-esther/esther-ai/AyudaEsther.tsx
    AYUDA DE ESTHER — soporte inteligente integrado, en TODOS los planes:
@@ -188,6 +189,9 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
   const [q, setQ] = useState("");
   const [elegida, setElegida] = useState<Pregunta | null>(null);
   const caja = useRef<HTMLInputElement>(null);
+  // Hablar con Cloud Esther: solo el Administrador (dueño) de la clínica; en el demo, siempre
+  const real = useClinicaReal();
+  const puedeSoporte = !real || real.rol === "admin";
   // Respuesta de Esther con IA cuando la duda no está en las preguntas frecuentes
   const [respuestaIA, setRespuestaIA] = useState<{ p: string; r: string } | null>(null);
   const [pensando, setPensando] = useState(false);
@@ -217,7 +221,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
       p: pregunta,
       r:
         r?.text ??
-        "No encontré esa respuesta en la ayuda. Probá con otras palabras (por ejemplo: «turno», «receta», «importar») o tocá «Hablar con soporte» abajo y te responde el equipo de Cloud Esther.",
+        "No encontré esa respuesta en la ayuda. Probá con otras palabras (por ejemplo: «turno», «receta», «importar») o pedile al administrador de la clínica que escriba a Soporte de Cloud Esther.",
     });
   };
 
@@ -355,6 +359,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
           </div>
           <div className="flex items-center justify-between gap-2 border-t border-primary/10 px-4 py-2.5">
             <p className="text-[10.5px] text-muted-foreground">Explica cómo usar el sistema; no ve datos de pacientes.</p>
+            {puedeSoporte && (
             <Link
               to={"/demo/soporte" as never}
               onClick={() => setAbierto(false)}
@@ -362,6 +367,7 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
             >
               <LifeBuoy className="size-3.5" /> Hablar con soporte
             </Link>
+            )}
           </div>
         </div>
       )}

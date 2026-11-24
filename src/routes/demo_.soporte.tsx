@@ -100,6 +100,20 @@ function Soporte() {
   };
 
   const caso = casos?.find((c) => c.id === abierto) ?? null;
+  // Solo el Administrador (dueño) de la clínica habla con Cloud Esther
+  if (real && real.rol !== "admin")
+    return (
+      <div className="ce-clinica mx-auto w-full max-w-[700px] px-4 py-10">
+        <div className="card-premium p-6 text-center">
+          <LifeBuoy className="mx-auto size-8 text-primary" />
+          <p className="mt-2 font-semibold">Soporte de Cloud Esther</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            El contacto con Cloud Esther lo hace el administrador de la clínica. Si necesitás algo, avisale a él o
+            a ella.
+          </p>
+        </div>
+      </div>
+    );
   const abiertos = (casos ?? []).filter((c) => c.estado !== "Resuelto").length;
 
   return (

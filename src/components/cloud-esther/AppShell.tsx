@@ -410,7 +410,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
             {[
               ...(!real || real.rol === "admin" ? [{ to: "/demo/accesos", label: "Accesos del equipo", icon: ShieldCheck }] : []),
               ...(real ? [{ to: "/demo/mi-cuenta", label: "Mi cuenta", icon: UserRound }] : []),
-              { to: "/demo/soporte", label: "Soporte de Cloud Esther", icon: LifeBuoy },
+              ...(!real || real.rol === "admin" ? [{ to: "/demo/soporte", label: "Soporte de Cloud Esther", icon: LifeBuoy }] : []),
             ].map((it) => {
               const activo = pathname === it.to;
               return (
@@ -819,8 +819,13 @@ function UsuarioMovil() {
   const items: { href: string; titulo: string; icon: typeof Users; enterprise?: boolean }[] = real
     ? [
         { href: "/demo/mi-cuenta", titulo: "Mi cuenta", icon: UserRound },
-        ...(real.rol === "admin" ? [{ href: "/demo/accesos", titulo: "Accesos del equipo", icon: ShieldCheck }] : []),
-        { href: "/demo/soporte", titulo: "Soporte de Cloud Esther", icon: LifeBuoy },
+        ...(real.rol === "admin"
+          ? [
+              { href: "/demo/accesos", titulo: "Accesos del equipo", icon: ShieldCheck },
+              // Solo el Administrador (dueño) habla con Cloud Esther
+              { href: "/demo/soporte", titulo: "Soporte de Cloud Esther", icon: LifeBuoy },
+            ]
+          : []),
       ]
     : [
         { href: "/portal", titulo: "Portal del paciente", icon: UserRound, enterprise: true },

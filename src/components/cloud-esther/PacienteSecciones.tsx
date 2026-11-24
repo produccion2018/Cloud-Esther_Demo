@@ -38,6 +38,7 @@ import {
   Upload,
   ImagePlus,
   Pill,
+  Copy,
   Printer,
   Images,
   GitCompare,
@@ -4743,9 +4744,12 @@ function RecetaForm({
   onCancel,
   alergias = [],
   recetasPrevias = [],
+  repetirDe,
 }: {
   alergias?: string[];
   recetasPrevias?: RecetaPaciente[];
+  /** Repetir una receta anterior: carga sus medicamentos, diagnóstico e indicaciones */
+  repetirDe?: RecetaPaciente | null;
   onSubmit: (r: {
     fecha: string;
     profesional: string;
@@ -4762,7 +4766,9 @@ function RecetaForm({
   const [fecha, setFecha] = useState(hoyISO());
   const profesionales = useProfesionales();
   const term = useTerminologia();
-  const [profesional, setProfesional] = useState(profesionales[0] ?? "");
+  const [profesional, setProfesional] = useState(
+    repetirDe && profesionales.includes(repetirDe.profesional) ? repetirDe.profesional : (profesionales[0] ?? ""),
+  );
   const [aceptaRiesgo, setAceptaRiesgo] = useState(false);
   const [matricula, setMatricula] = useState("");
   const slug = useClinicaReal()?.slug ?? null;
@@ -4787,12 +4793,20 @@ function RecetaForm({
     else setSelloUrl(url);
     setSubiendo(null);
   };
-  const [diagnostico, setDiagnostico] = useState("");
+  const [diagnostico, setDiagnostico] = useState(repetirDe?.diagnostico ?? "");
   const [vencimiento, setVencimiento] = useState("");
-  const [indicaciones, setIndicaciones] = useState("");
-  const [medicamentos, setMedicamentos] = useState<MedicamentoForm[]>([
-    { nombre: "", presentacion: "", via: VIAS_ADMINISTRACION[0], cantidad: "1", posologia: "" },
-  ]);
+  const [indicaciones, setIndicaciones] = useState(repetirDe?.indicaciones ?? "");
+  const [medicamentos, setMedicamentos] = useState<MedicamentoForm[]>(
+    repetirDe?.medicamentos.length
+      ? repetirDe.medicamentos.map((m) => ({
+          nombre: m.nombre,
+          presentacion: m.presentacion,
+          via: m.via || VIAS_ADMINISTRACION[0] || "",
+          cantidad: String(m.cantidad || 1),
+          posologia: m.posologia,
+        }))
+      : [{ nombre: "", presentacion: "", via: VIAS_ADMINISTRACION[0], cantidad: "1", posologia: "" }],
+  );
   const [error, setError] = useState("");
 
   const cambiarMedicamento = (i: number, campo: keyof MedicamentoForm, valor: string) => {
@@ -5465,6 +5479,7 @@ async function enviarRecetaWhatsApp(
 function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const { clinica: clinicaRx } = useSesion();
   const [abierto, setAbierto] = useState(false);
+  const [repetirDe, setRepetirDe] = useState<RecetaPaciente | null>(null);
   const [verId, setVerId] = useState<number | null>(null);
   const [enviarId, setEnviarId] = useState<number | null>(null);
   const lista = [...datos.recetas].sort((a, b) =>
@@ -5494,7 +5509,10 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         titulo="Receta digital"
         descripcion="Prescripciones emitidas al paciente, con medicamentos, posología e indicaciones."
         etiquetaBoton="Nueva receta digital"
-        onAgregar={() => setAbierto(true)}
+        onAgregar={() => {
+          setRepetirDe(null);
+          setAbierto(true);
+        }}
       />
       {lista.length === 0 ? (
         <EstadoVacio
@@ -5565,6 +5583,14 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       onClick={() => setEnviarId(r.id)}
                     />
                     <BotonMini
+                      icon={Copy}
+                      label="Repetir"
+                      onClick={() => {
+                        setRepetirDe(r);
+                        setAbierto(true);
+                      }}
+                    />
+                    <BotonMini
                       icon={MessageCircle}
                       label="Enviar por WhatsApp"
                       onClick={() =>
@@ -5597,8 +5623,19 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       )}
 
       {abierto && (
-        <Modal title="Nueva receta digital" onClose={() => setAbierto(false)}>
+        <Modal
+          title={repetirDe ? `Repetir receta ${repetirDe.numero}` : "Nueva receta digital"}
+          onClose={() => setAbierto(false)}
+        >
+          {repetirDe && (
+            <p className="mb-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-xs text-muted-foreground">
+              Se copiaron los medicamentos, el diagnóstico y las indicaciones de la receta del{" "}
+              {formatearFecha(repetirDe.fecha)}. Revisalos y emití la nueva receta con la fecha de hoy.
+            </p>
+          )}
           <RecetaForm
+            key={repetirDe?.id ?? "nueva"}
+            repetirDe={repetirDe}
             alergias={datos.antecedentes?.alergias ?? []}
             recetasPrevias={datos.recetas}
             onCancel={() => setAbierto(false)}

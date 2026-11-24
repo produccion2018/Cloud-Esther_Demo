@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CalendarPlus, Check, ChevronDown, PhoneCall, Settings2 } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, PhoneCall, Settings2, Sparkles, Zap } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
+import { PLANTILLAS, setN8n, storeN8n } from "@/lib/cloud-esther/n8n-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { setAjustesAgendaStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
@@ -44,6 +48,45 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
   const [config, setConfig] = useState(false);
   const [valor, setValor] = useState(String(meses));
   const [verAvisados, setVerAvisados] = useState(false);
+
+  // Automático: un flujo de Automatizaciones («Paciente para volver a llamar») los invita solo
+  // por WhatsApp. Corre en el servidor aunque nadie tenga la app abierta.
+  const { plan } = useCloudEsther();
+  const real = useClinicaReal();
+  const moduloAuto = MODULES.find((m) => m.id === "automatizaciones");
+  const autoDisponible = !!moduloAuto && availableIn(moduloAuto, plan);
+  const puedeConfigurar = !real || real.rol === "admin";
+  const { flujos } = storeN8n.usar();
+  const flujosRecall = flujos.filter((f) => f.evento === "paciente_inactivo");
+  const automatico = flujosRecall.some((f) => f.activo);
+  const alternarAutomatico = () => {
+    if (automatico) {
+      setN8n("flujos", (prev) => prev.map((f) => (f.evento === "paciente_inactivo" ? { ...f, activo: false } : f)));
+      onToast("Invitación automática pausada: queda la lista para hacerlo a mano");
+      return;
+    }
+    if (flujosRecall.length) {
+      const id = flujosRecall[0]!.id;
+      setN8n("flujos", (prev) => prev.map((f) => (f.id === id ? { ...f, activo: true } : f)));
+    } else {
+      const t = PLANTILLAS.find((x) => x.evento === "paciente_inactivo");
+      if (!t) return;
+      setN8n("flujos", (prev) => [
+        ...prev,
+        {
+          id: `f-${Date.now()}`,
+          nombre: t.nombre,
+          evento: t.evento,
+          pasos: t.pasos(),
+          activo: true,
+          sedes: "Todas",
+          creado: new Date().toISOString(),
+          plantilla: t.id,
+        },
+      ]);
+    }
+    onToast("Listo: los pacientes para volver a llamar se invitan solos por WhatsApp");
+  };
 
   const lista = useMemo(() => {
     const hoy = hoyISO();
@@ -123,6 +166,12 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
             >
               {pendientes.length}
             </span>
+            {automatico && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                <Zap className="size-3" />
+                Automático
+              </span>
+            )}
           </span>
           <span className="block text-[11.5px] text-muted-foreground">
             No vienen hace {textoTiempo(meses)} o más y no tienen turno
@@ -158,6 +207,59 @@ export function VolverALlamar({ onToast }: { onToast: (m: string) => void }) {
               <Settings2 className="size-3.5" />
               Cada {textoTiempo(meses)}
             </button>
+          </div>
+
+          {/* Hacerlo automático (Automatizaciones) */}
+          <div
+            className={`mb-3 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5 ${
+              automatico
+                ? "border-emerald-500/25 bg-emerald-500/[0.06]"
+                : "border-primary/12 bg-primary/[0.03]"
+            }`}
+          >
+            <span
+              className={`grid size-8 shrink-0 place-items-center rounded-lg text-white shadow-sm ${
+                automatico ? "bg-gradient-to-br from-emerald-500 to-teal-600" : "bg-gradient-to-br from-primary to-fuchsia-500"
+              }`}
+            >
+              {automatico ? <Zap className="size-4" /> : <Sparkles className="size-4" />}
+            </span>
+            <div className="min-w-0 flex-1 basis-48">
+              <p className="text-sm font-semibold">
+                {automatico ? "Automático activado" : "Que se haga solo"}
+              </p>
+              <p className="text-[11.5px] leading-snug text-muted-foreground">
+                {automatico
+                  ? `Esther los invita sola por WhatsApp al cumplir ${textoTiempo(meses)} sin venir (una vez por período). Si no responden, queda una tarea para llamarlos.`
+                  : autoDisponible
+                    ? "Esther invita sola por WhatsApp a cada paciente cuando cumple el tiempo sin venir. Nadie tiene que acordarse."
+                    : "Con el módulo Automatizaciones, Esther los invita sola por WhatsApp sin que nadie tenga que hacer nada."}
+              </p>
+            </div>
+            {autoDisponible ? (
+              puedeConfigurar ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  {automatico && (
+                    <Link to={"/demo/automatizaciones" as never} className="text-xs font-semibold text-primary hover:underline">
+                      Ver flujo
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={alternarAutomatico}
+                    className={automatico ? "btn-ce-outline" : "btn-ce"}
+                  >
+                    {automatico ? "Pausar" : "Activar"}
+                  </button>
+                </div>
+              ) : (
+                <span className="text-[11.5px] font-medium text-muted-foreground">Lo activa el administrador</span>
+              )
+            ) : (
+              <Link to={"/demo/automatizaciones" as never} className="btn-ce-outline shrink-0">
+                Ver Automatizaciones
+              </Link>
+            )}
           </div>
 
           {config && (

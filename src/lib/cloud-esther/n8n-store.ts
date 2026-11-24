@@ -40,8 +40,8 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     modulo: "Agenda",
   },
   paciente_inactivo: {
-    nombre: "Paciente inactivo",
-    detalle: "Sin turnos hace más de 6 meses",
+    nombre: "Paciente para volver a llamar",
+    detalle: "Sin venir hace los meses que elige la clínica en Pacientes (y sin turno)",
     modulo: "Pacientes",
   },
   paciente_nuevo: {

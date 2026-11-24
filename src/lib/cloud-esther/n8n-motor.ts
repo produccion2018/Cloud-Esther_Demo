@@ -132,28 +132,35 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
       lista = turnos.filter((t) => t.estado === "Cancelada").map(deTurno);
       break;
     case "paciente_inactivo": {
-      const corte = diaISO(-180);
+      // Igual que «Para volver a llamar» en Pacientes: meses que elige la clínica, última visita
+      // atendida, sin turno agendado y sin aviso a mano dentro del período.
+      const ajustes = storeAgenda.leer().ajustes;
+      const meses = Math.min(60, Math.max(1, Math.round(ajustes?.recallMeses ?? 6)));
+      const avisados = ajustes?.recallAvisados ?? {};
+      const hoy = hoyISO();
+      const corte = diaISO(-Math.round(meses * 30.44));
       lista = pacientes
-        .filter(
-          (p) =>
-            p.estado === "Inactivo" ||
-            !turnos.some((t) => t.paciente === nombre(p) && t.fecha >= corte),
-        )
-        .map((p) => {
-          const ult = turnos
-            .filter((t) => t.paciente === nombre(p))
+        .filter((p) => p.estado === "Activo")
+        .flatMap((p) => {
+          const suyos = turnos.filter((t) => t.paciente.trim().toLowerCase() === nombre(p).toLowerCase());
+          if (suyos.some((t) => t.fecha >= hoy && t.estado !== "Cancelada")) return [];
+          const ult = suyos
+            .filter((t) => t.estado === "Atendida" && t.fecha < hoy)
             .sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
-          return {
-            titulo: `${nombre(p)} sin turnos recientes`,
-            paciente: nombre(p),
-            pacienteId: p.id,
-            telefono: p.telefono,
-            sede: p.sucursal,
-            monto: 0,
-            dato: ult
-              ? `último turno el ${fecha(ult.fecha)} (${ult.tratamiento})`
-              : "sin turnos registrados",
-          };
+          if (!ult || ult.fecha >= corte) return [];
+          const aviso = (avisados[String(p.id)] ?? "").slice(0, 10);
+          if (aviso && aviso >= corte) return [];
+          return [
+            {
+              titulo: `${nombre(p)} sin venir hace ${meses} meses o más`,
+              paciente: nombre(p),
+              pacienteId: p.id,
+              telefono: p.telefono,
+              sede: p.sucursal,
+              monto: 0,
+              dato: `última visita el ${fecha(ult.fecha)} (${ult.tratamiento})`,
+            },
+          ];
         });
       break;
     }

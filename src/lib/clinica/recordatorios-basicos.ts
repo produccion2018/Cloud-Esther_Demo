@@ -7,6 +7,33 @@ import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
+import { leerRegistros, type Registros } from "@/components/cloud-esther/PacienteSecciones";
+import type { Turno } from "@/lib/cloud-esther/agenda-store";
+import type { Paciente } from "@/lib/cloud-esther/pacientes";
+import { normalizarBusqueda } from "@/lib/utils";
+
+/** Turnos atendidos (últimos `dias` días) que todavía no tienen evolución ni nota clínica ese día */
+export function turnosSinEvolucion(
+  turnos: Turno[],
+  pacientes: Paciente[],
+  registros: Record<number, Registros>,
+  dias = 7,
+): { turno: Turno; paciente: Paciente }[] {
+  const hoy = hoyISO();
+  const desde = hoyISO(-dias);
+  const porNombre = new Map(pacientes.map((p) => [normalizarBusqueda(`${p.nombre} ${p.apellido}`), p]));
+  const out: { turno: Turno; paciente: Paciente }[] = [];
+  for (const t of turnos) {
+    if (t.estado !== "Atendida" || t.fecha > hoy || t.fecha < desde) continue;
+    const p = porNombre.get(normalizarBusqueda(t.paciente));
+    if (!p) continue;
+    const r = registros[p.id];
+    const tiene =
+      (r?.historia ?? []).some((e) => e.fecha === t.fecha) || (r?.notasClinicas ?? []).some((n) => n.fecha === t.fecha);
+    if (!tiene) out.push({ turno: t, paciente: p });
+  }
+  return out.sort((a, b) => `${b.turno.fecha}${b.turno.hora}`.localeCompare(`${a.turno.fecha}${a.turno.hora}`));
+}
 
 /* Ubicación: src/lib/clinica/recordatorios-basicos.ts
    RECORDATORIOS BÁSICOS (TODOS LOS PLANES, sin IA): una vez por día, al abrir la app, quedan en
@@ -25,14 +52,18 @@ const hoyISO = (n = 0) => {
 export function useRecordatoriosBasicos() {
   const real = useClinicaReal();
   const { plan } = useCloudEsther();
-  const puede = !real || ["admin", "secretaria"].includes(real.rol);
+  const puede = !real || ["admin", "secretaria", "odontologo"].includes(real.rol);
   useEffect(() => {
     if (!puede) return;
     let hecho = false;
+    let pendienteEvolucion = false;
     const revisar = () => {
       if (hecho) return;
       // En una clínica real, recién cuando llegaron los datos del servidor
       if (real && !["agenda", "pacientes", "notificaciones"].every(moduloCargado)) return;
+      // La carpeta clínica puede tardar más en llegar: el aviso de evoluciones espera a tenerla
+      const conRegistros = !real || moduloCargado("registros");
+      if (!conRegistros) pendienteEvolucion = true;
       hecho = true;
       const hoy = hoyISO();
       const { turnos, ajustes } = storeAgenda.leer();
@@ -75,12 +106,35 @@ export function useRecordatoriosBasicos() {
           });
       }
 
+      // 3) Turnos atendidos sin evolución cargada (historia clínica completa y al día)
+      if (conRegistros && !existentes.has(`basico-evolucion-${hoy}`)) {
+        pendienteEvolucion = false;
+        const faltan = turnosSinEvolucion(turnos, leerPacientes(), leerRegistros());
+        if (faltan.length)
+          nuevos.push({
+            ...base,
+            asignado: "Profesionales",
+            id: `basico-evolucion-${hoy}`,
+            titulo: `${faltan.length} turno${faltan.length === 1 ? "" : "s"} atendido${faltan.length === 1 ? "" : "s"} sin evolución`,
+            detalle: `${faltan
+              .slice(0, 4)
+              .map((x) => `${x.turno.fecha.slice(8, 10)}/${x.turno.fecha.slice(5, 7)} ${x.paciente.nombre} ${x.paciente.apellido}${x.turno.odontologo ? ` (${x.turno.odontologo})` : ""}`)
+              .join(", ")}${faltan.length > 4 ? ` y ${faltan.length - 4} más` : ""}. Cargala desde la ficha del paciente → Historia clínica (hay plantillas para hacerlo rápido).`,
+            categoria: "Pacientes",
+            prioridad: "Normal",
+          });
+      }
+
       if (nuevos.length) setNotificaciones("manuales", (prev) => [...nuevos, ...prev.filter((p) => !nuevos.some((n) => n.id === p.id))]);
     };
     revisar();
     // Se reintenta mientras cargan los datos (y al volver a la pestaña otro día)
     const id = window.setInterval(() => {
       if (!hecho) revisar();
+      else if (pendienteEvolucion && moduloCargado("registros")) {
+        hecho = false;
+        revisar();
+      }
     }, 3000);
     const alVolver = () => {
       if (document.visibilityState === "visible") {

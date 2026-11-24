@@ -8,6 +8,7 @@ import {
   FlaskConical,
   ListTodo,
   PhoneCall,
+  FileClock,
   PackageMinus,
   ReceiptText,
   type LucideIcon,
@@ -20,6 +21,7 @@ import { storeInventario } from "@/lib/cloud-esther/inventario-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
 import { pacientesParaLlamar, textoTiempo } from "@/components/cloud-esther/pacientes/VolverALlamar";
+import { turnosSinEvolucion } from "@/lib/clinica/recordatorios-basicos";
 
 /* Ubicación: src/components/cloud-esther/dashboard/PendientesHoy.tsx
    PENDIENTES DE HOY (Dashboard, demo y clínica): en una sola tarjeta, lo que hay que atender hoy.
@@ -119,6 +121,21 @@ export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
           accion: "Invitar",
         });
     }
+
+    // 2c) Turnos atendidos sin evolución cargada (todos los planes; por profesional si se filtró)
+    const sinEvo = turnosSinEvolucion(turnos, pacientes, registros).filter(
+      (x) => !profesional || x.turno.odontologo === profesional,
+    );
+    if (sinEvo.length)
+      out.push({
+        id: "evolucion",
+        icon: FileClock,
+        tono: "from-indigo-500 to-violet-500",
+        titulo: `${sinEvo.length} turno${sinEvo.length > 1 ? "s" : ""} atendido${sinEvo.length > 1 ? "s" : ""} sin evolución`,
+        detalle: lista(sinEvo.map((x) => `${x.turno.fecha.slice(8, 10)}/${x.turno.fecha.slice(5, 7)} · ${x.paciente.nombre} ${x.paciente.apellido}`)),
+        ir: "/demo/historia",
+        accion: "Cargar",
+      });
 
     // 3) Presupuestos enviados sin respuesta (3 días o más)
     if (tiene("presupuestos")) {

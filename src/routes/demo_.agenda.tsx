@@ -28,6 +28,7 @@ import {
   MapPin,
   Stethoscope,
   DoorOpen,
+  FileClock,
   AlertTriangle,
   FileDown,
   Repeat,
@@ -1314,6 +1315,12 @@ function TurnoCard({
   const ant = pacTurno ? regs[pacTurno.id]?.antecedentes : undefined;
   const alertasMed = [...(ant?.alergias ?? []).filter(Boolean).map((x) => `Alergia a ${x}`), ...(ant?.enfermedades ?? []).filter(Boolean)];
   const [verAlertas, setVerAlertas] = useState(false);
+  // Turno atendido sin evolución cargada ese día (para que la historia quede completa)
+  const faltaEvolucion =
+    turno.estado === "Atendida" &&
+    !!pacTurno &&
+    !(regs[pacTurno.id]?.historia ?? []).some((e) => e.fecha === turno.fecha) &&
+    !(regs[pacTurno.id]?.notasClinicas ?? []).some((n) => n.fecha === turno.fecha);
   const finTurno = aHora(aMinutos(turno.hora) + (turno.duracion ?? duracionHabitual));
   const esHoy = turno.fecha === hoyISO();
   const enSala = activo && !!turno.llegada;
@@ -1385,6 +1392,15 @@ function TurnoCard({
               >
                 <Repeat className="size-3" />
                 {turno.serieN} de {turno.serieTotal}
+              </span>
+            )}
+            {faltaEvolucion && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300"
+                title="Cargá la evolución en la ficha del paciente → Historia clínica"
+              >
+                <FileClock className="size-3" />
+                Falta evolución
               </span>
             )}
             {espero !== null && (

@@ -179,7 +179,7 @@ export function PendientesHoy() {
           respuesta, laboratorio atrasado ni stock bajo.
         </p>
       ) : (
-        <ul className="grid gap-2 lg:grid-cols-2">
+        <ul data-movil="1col" className="grid gap-2 lg:grid-cols-2">
           {filas.map((f) => (
             <li key={f.id}>
               <Link

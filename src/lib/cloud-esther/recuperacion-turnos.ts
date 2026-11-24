@@ -33,7 +33,8 @@ type Horario = Pick<Turno, "fecha" | "hora" | "odontologo" | "sucursal">;
 /** ¿La preferencia de la lista de espera encaja con el horario liberado? "" / vacío = cualquiera. */
 function compatible(e: Espera, t: Horario): boolean {
   if (e.odontologo && e.odontologo !== t.odontologo) return false;
-  if (e.sucursal && e.sucursal !== t.sucursal && e.sucursal.toLowerCase() !== "todas") return false;
+  // Horario sin sucursal (clínica de una sola sede o sin sede cargada): no filtra por sucursal
+  if (t.sucursal && e.sucursal && e.sucursal !== t.sucursal && e.sucursal.toLowerCase() !== "todas") return false;
   if (e.dias && e.dias.length > 0 && !e.dias.includes(diaSemana(t.fecha))) return false;
   // Franja tolerante: acepta "Mañana/Mañanas", "Tarde/Tardes"; "Hoy/Cualquiera/"" = sin restricción.
   const fr = (e.franja ?? "").toLowerCase();

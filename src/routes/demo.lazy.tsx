@@ -1,4 +1,5 @@
 import { PendientesHoy } from "@/components/cloud-esther/dashboard/PendientesHoy";
+import { OcupacionHoy } from "@/components/cloud-esther/dashboard/OcupacionHoy";
 import { capitalizarNombre } from "@/lib/utils";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
@@ -1452,6 +1453,9 @@ function DashboardInner() {
 
         {/* Lo que hay que atender hoy: alertas médicas, cumpleaños, presupuestos, laboratorio y stock */}
         <PendientesHoy />
+
+        {/* Ocupación de hoy y horarios libres para ofrecer a la lista de espera */}
+        <OcupacionHoy onToast={show} />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className={`${CARD} lg:col-span-2`}>

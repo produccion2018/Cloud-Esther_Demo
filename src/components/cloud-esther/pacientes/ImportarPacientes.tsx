@@ -1,3 +1,5 @@
+import { normalizarDocumento, validarDocumento } from "@/lib/cloud-esther/terminologia";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -87,12 +89,12 @@ function fechaISO(v: string | number | undefined): string {
   return `${anio}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
 }
 
-function revisar(filas: Fila[], mapa: Partial<Record<Campo, string>>, existentes: Paciente[]): Revisada[] {
+function revisar(filas: Fila[], mapa: Partial<Record<Campo, string>>, existentes: Paciente[], pais = ""): Revisada[] {
   const val = (f: Fila, c: Campo) => {
     const k = mapa[c];
     return k ? String(f[k] ?? "").trim() : "";
   };
-  const docsCargados = new Set(existentes.map((p) => p.documento).filter(Boolean));
+  const docsCargados = new Set(existentes.map((p) => normalizarDocumento(p.documento)).filter(Boolean));
   const vistos = new Set<string>();
   return filas.map((f, i) => {
     let nombre = val(f, "nombre");
@@ -110,11 +112,12 @@ function revisar(filas: Fila[], mapa: Partial<Record<Campo, string>>, existentes
         nombre ||= partes.join(" ");
       }
     }
-    const documento = val(f, "documento").replace(/\D/g, "");
+    // Según el país de la clínica (DNI, RUT con K, CURP, DNI/NIE con letra…)
+    const documento = normalizarDocumento(val(f, "documento"));
     const email = val(f, "email").toLowerCase();
     let problema: string | null = null;
     if (!nombre.trim() || !apellido.trim()) problema = "Falta nombre o apellido";
-    else if (documento && !/^\d{6,12}$/.test(documento)) problema = "Documento con formato raro";
+    else if (documento && validarDocumento(documento, pais)) problema = "Documento con formato raro";
     else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problema = "Email inválido";
     const duplicado = !!documento && (docsCargados.has(documento) || vistos.has(documento));
     if (documento) vistos.add(documento);
@@ -176,6 +179,7 @@ export function ImportarPacientes({
   onToast: (m: string) => void;
 }) {
   const { pacientes, setPacientes } = usePacientes();
+  const paisImport = usePaisClinica();
   const archivo = useRef<HTMLInputElement>(null);
   const [nombreArchivo, setNombreArchivo] = useState("");
   const [filas, setFilas] = useState<Fila[]>([]);
@@ -204,7 +208,7 @@ export function ImportarPacientes({
     }
   };
 
-  const revisadas = filas.length ? revisar(filas, mapa, pacientes) : [];
+  const revisadas = filas.length ? revisar(filas, mapa, pacientes, paisImport) : [];
   const validas = revisadas.filter((r) => !r.problema && !r.duplicado);
   const conError = revisadas.filter((r) => r.problema).length;
   const duplicados = revisadas.filter((r) => !r.problema && r.duplicado).length;

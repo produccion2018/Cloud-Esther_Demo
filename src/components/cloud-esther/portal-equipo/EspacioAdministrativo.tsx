@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -109,7 +110,7 @@ function totalPresupuesto(p: PresupuestoPaciente) {
 }
 
 function whatsapp(telefono: string, texto: string) {
-  const numero = telefono.replace(/[^0-9]/g, "");
+  const numero = telefonoInternacional(telefono);
   return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : null;
 }
 

@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -147,7 +148,7 @@ const ESTILO: Record<EstadoComprobante, string> = {
 };
 const nombrePac = (p: Paciente | undefined) => (p ? `${p.nombre} ${p.apellido}` : "");
 function wa(tel: string, texto: string) {
-  return `https://wa.me/${tel.replace(/[^\d]/g, "")}?text=${encodeURIComponent(texto)}`;
+  return `https://wa.me/${telefonoInternacional(tel)}?text=${encodeURIComponent(texto)}`;
 }
 function mismoMes(iso: string, n = 0) {
   const d = new Date();

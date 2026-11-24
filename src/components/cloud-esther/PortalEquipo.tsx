@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
@@ -1984,7 +1985,7 @@ function FichaPaciente({
           <Phone className="size-3.5" /> Llamar
         </a>
         <a
-          href={`https://wa.me/${tel.replace("+", "")}`}
+          href={`https://wa.me/${telefonoInternacional(p.telefono)}`}
           target="_blank"
           rel="noreferrer"
           className="btn-wa flex-1"

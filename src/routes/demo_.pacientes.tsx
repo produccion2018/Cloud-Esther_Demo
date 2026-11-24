@@ -1,3 +1,7 @@
+import { CODIGO_PAIS } from "@/lib/clinica/whatsapp";
+import { formatoDocumento, normalizarDocumento, reglaDocumento, useTerminologia, validarDocumento } from "@/lib/cloud-esther/terminologia";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
+import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { SUCURSALES, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { createFileRoute } from "@tanstack/react-router";
@@ -151,8 +155,10 @@ const ESTADOS: EstadoPaciente[] = ["Activo", "Inactivo", "Archivado"];
 
 /* ───────────── Utilidades ───────────── */
 
-function formatearDocumento(digitos: string) {
-  return digitos ? Number(digitos).toLocaleString("es-AR") : "";
+/* El documento se muestra según el país de la clínica (DNI, CI, RUT, CURP…) */
+let paisDocs = "";
+function formatearDocumento(doc: string) {
+  return formatoDocumento(doc, paisDocs);
 }
 
 function etiquetaObraSocial(o: string) {
@@ -451,6 +457,9 @@ function PacienteForm({
   onCancel: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const paisForm = usePaisClinica();
+  const terminosForm = useTerminologia();
+  const reglaDoc = reglaDocumento(paisForm);
 
   const [foto, setFoto] = useState<string | null>(
     inicial?.foto ?? null,
@@ -570,17 +579,11 @@ function PacienteForm({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
 
-    const soloDigitos =
-      documento.replace(/\D/g, "");
-
-    if (
-      soloDigitos.length < 7 ||
-      soloDigitos.length > 8
-    ) {
-      setErrorDocumento(
-        "Ingresá un documento válido (7 u 8 dígitos).",
-      );
-
+    // Según el país de la clínica: DNI, CI, RUT con K, cédula, CURP, DNI/NIE con letra…
+    const soloDigitos = normalizarDocumento(documento);
+    const errorDoc = validarDocumento(documento, paisForm);
+    if (errorDoc) {
+      setErrorDocumento(errorDoc);
       return;
     }
 
@@ -718,20 +721,21 @@ function PacienteForm({
         </Field>
 
         <Field
-          label="Documento *"
-          hint="El documento debe ser válido y único para el paciente."
+          label={`${terminosForm.doc === "Documento" ? "Documento" : terminosForm.doc} *`}
+          hint={`${reglaDoc.texto}. Debe ser único para el paciente.`}
           error={errorDocumento}
         >
           <input
             required
-            inputMode="numeric"
+            inputMode={reglaDoc.numerico ? "numeric" : "text"}
+            autoCapitalize="characters"
             value={documento}
             onChange={(e) => {
               setDocumento(e.target.value);
               setErrorDocumento("");
             }}
             className={INPUT}
-            placeholder="95.222.294"
+            placeholder={reglaDoc.ejemplo}
           />
         </Field>
 
@@ -780,7 +784,7 @@ function PacienteForm({
                   value={tutorTelefono}
                   onChange={(e) => setTutorTelefono(e.target.value)}
                   className={INPUT}
-                  placeholder="+54 11 5555-8899"
+                  placeholder={`+${CODIGO_PAIS[paisForm] ?? "54"} …`}
                 />
               </Field>
             </div>
@@ -818,7 +822,7 @@ function PacienteForm({
               setTelefono(e.target.value)
             }
             className={INPUT}
-            placeholder="+54 11 5555-8899"
+            placeholder={`+${CODIGO_PAIS[paisForm] ?? "54"} …`}
           />
         </Field>
 
@@ -1307,6 +1311,9 @@ function auditarPaciente(tipo: "Alta" | "Baja" | "Modificación", accion: string
 
 function PacientesInner() {
   const { plan } = useCloudEsther();
+  // Multipaís: DNI, CI, RUT, Cédula, CURP… según el país de la clínica
+  const terminos = useTerminologia();
+  paisDocs = usePaisClinica();
   // Turnos de la agenda de la empresa (mismo store que "Agenda y turnos" y el Dashboard).
   const { turnos: turnosAgenda } = storeAgenda.usar();
   const hoyAgenda = hoyISO();
@@ -1349,7 +1356,7 @@ function PacientesInner() {
   // Orden y obra social (se recuerdan mientras dura la sesión)
   const [orden, setOrdenState] = useState<string>(() => {
     try {
-      return (typeof window !== "undefined" && sessionStorage.getItem("cloud-esther:pacientes-orden")) || "A a Z";
+      return (typeof window !== "undefined" && sessionStorage.getItem(claveTenant("cloud-esther:pacientes-orden"))) || "A a Z";
     } catch {
       return "A a Z";
     }
@@ -1357,7 +1364,7 @@ function PacientesInner() {
   const setOrden = (v: string) => {
     setOrdenState(v);
     try {
-      sessionStorage.setItem("cloud-esther:pacientes-orden", v);
+      sessionStorage.setItem(claveTenant("cloud-esther:pacientes-orden"), v);
     } catch {
       /* nada */
     }
@@ -1377,8 +1384,10 @@ function PacientesInner() {
     "",
   );
 
+  const qDoc = normalizarDocumento(busqueda);
   const coincide = (p: Paciente) =>
     !q ||
+    (qDoc.length >= 3 && /[A-Z]/.test(qDoc) && normalizarDocumento(p.documento).includes(qDoc)) ||
     normalizarBusqueda(`${p.nombre} ${p.apellido} ${p.email}`).includes(q) ||
     (qDigitos.length > 0 &&
       (p.documento.includes(
@@ -1913,7 +1922,7 @@ function PacientesInner() {
                               <p className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">{nombre}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
-                                  DNI {formatearDocumento(p.documento)}
+                                  {terminos.doc} {formatearDocumento(p.documento)}
                                 </span>
                                 <BadgeEstado estado={p.estado} />
                                 <AlertaMedica a={registros.de(p.id).antecedentes} />

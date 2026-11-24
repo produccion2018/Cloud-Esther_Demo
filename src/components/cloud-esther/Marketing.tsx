@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
@@ -137,7 +138,7 @@ function iniciales(n: string) {
     .join("");
 }
 function wa(tel: string, texto: string) {
-  return `https://wa.me/${tel.replace(/[^\d]/g, "")}?text=${encodeURIComponent(texto)}`;
+  return `https://wa.me/${telefonoInternacional(tel)}?text=${encodeURIComponent(texto)}`;
 }
 
 /* ───────────── Piezas ───────────── */

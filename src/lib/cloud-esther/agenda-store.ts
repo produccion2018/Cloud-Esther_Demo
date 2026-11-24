@@ -1,4 +1,4 @@
-import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { claveTenant, crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { TEAM_MEMBERS } from "@/lib/cloud-esther/equipo-profesional-data";
 import { capitalizarNombre } from "@/lib/utils";
 
@@ -289,18 +289,20 @@ const RECORDATORIOS_INICIAL: Recordatorio[] = [
 ];
 /* Profesional elegido para "ver el día de…": se comparte entre el Dashboard y la Agenda
    mientras dure la sesión del navegador, así no hay que elegirlo dos veces. */
-const CLAVE_PROFESIONAL = "cloud-esther:profesional-visto";
+// Por empresa: en multiempresa cada clínica recuerda su propio profesional elegido
+const CLAVE_PROFESIONAL_BASE = "cloud-esther:profesional-visto";
+const CLAVE_PROFESIONAL = () => claveTenant(CLAVE_PROFESIONAL_BASE);
 export function leerProfesionalVisto(): string {
   try {
-    return typeof window === "undefined" ? "" : (window.sessionStorage.getItem(CLAVE_PROFESIONAL) ?? "");
+    return typeof window === "undefined" ? "" : (window.sessionStorage.getItem(CLAVE_PROFESIONAL()) ?? "");
   } catch {
     return "";
   }
 }
 export function guardarProfesionalVisto(nombre: string) {
   try {
-    if (nombre) window.sessionStorage.setItem(CLAVE_PROFESIONAL, nombre);
-    else window.sessionStorage.removeItem(CLAVE_PROFESIONAL);
+    if (nombre) window.sessionStorage.setItem(CLAVE_PROFESIONAL(), nombre);
+    else window.sessionStorage.removeItem(CLAVE_PROFESIONAL());
   } catch {
     /* sin almacenamiento: no pasa nada */
   }

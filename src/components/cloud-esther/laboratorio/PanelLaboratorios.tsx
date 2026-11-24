@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -76,7 +77,7 @@ const diasEntre = (a: string, b: string) =>
   Math.round((new Date(`${b}T12:00:00`).getTime() - new Date(`${a}T12:00:00`).getTime()) / 86_400_000);
 
 function whatsapp(tel: string, texto: string) {
-  const n = tel.replace(/\D/g, "");
+  const n = telefonoInternacional(tel);
   return n ? `https://wa.me/${n}?text=${encodeURIComponent(texto)}` : null;
 }
 
@@ -404,7 +405,7 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
               </div>
               <div className="relative mt-3 flex flex-wrap gap-1.5">
                 {tel && (
-                  <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="btn-wa !min-h-9">
+                  <a href={`https://wa.me/${telefonoInternacional(l.telefono)}`} target="_blank" rel="noreferrer" className="btn-wa !min-h-9">
                     <IconoWhatsApp /> WhatsApp
                   </a>
                 )}

@@ -1,3 +1,5 @@
+import { fijarPaisTelefonos } from "@/lib/clinica/whatsapp";
+import { usePaisClinica as usePaisClinicaApp } from "@/lib/cloud-esther/coberturas";
 import { useRecordatoriosBasicos } from "@/lib/clinica/recordatorios-basicos";
 import { useEffect, useId, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
@@ -1306,6 +1308,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useBandejaAutomatizaciones();
   // Recordatorios básicos de todos los planes (una vez por día, en Notificaciones)
   useRecordatoriosBasicos();
+  // Multipaís: los teléfonos de los pacientes llevan el código del país de ESTA clínica (WhatsApp)
+  const paisConfigurado = usePaisClinicaApp();
+  const paisClinicaApp = real?.sesion.clinica.pais || paisConfigurado;
+  useEffect(() => {
+    fijarPaisTelefonos(paisClinicaApp);
+  }, [paisClinicaApp]);
   // Las sucursales (sedes) salen de lo que cargó el dueño en Configuración. Si no cargó ninguna,
   // la sede es el nombre de la clínica. Vale para el demo y para la clínica real.
   ajustarCatalogosClinica(

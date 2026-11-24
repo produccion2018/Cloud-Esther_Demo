@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { ReactNode } from "react";
@@ -103,7 +104,7 @@ function mayuscula(t: string) {
   return s ? s[0]!.toUpperCase() + s.slice(1) : s;
 }
 function wa(tel: string, texto: string) {
-  return `https://wa.me/${tel.replace(/[^\d]/g, "")}?text=${encodeURIComponent(texto)}`;
+  return `https://wa.me/${telefonoInternacional(tel)}?text=${encodeURIComponent(texto)}`;
 }
 function descargarCSV(nombre: string, filas: (string | number)[][]) {
   const csv = filas

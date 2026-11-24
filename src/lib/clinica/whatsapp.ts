@@ -26,10 +26,55 @@ export function telefonoDePaciente(nombreCompleto: string): string | null {
   return p?.telefono?.trim() || null;
 }
 
-/** Número para wa.me (solo dígitos, con código de país). null si no alcanza para ser un teléfono. */
+/* PAÍS DE LA CLÍNICA para los teléfonos: los pacientes se cargan como se usa en cada país
+   ("011 15 4444-5555", "099 123 456"…) y WhatsApp necesita el código de país. Lo fija el
+   AppShell con el país de la clínica (multiempresa y multipaís). */
+let paisTelefonos = "AR";
+export function fijarPaisTelefonos(pais: string) {
+  paisTelefonos = (pais || "AR").toUpperCase();
+}
+
+/** Código telefónico de cada país donde trabaja Cloud Esther */
+export const CODIGO_PAIS: Record<string, string> = {
+  AR: "54", UY: "598", CL: "56", CO: "57", PE: "51", EC: "593", VE: "58", MX: "52", ES: "34",
+  BO: "591", PY: "595", CR: "506", PA: "507", GT: "502", SV: "503", HN: "504", NI: "505",
+  DO: "1", PR: "1", CU: "53", US: "1",
+};
+
+/** Teléfono internacional (solo dígitos, con código de país). Igual que en el servidor. */
+export function telefonoInternacional(telefono: string, pais = paisTelefonos): string {
+  const crudo = (telefono ?? "").trim();
+  let n = crudo.replace(/\D/g, "");
+  if (!n) return "";
+  if (crudo.startsWith("+")) return n;
+  if (n.startsWith("00")) return n.slice(2);
+  const p = pais.toUpperCase();
+  const cc = CODIGO_PAIS[p] ?? "";
+  if (!cc) return n;
+  if (n.startsWith(cc) && n.length >= cc.length + 8) {
+    if (p === "AR" && !n.startsWith("549") && n.length === 12) return `549${n.slice(2)}`;
+    return n;
+  }
+  n = n.replace(/^0+/, "");
+  if (p === "AR") {
+    if (n.length === 12) {
+      for (const area of [2, 3, 4]) {
+        if (n.slice(area, area + 2) === "15") {
+          n = n.slice(0, area) + n.slice(area + 2);
+          break;
+        }
+      }
+    }
+    if (n.startsWith("9") && n.length === 11) n = n.slice(1);
+    return `549${n}`;
+  }
+  return `${cc}${n}`;
+}
+
+/** Número para wa.me (internacional, según el país de la clínica). null si no alcanza para ser un teléfono. */
 export function numeroWhatsApp(telefono: string | null | undefined): string | null {
-  const n = (telefono ?? "").replace(/\D/g, "");
-  return n.length >= 8 ? n : null;
+  const n = telefonoInternacional(telefono ?? "");
+  return n.length >= 10 ? n : null;
 }
 
 export function textoRecordatorioTurno(

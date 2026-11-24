@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useMemo, useRef, useState } from "react"
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
 import { useTerminologia } from "@/lib/cloud-esther/terminologia"
@@ -808,7 +809,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
                         </div>
                         <div className="absolute right-3 top-3 flex gap-1 sm:static" onClick={(e) => e.stopPropagation()}>
                           {m.phone && (
-                            <a href={`https://wa.me/${m.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="grid size-8 place-items-center rounded-full border border-emerald-500/20 bg-white text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500 hover:text-white hover:shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]" aria-label={`Escribir por WhatsApp a ${fullName(m)}`} title="WhatsApp">
+                            <a href={`https://wa.me/${telefonoInternacional(m.phone)}`} target="_blank" rel="noreferrer" className="grid size-8 place-items-center rounded-full border border-emerald-500/20 bg-white text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500 hover:text-white hover:shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]" aria-label={`Escribir por WhatsApp a ${fullName(m)}`} title="WhatsApp">
                               <IconoWhatsApp className="size-3.5" />
                             </a>
                           )}

@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
@@ -781,7 +782,7 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
         <div className="flex gap-1.5">
           {m.phone && (
             <a
-              href={`https://wa.me/${m.phone.replace(/[^\d]/g, "")}`}
+              href={`https://wa.me/${telefonoInternacional(m.phone)}`}
               target="_blank"
               rel="noreferrer"
               aria-label="WhatsApp"

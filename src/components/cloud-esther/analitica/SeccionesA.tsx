@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -307,7 +308,7 @@ export function Pacientes({ ctx }: { ctx: CtxBI }) {
                     className="btn-wa"
                     target="_blank"
                     rel="noreferrer"
-                    href={`https://wa.me/${p.telefono.replace(/[^\d]/g, "")}?text=${encodeURIComponent(`Hola ${p.nombre}, hace un tiempo que no te vemos en la clínica. ¿Querés que te reservemos un turno de control?`)}`}
+                    href={`https://wa.me/${telefonoInternacional(p.telefono)}?text=${encodeURIComponent(`Hola ${p.nombre}, hace un tiempo que no te vemos en la clínica. ¿Querés que te reservemos un turno de control?`)}`}
                   >
                     <IconoWhatsApp /> WhatsApp
                   </a>

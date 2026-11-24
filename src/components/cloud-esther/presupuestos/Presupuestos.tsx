@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNavigate } from "@tanstack/react-router";
@@ -131,7 +132,7 @@ const vencido = (p: PresupuestoPaciente) =>
   p.estado === "Enviado" && !!p.validez && p.validez < hoyISO();
 const estadoVisual = (p: PresupuestoPaciente) => (vencido(p) ? "Vencido" : p.estado);
 function wa(tel: string, texto: string) {
-  return `https://wa.me/${tel.replace(/[^\d]/g, "")}?text=${encodeURIComponent(texto)}`;
+  return `https://wa.me/${telefonoInternacional(tel)}?text=${encodeURIComponent(texto)}`;
 }
 
 /* ───────────── Página ───────────── */

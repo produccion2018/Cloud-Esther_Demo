@@ -1,3 +1,5 @@
+import { normalizarDocumento, validarDocumento } from "@/lib/cloud-esther/terminologia";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { useState } from "react";
 import {
   ArrowDownCircle,
@@ -538,6 +540,7 @@ function AltaPaciente({
   onCerrar: () => void;
   onGuardar: (p: Omit<Paciente, "id">) => void;
 }) {
+  const paisAlta = usePaisClinica();
   const [f, setF] = useState({
     nombre: "",
     apellido: "",
@@ -573,12 +576,13 @@ function AltaPaciente({
           e.preventDefault();
           if (!f.nombre.trim() || !f.apellido.trim())
             return setError("Completá nombre y apellido.");
-          if (!/^\d{6,10}$/.test(f.documento.replace(/\D/g, "")))
-            return setError("El documento tiene que tener entre 6 y 10 dígitos.");
+          // Según el país de la clínica (DNI, RUT con K, CURP, DNI/NIE con letra…)
+          const errDoc = validarDocumento(f.documento, paisAlta);
+          if (errDoc) return setError(errDoc);
           onGuardar({
             nombre: f.nombre.trim(),
             apellido: f.apellido.trim(),
-            documento: f.documento.replace(/\D/g, ""),
+            documento: normalizarDocumento(f.documento),
             fechaNacimiento: f.fechaNacimiento,
             genero: "",
             email: f.email.trim(),

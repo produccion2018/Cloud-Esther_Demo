@@ -1,3 +1,4 @@
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import {
   AlertTriangle,
   CalendarCheck,
@@ -386,7 +387,7 @@ export function ResumenPaciente({
           <div className="flex flex-wrap gap-2">
             {tel && (
               <a
-                href={`https://wa.me/${tel}`}
+                href={`https://wa.me/${telefonoInternacional(paciente.telefono)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-wa"

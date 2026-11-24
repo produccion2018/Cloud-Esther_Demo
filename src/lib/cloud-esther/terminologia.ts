@@ -136,3 +136,54 @@ export function useTerminologia(): Termino {
   const pais = paisEfectivo(settings.datosClinica?.pais);
   return terminologiaDe(pais);
 }
+
+/* ───────────── Documento del paciente según el país ─────────────
+   Cada país tiene su formato: DNI argentino (7-8 dígitos), CI uruguaya, RUT chileno (con dígito
+   verificador que puede ser K), cédula colombiana (hasta 10), CURP mexicana (18 letras y números),
+   DNI/NIE español (con letra), DPI guatemalteco (13)… Se guarda sin puntos ni guiones. */
+type ReglaDoc = { re: RegExp; ejemplo: string; texto: string; numerico: boolean };
+const DOC_POR_PAIS: Record<string, ReglaDoc> = {
+  AR: { re: /^\d{7,8}$/, ejemplo: "30.123.456", texto: "7 u 8 dígitos", numerico: true },
+  UY: { re: /^\d{6,8}$/, ejemplo: "4.123.456-7", texto: "6 a 8 dígitos", numerico: true },
+  CL: { re: /^\d{7,8}[\dK]$/, ejemplo: "12.345.678-K", texto: "RUT con dígito verificador", numerico: false },
+  CO: { re: /^\d{6,10}$/, ejemplo: "1.020.304.050", texto: "6 a 10 dígitos", numerico: true },
+  PE: { re: /^\d{8}$/, ejemplo: "45678912", texto: "8 dígitos", numerico: true },
+  EC: { re: /^\d{10}$/, ejemplo: "1712345678", texto: "10 dígitos", numerico: true },
+  BO: { re: /^[\dA-Z]{5,12}$/, ejemplo: "4567890", texto: "5 a 12 caracteres", numerico: false },
+  PY: { re: /^\d{5,9}$/, ejemplo: "4.567.890", texto: "5 a 9 dígitos", numerico: true },
+  CR: { re: /^\d{9,12}$/, ejemplo: "1-0234-0567", texto: "9 a 12 dígitos", numerico: true },
+  PA: { re: /^[\dA-Z]{5,13}$/, ejemplo: "8-123-456", texto: "5 a 13 caracteres", numerico: false },
+  GT: { re: /^\d{13}$/, ejemplo: "2345 67890 0101", texto: "13 dígitos", numerico: true },
+  HN: { re: /^\d{13}$/, ejemplo: "0801-1990-12345", texto: "13 dígitos", numerico: true },
+  SV: { re: /^\d{9}$/, ejemplo: "01234567-8", texto: "9 dígitos", numerico: true },
+  DO: { re: /^\d{11}$/, ejemplo: "001-1234567-8", texto: "11 dígitos", numerico: true },
+  MX: { re: /^[A-Z]{4}\d{6}[A-Z]{6}[\dA-Z]\d$/, ejemplo: "GOMC800101HDFRRR09", texto: "CURP de 18 caracteres", numerico: false },
+  ES: { re: /^(\d{8}[A-Z]|[XYZ]\d{7}[A-Z])$/, ejemplo: "12345678Z", texto: "DNI o NIE con letra", numerico: false },
+  VE: { re: /^[VE]?\d{6,9}$/, ejemplo: "V-12.345.678", texto: "6 a 9 dígitos", numerico: false },
+  PR: { re: /^[\dA-Z]{4,20}$/, ejemplo: "1234567", texto: "4 a 20 caracteres", numerico: false },
+};
+const DOC_NEUTRO: ReglaDoc = { re: /^[\dA-Z]{4,20}$/, ejemplo: "12345678", texto: "4 a 20 letras o números", numerico: false };
+
+/** Documento sin puntos, guiones ni espacios (y en mayúsculas). */
+export function normalizarDocumento(v: string): string {
+  return (v ?? "").toUpperCase().replace(/[^0-9A-ZÑ]/g, "");
+}
+export function reglaDocumento(pais: string | undefined): ReglaDoc {
+  return DOC_POR_PAIS[(pais ?? "").trim().toUpperCase()] ?? DOC_NEUTRO;
+}
+/** null si está bien; si no, el motivo para mostrar */
+export function validarDocumento(v: string, pais: string | undefined): string | null {
+  const r = reglaDocumento(pais);
+  const n = normalizarDocumento(v);
+  return r.re.test(n) ? null : `Ingresá un documento válido (${r.texto}).`;
+}
+/** Cómo se muestra: con puntos de miles cuando es solo número (AR, UY, PY, CO); RUT con guion. */
+export function formatoDocumento(doc: string, pais: string | undefined): string {
+  const n = normalizarDocumento(doc);
+  if (!n) return "";
+  const p = (pais ?? "").trim().toUpperCase();
+  const miles = (d: string) => d.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (p === "CL" && /^\d{7,8}[\dK]$/.test(n)) return `${miles(n.slice(0, -1))}-${n.slice(-1)}`;
+  if (["AR", "UY", "PY", "CO", ""].includes(p) && /^\d+$/.test(n)) return miles(n);
+  return n;
+}

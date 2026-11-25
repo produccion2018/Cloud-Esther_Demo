@@ -246,7 +246,7 @@ function Blog() {
           {/* ───────── Artículos ───────── */}
           <section className="relative overflow-hidden bg-gradient-to-b from-[#fbf8ff] via-white to-[#f7f2ff] px-5 py-16 text-[#1b1233] lg:px-8 lg:py-24">
             <div className="mx-auto max-w-6xl">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex flex-col gap-6">
                 <Reveal className="shrink-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-violet-600">
                     {filtrando ? "Resultados" : "Últimos artículos"}
@@ -256,10 +256,9 @@ function Blog() {
                   </h2>
                 </Reveal>
 
-                {/* Categorías (desliza en el celular) */}
-                {/* En la computadora bajan de renglón (así no se corta ninguna) */}
-                <div className="-mx-5 min-w-0 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
-                  <div className="flex w-max gap-2 lg:w-auto lg:flex-wrap lg:justify-end">
+                {/* Categorías: SIEMPRE en una sola línea, debajo del título (en el celular se desliza) */}
+                <div className="-mx-5 min-w-0 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
+                  <div className="flex w-max flex-nowrap gap-1.5 lg:gap-1 xl:gap-2">
                     {categorias.map((c) => {
                       const activa = c === categoria;
                       return (
@@ -271,7 +270,7 @@ function Blog() {
                             setVisibles(POR_PAGINA);
                           }}
                           aria-pressed={activa}
-                          className={`relative h-10 rounded-full px-4 text-sm font-semibold transition-colors ${
+                          className={`relative h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[13px] font-semibold transition-colors sm:h-10 sm:px-3 lg:px-2.5 xl:px-4 xl:text-sm ${
                             activa ? "text-white" : "border border-violet-200 bg-white text-[#1b1233]/70 hover:border-violet-300 hover:text-[#1b1233]"
                           }`}
                         >

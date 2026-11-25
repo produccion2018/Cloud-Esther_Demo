@@ -667,6 +667,7 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
                     contexto={{
                       paciente: `${activo.nombre} ${activo.apellido}`.trim(),
                       telefono: activo.telefono,
+                      nacimiento: activo.fechaNacimiento,
                       email: activo.email,
                     }}
                   />

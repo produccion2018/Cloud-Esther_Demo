@@ -1285,6 +1285,7 @@ function CarpetaPaciente({
               contexto={{
                 paciente: nombreCompleto(paciente),
                 telefono: paciente.telefono,
+                nacimiento: paciente.fechaNacimiento,
                 email: paciente.email,
               }}
             />

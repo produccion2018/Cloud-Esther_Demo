@@ -71,6 +71,7 @@ import {
   CircleDollarSign,
   UserRound,
   ShieldAlert,
+  TriangleAlert,
   PencilLine,
   MessageCircle,
   Lock,
@@ -98,6 +99,13 @@ import {
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
+import {
+  antecedentesRelevantes,
+  avisosDiagnostico,
+  avisosMedicamento,
+  edadDesde,
+  type AvisoInteraccion,
+} from "@/lib/cloud-esther/interacciones";
 import {
   buscarEnVademecum,
   filtrarSugerencias,
@@ -634,7 +642,14 @@ export type SeccionRegistros =
 
 /* Datos opcionales del contexto (paciente / clínica) para la receta digital y el resumen de estudios.
    TODO backend: completarlos desde la ficha del paciente y la configuración de la clínica. */
-export type ContextoPaciente = { paciente?: string; email?: string; clinica?: string; telefono?: string };
+export type ContextoPaciente = {
+  paciente?: string;
+  email?: string;
+  clinica?: string;
+  telefono?: string;
+  /** Fecha de nacimiento (AAAA-MM-DD): para los avisos por edad al recetar */
+  nacimiento?: string;
+};
 
 const VACIO: Registros = {
   antecedentes: ANTECEDENTES_VACIOS,
@@ -4730,6 +4745,34 @@ const FAMILIAS_ALERGIA: { alergia: RegExp; droga: RegExp; familia: string }[] = 
   { alergia: /clindam/i, droga: /clindam/i, familia: "clindamicina" },
 ];
 
+/** Avisos por antecedentes del paciente (rojo = alto, ámbar = precaución). */
+function ListaAvisos({ avisos }: { avisos: AvisoInteraccion[] }) {
+  if (avisos.length === 0) return null;
+  return (
+    <ul className="mt-2 space-y-1.5">
+      {avisos.map((a) => (
+        <li
+          key={a.motivo}
+          className={`flex items-start gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] leading-snug ${
+            a.nivel === "alto"
+              ? "bg-destructive/10 text-destructive"
+              : "bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          }`}
+        >
+          {a.nivel === "alto" ? (
+            <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
+          ) : (
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          )}
+          <span>
+            <span className="font-semibold">{a.motivo}:</span> {a.detalle}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Devuelve la alergia con la que choca el medicamento (o null). */
 function choqueAlergia(
   medicamento: string,
@@ -4753,8 +4796,13 @@ function RecetaForm({
   alergias = [],
   recetasPrevias = [],
   repetirDe,
+  antecedentes,
+  edad = null,
 }: {
   alergias?: string[];
+  /** Antecedentes del paciente: enfermedades, medicación habitual y hábitos (para los avisos) */
+  antecedentes?: Antecedentes;
+  edad?: number | null;
   recetasPrevias?: RecetaPaciente[];
   /** Repetir una receta anterior: carga sus medicamentos, diagnóstico e indicaciones */
   repetirDe?: RecetaPaciente | null;
@@ -4820,6 +4868,18 @@ function RecetaForm({
   // Medicamentos frecuentes de la clínica (propios + los más recetados): un toque y se agregan
   const frecuentes = useMedicamentosFrecuentes();
   const paisRx = usePaisClinica();
+  // Antecedentes que se cruzan con lo que se receta (embarazo, anticoagulantes, edad…)
+  const clinicos = {
+    enfermedades: antecedentes?.enfermedades ?? [],
+    medicacion: antecedentes?.medicacion ?? "",
+    habitos: antecedentes?.habitos ?? [],
+    observaciones: antecedentes?.observaciones ?? "",
+    edad,
+  };
+  const relevantes = antecedentesRelevantes(clinicos);
+  const hayAvisoAlto = medicamentos.some((m) =>
+    avisosMedicamento(m.nombre, clinicos).some((a) => a.nivel === "alto"),
+  );
   const nombresMeds = useMemo(
     () => [
       ...frecuentes.propios.map((m) => m.nombre),
@@ -4890,6 +4950,13 @@ function RecetaForm({
     if (conChoque.length && !aceptaRiesgo) {
       setError(
         `Atención: ${conChoque.map((m) => m.nombre.trim()).join(", ")} puede causar una reacción alérgica. Revisalo o confirmá que querés emitir la receta igual.`,
+      );
+      return;
+    }
+    const conAlto = validos.filter((m) => avisosMedicamento(m.nombre, clinicos).some((a) => a.nivel === "alto"));
+    if (conAlto.length && !aceptaRiesgo) {
+      setError(
+        `Atención: revisá los avisos de ${conAlto.map((m) => m.nombre.trim()).join(", ")} según los antecedentes del paciente, o confirmá que querés emitir la receta igual.`,
       );
       return;
     }
@@ -5002,6 +5069,12 @@ function RecetaForm({
           Sin alergias registradas en los antecedentes del paciente.
         </p>
       )}
+      {(relevantes.length > 0 || edad !== null) && (
+        <p className="rounded-lg border border-primary/15 bg-primary/[0.04] px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Se tienen en cuenta: </span>
+          {[...(edad !== null ? [`${edad} años`] : []), ...relevantes].join(" · ")}
+        </p>
+      )}
 
       <Field label="Diagnóstico">
         <Autocompletar
@@ -5012,6 +5085,7 @@ function RecetaForm({
           placeholder="Ej: Pericoronaritis pieza 38"
           ariaLabel="Diagnóstico"
         />
+        <ListaAvisos avisos={avisosDiagnostico(diagnostico, clinicos)} />
       </Field>
 
       <div>
@@ -5110,6 +5184,7 @@ function RecetaForm({
                   </p>
                 ) : null;
               })()}
+              <ListaAvisos avisos={avisosMedicamento(m.nombre, clinicos)} />
             </div>
           ))}
         </div>
@@ -5138,7 +5213,7 @@ function RecetaForm({
           </p>
         )}
         {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
-        {medicamentos.some((m) => choqueAlergia(m.nombre, alergias)) && (
+        {(medicamentos.some((m) => choqueAlergia(m.nombre, alergias)) || hayAvisoAlto) && (
           <label className="mt-2 flex items-center gap-2 text-xs font-medium text-destructive">
             <input
               type="checkbox"
@@ -5149,7 +5224,7 @@ function RecetaForm({
               }}
               className="size-4 accent-[var(--color-destructive)]"
             />
-            Revisé la alergia y quiero emitir la receta igual
+            Revisé los avisos y quiero emitir la receta igual
           </label>
         )}
       </div>
@@ -5723,6 +5798,8 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             key={repetirDe?.id ?? "nueva"}
             repetirDe={repetirDe}
             alergias={datos.antecedentes?.alergias ?? []}
+            antecedentes={datos.antecedentes}
+            edad={edadDesde(contexto?.nacimiento)}
             recetasPrevias={datos.recetas}
             onCancel={() => setAbierto(false)}
             onSubmit={(nueva) => {

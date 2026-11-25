@@ -38,6 +38,8 @@ import {
   ExternalLink,
   Upload,
   Loader2,
+  Share2,
+  MonitorSmartphone,
   ImagePlus,
   Pill,
   Copy,
@@ -102,6 +104,7 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
 import { crearEnlaceEstudio } from "@/lib/clinica/enlace-estudio";
+import { clavePublicacion, puedePublicarPortal, setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { completarPlantilla, usePlantillasInforme } from "@/components/cloud-esther/pacientes/PlantillasInforme";
 import {
   actualizarEstadoVerificacion,
@@ -363,6 +366,8 @@ type EstudioPaciente = {
   subidoPorPaciente?: boolean;
   /** Fecha en que se informó */
   informadoEl?: string;
+  /** Última vez que se le compartió al paciente */
+  compartidoEl?: string;
 };
 
 /** ORDEN DE ESTUDIO: el profesional pide una radiografía/tomografía; queda «Pendiente» hasta
@@ -6668,11 +6673,13 @@ function GaleriaTab({
   onVer,
   onBorrar,
   onInformar,
+  onCompartir,
 }: {
   estudios: EstudioPaciente[];
   onVer: (id: number) => void;
   onBorrar: (s: EstudioPaciente) => void;
   onInformar: (s: EstudioPaciente) => void;
+  onCompartir: (s: EstudioPaciente) => void;
 }) {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"" | EstadoInforme>("");
@@ -6821,8 +6828,8 @@ function GaleriaTab({
                     {s.diagnostico || "Sin informe o diagnóstico registrado."}
                   </p>
 
-                  <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border/60 pt-1.5">
-                    <div className="min-w-0 text-[9px] text-muted-foreground">
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-border/60 pt-1.5">
+                    <div className="min-w-0 flex-1 basis-16 text-[9px] text-muted-foreground">
                       {s.solicitante ? (
                         <span className="block truncate">Solicita: {s.solicitante}</span>
                       ) : s.archivoNombre ? (
@@ -6831,13 +6838,14 @@ function GaleriaTab({
                         <span>Sin archivo adjunto</span>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-0.5">
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5">
                       <BotonMini
                         compacto
                         icon={FileText}
                         label={s.estadoInforme === "Informado" ? "Editar informe" : "Informar"}
                         onClick={() => onInformar(s)}
                       />
+                      <BotonMini compacto icon={Share2} label="Compartir" onClick={() => onCompartir(s)} />
                       <BotonMini compacto icon={Eye} label="Abrir" onClick={() => onVer(s.id)} />
                       <BotonBorrar
                         compacto
@@ -8805,6 +8813,134 @@ function InformeEstudioForm({
   );
 }
 
+/* ───────────── Compartir el estudio con el paciente ─────────────
+   Con un toque: por WhatsApp (con la imagen y lo que se vio, en palabras simples) o visible en
+   su Portal del paciente (respeta quién puede enviar al portal). */
+function CompartirEstudio({
+  estudio,
+  contexto,
+  onListo,
+  onToast,
+}: {
+  estudio: EstudioPaciente;
+  contexto?: ContextoPaciente | undefined;
+  onListo: (cambios: Partial<EstudioPaciente>) => void;
+  onToast: (m: string) => void;
+}) {
+  const { config, publicados = {} } = storePortal.usar();
+  const real = useClinicaReal();
+  const rol = real?.rol ?? "admin";
+  const puedePortal = puedePublicarPortal(config, rol, real?.sesion.usuario.email);
+  const pacienteId = contexto?.pacienteId;
+  const clave = pacienteId ? clavePublicacion(pacienteId, "estudio", estudio.id) : "";
+  const automatico = (config.envio ?? "automatico") === "automatico";
+  const enPortal = automatico || (!!clave && !!publicados[clave]);
+  const nombre = (contexto?.paciente ?? "").split(" ")[0] || "";
+  const urlPublica = estudio.url && /^https:\/\//.test(estudio.url) ? estudio.url : "";
+  const [incluirInforme, setIncluirInforme] = useState(Boolean(estudio.diagnostico));
+
+  const texto = [
+    `Hola${nombre ? ` ${nombre}` : ""} 👋 Te compartimos tu ${estudio.tipo.toLowerCase()}${estudio.pieza ? ` (pieza ${estudio.pieza})` : ""} del ${formatearFecha(estudio.fecha)}.`,
+    incluirInforme && estudio.diagnostico ? `\nLo que vimos: ${estudio.diagnostico}` : "",
+    urlPublica ? `\nPodés verlo acá: ${urlPublica}` : "",
+    `\nCualquier duda, escribinos. ${contexto?.clinica || ""}`.trimEnd(),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const porWhatsApp = async () => {
+    try {
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      // En el celular se comparte la imagen misma (si se puede)
+      if (estudio.url && esImagen(estudio.archivoNombre || estudio.url) && typeof nav.share === "function" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) {
+        const blob = await (await fetch(estudio.url)).blob();
+        const archivo = new File([blob], estudio.archivoNombre || "estudio.jpg", { type: blob.type || "image/jpeg" });
+        if (nav.canShare?.({ files: [archivo] })) {
+          await nav.share({ files: [archivo], text: texto });
+          onListo({ compartidoEl: hoyISO() });
+          return;
+        }
+      }
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+    }
+    const numero = numeroWhatsApp(contexto?.telefono);
+    window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+    if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+    onListo({ compartidoEl: hoyISO() });
+  };
+
+  const alternarPortal = () => {
+    if (!clave) return onToast("Abrí la ficha del paciente para enviarlo a su portal.");
+    if (!puedePortal) return onToast("Tu usuario no tiene permiso para enviar al portal");
+    if (publicados[clave]) {
+      setPortal("publicados", (prev) => {
+        const c = { ...(prev ?? {}) };
+        delete c[clave];
+        return c;
+      });
+      onToast("Quitado del portal del paciente");
+    } else {
+      setPortal("publicados", (prev) => ({
+        ...(prev ?? {}),
+        [clave]: { por: real?.sesion.usuario.nombre ?? "Equipo", fecha: new Date().toISOString() },
+      }));
+      onToast(`Ya lo ve ${nombre || "el paciente"} en su portal`);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{estudio.tipo}</span>
+        {estudio.pieza ? ` · Pieza ${estudio.pieza}` : ""} · {formatearFecha(estudio.fecha)}
+      </p>
+      {estudio.diagnostico ? (
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={incluirInforme}
+            onChange={(e) => setIncluirInforme(e.target.checked)}
+            className="mt-0.5 size-4 accent-[var(--color-primary)]"
+          />
+          <span>Incluir el informe en el mensaje</span>
+        </label>
+      ) : (
+        <p className="text-[12px] text-muted-foreground">Todavía no tiene informe: se manda solo el estudio.</p>
+      )}
+      <div className="rounded-xl border border-border bg-background/60 p-3 text-[12px] whitespace-pre-line text-foreground/80 [overflow-wrap:anywhere]">{texto}</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => void porWhatsApp()}
+          className="flex h-11 items-center justify-center gap-2 rounded-full bg-emerald-500 px-4 text-sm font-semibold text-white shadow-[0_10px_24px_-14px_rgba(16,185,129,0.9)] transition hover:bg-emerald-600"
+        >
+          <MessageCircle className="size-4" />
+          Mandar por WhatsApp
+        </button>
+        <button
+          type="button"
+          disabled={automatico}
+          onClick={alternarPortal}
+          className={`flex h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
+            enPortal
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : "border-primary/25 bg-card text-primary hover:bg-primary/[0.06]"
+          } disabled:cursor-default`}
+        >
+          <MonitorSmartphone className="size-4" />
+          {automatico ? "Ya lo ve en su portal" : enPortal ? "En su portal · quitar" : "Mostrar en su portal"}
+        </button>
+      </div>
+      {!urlPublica && estudio.url && (
+        <p className="text-[11px] text-muted-foreground">
+          En la computadora se manda el mensaje; desde el celular se comparte también la imagen.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
   // mediciones, vínculo con tratamientos y diagnóstico.
@@ -8812,6 +8948,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [abierto, setAbierto] = useState(false);
   const [pidiendo, setPidiendo] = useState(false);
   const [informando, setInformando] = useState<EstudioPaciente | null>(null);
+  const [compartiendo, setCompartiendo] = useState<EstudioPaciente | null>(null);
   // Llegó el estudio de una orden: se abre «Cargar estudio» con lo que se pidió
   const [llegoDe, setLlegoDe] = useState<OrdenEstudio | null>(null);
   const ordenes = datos.ordenesEstudio ?? [];
@@ -8951,6 +9088,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           estudios={lista}
           onVer={setVisorId}
           onInformar={setInformando}
+          onCompartir={setCompartiendo}
           onBorrar={(s) => {
             // TODO backend: DELETE /pacientes/:id/estudios/:estudioId
             if (s.url) URL.revokeObjectURL(s.url);
@@ -9007,6 +9145,20 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
               setTab("galeria");
               onToast(llegoDe ? `Estudio cargado: la orden ${llegoDe.numero} quedó recibida` : "Estudio cargado");
             }}
+          />
+        </Modal>
+      )}
+
+      {compartiendo && (
+        <Modal title="Compartir con el paciente" onClose={() => setCompartiendo(null)}>
+          <CompartirEstudio
+            key={compartiendo.id}
+            estudio={compartiendo}
+            contexto={contexto}
+            onToast={onToast}
+            onListo={(cambios) =>
+              cambiar("estudios", (prev) => prev.map((x) => (x.id === compartiendo.id ? { ...x, ...cambios } : x)))
+            }
           />
         </Modal>
       )}

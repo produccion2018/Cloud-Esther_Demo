@@ -37,6 +37,7 @@ import {
   Paperclip,
   ExternalLink,
   Upload,
+  Loader2,
   ImagePlus,
   Pill,
   Copy,
@@ -128,7 +129,7 @@ import {
   useMedicamentosFrecuentes,
   type MedicamentoUso,
 } from "@/components/cloud-esther/pacientes/MedicamentosFrecuentes";
-import { guardarArchivo, urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
+import { achicarFoto, guardarArchivo, urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* ───────────── Catálogos ─────────────
@@ -8330,22 +8331,20 @@ function OrdenesEstudioCard({
                 : "Pedí una radiografía o tomografía y mandásela al paciente por WhatsApp."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void pedirEstudioAlPaciente(contexto, null, onToast)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/[0.06]"
-        >
-          <Upload className="size-3.5" />
-          Enlace para subir
-        </button>
-        <button
-          type="button"
-          onClick={onPedir}
-          className={BTN_PRIMARIO}
-        >
-          <Plus className="size-4" />
-          Pedir estudio
-        </button>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => void pedirEstudioAlPaciente(contexto, null, onToast)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/[0.06]"
+          >
+            <Upload className="size-3.5" />
+            Enlace para subir
+          </button>
+          <button type="button" onClick={onPedir} className={BTN_PRIMARIO}>
+            <Plus className="size-4" />
+            Pedir estudio
+          </button>
+        </div>
       </div>
       {pendientes.length > 0 && (
         <ul className="mt-3 space-y-2">
@@ -8398,6 +8397,262 @@ function OrdenesEstudioCard({
   );
 }
 
+/* ───────────── Carga rápida desde el celular ─────────────
+   Sacás la foto con la cámara o elegís varios archivos juntos; el tipo y la pieza se sugieren
+   solos (por el nombre del archivo y la forma de la imagen) y se guardan todos de una vez.
+   Los archivos van a Cloudinary (nunca a la base). Si hay una orden pendiente del mismo tipo,
+   se vincula sola y queda recibida. */
+
+type ArchivoRapido = {
+  id: string;
+  archivo: File;
+  vista: string;
+  tipo: string;
+  pieza: string;
+  ordenId: number | null;
+};
+
+/** Tipo de estudio sugerido: por el nombre del archivo y, si es imagen, por su forma. */
+async function sugerirTipoEstudio(f: File): Promise<string> {
+  const n = f.name.toLowerCase();
+  if (/pano|opg|orto ?pan/.test(n)) return "Radiografía panorámica";
+  if (/peri/.test(n)) return "Radiografía periapical";
+  if (/bite|aleta/.test(n)) return "Radiografía bitewing";
+  if (/cefa|tele|lateral/.test(n)) return "Radiografía cefalométrica";
+  if (/tomo|cbct|cone|\.dcm/.test(n)) return "Tomografía (CBCT)";
+  if (/oclus/.test(n)) return "Radiografía oclusal";
+  if (/lab|anali/.test(n)) return "Análisis de laboratorio";
+  if (f.type === "application/pdf") return "Otro";
+  try {
+    const bmp = await createImageBitmap(f);
+    const r = bmp.width / bmp.height;
+    bmp.close();
+    if (r >= 1.7) return "Radiografía panorámica"; // muy apaisada
+    if (r <= 0.85 || (r >= 1.15 && r < 1.45)) return "Radiografía periapical";
+  } catch {
+    /* formato que el navegador no lee (ej. HEIC): queda para elegir */
+  }
+  return "Fotografía intraoral";
+}
+
+/** Pieza FDI sugerida por el nombre del archivo (ej. «perio_36.jpg» → 36). */
+function sugerirPiezaArchivo(nombre: string): string {
+  const m = nombre.match(/(?:^|[^0-9])([1-4][1-8]|[5-8][1-5])(?:[^0-9]|$)/);
+  return m?.[1] ?? "";
+}
+
+function CargaRapidaEstudios({
+  ordenes,
+  onGuardar,
+  onToast,
+}: {
+  ordenes: OrdenEstudio[];
+  onGuardar: (estudios: Omit<EstudioPaciente, "id">[], ordenesRecibidas: number[]) => void;
+  onToast: (m: string) => void;
+}) {
+  const camara = useRef<HTMLInputElement>(null);
+  const varios = useRef<HTMLInputElement>(null);
+  const [items, setItems] = useState<ArchivoRapido[]>([]);
+  const [guardando, setGuardando] = useState<{ hecho: number; total: number } | null>(null);
+  const pendientes = ordenes.filter((o) => o.estado === "Pendiente");
+
+  const agregar = async (lista: FileList | null) => {
+    if (!lista?.length) return;
+    const validos = Array.from(lista).filter((f) => f.type.startsWith("image/") || f.type === "application/pdf");
+    if (validos.length < lista.length) onToast("Solo fotos o PDF");
+    const nuevos = await Promise.all(
+      validos.slice(0, 12).map(async (f, i) => {
+        const tipo = await sugerirTipoEstudio(f);
+        const orden = pendientes.find((o) => o.tipo === tipo) ?? null;
+        return {
+          id: `${Date.now()}-${i}`,
+          archivo: f,
+          vista: f.type.startsWith("image/") ? URL.createObjectURL(f) : "",
+          tipo,
+          pieza: sugerirPiezaArchivo(f.name) || orden?.piezas || "",
+          ordenId: orden?.id ?? null,
+        };
+      }),
+    );
+    setItems((prev) => [...prev, ...nuevos].slice(0, 12));
+  };
+
+  const cerrar = () => {
+    items.forEach((x) => x.vista && URL.revokeObjectURL(x.vista));
+    setItems([]);
+  };
+
+  const guardar = async () => {
+    setGuardando({ hecho: 0, total: items.length });
+    const listos: Omit<EstudioPaciente, "id">[] = [];
+    const recibidas = new Set<number>();
+    let fallaron = 0;
+    for (const [i, it] of items.entries()) {
+      try {
+        // Las fotos se achican un poco (se ven nítidas igual) y van a Cloudinary
+        const archivo = it.archivo.type.startsWith("image/") ? await achicarFoto(it.archivo, 2400) : it.archivo;
+        const url = await guardarArchivo(archivo, { nombre: it.archivo.name });
+        const orden = it.ordenId ? pendientes.find((o) => o.id === it.ordenId) : undefined;
+        listos.push({
+          tipo: it.tipo,
+          fecha: hoyISO(),
+          zona: orden?.zona ?? "",
+          solicitante: orden?.profesional ?? "",
+          profesional: "",
+          pieza: it.pieza.trim(),
+          observaciones: "",
+          diagnostico: "",
+          archivoNombre: it.archivo.name,
+          url,
+          estadoInforme: "Sin informar",
+          tratamientoId: null,
+          ...(orden ? { ordenId: orden.id } : {}),
+        });
+        if (orden) recibidas.add(orden.id);
+      } catch {
+        fallaron++;
+      }
+      setGuardando({ hecho: i + 1, total: items.length });
+    }
+    setGuardando(null);
+    if (listos.length) onGuardar(listos, [...recibidas]);
+    if (fallaron) onToast(`${fallaron} archivo${fallaron === 1 ? "" : "s"} no se pudo subir. Probá de nuevo.`);
+    else onToast(`${listos.length} estudio${listos.length === 1 ? "" : "s"} cargado${listos.length === 1 ? "" : "s"}`);
+    cerrar();
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-primary/25 bg-primary/[0.03] p-2.5">
+        <p className="min-w-0 flex-1 basis-40 text-[12px] text-muted-foreground">
+          <span className="font-semibold text-foreground">Carga rápida:</span> sacá la foto o subí varios juntos. El tipo y la
+          pieza se sugieren solos.
+        </p>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => camara.current?.click()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 text-[12px] font-semibold text-primary hover:bg-primary/[0.06]"
+          >
+            <Camera className="size-3.5" />
+            Sacar foto
+          </button>
+          <button
+            type="button"
+            onClick={() => varios.current?.click()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 text-[12px] font-semibold text-primary hover:bg-primary/[0.06]"
+          >
+            <Images className="size-3.5" />
+            Subir varios
+          </button>
+        </div>
+        <input
+          ref={camara}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            void agregar(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={varios}
+          type="file"
+          accept="image/*,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void agregar(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {items.length > 0 && (
+        <Modal title={`Cargar ${items.length} estudio${items.length === 1 ? "" : "s"}`} onClose={() => !guardando && cerrar()}>
+          <ul className="space-y-2.5">
+            {items.map((it) => (
+              <li key={it.id} className="flex gap-2.5 rounded-xl border border-border p-2">
+                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-muted">
+                  {it.vista ? (
+                    <img src={it.vista} alt="" className="size-full object-cover" />
+                  ) : (
+                    <FileText className="size-6 text-primary" />
+                  )}
+                </div>
+                <div className="grid min-w-0 flex-1 grid-cols-[72px_minmax(0,1fr)] items-center gap-1.5">
+                  <div className="col-span-2">
+                    <SelectField
+                      value={it.tipo}
+                      onChange={(v) => setItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, tipo: v } : x)))}
+                      options={TIPOS_ESTUDIO}
+                    />
+                  </div>
+                  <input
+                    value={it.pieza}
+                    onChange={(e) => setItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, pieza: e.target.value } : x)))}
+                    className={INPUT}
+                    placeholder="Pieza"
+                    inputMode="numeric"
+                    aria-label="Pieza"
+                  />
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {it.archivo.name}
+                    {it.ordenId ? ` · ${pendientes.find((o) => o.id === it.ordenId)?.numero ?? ""}` : ""}
+                  </p>
+                </div>
+                {!guardando && (
+                  <button
+                    type="button"
+                    aria-label="Quitar"
+                    onClick={() => {
+                      if (it.vista) URL.revokeObjectURL(it.vista);
+                      setItems((prev) => prev.filter((x) => x.id !== it.id));
+                    }}
+                    className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={!!guardando}
+              onClick={() => varios.current?.click()}
+              className="text-[12px] font-semibold text-primary hover:underline disabled:opacity-50"
+            >
+              + Agregar más
+            </button>
+            <button
+              type="button"
+              disabled={!!guardando}
+              onClick={() => void guardar()}
+              className={`${BTN_PRIMARIO} disabled:opacity-60`}
+            >
+              {guardando ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Subiendo {guardando.hecho}/{guardando.total}…
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  Guardar todos
+                </>
+              )}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
   // mediciones, vínculo con tratamientos y diagnóstico.
@@ -8442,6 +8697,26 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         onAgregar={() => {
           setLlegoDe(null);
           setAbierto(true);
+        }}
+      />
+
+      <CargaRapidaEstudios
+        ordenes={ordenes}
+        onToast={onToast}
+        onGuardar={(nuevos, recibidas) => {
+          const base = Date.now();
+          const conId = nuevos.map((e, i) => ({ ...e, id: base + i }));
+          cambiar("estudios", (prev) => [...prev, ...conId]);
+          if (recibidas.length) {
+            cambiar("ordenesEstudio", (prev) =>
+              (prev ?? []).map((o) =>
+                recibidas.includes(o.id)
+                  ? { ...o, estado: "Recibido" as const, recibidoEl: hoyISO(), estudioId: conId.find((e) => e.ordenId === o.id)?.id ?? base }
+                  : o,
+              ),
+            );
+          }
+          setTab("galeria");
         }}
       />
 

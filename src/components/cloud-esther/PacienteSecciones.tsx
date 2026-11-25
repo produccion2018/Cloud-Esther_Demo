@@ -126,7 +126,7 @@ import {
   useMedicamentosFrecuentes,
   type MedicamentoUso,
 } from "@/components/cloud-esther/pacientes/MedicamentosFrecuentes";
-import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
+import { guardarArchivo, urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* ───────────── Catálogos ─────────────
@@ -2500,15 +2500,12 @@ export function NotaVozRecorder({
     const blob = blobRef.current;
     if (!blob || !audioUrl) return;
     setGuardando(true);
-    // El audio se guarda dentro de la ficha (si es muy largo, queda solo la transcripción)
-    let url = audioUrl;
-    if (blob.size < 2_500_000) {
-      url = await new Promise<string>((res) => {
-        const fr = new FileReader();
-        fr.onload = () => res(String(fr.result));
-        fr.onerror = () => res(audioUrl);
-        fr.readAsDataURL(blob);
-      });
+    // El audio va a Cloudinary (nunca a la base de datos). Si no se puede subir, queda la transcripción.
+    let url = "";
+    try {
+      url = await guardarArchivo(blob, { nombre: "nota-de-voz.webm" });
+    } catch {
+      url = "";
     }
     setGuardando(false);
     onSave({

@@ -137,6 +137,46 @@ function guardar(g: Guardado | null) {
   }
 }
 
+/* ───────────── Datos del demo en el servidor (iguales en todos los dispositivos) ───────────── */
+
+/** ¿Los datos de este demo se guardan en el servidor? (hay servidor y sesión del demo) */
+export function demoConDatosEnServidor(): boolean {
+  return DEMO_EN_SERVIDOR && !!leerGuardado()?.token;
+}
+
+/** Error con el código del servidor (lo usa la sincronización). */
+export class ErrorDatosDemo extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+/** Pedido a /demo/datos (sub = "" para las versiones, o "/<módulo>"). */
+export async function pedirDatosDemo<T>(metodo: string, sub: string, cuerpo?: unknown): Promise<T> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Sin sesión del demo", 401);
+  let r: Response;
+  try {
+    r = await pedir(metodo, `/demo/datos${sub}`, cuerpo, token);
+  } catch {
+    throw new ErrorDatosDemo("Sin conexión", 0);
+  }
+  if (!r.ok) throw new ErrorDatosDemo(await r.text().catch(() => ""), r.status);
+  return (r.status === 204 ? undefined : await r.json()) as T;
+}
+
+/** Firma para subir un archivo del demo directo a Cloudinary (carpeta del demo). */
+export async function pedirFirmaDemo<T>(): Promise<T> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Sin sesión del demo", 401);
+  const r = await pedir("POST", "/demo/imagenes/firma", undefined, token);
+  if (!r.ok) throw new ErrorDatosDemo(await r.text().catch(() => ""), r.status);
+  return (await r.json()) as T;
+}
+
 /* ───────────── Estado en memoria (lo que dijo el servidor) ───────────── */
 
 let estado: EstadoDemoServidor | null = null;

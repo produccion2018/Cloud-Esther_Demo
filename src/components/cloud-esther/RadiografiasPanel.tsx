@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ERROR_SUBIDA, guardarArchivo } from "@/lib/clinica/subir-imagen";
 import { Contrast, Download, FileText, ImageIcon, Maximize2, RotateCw, Sun, Upload, X, ZoomIn, ZoomOut } from "lucide-react";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 
@@ -137,15 +138,15 @@ export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Prop
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
+      // El archivo va a Cloudinary (nunca a la base de datos); acá queda solo su dirección
+      void guardarArchivo(file).then((url) => {
         const nuevo: Registro = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           fdi: fdiSeleccionado,
           nombre: file.name,
           fecha: new Date().toLocaleDateString("es-AR"),
           tipo: esPdf ? "pdf" : "imagen",
-          dataUrl: reader.result as string,
+          dataUrl: url,
         };
         setRegistros((prev) => {
           const next = [nuevo, ...prev];
@@ -157,8 +158,7 @@ export function RadiografiasPanel({ pacienteId, fdiSeleccionado, onToast }: Prop
             ? `Estudio agregado a la pieza ${fdiSeleccionado}`
             : "Estudio agregado (sin pieza asociada)",
         );
-      };
-      reader.readAsDataURL(file);
+      }, () => onToast(ERROR_SUBIDA));
     });
   };
 

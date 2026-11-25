@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ERROR_SUBIDA, guardarDataUrl } from "@/lib/clinica/subir-imagen";
 import { FileText, ImagePlus, Lock, Palette, Smartphone, Trash2 } from "lucide-react";
 
 import { MARCA_VACIA, type ClinicSettings, type MarcaClinica } from "@/lib/cloud-esther/settings-store";
@@ -104,10 +105,11 @@ export function MarcaClinicaCard({
                     setError("");
                     if (f.size > 4 * 1024 * 1024) return setError("La imagen pesa más de 4 MB.");
                     try {
-                      cambiar({ logo: await achicarLogo(f) });
+                      // Se achica y se sube a Cloudinary (nunca a la base de datos)
+                      cambiar({ logo: await guardarDataUrl(await achicarLogo(f), { nombre: "logo.png" }) });
                       onToast("Logo actualizado");
-                    } catch {
-                      setError("No pude leer la imagen. Probá con PNG o JPG.");
+                    } catch (e) {
+                      setError(e instanceof Error && e.message === ERROR_SUBIDA ? ERROR_SUBIDA : "No pude leer la imagen. Probá con PNG o JPG.");
                     }
                   }}
                 />

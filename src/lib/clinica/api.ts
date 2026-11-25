@@ -214,7 +214,11 @@ async function http<T>(slug: string, metodo: string, ruta: string, cuerpo?: unkn
   if (!r.ok) {
     const texto = await r.text().catch(() => "");
     // Sesión vencida o desactivada: se borra la sesión guardada y vuelve al ingreso
-    if (r.status === 401 && token) borrarSesionClinica(slug);
+    if (r.status === 401 && token) {
+      // Si se cerró por entrar desde otro dispositivo (límite del plan), el ingreso lo explica
+      if (/entraste desde otro/i.test(texto)) guardarMotivoSalida(slug, texto);
+      borrarSesionClinica(slug);
+    }
     throw new ErrorClinica(texto || `Error ${r.status}`, r.status);
   }
   return (r.status === 204 ? undefined : await r.json()) as T;
@@ -226,10 +230,50 @@ export const pedirAClinica = <T,>(slug: string, metodo: string, ruta: string, cu
 
 export const infoPublicaClinica = (slug: string) => http<{ nombre: string }>(slug, "GET", "");
 
-export async function ingresarClinica(slug: string, email: string, claveIngreso: string): Promise<SesionClinica> {
-  const s = sesionProlija(await http<SesionClinica>(slug, "POST", "/ingresar", { email, clave: claveIngreso }));
+/** Tipo de dispositivo para el límite del plan (el iPad se presenta como Mac: se mira la pantalla táctil). */
+export function tipoDispositivo(): "computadora" | "celular" | "tablet" {
+  if (typeof navigator === "undefined") return "computadora";
+  const ua = navigator.userAgent;
+  const tactil = (navigator.maxTouchPoints ?? 0) > 1;
+  if (/iPad|Tablet|Kindle|Silk/i.test(ua) || (/Macintosh/i.test(ua) && tactil)) return "tablet";
+  if (/Mobi|iPhone|iPod|Windows Phone/i.test(ua)) return "celular";
+  if (/Android/i.test(ua)) return "tablet"; // Android sin «Mobile» = tablet
+  return "computadora";
+}
+
+const claveMotivo = (slug: string) => `ce-clinica-motivo-salida:${slug}`;
+function guardarMotivoSalida(slug: string, texto: string) {
+  try {
+    window.sessionStorage.setItem(claveMotivo(slug), texto.slice(0, 300));
+  } catch {
+    /* nada */
+  }
+}
+/** Por qué se cerró la sesión (una sola vez): para mostrarlo en el ingreso. */
+export function tomarMotivoSalida(slug: string): string | null {
+  try {
+    const t = window.sessionStorage.getItem(claveMotivo(slug));
+    window.sessionStorage.removeItem(claveMotivo(slug));
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+export async function ingresarClinica(
+  slug: string,
+  email: string,
+  claveIngreso: string,
+): Promise<SesionClinica & { aviso?: string }> {
+  const r = await http<SesionClinica & { aviso?: string }>(slug, "POST", "/ingresar", {
+    email,
+    clave: claveIngreso,
+    dispositivo: tipoDispositivo(),
+  });
+  const { aviso, ...sinAviso } = r;
+  const s = sesionProlija(sinAviso);
   guardarSesionClinica(s);
-  return s;
+  return { ...s, ...(aviso ? { aviso } : {}) };
 }
 
 /** Modo SOPORTE: el panel abre /c/<dirección>#soporte=<token> en otra pestaña.

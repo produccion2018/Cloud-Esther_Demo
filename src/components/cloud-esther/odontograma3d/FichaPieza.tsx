@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
+import { ERROR_SUBIDA, guardarArchivo, guardarDataUrl } from "@/lib/clinica/subir-imagen";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import {
   Activity,
@@ -1146,7 +1147,13 @@ function SeccionImagenes({
     const f = files?.[0];
     if (!f) return;
     if (!f.type.startsWith("image/")) return onToast("Elegí una imagen (JPG o PNG)");
-    const url = await leerImagen(f, 1100);
+    let url: string;
+    try {
+      // Se achica en el navegador y se sube a Cloudinary (nunca a la base de datos)
+      url = await guardarDataUrl(await leerImagen(f, 1100), { nombre: f.name });
+    } catch {
+      return onToast(ERROR_SUBIDA);
+    }
     cambiarRegistro(pacienteId, "fotografias", (prev) => [
       {
         id: siguienteId(prev),
@@ -1324,15 +1331,16 @@ function SeccionEstudios({
     let url = "";
     let nombre = "";
     if (f) {
-      if (f.type.startsWith("image/")) url = await leerImagen(f, 1400);
-      else if (f.type === "application/pdf") {
-        if (f.size > 3_000_000) return onToast("El PDF supera 3 MB");
-        url = await new Promise<string>((r) => {
-          const fr = new FileReader();
-          fr.onload = () => r(String(fr.result));
-          fr.readAsDataURL(f);
-        });
-      } else return onToast("Elegí una imagen o un PDF");
+      try {
+        // Imagen achicada o PDF → Cloudinary (nunca a la base de datos)
+        if (f.type.startsWith("image/")) url = await guardarDataUrl(await leerImagen(f, 1400), { nombre: f.name });
+        else if (f.type === "application/pdf") {
+          if (f.size > 10_000_000) return onToast("El PDF supera 10 MB");
+          url = await guardarArchivo(f);
+        } else return onToast("Elegí una imagen o un PDF");
+      } catch {
+        return onToast(ERROR_SUBIDA);
+      }
       nombre = f.name;
     }
     cambiarRegistro(pacienteId, "estudios", (prev) => [

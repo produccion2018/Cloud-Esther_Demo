@@ -1,11 +1,21 @@
+import { toast } from "sonner";
+
 import { pedirAClinica } from "./api";
+import { SLUG_DEMO } from "./demo-admin";
+import { clinicaReal } from "./modo-clinica";
+import { demoConDatosEnServidor, pedirFirmaDemo } from "@/lib/cloud-esther/demo-servidor";
 
 /* Ubicación: src/lib/clinica/subir-imagen.ts
-   Sube UNA imagen a Cloudinary de forma segura: primero le pide la firma al backend (con la
-   sesión de la clínica), y después sube el archivo DIRECTO a Cloudinary con esa firma. El
-   secreto nunca pasa por el navegador. Devuelve la URL (secure_url) para guardar en el módulo. */
 
-type FirmaImagen = {
+   ARCHIVOS (fotos, radiografías, PDFs, audios, logos, firmas) → SIEMPRE A CLOUDINARY.
+   Nunca se guardan adentro de la base de datos: en los datos queda solo la dirección (URL).
+   1. Se le pide la firma al servidor (con la sesión de la clínica o del demo).
+   2. El navegador sube el archivo DIRECTO a Cloudinary con esa firma (el secreto nunca sale
+      del servidor). Cada clínica / demo tiene su propia carpeta.
+   Si Cloudinary no está disponible, NO se guarda el archivo (se avisa): así la base no se llena.
+   Solo el demo sin servidor (todo en este navegador) lo guarda en el navegador. */
+
+type Firma = {
   cloudName: string;
   apiKey: string;
   timestamp: number;
@@ -13,19 +23,69 @@ type FirmaImagen = {
   folder: string;
 };
 
-/** URL PERSISTENTE para una imagen (que sobrevive a recargar la página):
- *  - Clínica real → la sube a Cloudinary y devuelve su URL.
- *  - Demo o si Cloudinary falla → la convierte a data URL (base64), que también persiste.
- *  Nunca usar URL.createObjectURL para guardar: esa URL (blob:) se rompe al recargar. */
-export async function urlPersistenteImagen(archivo: File, slug: string | null): Promise<string> {
+export const ERROR_SUBIDA =
+  "No se pudo subir el archivo a la nube. Revisá tu internet y probá de nuevo; si sigue, avisale a Cloud Esther.";
+
+async function subirConFirma(f: Firma, archivo: Blob, nombre?: string): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", archivo, nombre ?? (archivo instanceof File ? archivo.name : "archivo"));
+  fd.append("api_key", f.apiKey);
+  fd.append("timestamp", String(f.timestamp));
+  fd.append("signature", f.signature);
+  fd.append("folder", f.folder);
+  // «auto»: imágenes, PDFs y audios con la misma firma
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${f.cloudName}/auto/upload`, { method: "POST", body: fd });
+  if (!r.ok) throw new Error(ERROR_SUBIDA);
+  const data = (await r.json()) as { secure_url?: string };
+  if (!data.secure_url) throw new Error(ERROR_SUBIDA);
+  return data.secure_url;
+}
+
+const slugReal = (slug?: string | null) => {
+  const s = slug ?? clinicaReal()?.slug ?? null;
+  return s && s !== SLUG_DEMO ? s : null;
+};
+
+/** ¿Los archivos van a Cloudinary? (clínica real o demo con servidor). Si no, quedan en el navegador. */
+export const archivosEnLaNube = (slug?: string | null) => Boolean(slugReal(slug)) || demoConDatosEnServidor();
+
+/** Sube un archivo a Cloudinary y devuelve su dirección. Demo sin servidor: data URL (en el navegador). */
+export async function guardarArchivo(archivo: Blob, opciones: { slug?: string | null | undefined; nombre?: string | undefined } = {}): Promise<string> {
+  const slug = slugReal(opciones.slug);
   if (slug) {
-    try {
-      return await subirImagenClinica(slug, archivo);
-    } catch {
-      /* cae a data URL */
-    }
+    const f = await pedirAClinica<Firma>(slug, "POST", "/imagenes/firma").catch(() => {
+      throw new Error(ERROR_SUBIDA);
+    });
+    return subirConFirma(f, archivo, opciones.nombre);
   }
-  return await new Promise<string>((resolve) => {
+  if (demoConDatosEnServidor()) {
+    const f = await pedirFirmaDemo<Firma>().catch(() => {
+      throw new Error(ERROR_SUBIDA);
+    });
+    return subirConFirma(f, archivo, opciones.nombre);
+  }
+  return blobADataUrl(archivo);
+}
+
+/** Igual que guardarArchivo, pero avisa el error en pantalla (y lo vuelve a lanzar). */
+export async function urlPersistenteImagen(archivo: Blob, slug?: string | null): Promise<string> {
+  try {
+    return await guardarArchivo(archivo, { slug });
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : ERROR_SUBIDA);
+    throw e;
+  }
+}
+
+/** Para lo que ya está como data URL (ej. una imagen achicada en el navegador). */
+export async function guardarDataUrl(dataUrl: string, opciones: { slug?: string | null | undefined; nombre?: string | undefined } = {}): Promise<string> {
+  if (!archivosEnLaNube(opciones.slug)) return dataUrl;
+  const blob = await (await fetch(dataUrl)).blob();
+  return guardarArchivo(blob, opciones);
+}
+
+export function blobADataUrl(archivo: Blob): Promise<string> {
+  return new Promise<string>((resolve) => {
     const fr = new FileReader();
     fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : "");
     fr.onerror = () => resolve("");
@@ -34,22 +94,7 @@ export async function urlPersistenteImagen(archivo: File, slug: string | null): 
 }
 
 export async function subirImagenClinica(slug: string, file: File): Promise<string> {
-  const f = await pedirAClinica<FirmaImagen>(slug, "POST", "/imagenes/firma");
-
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("api_key", f.apiKey);
-  fd.append("timestamp", String(f.timestamp));
-  fd.append("signature", f.signature);
-  fd.append("folder", f.folder);
-
-  const r = await fetch(`https://api.cloudinary.com/v1_1/${f.cloudName}/image/upload`, {
-    method: "POST",
-    body: fd,
-  });
-  if (!r.ok) throw new Error("No se pudo subir la imagen.");
-  const data = (await r.json()) as { secure_url: string };
-  return data.secure_url;
+  return guardarArchivo(file, { slug });
 }
 
 /** Achica una foto (lado mayor ≤ `lado` px, JPEG). Una foto del celular de 3 MB queda en ~40 KB. */
@@ -70,23 +115,17 @@ export async function achicarFoto(archivo: File, lado = 400): Promise<File> {
   }
 }
 
-/** FOTO DE UN PACIENTE. En la clínica real va a Cloudinary y en el listado queda solo su dirección
- *  (así 15.000 pacientes siguen entrando en el plan). Si Cloudinary no está disponible, NO se
- *  guarda la foto adentro del listado (devuelve null). En el demo queda achicada en el navegador. */
+/** FOTO DE UN PACIENTE: va a Cloudinary y en el listado queda solo su dirección. Si Cloudinary
+ *  no está disponible devuelve null (la foto no se guarda adentro de los datos). En el demo sin
+ *  servidor queda achicada en el navegador. */
 export async function fotoPaciente(archivo: File, slug: string | null): Promise<string | null> {
   const chica = await achicarFoto(archivo, 400);
-  if (slug) {
+  if (archivosEnLaNube(slug)) {
     try {
-      return await subirImagenClinica(slug, chica);
+      return await guardarArchivo(chica, { slug });
     } catch {
       return null;
     }
   }
-  const mini = await achicarFoto(archivo, 160);
-  return await new Promise<string>((resolve) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : "");
-    fr.onerror = () => resolve("");
-    fr.readAsDataURL(mini);
-  });
+  return blobADataUrl(await achicarFoto(archivo, 160));
 }

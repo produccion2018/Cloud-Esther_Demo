@@ -59,6 +59,7 @@ export const plans: Plan[] = [
     support: "Soporte por email",
     modules: "Módulos esenciales",
     features: [
+      "Cada usuario en 2 dispositivos a la vez (ej. celular y computadora)",
       "Dashboard",
       "Agenda y turnos",
       "Recordatorios de turnos por WhatsApp",
@@ -87,6 +88,7 @@ export const plans: Plan[] = [
     support: "Soporte prioritario",
     modules: "Módulos esenciales + gestión",
     features: [
+      "Cada usuario en 2 computadoras, 2 celulares y 1 tablet a la vez",
       "Todo lo del plan Start",
       "Odontograma 2D completo: dentición temporal y mixta, historial y exportación",
       "Agenda avanzada: vista mensual, bloqueos y lista de espera",
@@ -115,6 +117,7 @@ export const plans: Plan[] = [
     support: "Soporte prioritario con atención ampliada",
     modules: "Módulos avanzados",
     features: [
+      "Cada usuario en 3 computadoras, 3 celulares y 2 tablets a la vez",
       "Todo lo del plan Pro",
       "Odontograma 3D con rayos X y simulador de sonrisa",
       "Notas de voz y audio clínico",
@@ -144,6 +147,7 @@ export const plans: Plan[] = [
     support: "Soporte dedicado 24/7",
     modules: "Todos los módulos",
     features: [
+      "Cada usuario en 5 computadoras, 5 celulares y 5 tablets a la vez",
       "Todo lo del plan Plus",
       "Portal del paciente",
       "Portal del profesional",
@@ -186,6 +190,11 @@ export const comparison: { feature: string; values: string[] }[] = [
   {
     feature: "Usuarios internos",
     values: ["Hasta 5", "Hasta 15", "Hasta 40", "Hasta 150"],
+  },
+
+  {
+    feature: "Dispositivos por usuario a la vez",
+    values: ["2 en total", "2 computadoras · 2 celulares · 1 tablet", "3 computadoras · 3 celulares · 2 tablets", "5 computadoras · 5 celulares · 5 tablets"],
   },
 
   {

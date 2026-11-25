@@ -1,4 +1,5 @@
 import { telefonoInternacional } from "@/lib/clinica/whatsapp";
+import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen"
 import { useMemo, useRef, useState } from "react"
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
 import { useTerminologia } from "@/lib/cloud-esther/terminologia"
@@ -317,9 +318,8 @@ function FirmaOSello({
   const leer = (archivo?: File) => {
     if (!archivo || !archivo.type.startsWith("image/")) return
     if (archivo.size > 2_000_000) return // demasiado grande para una firma/sello
-    const r = new FileReader()
-    r.onload = () => onCambio(typeof r.result === "string" ? r.result : undefined)
-    r.readAsDataURL(archivo)
+    // A Cloudinary (nunca a la base de datos); acá queda solo la dirección
+    void urlPersistenteImagen(archivo).then(onCambio, () => undefined)
   }
   return (
     <Field label={label}>

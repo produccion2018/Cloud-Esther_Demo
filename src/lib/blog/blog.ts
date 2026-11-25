@@ -343,31 +343,32 @@ type Firma = { cloudName: string; apiKey: string; timestamp: number; signature: 
 
 /**
  * Sube una imagen para el blog y devuelve la dirección para guardar en el artículo.
- * Con backend y Cloudinary configurado: sube la foto original a Cloudinary (optimizada al mostrarla).
- * Si no: la comprime en el navegador y la guarda dentro del artículo.
+ * Con backend: SIEMPRE a Cloudinary (nunca se guardan imágenes en la base de datos). Si Cloudinary
+ * no está configurado, avisa y no la guarda.
+ * Sin backend (panel de demostración, todo en este navegador): la comprime y queda en el navegador.
  */
 export async function subirImagenBlog(archivo: File): Promise<string> {
   if (archivo.size > 15 * 1024 * 1024) throw new Error("La imagen pesa más de 15 MB.");
-  if (BLOG_CON_BACKEND) {
-    let firma: Firma | null = null;
-    try {
-      firma = await http<Firma>("POST", "/admin/blog/imagenes/firma", undefined, true);
-    } catch (e) {
-      if ((e as { status?: number }).status !== 503) throw e;
+  if (!/^image\/(jpeg|png|webp|gif|avif)$/.test(archivo.type)) throw new Error("Subí una imagen JPG, PNG o WebP.");
+  if (!BLOG_CON_BACKEND) return comprimirImagen(archivo);
+  let firma: Firma;
+  try {
+    firma = await http<Firma>("POST", "/admin/blog/imagenes/firma", undefined, true);
+  } catch (e) {
+    if ((e as { status?: number }).status === 503) {
+      throw new Error("Las imágenes se guardan en Cloudinary y todavía no está configurado. Cargá las llaves de Cloudinary en el servidor.");
     }
-    if (firma) {
-      const form = new FormData();
-      form.append("file", archivo);
-      form.append("api_key", firma.apiKey);
-      form.append("timestamp", String(firma.timestamp));
-      form.append("signature", firma.signature);
-      form.append("folder", firma.folder);
-      const r = await fetch(`https://api.cloudinary.com/v1_1/${firma.cloudName}/image/upload`, { method: "POST", body: form });
-      if (!r.ok) throw new Error("No se pudo subir la imagen. Probá de nuevo.");
-      const j = (await r.json()) as { secure_url?: string };
-      if (!j.secure_url) throw new Error("No se pudo subir la imagen. Probá de nuevo.");
-      return j.secure_url.replace("/upload/", "/upload/f_auto,q_auto,w_1600/");
-    }
+    throw e;
   }
-  return comprimirImagen(archivo);
+  const form = new FormData();
+  form.append("file", archivo);
+  form.append("api_key", firma.apiKey);
+  form.append("timestamp", String(firma.timestamp));
+  form.append("signature", firma.signature);
+  form.append("folder", firma.folder);
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${firma.cloudName}/image/upload`, { method: "POST", body: form });
+  if (!r.ok) throw new Error("No se pudo subir la imagen. Probá de nuevo.");
+  const j = (await r.json()) as { secure_url?: string };
+  if (!j.secure_url) throw new Error("No se pudo subir la imagen. Probá de nuevo.");
+  return j.secure_url.replace("/upload/", "/upload/f_auto,q_auto,w_1600/");
 }

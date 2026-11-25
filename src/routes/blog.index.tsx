@@ -257,8 +257,9 @@ function Blog() {
                 </Reveal>
 
                 {/* Categorías (desliza en el celular) */}
-                <div className="-mx-5 min-w-0 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
-                  <div className="flex w-max gap-2">
+                {/* En la computadora bajan de renglón (así no se corta ninguna) */}
+                <div className="-mx-5 min-w-0 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
+                  <div className="flex w-max gap-2 lg:w-auto lg:flex-wrap lg:justify-end">
                     {categorias.map((c) => {
                       const activa = c === categoria;
                       return (

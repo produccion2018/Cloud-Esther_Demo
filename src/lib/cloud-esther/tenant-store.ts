@@ -2,6 +2,13 @@ import { useSyncExternalStore } from "react";
 import { clinicaActualId, suscribirSesion } from "@/lib/cloud-esther/auth-store";
 import { PREFIJO_TENANT, clinicaReal } from "@/lib/clinica/modo-clinica";
 import { cargarModulo, guardarModulo, registrarModulo } from "@/lib/clinica/sincronizar";
+import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+
+/** Clave del módulo del DEMO en el servidor: módulo + empresa del demo (máx. 60, [a-z0-9-]). */
+function claveDemoServidor(persistir: string, tenant: string): string {
+  const empresa = tenant.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "demo";
+  return `${persistir}--${empresa}`.slice(0, 60);
+}
 
 /* Ubicación: src/lib/cloud-esther/tenant-store.ts
 
@@ -138,16 +145,48 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
       return;
     }
     cargados.add(tenant);
+    let habiaLocal = false;
     try {
       const guardado = window.localStorage.getItem(clave(tenant));
       if (guardado) {
         porEmpresa.set(tenant, norm(JSON.parse(guardado) as T));
+        habiaLocal = true;
         avisar();
       }
     } catch {
       /* datos corruptos o sin almacenamiento: se usan los de ejemplo */
     }
+    // DEMO con sesión en el servidor: los datos se guardan también allá, así se ve lo mismo en el
+    // celular, la notebook o la tablet. Lo de este navegador queda como copia (y se sube si el
+    // servidor todavía no tiene nada).
+    if (demoConDatosEnServidor()) {
+      const claveServidor = claveDemoServidor(opciones.persistir, tenant);
+      demoEnServidor.set(tenant, claveServidor);
+      registrarModulo(claveServidor, {
+        demo: true,
+        aplicar: (datos) => {
+          if (tenantActual() !== tenant) return;
+          const nuevo = Array.isArray(datos)
+            ? (datos as T)
+            : ({ ...vacioCompleto(), ...(conLocal(datos, de(tenant)) as object) } as T);
+          const valor = norm(nuevo);
+          porEmpresa.set(tenant, valor);
+          try {
+            window.localStorage.setItem(clave(tenant), JSON.stringify(valor));
+          } catch {
+            /* sin espacio */
+          }
+          avisar();
+        },
+        vacio: () => vacio(),
+        paraGuardar: (valor) => quitarLocal(valor as T),
+        subirSiNoHay: () => (habiaLocal ? de(tenant) : undefined),
+      });
+      void cargarModulo(claveServidor);
+    }
   };
+  // Empresas del demo que se guardan también en el servidor → su clave allá
+  const demoEnServidor = new Map<string, string>();
 
   // Lo guardado puede ser de una versión anterior: los campos nuevos toman su valor vacío
   const vacioCompleto = (): Partial<T> => {
@@ -166,6 +205,8 @@ export function crearStorePorEmpresa<T>(inicial: () => T, opciones: OpcionesStor
     } catch {
       /* sin espacio o bloqueado: sigue funcionando en memoria */
     }
+    const claveServidor = demoEnServidor.get(tenant);
+    if (claveServidor && demoConDatosEnServidor()) guardarModulo(claveServidor, valor);
   };
 
   const leer = (): T => de(tenantActual());

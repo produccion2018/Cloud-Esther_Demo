@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, Mail, MailCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
+import { toast } from "sonner";
+
 import { MarcoClinica, MensajeError } from "@/components/clinica/marco";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +14,7 @@ import {
   infoPublicaClinica,
   ingresarClinica,
   recuperarClaveClinica,
+  tomarMotivoSalida,
   useSesionClinica,
   type SesionClinica,
 } from "@/lib/clinica/api";
@@ -108,6 +111,9 @@ function Ingresar({ slug }: { slug: string }) {
   const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  // Si la sesión se cerró por entrar desde otro dispositivo (límite del plan), se explica acá
+  const [motivo, setMotivo] = useState<string | null>(null);
+  useEffect(() => setMotivo(tomarMotivoSalida(slug)), [slug]);
 
   const ingresar = async (e: FormEvent) => {
     e.preventDefault();
@@ -115,7 +121,8 @@ function Ingresar({ slug }: { slug: string }) {
     setError(null);
     setCargando(true);
     try {
-      await ingresarClinica(slug, email.trim(), clave);
+      const s = await ingresarClinica(slug, email.trim(), clave);
+      if (s.aviso) toast.info(s.aviso, { duration: 10000 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo ingresar.");
       setCargando(false);
@@ -245,6 +252,11 @@ function Ingresar({ slug }: { slug: string }) {
           {verClave ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </CampoIcono>
+      {motivo && !error && (
+        <p role="status" className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+          {motivo}
+        </p>
+      )}
       {error && <MensajeError>{error}</MensajeError>}
       <Button type="submit" className="ce-boton h-12 w-full rounded-full text-base" disabled={cargando}>
         {cargando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

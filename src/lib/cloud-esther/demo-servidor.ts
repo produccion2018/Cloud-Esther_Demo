@@ -140,10 +140,9 @@ function guardar(g: Guardado | null) {
 /* ───────────── Datos del demo en el servidor (iguales en todos los dispositivos) ───────────── */
 
 /** ¿Los datos de este demo se guardan en el servidor?
- *  NO: decisión del Dueño (25 nov) — el demo guarda todo en el navegador (localStorage), como
- *  siempre. El servidor ya sabe guardarlos (/demo/datos): para activarlo, devolver
- *  `DEMO_EN_SERVIDOR && !!leerGuardado()?.token`. */
-export const DATOS_DEMO_EN_SERVIDOR = false;
+ *  SÍ (pedido del Dueño, 25 nov): quien prueba el demo tiene que encontrar mañana lo que cargó
+ *  hoy, en el celular, la computadora o la tablet. Además queda una copia en el navegador. */
+export const DATOS_DEMO_EN_SERVIDOR = true;
 export function demoConDatosEnServidor(): boolean {
   return DATOS_DEMO_EN_SERVIDOR && DEMO_EN_SERVIDOR && !!leerGuardado()?.token;
 }

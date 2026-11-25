@@ -59,9 +59,15 @@ export async function guardarArchivo(archivo: Blob, opciones: { slug?: string | 
     return subirConFirma(f, archivo, opciones.nombre);
   }
   if (demoConDatosEnServidor()) {
-    const f = await pedirFirmaDemo<Firma>().catch(() => {
+    let f: Firma;
+    try {
+      f = await pedirFirmaDemo<Firma>();
+    } catch (e) {
+      // Demo mientras Cloudinary todavía no está configurado: para no romper la prueba, la imagen
+      // queda chica (y los PDF/audios livianos). Con Cloudinary configurado, va siempre allá.
+      if ((e as { status?: number }).status === 503) return archivoChicoDemo(archivo);
       throw new Error(ERROR_SUBIDA);
-    });
+    }
     return subirConFirma(f, archivo, opciones.nombre);
   }
   return blobADataUrl(archivo);
@@ -82,6 +88,15 @@ export async function guardarDataUrl(dataUrl: string, opciones: { slug?: string 
   if (!archivosEnLaNube(opciones.slug)) return dataUrl;
   const blob = await (await fetch(dataUrl)).blob();
   return guardarArchivo(blob, opciones);
+}
+
+async function archivoChicoDemo(archivo: Blob): Promise<string> {
+  if (archivo.type.startsWith("image/")) {
+    const f = archivo instanceof File ? archivo : new File([archivo], "imagen", { type: archivo.type });
+    return blobADataUrl(await achicarFoto(f, 900));
+  }
+  if (archivo.size > 1_500_000) throw new Error("En el demo, los archivos de más de 1,5 MB no se pueden guardar todavía.");
+  return blobADataUrl(archivo);
 }
 
 export function blobADataUrl(archivo: Blob): Promise<string> {

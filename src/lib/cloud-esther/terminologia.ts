@@ -84,16 +84,18 @@ const TZ_PAIS: Record<string, string> = {
 export function detectarPais(): string {
   if (typeof window === "undefined") return "";
   try {
-    // 1) Idioma: "es-AR", "es_MX", "es-ES"… el sufijo es el país.
+    // 1) Zona horaria: dice DÓNDE está ("America/Argentina/Buenos_Aires", "Europe/Madrid"…).
+    //    Va primero: muchos celulares en español vienen con el idioma «es-ES» aunque estén en
+    //    Argentina, y eso hacía pedir el DNI español (con letra).
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+    for (const prefijo of Object.keys(TZ_PAIS)) {
+      if (tz.startsWith(prefijo)) return TZ_PAIS[prefijo] ?? "";
+    }
+    // 2) Idioma: "es-AR", "es_MX"… el sufijo es el país.
     const idiomas = [navigator.language, ...(navigator.languages ?? [])];
     for (const l of idiomas) {
       const cc = /[-_]([A-Za-z]{2})$/.exec(l ?? "")?.[1]?.toUpperCase();
       if (cc && POR_PAIS[cc]) return cc;
-    }
-    // 2) Zona horaria: "America/Argentina/Buenos_Aires", "Europe/Madrid"…
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
-    for (const prefijo of Object.keys(TZ_PAIS)) {
-      if (tz.startsWith(prefijo)) return TZ_PAIS[prefijo] ?? "";
     }
   } catch {
     /* algún navegador sin estas APIs: términos neutros */
@@ -143,7 +145,8 @@ export function useTerminologia(): Termino {
    DNI/NIE español (con letra), DPI guatemalteco (13)… Se guarda sin puntos ni guiones. */
 type ReglaDoc = { re: RegExp; ejemplo: string; texto: string; numerico: boolean };
 const DOC_POR_PAIS: Record<string, ReglaDoc> = {
-  AR: { re: /^\d{7,8}$/, ejemplo: "30.123.456", texto: "7 u 8 dígitos", numerico: true },
+  // DNI (7 u 8 dígitos; los viejos de 6) o CUIL/CUIT (11 dígitos)
+  AR: { re: /^(\d{6,8}|\d{11})$/, ejemplo: "30.123.456", texto: "DNI de 7 u 8 dígitos o CUIL", numerico: true },
   UY: { re: /^\d{6,8}$/, ejemplo: "4.123.456-7", texto: "6 a 8 dígitos", numerico: true },
   CL: { re: /^\d{7,8}[\dK]$/, ejemplo: "12.345.678-K", texto: "RUT con dígito verificador", numerico: false },
   CO: { re: /^\d{6,10}$/, ejemplo: "1.020.304.050", texto: "6 a 10 dígitos", numerico: true },
@@ -171,11 +174,15 @@ export function normalizarDocumento(v: string): string {
 export function reglaDocumento(pais: string | undefined): ReglaDoc {
   return DOC_POR_PAIS[(pais ?? "").trim().toUpperCase()] ?? DOC_NEUTRO;
 }
-/** null si está bien; si no, el motivo para mostrar */
-export function validarDocumento(v: string, pais: string | undefined): string | null {
+/** null si está bien; si no, el motivo para mostrar.
+ *  estricto=false (el país no lo configuró la clínica, solo se adivinó del navegador): se acepta
+ *  también cualquier documento razonable, así nunca se rechaza un documento válido por error. */
+export function validarDocumento(v: string, pais: string | undefined, estricto = true): string | null {
   const r = reglaDocumento(pais);
   const n = normalizarDocumento(v);
-  return r.re.test(n) ? null : `Ingresá un documento válido (${r.texto}).`;
+  if (r.re.test(n)) return null;
+  if (!estricto && DOC_NEUTRO.re.test(n)) return null;
+  return `Ingresá un documento válido (${r.texto}).`;
 }
 /** Cómo se muestra: con puntos de miles cuando es solo número (AR, UY, PY, CO); RUT con guion. */
 export function formatoDocumento(doc: string, pais: string | undefined): string {

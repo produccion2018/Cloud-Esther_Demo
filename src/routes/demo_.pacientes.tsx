@@ -1,6 +1,6 @@
 import { CODIGO_PAIS } from "@/lib/clinica/whatsapp";
 import { formatoDocumento, normalizarDocumento, reglaDocumento, useTerminologia, validarDocumento } from "@/lib/cloud-esther/terminologia";
-import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
+import { usePaisClinica, usePaisConfirmado } from "@/lib/cloud-esther/coberturas";
 import { claveTenant } from "@/lib/cloud-esther/tenant-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { SUCURSALES, storeAgenda } from "@/lib/cloud-esther/agenda-store";
@@ -460,6 +460,7 @@ function PacienteForm({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const paisForm = usePaisClinica();
+  const paisConfirmado = usePaisConfirmado();
   const terminosForm = useTerminologia();
   const reglaDoc = reglaDocumento(paisForm);
 
@@ -583,7 +584,7 @@ function PacienteForm({
 
     // Según el país de la clínica: DNI, CI, RUT con K, cédula, CURP, DNI/NIE con letra…
     const soloDigitos = normalizarDocumento(documento);
-    const errorDoc = validarDocumento(documento, paisForm);
+    const errorDoc = validarDocumento(documento, paisForm, paisConfirmado);
     if (errorDoc) {
       setErrorDocumento(errorDoc);
       return;

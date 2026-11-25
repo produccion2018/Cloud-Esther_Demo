@@ -1,7 +1,7 @@
 import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { storePresupuestos, type Cobertura, type TipoCobertura } from "@/lib/cloud-esther/presupuestos-store";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
-import { paisEfectivo } from "@/lib/cloud-esther/terminologia";
+import { paisDeSesionClinica, paisEfectivo } from "@/lib/cloud-esther/terminologia";
 
 /* Ubicación: src/lib/cloud-esther/coberturas.ts
    COBERTURAS Y NOMENCLADOR (Argentina y el resto de los países).
@@ -187,6 +187,14 @@ export function usePaisClinica(): string {
   const ctx = useCloudEstherOpcional();
   const s = useClinicSettings(ctx?.clinic ?? "demo");
   return paisEfectivo(s.datosClinica.pais) || "AR";
+}
+
+/** ¿El país lo eligió la clínica (o viene de su contrato)? Si no, solo se adivinó del navegador
+    y las validaciones por país no deben rechazar nada. */
+export function usePaisConfirmado(): boolean {
+  const ctx = useCloudEstherOpcional();
+  const s = useClinicSettings(ctx?.clinic ?? "demo");
+  return Boolean((s.datosClinica.pais ?? "").trim() || paisDeSesionClinica());
 }
 
 /** Nombres para elegir en la ficha del paciente: las coberturas activas de la clínica

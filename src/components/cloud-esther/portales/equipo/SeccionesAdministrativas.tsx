@@ -1,5 +1,5 @@
 import { normalizarDocumento, validarDocumento } from "@/lib/cloud-esther/terminologia";
-import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
+import { usePaisClinica, usePaisConfirmado } from "@/lib/cloud-esther/coberturas";
 import { useState } from "react";
 import {
   ArrowDownCircle,
@@ -541,6 +541,7 @@ function AltaPaciente({
   onGuardar: (p: Omit<Paciente, "id">) => void;
 }) {
   const paisAlta = usePaisClinica();
+  const paisAltaConfirmado = usePaisConfirmado();
   const [f, setF] = useState({
     nombre: "",
     apellido: "",
@@ -577,7 +578,7 @@ function AltaPaciente({
           if (!f.nombre.trim() || !f.apellido.trim())
             return setError("Completá nombre y apellido.");
           // Según el país de la clínica (DNI, RUT con K, CURP, DNI/NIE con letra…)
-          const errDoc = validarDocumento(f.documento, paisAlta);
+          const errDoc = validarDocumento(f.documento, paisAlta, paisAltaConfirmado);
           if (errDoc) return setError(errDoc);
           onGuardar({
             nombre: f.nombre.trim(),

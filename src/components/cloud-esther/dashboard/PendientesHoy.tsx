@@ -9,6 +9,7 @@ import {
   ListTodo,
   PhoneCall,
   FileClock,
+  FileSearch,
   PackageMinus,
   ReceiptText,
   type LucideIcon,
@@ -136,6 +137,29 @@ export function PendientesHoy({ profesional = "" }: { profesional?: string }) {
         ir: "/demo/historia",
         accion: "Cargar",
       });
+
+    // 2d) Estudios sin informar (todos los planes): primero los que subió el paciente
+    {
+      const sinInforme: { texto: string; delPaciente: boolean }[] = [];
+      for (const p of pacientes)
+        for (const e of registros[p.id]?.estudios ?? [])
+          if (e.estadoInforme === "Sin informar" && !/^Fotograf/.test(e.tipo))
+            sinInforme.push({
+              texto: `${p.nombre} ${p.apellido} · ${e.tipo.replace("Radiografía ", "Rx ")}${e.subidoPorPaciente ? " (lo subió el paciente)" : ""}`,
+              delPaciente: !!e.subidoPorPaciente,
+            });
+      sinInforme.sort((a, b) => Number(b.delPaciente) - Number(a.delPaciente));
+      if (sinInforme.length)
+        out.push({
+          id: "estudios",
+          icon: FileSearch,
+          tono: "from-sky-500 to-indigo-500",
+          titulo: `${sinInforme.length} estudio${sinInforme.length > 1 ? "s" : ""} sin informar`,
+          detalle: lista(sinInforme.map((x) => x.texto)),
+          ir: "/demo/estudios",
+          accion: "Informar",
+        });
+    }
 
     // 3) Presupuestos enviados sin respuesta (3 días o más)
     if (tiene("presupuestos")) {

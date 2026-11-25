@@ -83,8 +83,19 @@ export interface ClinicSettings {
   marca?: MarcaClinica;
   /** Plantillas de evolución propias de la clínica (se suman a las de Cloud Esther). */
   plantillasEvolucion?: PlantillaEvolucion[];
+  /** Plantillas propias de la clínica para informar estudios (por tipo de estudio). */
+  plantillasInforme?: PlantillaInforme[];
   /** Medicamentos frecuentes de la clínica (su propio vademécum para recetar con un toque). */
   medicamentosFrecuentes?: MedicamentoFrecuente[];
+}
+
+/** Plantilla de informe de estudio guardada por la clínica. */
+export interface PlantillaInforme {
+  id: string;
+  /** Tipo de estudio al que aplica (ej. «Radiografía periapical») */
+  tipo: string;
+  nombre: string;
+  texto: string;
 }
 
 /** Medicamento que la clínica receta seguido: se carga completo con un toque. */

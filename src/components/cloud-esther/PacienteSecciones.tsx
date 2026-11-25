@@ -102,6 +102,7 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
 import { crearEnlaceEstudio } from "@/lib/clinica/enlace-estudio";
+import { completarPlantilla, usePlantillasInforme } from "@/components/cloud-esther/pacientes/PlantillasInforme";
 import {
   actualizarEstadoVerificacion,
   codigoLegible,
@@ -360,6 +361,8 @@ type EstudioPaciente = {
   ordenId?: number;
   /** Lo subió el paciente con el enlace (para revisar) */
   subidoPorPaciente?: boolean;
+  /** Fecha en que se informó */
+  informadoEl?: string;
 };
 
 /** ORDEN DE ESTUDIO: el profesional pide una radiografía/tomografía; queda «Pendiente» hasta
@@ -6664,10 +6667,12 @@ function GaleriaTab({
   estudios: todos,
   onVer,
   onBorrar,
+  onInformar,
 }: {
   estudios: EstudioPaciente[];
   onVer: (id: number) => void;
   onBorrar: (s: EstudioPaciente) => void;
+  onInformar: (s: EstudioPaciente) => void;
 }) {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"" | EstadoInforme>("");
@@ -6827,6 +6832,12 @@ function GaleriaTab({
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
+                      <BotonMini
+                        compacto
+                        icon={FileText}
+                        label={s.estadoInforme === "Informado" ? "Editar informe" : "Informar"}
+                        onClick={() => onInformar(s)}
+                      />
                       <BotonMini compacto icon={Eye} label="Abrir" onClick={() => onVer(s.id)} />
                       <BotonBorrar
                         compacto
@@ -8653,12 +8664,154 @@ function CargaRapidaEstudios({
   );
 }
 
+/* ───────────── Informe rápido del estudio ─────────────
+   Un toque en una plantilla y el informe queda escrito ({pieza} se completa solo). Se edita lo
+   que haga falta y el estudio pasa a «Informado» con quién y cuándo. */
+function InformeEstudioForm({
+  estudio,
+  onSubmit,
+  onCancel,
+}: {
+  estudio: EstudioPaciente;
+  onSubmit: (cambios: Pick<EstudioPaciente, "diagnostico" | "observaciones" | "profesional" | "informadoEl" | "estadoInforme">) => void;
+  onCancel: () => void;
+}) {
+  const { base, propias, guardar, borrar, puedeGuardar } = usePlantillasInforme(estudio.tipo);
+  const profesionales = useProfesionales();
+  const [texto, setTexto] = useState(estudio.diagnostico ?? "");
+  const [observaciones, setObservaciones] = useState(estudio.observaciones ?? "");
+  const [profesional, setProfesional] = useState(estudio.profesional || profesionales[0] || "");
+  const [nombrePlantilla, setNombrePlantilla] = useState("");
+  const [guardandoPlantilla, setGuardandoPlantilla] = useState(false);
+  const [error, setError] = useState("");
+  const usar = (t: string) => {
+    setTexto(completarPlantilla(t, estudio.pieza));
+    setError("");
+  };
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!texto.trim()) return setError("Escribí el informe o elegí una plantilla.");
+    onSubmit({
+      diagnostico: texto.trim(),
+      observaciones: observaciones.trim(),
+      profesional: profesional.trim(),
+      informadoEl: hoyISO(),
+      estadoInforme: "Informado",
+    });
+  };
+
+  return (
+    <form onSubmit={enviar} className="space-y-3">
+      <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{estudio.tipo}</span>
+        {estudio.pieza ? ` · Pieza ${estudio.pieza}` : ""} · {formatearFecha(estudio.fecha)}
+      </p>
+      <div>
+        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-primary/80">Plantillas</p>
+        <div className="flex flex-wrap gap-1.5">
+          {base.map((p) => (
+            <button
+              key={p.nombre}
+              type="button"
+              onClick={() => usar(p.texto)}
+              className="h-8 rounded-full border border-primary/15 bg-card px-3 text-xs font-semibold text-foreground/80 transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              {p.nombre}
+            </button>
+          ))}
+          {propias.map((p) => (
+            <span key={p.id} className="inline-flex items-center">
+              <button
+                type="button"
+                onClick={() => usar(p.texto)}
+                className={`h-8 rounded-full border border-fuchsia-300 bg-fuchsia-50 px-3 text-xs font-semibold text-fuchsia-700 transition hover:border-primary hover:bg-primary hover:text-primary-foreground dark:bg-fuchsia-500/10 dark:text-fuchsia-300 ${puedeGuardar ? "rounded-r-none pr-2" : ""}`}
+              >
+                {p.nombre}
+              </button>
+              {puedeGuardar && (
+                <button
+                  type="button"
+                  aria-label={`Quitar la plantilla ${p.nombre}`}
+                  onClick={() => borrar(p.id)}
+                  className="grid h-8 w-6 place-items-center rounded-r-full border border-l-0 border-fuchsia-300 bg-fuchsia-50 text-fuchsia-600 hover:bg-fuchsia-100 dark:bg-fuchsia-500/10"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      </div>
+      <Field label="Informe *">
+        <textarea
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setError("");
+          }}
+          rows={5}
+          className={`${INPUT} h-auto py-2 leading-relaxed`}
+          placeholder="Hallazgos del estudio"
+        />
+      </Field>
+      {texto.includes("___") && (
+        <p className="-mt-1 text-[11px] text-amber-700 dark:text-amber-300">Completá los espacios marcados con ___.</p>
+      )}
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Informa">
+          <input list="dl-profesionales" value={profesional} onChange={(e) => setProfesional(e.target.value)} className={INPUT} placeholder="Profesional" />
+        </Field>
+        <Field label="Observaciones">
+          <input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className={INPUT} placeholder="Opcional" />
+        </Field>
+      </div>
+      {puedeGuardar && texto.trim() && (
+        guardandoPlantilla ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={nombrePlantilla}
+              onChange={(e) => setNombrePlantilla(e.target.value)}
+              className={`${INPUT} min-w-0 flex-1`}
+              placeholder="Nombre de la plantilla"
+              autoFocus
+            />
+            <button
+              type="button"
+              disabled={!nombrePlantilla.trim()}
+              onClick={() => {
+                guardar(nombrePlantilla, texto.trim());
+                setGuardandoPlantilla(false);
+                setNombrePlantilla("");
+              }}
+              className="h-9 rounded-full border border-primary/25 px-3 text-xs font-semibold text-primary hover:bg-primary/[0.06] disabled:opacity-50"
+            >
+              Guardar plantilla
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setGuardandoPlantilla(true)}
+            className="text-[12px] font-semibold text-primary hover:underline"
+          >
+            + Guardar este texto como plantilla de la clínica
+          </button>
+        )
+      )}
+      {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+      <Acciones etiqueta="Guardar informe" onCancel={onCancel} />
+    </form>
+  );
+}
+
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
   // mediciones, vínculo con tratamientos y diagnóstico.
   const conDiagnostico = useNivel("estudios").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [pidiendo, setPidiendo] = useState(false);
+  const [informando, setInformando] = useState<EstudioPaciente | null>(null);
   // Llegó el estudio de una orden: se abre «Cargar estudio» con lo que se pidió
   const [llegoDe, setLlegoDe] = useState<OrdenEstudio | null>(null);
   const ordenes = datos.ordenesEstudio ?? [];
@@ -8797,6 +8950,7 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
         <GaleriaTab
           estudios={lista}
           onVer={setVisorId}
+          onInformar={setInformando}
           onBorrar={(s) => {
             // TODO backend: DELETE /pacientes/:id/estudios/:estudioId
             if (s.url) URL.revokeObjectURL(s.url);
@@ -8852,6 +9006,21 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
               setLlegoDe(null);
               setTab("galeria");
               onToast(llegoDe ? `Estudio cargado: la orden ${llegoDe.numero} quedó recibida` : "Estudio cargado");
+            }}
+          />
+        </Modal>
+      )}
+
+      {informando && (
+        <Modal title="Informar estudio" onClose={() => setInformando(null)}>
+          <InformeEstudioForm
+            key={informando.id}
+            estudio={informando}
+            onCancel={() => setInformando(null)}
+            onSubmit={(cambios) => {
+              cambiar("estudios", (prev) => prev.map((x) => (x.id === informando.id ? { ...x, ...cambios } : x)));
+              setInformando(null);
+              onToast("Estudio informado");
             }}
           />
         </Modal>

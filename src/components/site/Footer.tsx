@@ -26,6 +26,7 @@ const columns: {
     title: "Empresa",
     links: [
       { label: "Nosotros", to: "/nosotros" },
+      { label: "Blog", to: "/blog" },
       { label: "Contacto", to: "/demostracion" },
     ],
   },

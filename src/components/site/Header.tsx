@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Home,
   Menu,
+  Newspaper,
   ReceiptText,
   LayoutGrid,
   Stethoscope,
@@ -23,6 +24,7 @@ const nav = [
   { label: "Inicio", to: "/" },
   { label: "Planes", to: "/planes" },
   { label: "Nosotros", to: "/nosotros" },
+  { label: "Blog", to: "/blog" },
 ];
 
 /* Ítems del menú móvil con su ícono (para el panel rediseñado). */
@@ -30,6 +32,7 @@ const navMovil = [
   { label: "Inicio", to: "/", icon: Home, exact: true },
   { label: "Planes", to: "/planes", icon: Tag, exact: false },
   { label: "Nosotros", to: "/nosotros", icon: Users, exact: false },
+  { label: "Blog", to: "/blog", icon: Newspaper, exact: false },
 ];
 
 const featureItems = [
@@ -259,7 +262,7 @@ export function Header() {
             </div>
 
             {/* =================================================
-                PLANES + NOSOTROS
+                PLANES + NOSOTROS + BLOG
             ================================================= */}
             {nav.slice(1).map((item) => (
               <NavLink
@@ -469,7 +472,7 @@ export function Header() {
                   </AnimatePresence>
                 </motion.div>
 
-                {/* Planes + Nosotros */}
+                {/* Planes + Nosotros + Blog */}
                 {navMovil.slice(1).map((item, i) => (
                   <motion.div
                     key={item.to}

@@ -30,6 +30,7 @@ import { Route as AdminAccesosRouteImport } from './routes/admin.accesos'
 import { Route as AdminActividadRouteImport } from './routes/admin.actividad'
 import { Route as AdminAtencionRouteImport } from './routes/admin.atencion'
 import { Route as AdminAuditoriaRouteImport } from './routes/admin.auditoria'
+import { Route as AdminBlogRouteImport } from './routes/admin.blog'
 import { Route as AdminClinicasRouteImport } from './routes/admin.clinicas'
 import { Route as AdminCuentaRouteImport } from './routes/admin.cuenta'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
@@ -49,6 +50,8 @@ import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer
 import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as ApiIaRouteImport } from './routes/api.ia'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as DemoAccesosRouteImport } from './routes/demo_.accesos'
 import { Route as DemoAdminRouteImport } from './routes/demo_.admin'
@@ -191,6 +194,11 @@ const AdminAuditoriaRoute = AdminAuditoriaRouteImport.update({
   path: '/auditoria',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminBlogRoute = AdminBlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminClinicasRoute = AdminClinicasRouteImport.update({
   id: '/clinicas',
   path: '/clinicas',
@@ -284,6 +292,16 @@ const ApiIaRoute = ApiIaRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CSlugRoute = CSlugRouteImport.update({
@@ -491,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/blog': typeof AdminBlogRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
   '/admin/demos': typeof AdminDemosRoute
@@ -509,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
@@ -543,6 +563,7 @@ export interface FileRoutesByFullPath {
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -568,6 +589,7 @@ export interface FileRoutesByTo {
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/blog': typeof AdminBlogRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
   '/admin/demos': typeof AdminDemosRoute
@@ -586,6 +608,7 @@ export interface FileRoutesByTo {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
   '/demo/admin': typeof DemoAdminRoute
@@ -620,6 +643,7 @@ export interface FileRoutesByTo {
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
+  '/blog': typeof BlogIndexRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
   '/demo/equipo-profesional/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo/equipo-profesional/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -647,6 +671,7 @@ export interface FileRoutesById {
   '/admin/actividad': typeof AdminActividadRoute
   '/admin/atencion': typeof AdminAtencionRoute
   '/admin/auditoria': typeof AdminAuditoriaRoute
+  '/admin/blog': typeof AdminBlogRoute
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cuenta': typeof AdminCuentaRoute
   '/admin/demos': typeof AdminDemosRoute
@@ -665,6 +690,7 @@ export interface FileRoutesById {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo_/accesos': typeof DemoAccesosRoute
   '/demo_/admin': typeof DemoAdminRoute
@@ -699,6 +725,7 @@ export interface FileRoutesById {
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/c/$slug_/clave': typeof CSlugClaveRoute
   '/demo_/equipo-profesional_/agendas-horarios': typeof DemoEquipoProfesionalAgendasHorariosRoute
   '/demo_/equipo-profesional_/especialidades': typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -727,6 +754,7 @@ export interface FileRouteTypes {
     | '/admin/actividad'
     | '/admin/atencion'
     | '/admin/auditoria'
+    | '/admin/blog'
     | '/admin/clinicas'
     | '/admin/cuenta'
     | '/admin/demos'
@@ -745,6 +773,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/blog/$slug'
     | '/c/$slug'
     | '/demo/accesos'
     | '/demo/admin'
@@ -779,6 +808,7 @@ export interface FileRouteTypes {
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
+    | '/blog/'
     | '/c/$slug/clave'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
@@ -804,6 +834,7 @@ export interface FileRouteTypes {
     | '/admin/actividad'
     | '/admin/atencion'
     | '/admin/auditoria'
+    | '/admin/blog'
     | '/admin/clinicas'
     | '/admin/cuenta'
     | '/admin/demos'
@@ -822,6 +853,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/blog/$slug'
     | '/c/$slug'
     | '/demo/accesos'
     | '/demo/admin'
@@ -856,6 +888,7 @@ export interface FileRouteTypes {
     | '/verificar/$codigo'
     | '/admin'
     | '/app'
+    | '/blog'
     | '/c/$slug/clave'
     | '/demo/equipo-profesional/agendas-horarios'
     | '/demo/equipo-profesional/especialidades'
@@ -882,6 +915,7 @@ export interface FileRouteTypes {
     | '/admin/actividad'
     | '/admin/atencion'
     | '/admin/auditoria'
+    | '/admin/blog'
     | '/admin/clinicas'
     | '/admin/cuenta'
     | '/admin/demos'
@@ -900,6 +934,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/blog/$slug'
     | '/c/$slug'
     | '/demo_/accesos'
     | '/demo_/admin'
@@ -934,6 +969,7 @@ export interface FileRouteTypes {
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
+    | '/blog/'
     | '/c/$slug_/clave'
     | '/demo_/equipo-profesional_/agendas-horarios'
     | '/demo_/equipo-profesional_/especialidades'
@@ -958,6 +994,7 @@ export interface RootRouteChildren {
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   ApiIaRoute: typeof ApiIaRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   CSlugRoute: typeof CSlugRoute
   DemoAccesosRoute: typeof DemoAccesosRoute
   DemoAdminRoute: typeof DemoAdminRoute
@@ -991,6 +1028,7 @@ export interface RootRouteChildren {
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   CSlugClaveRoute: typeof CSlugClaveRoute
   DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
   DemoEquipoProfesionalEspecialidadesRoute: typeof DemoEquipoProfesionalEspecialidadesRoute
@@ -1146,6 +1184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditoriaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/blog': {
+      id: '/admin/blog'
+      path: '/blog'
+      fullPath: '/admin/blog'
+      preLoaderRoute: typeof AdminBlogRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/clinicas': {
       id: '/admin/clinicas'
       path: '/clinicas'
@@ -1277,6 +1322,20 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$slug': {
@@ -1539,6 +1598,7 @@ interface AdminRouteChildren {
   AdminActividadRoute: typeof AdminActividadRoute
   AdminAtencionRoute: typeof AdminAtencionRoute
   AdminAuditoriaRoute: typeof AdminAuditoriaRoute
+  AdminBlogRoute: typeof AdminBlogRoute
   AdminClinicasRoute: typeof AdminClinicasRoute
   AdminCuentaRoute: typeof AdminCuentaRoute
   AdminDemosRoute: typeof AdminDemosRoute
@@ -1564,6 +1624,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminActividadRoute: AdminActividadRoute,
   AdminAtencionRoute: AdminAtencionRoute,
   AdminAuditoriaRoute: AdminAuditoriaRoute,
+  AdminBlogRoute: AdminBlogRoute,
   AdminClinicasRoute: AdminClinicasRoute,
   AdminCuentaRoute: AdminCuentaRoute,
   AdminDemosRoute: AdminDemosRoute,
@@ -1604,6 +1665,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   ApiIaRoute: ApiIaRoute,
+  BlogSlugRoute: BlogSlugRoute,
   CSlugRoute: CSlugRoute,
   DemoAccesosRoute: DemoAccesosRoute,
   DemoAdminRoute: DemoAdminRoute,
@@ -1637,6 +1699,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoTratamientosRoute: DemoTratamientosRoute,
   VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,
+  BlogIndexRoute: BlogIndexRoute,
   CSlugClaveRoute: CSlugClaveRoute,
   DemoEquipoProfesionalAgendasHorariosRoute:
     DemoEquipoProfesionalAgendasHorariosRoute,

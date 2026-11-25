@@ -19,6 +19,7 @@ export type EventoId =
   | "tratamiento_finalizado"
   | "factura_vencida"
   | "stock_bajo"
+  | "estudio_pendiente"
   | "mensaje_contact_center";
 
 export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo: string }> = {
@@ -63,6 +64,11 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Stock bajo",
     detalle: "Insumo por debajo del mínimo",
     modulo: "Inventario",
+  },
+  estudio_pendiente: {
+    nombre: "Estudio pedido sin recibir",
+    detalle: "Orden de estudio pendiente hace 7 días o más",
+    modulo: "Estudios",
   },
   mensaje_contact_center: {
     nombre: "Mensaje del Contact Center",
@@ -303,6 +309,20 @@ export const PLANTILLAS: {
     pasos: () => [
       p("notificar", { canal: "Aviso interno" }),
       p("webhook", { url: "https://proveedor.ejemplo.com/pedidos" }),
+    ],
+  },
+  {
+    id: "estudio-pendiente",
+    nombre: "Recordar estudios pedidos",
+    descripcion:
+      "Si el paciente no trajo la radiografía o tomografía en 7 días, se le recuerda por WhatsApp y se avisa al equipo.",
+    evento: "estudio_pendiente",
+    pasos: () => [
+      p("whatsapp", {
+        mensaje:
+          "Hola {paciente}, te recordamos que tenés pendiente tu estudio ({dato}). Cuando lo tengas, mandanos una foto o el archivo por acá.",
+      }),
+      p("notificar", { canal: "Aviso interno" }),
     ],
   },
   {

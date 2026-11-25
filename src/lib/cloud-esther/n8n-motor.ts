@@ -7,7 +7,7 @@
 
 import { storeAgenda, setTareasStore } from "@/lib/cloud-esther/agenda-store";
 import { leerPacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
-import { leerRegistros, cambiarRegistro } from "@/components/cloud-esther/PacienteSecciones";
+import { DIAS_ORDEN_PENDIENTE, leerRegistros, cambiarRegistro } from "@/components/cloud-esther/PacienteSecciones";
 import {
   estadoComprobante,
   paisFiscal,
@@ -220,6 +220,31 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
           dato: `${i.nombre}: quedan ${i.stock} ${i.unidad} y el mínimo es ${i.minimo}`,
         }));
       break;
+    case "estudio_pendiente": {
+      // Órdenes de estudio pedidas hace 7 días o más y todavía sin recibir
+      const hoy = hoyISO();
+      lista = Object.entries(leerRegistros()).flatMap(([pid, reg]) =>
+        (reg?.ordenesEstudio ?? [])
+          .filter((o) => o.estado === "Pendiente")
+          .filter((o) => (Date.parse(hoy) - Date.parse(o.fecha)) / 86_400_000 >= DIAS_ORDEN_PENDIENTE)
+          .flatMap((o) => {
+            const p = pacientes.find((x) => String(x.id) === pid);
+            if (!p) return [];
+            return [
+              {
+                titulo: `${o.tipo} de ${nombre(p)} sin recibir`,
+                paciente: nombre(p),
+                pacienteId: p.id,
+                telefono: p.telefono,
+                sede: p.sucursal,
+                monto: 0,
+                dato: `${o.tipo.toLowerCase()}${o.piezas ? ` de las piezas ${o.piezas}` : ""}, pedido el ${fecha(o.fecha)}`,
+              },
+            ];
+          }),
+      );
+      break;
+    }
     case "mensaje_contact_center": {
       const p = pacientes.find((x) => x.estado === "Activo") ?? pacientes[0];
       if (p)
@@ -263,6 +288,8 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Hola ${n}, te recordamos que tenés un ${d.dato}. Podés abonarlo desde el link de pago o en la clínica. Si ya lo pagaste, desestimá este mensaje.`;
     case "stock_bajo":
       return `Reposición sugerida: ${d.dato}.`;
+    case "estudio_pendiente":
+      return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
     case "mensaje_contact_center":
       return `Hola ${n}, ¡claro! Tengo horarios disponibles esta semana. ¿Preferís mañana o tarde?`;
   }

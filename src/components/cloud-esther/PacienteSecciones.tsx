@@ -117,6 +117,7 @@ import {
 import {
   buscarEnVademecum,
   filtrarSugerencias,
+  PIEZAS_FDI,
   sugerirDiagnostico,
   vademecumDe,
 } from "@/lib/cloud-esther/vademecum";
@@ -353,6 +354,31 @@ type EstudioPaciente = {
   url: string;
   estadoInforme: EstadoInforme;
   tratamientoId: number | null;
+  /** Orden de estudio de la que vino (si se pidió desde la ficha) */
+  ordenId?: number;
+};
+
+/** ORDEN DE ESTUDIO: el profesional pide una radiografía/tomografía; queda «Pendiente» hasta
+    que llega el estudio (o se cancela). Si tarda, avisa (recordatorio básico o automatización). */
+export type OrdenEstudio = {
+  id: number;
+  numero: string;
+  fecha: string;
+  tipo: string;
+  piezas: string;
+  zona: string;
+  /** Motivo o diagnóstico presuntivo */
+  indicacion: string;
+  /** Centro radiológico (opcional) */
+  centro: string;
+  urgente: boolean;
+  profesional: string;
+  matricula: string;
+  estado: "Pendiente" | "Recibido" | "Cancelada";
+  recibidoEl?: string;
+  estudioId?: number;
+  /** Última vez que se le recordó al paciente */
+  recordadoEl?: string;
 };
 
 type NotaClinica = {
@@ -629,6 +655,8 @@ export type Registros = {
   periodontograma?: EvaluacionPerio[];
   /** Fichas clínicas por especialidad (Ortodoncia, Periodoncia, Endodoncia…) */
   fichasEspecialidad?: FichaEspecialidad[];
+  /** Órdenes de estudio pedidas (radiografías, tomografías…) */
+  ordenesEstudio?: OrdenEstudio[];
 };
 
 export type Cambiar = <K extends keyof Registros>(
@@ -6144,19 +6172,24 @@ function EstudioForm({
   tratamientos,
   onSubmit,
   onCancel,
+  inicial,
 }: {
   tratamientos: TratamientoPaciente[];
   onSubmit: (e: Omit<EstudioPaciente, "id">) => void;
   onCancel: () => void;
+  /** Llegó el estudio de una orden: se completa con lo que se pidió */
+  inicial?: OrdenEstudio | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [tipo, setTipo] = useState(TIPOS_ESTUDIO[0]);
+  const [tipo, setTipo] = useState(
+    inicial && TIPOS_ESTUDIO.includes(inicial.tipo) ? inicial.tipo : (TIPOS_ESTUDIO[0] ?? ""),
+  );
   const [fecha, setFecha] = useState(hoyISO());
-  const [zona, setZona] = useState("");
-  const [solicitante, setSolicitante] = useState("");
+  const [zona, setZona] = useState(inicial?.zona ?? "");
+  const [solicitante, setSolicitante] = useState(inicial?.profesional ?? "");
   const [profesional, setProfesional] = useState("");
-  const [pieza, setPieza] = useState("");
+  const [pieza, setPieza] = useState(inicial?.piezas ?? "");
   const [observaciones, setObservaciones] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
   const [estadoInforme, setEstadoInforme] = useState<EstadoInforme>("Sin informar");
@@ -6179,6 +6212,7 @@ function EstudioForm({
       url: archivo ? await urlPersistenteImagen(archivo, slug) : "",
       estadoInforme,
       tratamientoId,
+      ...(inicial ? { ordenId: inicial.id } : {}),
     });
   };
 
@@ -8007,11 +8041,314 @@ function FotografiasSec({ datos, cambiar, onToast }: PropsSeccion) {
 type TabEstudios =
   "galeria" | "fotografias" | "comparar" | "anotaciones" | "vinculados" | "diagnostico";
 
+/* ───────────── Órdenes de estudio ─────────────
+   El profesional pide el estudio con un toque: sale un PDF con el membrete de la clínica para
+   mandarlo por WhatsApp al paciente (o al centro radiológico). Queda «Pendiente» en la ficha
+   hasta que llega; si tarda más de DIAS_ORDEN_PENDIENTE días, avisa: recordatorio en
+   Notificaciones (todos los planes) y, si la clínica lo activa, una automatización le escribe
+   al paciente (planes con Automatizaciones). */
+
+export const DIAS_ORDEN_PENDIENTE = 7;
+const TIPOS_ORDEN = TIPOS_ESTUDIO.filter((t) => !/^Fotograf/.test(t));
+
+/** «3» → 31…38; «36, 4» → «36, 41»… (numeración FDI) */
+function sugerirPiezas(texto: string): string[] {
+  const partes = texto.trim().split(/[\s,]+/).filter(Boolean);
+  const ultima = partes.at(-1) ?? "";
+  if (!/^\d{1,2}$/.test(ultima)) return [];
+  const antes = partes.slice(0, -1).map((x) => `${x}, `).join("");
+  return PIEZAS_FDI.filter((p) => p.startsWith(ultima) && p !== ultima)
+    .slice(0, 8)
+    .map((p) => `${antes}${p}`);
+}
+
+const diasDesde = (iso: string) => Math.max(0, Math.floor((Date.parse(hoyISO()) - Date.parse(iso)) / 86_400_000));
+
+function htmlOrden(o: OrdenEstudio, contexto?: ContextoPaciente, membrete = "") {
+  const fuente = getComputedStyle(document.body).fontFamily;
+  const fila = (et: string, v: string) =>
+    v ? `<div class="f"><div class="et">${et}</div><div>${escapar(v)}</div></div>` : "";
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Orden ${escapar(o.numero)}</title>
+<style>
+  @page { size: A5; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: ${fuente}; color: #171717; font-size: 13px; margin: 0; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #6d28d9; padding-bottom: 10px; }
+  .top h1 { font-size: 18px; margin: 0; }
+  .top small { color: #737373; text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
+  .der { text-align: right; font-size: 11px; color: #737373; }
+  .der b { display: block; font-size: 14px; color: #171717; }
+  .caja { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #fafafa; border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12px; }
+  .et { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #737373; font-weight: 600; margin-bottom: 2px; }
+  .pedido { margin-top: 18px; border: 1px solid #ddd6fe; border-radius: 10px; padding: 12px 14px; }
+  .pedido h2 { margin: 0 0 8px; font-size: 16px; color: #6d28d9; }
+  .f { margin-top: 8px; font-size: 13px; white-space: pre-line; }
+  .urg { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 99px; background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; letter-spacing: .05em; vertical-align: middle; }
+  .pie { display: flex; justify-content: flex-end; margin-top: 56px; }
+  .firma { width: 210px; text-align: center; border-top: 1px solid #a3a3a3; padding-top: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+  ${membrete}
+  <div class="top">
+    <div>
+      <h1>${escapar(contexto?.clinica || "Orden de estudio")}</h1>
+      <small>Orden de estudio</small>
+    </div>
+    <div class="der">
+      <b>${escapar(o.numero)}</b>
+      Fecha: ${escapar(formatearFecha(o.fecha))}
+    </div>
+  </div>
+  <div class="caja">
+    <div><div class="et">Paciente</div><strong>${escapar(contexto?.paciente || "—")}</strong></div>
+    <div><div class="et">Profesional</div><strong>${escapar(o.profesional || "—")}</strong>${o.matricula ? `<br/>Mat. ${escapar(o.matricula)}` : ""}</div>
+  </div>
+  <div class="pedido">
+    <h2>${escapar(o.tipo)}${o.urgente ? '<span class="urg">URGENTE</span>' : ""}</h2>
+    ${fila("Piezas", o.piezas)}
+    ${fila("Zona", o.zona)}
+    ${fila("Motivo / diagnóstico presuntivo", o.indicacion)}
+    ${fila("Centro radiológico", o.centro)}
+  </div>
+  <div class="pie"><div class="firma"><strong>${escapar(o.profesional || "Profesional")}</strong>${o.matricula ? `<br/>Mat. ${escapar(o.matricula)}` : ""}</div></div>
+</body>
+</html>`;
+}
+
+async function enviarOrdenWhatsApp(
+  o: OrdenEstudio,
+  contexto: ContextoPaciente | undefined,
+  membrete: string,
+  onToast: (m: string) => void,
+) {
+  const nombre = (contexto?.paciente ?? "").split(" ")[0] || "";
+  const texto = `Hola${nombre ? ` ${nombre}` : ""} 👋 Te enviamos la orden para tu ${o.tipo.toLowerCase()}${o.piezas ? ` (piezas ${o.piezas})` : ""}${o.centro ? `. Podés hacerla en ${o.centro}` : ""}.\n\nCuando tengas el estudio, mandanos por acá una foto o el archivo y lo sumamos a tu ficha. ¡Gracias!\n\n${contexto?.clinica || "La clínica"}`;
+  try {
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (typeof nav.share === "function" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) {
+      const blob = await pdfBlobDeHtml(htmlOrden(o, contexto, membrete), "a5");
+      if (blob) {
+        const archivo = new File([blob], `orden-${o.numero}.pdf`, { type: "application/pdf" });
+        if (nav.canShare?.({ files: [archivo] })) {
+          await nav.share({ files: [archivo], text: texto, title: `Orden ${o.numero}` });
+          return;
+        }
+      }
+    }
+  } catch (e) {
+    if ((e as Error)?.name === "AbortError") return;
+  }
+  const numero = numeroWhatsApp(contexto?.telefono);
+  window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+  if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+}
+
+function OrdenEstudioForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (o: Omit<OrdenEstudio, "id" | "numero" | "estado">) => void;
+  onCancel: () => void;
+}) {
+  const profesionales = useProfesionales();
+  const { miembros } = useEquipo();
+  const paisOrden = usePaisClinica();
+  const [tipo, setTipo] = useState(TIPOS_ORDEN[1] ?? TIPOS_ORDEN[0] ?? "");
+  const [fecha, setFecha] = useState(hoyISO());
+  const [piezas, setPiezas] = useState("");
+  const [zona, setZona] = useState("");
+  const [indicacion, setIndicacion] = useState("");
+  const [centro, setCentro] = useState("");
+  const [urgente, setUrgente] = useState(false);
+  const [profesional, setProfesional] = useState(profesionales[0] ?? "");
+  const [matricula, setMatricula] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const perfil = miembros.find((m) => `${m.firstName} ${m.lastName}`.trim() === profesional.trim());
+    if (perfil?.licenseNumber) setMatricula(perfil.licenseNumber);
+  }, [profesional]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!profesional.trim()) return setError("Elegí el profesional que pide el estudio.");
+    onSubmit({
+      fecha,
+      tipo,
+      piezas: piezas.trim(),
+      zona: zona.trim(),
+      indicacion: indicacion.trim(),
+      centro: centro.trim(),
+      urgente,
+      profesional: profesional.trim(),
+      matricula: matricula.trim(),
+    });
+  };
+
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Estudio que se pide *">
+          <SelectField value={tipo} onChange={setTipo} options={TIPOS_ORDEN} />
+        </Field>
+        <Field label="Fecha">
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Piezas">
+          <Autocompletar
+            value={piezas}
+            onChange={setPiezas}
+            sugerir={sugerirPiezas}
+            className={INPUT}
+            placeholder="Ej: 36, 37"
+            ariaLabel="Piezas"
+          />
+        </Field>
+        <Field label="Zona">
+          <input value={zona} onChange={(e) => setZona(e.target.value)} className={INPUT} placeholder="Ej: maxilar inferior izquierdo" />
+        </Field>
+        <Field label="Profesional *">
+          <input
+            list="dl-profesionales"
+            value={profesional}
+            onChange={(e) => {
+              setProfesional(e.target.value);
+              setError("");
+            }}
+            className={INPUT}
+            placeholder="Quién pide el estudio"
+          />
+        </Field>
+        <Field label="Matrícula">
+          <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className={INPUT} placeholder="Ej: MN 12345" />
+        </Field>
+      </div>
+      <Field label="Motivo / diagnóstico presuntivo">
+        <Autocompletar
+          value={indicacion}
+          onChange={setIndicacion}
+          sugerir={(t) => sugerirDiagnostico(t, paisOrden)}
+          className={INPUT}
+          placeholder="Ej: Control de endodoncia pieza 36"
+          ariaLabel="Motivo"
+        />
+      </Field>
+      <Field label="Centro radiológico (opcional)">
+        <input value={centro} onChange={(e) => setCentro(e.target.value)} className={INPUT} placeholder="Dónde conviene hacerlo" />
+      </Field>
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input type="checkbox" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />
+        Es urgente
+      </label>
+      {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+      <Acciones etiqueta="Crear orden" onCancel={onCancel} />
+    </form>
+  );
+}
+
+function OrdenesEstudioCard({
+  ordenes,
+  contexto,
+  onPedir,
+  onLlego,
+  onCancelar,
+  onToast,
+}: {
+  ordenes: OrdenEstudio[];
+  contexto?: ContextoPaciente | undefined;
+  onPedir: () => void;
+  onLlego: (o: OrdenEstudio) => void;
+  onCancelar: (o: OrdenEstudio) => void;
+  onToast: (m: string) => void;
+}) {
+  const marca = useMarca();
+  const membrete = membreteHTML(marca, contexto?.clinica || "Clínica");
+  const pendientes = ordenes.filter((o) => o.estado === "Pendiente").sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const recibidas = ordenes.filter((o) => o.estado === "Recibido").length;
+  return (
+    <div className="rounded-2xl border border-primary/12 bg-card p-3 shadow-[0_10px_26px_-22px_rgba(76,29,149,0.6)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+          <ClipboardList className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Órdenes de estudio</p>
+          <p className="text-[11px] text-muted-foreground">
+            {pendientes.length
+              ? `${pendientes.length} pendiente${pendientes.length === 1 ? "" : "s"} de recibir${recibidas ? ` · ${recibidas} recibida${recibidas === 1 ? "" : "s"}` : ""}`
+              : recibidas
+                ? `Todas recibidas (${recibidas})`
+                : "Pedí una radiografía o tomografía y mandásela al paciente por WhatsApp."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onPedir}
+          className={BTN_PRIMARIO}
+        >
+          <Plus className="size-4" />
+          Pedir estudio
+        </button>
+      </div>
+      {pendientes.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {pendientes.map((o) => {
+            const dias = diasDesde(o.fecha);
+            const atrasada = dias >= DIAS_ORDEN_PENDIENTE;
+            return (
+              <li key={o.id} className="rounded-xl border border-border bg-background/60 p-2.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold">{o.tipo}</p>
+                  {o.urgente && (
+                    <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive">Urgente</span>
+                  )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      atrasada ? "bg-amber-500/15 text-amber-800 dark:text-amber-300" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {dias === 0 ? "Pedida hoy" : `Pedida hace ${dias} día${dias === 1 ? "" : "s"}`}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
+                  {[o.numero, o.piezas && `Piezas ${o.piezas}`, o.centro, o.profesional].filter(Boolean).join(" · ")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <BotonMini icon={Check} label="Llegó el estudio" onClick={() => onLlego(o)} />
+                  <BotonMini
+                    icon={MessageCircle}
+                    label="Enviar por WhatsApp"
+                    onClick={() => void enviarOrdenWhatsApp(o, contexto, membrete, onToast)}
+                  />
+                  <BotonMini
+                    icon={Download}
+                    label="PDF"
+                    onClick={() => void descargarPDF(htmlOrden(o, contexto, membrete), `orden-${o.numero}`, "a5")}
+                  />
+                  <BotonMini icon={Ban} label="Cancelar" onClick={() => onCancelar(o)} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   // Start: estudios clínicos (cargar, ver y fotografías). Pro en adelante: comparación,
   // mediciones, vínculo con tratamientos y diagnóstico.
   const conDiagnostico = useNivel("estudios").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
+  const [pidiendo, setPidiendo] = useState(false);
+  // Llegó el estudio de una orden: se abre «Cargar estudio» con lo que se pidió
+  const [llegoDe, setLlegoDe] = useState<OrdenEstudio | null>(null);
+  const ordenes = datos.ordenesEstudio ?? [];
   const [tab, setTab] = useState<TabEstudios>("galeria");
   const [visorId, setVisorId] = useState<number | null>(null);
 
@@ -8044,7 +8381,27 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             : "Radiografías, tomografías y fotografías clínicas del paciente, ordenadas por fecha."
         }
         etiquetaBoton="Cargar estudio"
-        onAgregar={() => setAbierto(true)}
+        onAgregar={() => {
+          setLlegoDe(null);
+          setAbierto(true);
+        }}
+      />
+
+      <OrdenesEstudioCard
+        ordenes={ordenes}
+        contexto={contexto}
+        onPedir={() => setPidiendo(true)}
+        onLlego={(o) => {
+          setLlegoDe(o);
+          setAbierto(true);
+        }}
+        onCancelar={(o) => {
+          cambiar("ordenesEstudio", (prev) =>
+            (prev ?? []).map((x) => (x.id === o.id ? { ...x, estado: "Cancelada" as const } : x)),
+          );
+          onToast(`${o.numero}: orden cancelada`);
+        }}
+        onToast={onToast}
       />
 
       <div
@@ -8137,16 +8494,50 @@ function EstudiosSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
       )}
 
       {abierto && (
-        <Modal title="Cargar estudio" onClose={() => setAbierto(false)}>
+        <Modal
+          title={llegoDe ? `Cargar el estudio de la orden ${llegoDe.numero}` : "Cargar estudio"}
+          onClose={() => setAbierto(false)}
+        >
           <EstudioForm
+            key={llegoDe?.id ?? "nuevo"}
+            inicial={llegoDe}
             tratamientos={datos.tratamientos}
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
               // TODO backend: POST /pacientes/:id/estudios
-              cambiar("estudios", (prev) => [...prev, { ...nuevo, id: Date.now() }]);
+              const id = Date.now();
+              cambiar("estudios", (prev) => [...prev, { ...nuevo, id }]);
+              if (llegoDe) {
+                // La orden queda «Recibida» (deja de avisar)
+                cambiar("ordenesEstudio", (prev) =>
+                  (prev ?? []).map((x) =>
+                    x.id === llegoDe.id ? { ...x, estado: "Recibido" as const, recibidoEl: hoyISO(), estudioId: id } : x,
+                  ),
+                );
+              }
               setAbierto(false);
+              setLlegoDe(null);
               setTab("galeria");
-              onToast("Estudio cargado");
+              onToast(llegoDe ? `Estudio cargado: la orden ${llegoDe.numero} quedó recibida` : "Estudio cargado");
+            }}
+          />
+        </Modal>
+      )}
+
+      {pidiendo && (
+        <Modal title="Pedir estudio" onClose={() => setPidiendo(false)}>
+          <OrdenEstudioForm
+            onCancel={() => setPidiendo(false)}
+            onSubmit={(o) => {
+              const siguiente =
+                ordenes.reduce((max, x) => Math.max(max, Number(x.numero.replace(/\D/g, "")) || 0), 0) + 1;
+              const numero = `OE-${String(siguiente).padStart(4, "0")}`;
+              cambiar("ordenesEstudio", (prev) => [
+                ...(prev ?? []),
+                { ...o, id: Date.now(), numero, estado: "Pendiente" as const },
+              ]);
+              setPidiendo(false);
+              onToast(`Orden ${numero} creada: mandala por WhatsApp o descargá el PDF`);
             }}
           />
         </Modal>

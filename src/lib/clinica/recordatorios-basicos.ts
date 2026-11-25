@@ -7,7 +7,7 @@ import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
-import { leerRegistros, type Registros } from "@/components/cloud-esther/PacienteSecciones";
+import { DIAS_ORDEN_PENDIENTE, leerRegistros, type Registros } from "@/components/cloud-esther/PacienteSecciones";
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
@@ -120,6 +120,34 @@ export function useRecordatoriosBasicos() {
               .slice(0, 4)
               .map((x) => `${x.turno.fecha.slice(8, 10)}/${x.turno.fecha.slice(5, 7)} ${x.paciente.nombre} ${x.paciente.apellido}${x.turno.odontologo ? ` (${x.turno.odontologo})` : ""}`)
               .join(", ")}${faltan.length > 4 ? ` y ${faltan.length - 4} más` : ""}. Cargala desde la ficha del paciente → Historia clínica (hay plantillas para hacerlo rápido).`,
+            categoria: "Pacientes",
+            prioridad: "Normal",
+          });
+      }
+
+      // 4) Órdenes de estudio pedidas hace 7 días o más y todavía sin recibir
+      //    (con la automatización «Estudio pendiente» activa, le escribe sola al paciente)
+      if (conRegistros && !flujoActivo("estudio_pendiente") && !existentes.has(`basico-estudios-${hoy}`)) {
+        const pacs = leerPacientes();
+        const atrasadas: { paciente: string; tipo: string; dias: number }[] = [];
+        for (const [pid, reg] of Object.entries(leerRegistros())) {
+          for (const o of reg?.ordenesEstudio ?? []) {
+            if (o.estado !== "Pendiente") continue;
+            const dias = Math.floor((Date.parse(hoy) - Date.parse(o.fecha)) / 86_400_000);
+            if (dias < DIAS_ORDEN_PENDIENTE) continue;
+            const p = pacs.find((x) => String(x.id) === pid);
+            atrasadas.push({ paciente: p ? `${p.nombre} ${p.apellido}` : "Paciente", tipo: o.tipo, dias });
+          }
+        }
+        if (atrasadas.length)
+          nuevos.push({
+            ...base,
+            id: `basico-estudios-${hoy}`,
+            titulo: `${atrasadas.length} estudio${atrasadas.length === 1 ? "" : "s"} pedido${atrasadas.length === 1 ? "" : "s"} sin recibir`,
+            detalle: `${atrasadas
+              .slice(0, 3)
+              .map((x) => `${x.paciente} (${x.tipo.toLowerCase()}, hace ${x.dias} días)`)
+              .join(", ")}${atrasadas.length > 3 ? ` y ${atrasadas.length - 3} más` : ""}. Recordáselo por WhatsApp desde la ficha → Estudios → «Enviar por WhatsApp».`,
             categoria: "Pacientes",
             prioridad: "Normal",
           });

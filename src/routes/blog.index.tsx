@@ -8,6 +8,7 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { Reveal } from "@/components/site/Reveal";
 import { PortadaBlog } from "@/components/blog/PortadaBlog";
 import { CategoriaChip, TarjetaArticulo } from "@/components/blog/TarjetaArticulo";
+import { useModoClaroBlog } from "@/lib/blog/modo-claro";
 import { fechaLarga, minutosLectura, useArticulosPublicos, type ArticuloBlog } from "@/lib/blog/blog";
 
 /* Ubicación: src/routes/blog.index.tsx
@@ -132,6 +133,7 @@ function sinAcentos(t: string) {
 }
 
 function Blog() {
+  useModoClaroBlog();
   const { datos, cargando, error } = useArticulosPublicos();
   const [categoria, setCategoria] = useState<string>("Todas");
   const [busqueda, setBusqueda] = useState("");

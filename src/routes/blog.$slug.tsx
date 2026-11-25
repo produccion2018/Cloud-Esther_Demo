@@ -10,6 +10,7 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { PortadaBlog } from "@/components/blog/PortadaBlog";
 import { ContenidoArticulo, indiceDe } from "@/components/blog/ContenidoArticulo";
 import { CategoriaChip, TarjetaArticulo } from "@/components/blog/TarjetaArticulo";
+import { useModoClaroBlog } from "@/lib/blog/modo-claro";
 import { fechaLarga, minutosLectura, useArticuloPublico, useArticulosPublicos } from "@/lib/blog/blog";
 
 /* Ubicación: src/routes/blog.$slug.tsx
@@ -125,6 +126,7 @@ function Indice({ items }: { items: { id: string; texto: string }[] }) {
 }
 
 function Articulo() {
+  useModoClaroBlog();
   const { slug } = Route.useParams();
   const { datos: articulo, cargando, error } = useArticuloPublico(slug);
   const { datos: todos } = useArticulosPublicos();

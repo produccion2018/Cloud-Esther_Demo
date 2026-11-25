@@ -83,6 +83,7 @@ import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as VerificarCodigoRouteImport } from './routes/verificar.$codigo'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
@@ -459,6 +460,11 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SubirEstudioTokenRoute = SubirEstudioTokenRouteImport.update({
+  id: '/subir-estudio/$token',
+  path: '/subir-estudio/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerificarCodigoRoute = VerificarCodigoRouteImport.update({
   id: '/verificar/$codigo',
   path: '/verificar/$codigo',
@@ -560,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -640,6 +647,7 @@ export interface FileRoutesByTo {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
@@ -722,6 +730,7 @@ export interface FileRoutesById {
   '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/soporte': typeof DemoSoporteRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
+  '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -805,6 +814,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -885,6 +895,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin'
     | '/app'
@@ -966,6 +977,7 @@ export interface FileRouteTypes {
     | '/demo_/rrhh'
     | '/demo_/soporte'
     | '/demo_/tratamientos'
+    | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -1026,6 +1038,7 @@ export interface RootRouteChildren {
   DemoRrhhRoute: typeof DemoRrhhRoute
   DemoSoporteRoute: typeof DemoSoporteRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
+  SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -1555,6 +1568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/subir-estudio/$token': {
+      id: '/subir-estudio/$token'
+      path: '/subir-estudio/$token'
+      fullPath: '/subir-estudio/$token'
+      preLoaderRoute: typeof SubirEstudioTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verificar/$codigo': {
       id: '/verificar/$codigo'
       path: '/verificar/$codigo'
@@ -1697,6 +1717,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRrhhRoute: DemoRrhhRoute,
   DemoSoporteRoute: DemoSoporteRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
+  SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,
   BlogIndexRoute: BlogIndexRoute,

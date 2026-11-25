@@ -1287,6 +1287,7 @@ function CarpetaPaciente({
                 paciente: nombreCompleto(paciente),
                 telefono: paciente.telefono,
                 nacimiento: paciente.fechaNacimiento,
+                pacienteId: paciente.id,
                 email: paciente.email,
               }}
             />

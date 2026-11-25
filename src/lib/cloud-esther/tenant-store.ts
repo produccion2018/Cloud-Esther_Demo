@@ -5,7 +5,7 @@ import { cargarModulo, guardarModulo, registrarModulo } from "@/lib/clinica/sinc
 import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 
 /** Clave del módulo del DEMO en el servidor: módulo + empresa del demo (máx. 60, [a-z0-9-]). */
-function claveDemoServidor(persistir: string, tenant: string): string {
+export function claveDemoServidor(persistir: string, tenant: string): string {
   const empresa = tenant.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "demo";
   return `${persistir}--${empresa}`.slice(0, 60);
 }

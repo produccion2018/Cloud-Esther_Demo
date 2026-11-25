@@ -171,6 +171,21 @@ export async function pedirDatosDemo<T>(metodo: string, sub: string, cuerpo?: un
   return (r.status === 204 ? undefined : await r.json()) as T;
 }
 
+/** Demo: enlace para que el paciente suba su estudio (va a los datos del demo en el servidor). */
+export async function crearEnlaceEstudioDemo(datos: {
+  clave: string;
+  pacienteId: number;
+  ordenId?: number | null;
+  nombre: string;
+  tipo: string;
+}): Promise<{ token: string; vence: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/estudios/enlaces", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string; vence: string };
+}
+
 /** Firma para subir un archivo del demo directo a Cloudinary (carpeta del demo). */
 export async function pedirFirmaDemo<T>(): Promise<T> {
   const token = leerGuardado()?.token;

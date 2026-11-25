@@ -100,6 +100,7 @@ import {
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
+import { crearEnlaceEstudio } from "@/lib/clinica/enlace-estudio";
 import {
   actualizarEstadoVerificacion,
   codigoLegible,
@@ -356,6 +357,8 @@ type EstudioPaciente = {
   tratamientoId: number | null;
   /** Orden de estudio de la que vino (si se pidió desde la ficha) */
   ordenId?: number;
+  /** Lo subió el paciente con el enlace (para revisar) */
+  subidoPorPaciente?: boolean;
 };
 
 /** ORDEN DE ESTUDIO: el profesional pide una radiografía/tomografía; queda «Pendiente» hasta
@@ -687,6 +690,8 @@ export type ContextoPaciente = {
   telefono?: string;
   /** Fecha de nacimiento (AAAA-MM-DD): para los avisos por edad al recetar */
   nacimiento?: string;
+  /** Id del paciente (para el enlace con el que sube sus estudios) */
+  pacienteId?: number;
 };
 
 const VACIO: Registros = {
@@ -1426,7 +1431,7 @@ export function cambiarRegistro<K extends keyof Registros>(
   fn: (prev: Registros[K]) => Registros[K],
 ) {
   const todos = storeRegistros.leer();
-  const actual = todos[id] ?? VACIO;
+  const actual = { ...VACIO, ...todos[id] } as Registros;
   storeRegistros.poner({ ...todos, [id]: { ...actual, [clave]: fn(actual[clave]) } as Registros });
 }
 
@@ -1438,7 +1443,8 @@ export function useTodosLosRegistros(): Record<number, Registros> {
 export function useRegistrosPacientes() {
   const porPaciente = storeRegistros.usar();
 
-  const de = (id: number): Registros => porPaciente[id] ?? VACIO;
+  // Completo siempre (una ficha que llega a medias, ej. un estudio subido por el paciente, no rompe)
+  const de = (id: number): Registros => (porPaciente[id] ? ({ ...VACIO, ...porPaciente[id] } as Registros) : VACIO);
 
   function cambiar<K extends keyof Registros>(
     id: number,
@@ -1446,7 +1452,7 @@ export function useRegistrosPacientes() {
     fn: (prev: Registros[K]) => Registros[K],
   ) {
     const todos = storeRegistros.leer();
-    const actual = todos[id] ?? VACIO;
+    const actual = { ...VACIO, ...todos[id] } as Registros;
     const siguiente = { ...actual, [clave]: fn(actual[clave]) } as Registros;
     storeRegistros.poner({ ...todos, [id]: siguiente });
   }
@@ -6794,6 +6800,11 @@ function GaleriaTab({
                         <span className="whitespace-nowrap">{formatearFecha(s.fecha)}</span>
                         {s.zona ? ` · ${s.zona}` : ""}
                       </p>
+                      {s.subidoPorPaciente && s.estadoInforme === "Sin informar" && (
+                        <span className="mt-1 inline-flex rounded-full bg-sky-500/10 px-2 py-0.5 text-[9px] font-semibold text-sky-700 dark:text-sky-300">
+                          Lo subió el paciente · para revisar
+                        </span>
+                      )}
                     </div>
                     <span className="shrink-0 whitespace-nowrap">
                       <Badge tono={TONO_INFORME[s.estadoInforme]}>{s.estadoInforme}</Badge>
@@ -8250,6 +8261,40 @@ function OrdenEstudioForm({
   );
 }
 
+/** Manda por WhatsApp el enlace para que el paciente suba su estudio (sin iniciar sesión). */
+async function pedirEstudioAlPaciente(
+  contexto: ContextoPaciente | undefined,
+  orden: OrdenEstudio | null,
+  onToast: (m: string) => void,
+) {
+  if (!contexto?.pacienteId) return onToast("Abrí la ficha del paciente para mandarle el enlace.");
+  // Se abre la ventana ya (si no, el celular la bloquea) y se completa cuando llega el enlace
+  const ventana = window.open("", "_blank");
+  if (ventana) ventana.opener = null;
+  try {
+    const url = await crearEnlaceEstudio({
+      pacienteId: contexto.pacienteId,
+      ordenId: orden?.id ?? null,
+      nombre: contexto.paciente ?? "",
+      tipo: orden?.tipo ?? "",
+    });
+    const nombre = (contexto.paciente ?? "").split(" ")[0] || "";
+    const texto = `Hola${nombre ? ` ${nombre}` : ""} 👋 Para sumar ${orden ? `tu ${orden.tipo.toLowerCase()}` : "tu estudio"} a tu ficha, subilo desde acá (una foto clara o el PDF del centro radiológico):
+${url}
+
+El enlace vence en 14 días. ¡Gracias!
+${contexto.clinica || ""}`.trim();
+    const numero = numeroWhatsApp(contexto.telefono);
+    const destino = `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`;
+    if (ventana) ventana.location.href = destino;
+    else window.open(destino, "_blank", "noopener,noreferrer");
+    onToast(numero ? "Enlace listo: se abrió WhatsApp para mandárselo" : "Enlace listo: elegí el contacto en WhatsApp");
+  } catch (e) {
+    ventana?.close();
+    onToast(e instanceof Error && e.message ? e.message : "No se pudo crear el enlace. Probá de nuevo.");
+  }
+}
+
 function OrdenesEstudioCard({
   ordenes,
   contexto,
@@ -8287,6 +8332,14 @@ function OrdenesEstudioCard({
         </div>
         <button
           type="button"
+          onClick={() => void pedirEstudioAlPaciente(contexto, null, onToast)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/[0.06]"
+        >
+          <Upload className="size-3.5" />
+          Enlace para subir
+        </button>
+        <button
+          type="button"
           onClick={onPedir}
           className={BTN_PRIMARIO}
         >
@@ -8319,6 +8372,11 @@ function OrdenesEstudioCard({
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <BotonMini icon={Check} label="Llegó el estudio" onClick={() => onLlego(o)} />
+                  <BotonMini
+                    icon={Upload}
+                    label="Que lo suba el paciente"
+                    onClick={() => void pedirEstudioAlPaciente(contexto, o, onToast)}
+                  />
                   <BotonMini
                     icon={MessageCircle}
                     label="Enviar por WhatsApp"

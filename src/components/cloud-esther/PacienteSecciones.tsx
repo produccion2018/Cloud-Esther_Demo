@@ -72,6 +72,7 @@ import {
   UserRound,
   ShieldAlert,
   TriangleAlert,
+  RefreshCw,
   PencilLine,
   MessageCircle,
   Lock,
@@ -99,6 +100,13 @@ import {
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
+import {
+  actualizarEstadoVerificacion,
+  codigoLegible,
+  qrSvg,
+  registrarVerificacion,
+  urlVerificacion,
+} from "@/lib/cloud-esther/verificacion-receta";
 import {
   antecedentesRelevantes,
   avisosDiagnostico,
@@ -468,6 +476,8 @@ type RecetaPaciente = {
   /** Firma del profesional (imagen) y sello/matrícula (imagen), para la impresa y el email. */
   firmaUrl?: string;
   selloUrl?: string;
+  /** Código al azar del QR de verificación (se puede cambiar; el anterior deja de servir) */
+  verificacion?: string;
 };
 
 export type LineaPresupuesto = {
@@ -5385,6 +5395,22 @@ function RecetaDocumento({
           </div>
         </div>
       </div>
+      {r.verificacion && r.estado !== "Borrador" && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-neutral-200 p-2.5">
+          <span
+            className="shrink-0"
+            // QR generado por nosotros (SVG propio, sin datos del usuario sin escapar)
+            dangerouslySetInnerHTML={{ __html: qrSvg(urlVerificacion(r.verificacion), 72) }}
+          />
+          <div className="min-w-0 text-[11px] leading-snug text-neutral-600">
+            <p className="font-semibold text-neutral-800">Receta verificable</p>
+            <p>Escaneá el código para confirmar que es auténtica y si ya fue dispensada.</p>
+            <p className="mt-1 break-all font-mono text-[10px] tracking-wide text-neutral-500">
+              {codigoLegible(r.verificacion)}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5485,6 +5511,14 @@ function htmlReceta(r: RecetaPaciente, contexto?: ContextoPaciente, membrete = "
       <div class="firma-linea"><strong>${escapar(r.profesional || "Profesional")}</strong>${r.matricula ? `<br/>Mat. ${escapar(r.matricula)}` : ""}</div>
     </div>
   </div>
+  ${
+    r.verificacion && r.estado !== "Borrador"
+      ? `<div style="display:flex;align-items:center;gap:10px;margin-top:14px;border:1px solid #e5e5e5;border-radius:8px;padding:8px 10px;font-size:10.5px;color:#525252;line-height:1.35">
+    ${qrSvg(urlVerificacion(r.verificacion), 70)}
+    <div><strong style="color:#171717">Receta verificable</strong><br/>Escaneá el código para confirmar que es auténtica y si ya fue dispensada.<br/><span style="font-family:monospace;font-size:9.5px;letter-spacing:.04em">${escapar(codigoLegible(r.verificacion))}</span></div>
+  </div>`
+      : ""
+  }
 </body>
 </html>`;
 }
@@ -5650,14 +5684,44 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const recetaVista = datos.recetas.find((r) => r.id === verId) ?? null;
   const recetaEnvio = datos.recetas.find((r) => r.id === enviarId) ?? null;
 
+  const marca = useMarca();
+  const slug = useClinicaReal()?.slug ?? null;
+
   const cambiarEstado = (r: RecetaPaciente, estado: EstadoReceta) => {
     // TODO backend: PATCH /pacientes/:id/recetas/:recetaId { estado }
     cambiar("recetas", (prev) => prev.map((x) => (x.id === r.id ? { ...x, estado } : x)));
     onToast(`${r.numero}: ${estado.toLowerCase()}`);
+    // Lo que ve la farmacia al escanear el QR (dispensada / anulada)
+    if (r.verificacion) void actualizarEstadoVerificacion(slug, r, estado).catch(() => undefined);
   };
 
-  const marca = useMarca();
-  const slug = useClinicaReal()?.slug ?? null;
+  // QR de verificación: cada receta emitida recibe su código al azar (una sola vez por receta)
+  const pidiendoQr = useRef(new Set<number>());
+  const asignarQr = async (r: RecetaPaciente, renovar = false) => {
+    const codigo = await registrarVerificacion(slug, r, {
+      paciente: contexto?.paciente,
+      clinica: contexto?.clinica || clinicaRx?.nombre || marca.nombre,
+      renovar,
+    });
+    cambiar("recetas", (prev) => prev.map((x) => (x.id === r.id ? { ...x, verificacion: codigo } : x)));
+    return codigo;
+  };
+  useEffect(() => {
+    for (const r of datos.recetas) {
+      if (r.verificacion || r.estado === "Borrador" || pidiendoQr.current.has(r.id)) continue;
+      pidiendoQr.current.add(r.id);
+      void asignarQr(r).catch(() => pidiendoQr.current.delete(r.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datos.recetas, slug]);
+  const cambiarQr = async (r: RecetaPaciente) => {
+    try {
+      await asignarQr(r, true);
+      onToast(`${r.numero}: nuevo código QR. El anterior ya no sirve.`);
+    } catch {
+      onToast("No se pudo cambiar el código. Probá de nuevo.");
+    }
+  };
   const descargar = (r: RecetaPaciente) => {
     imprimirReceta(r, contexto, membreteHTML(marca, contexto?.clinica || "Clínica"));
     onToast(`${r.numero}: descargando la receta en PDF`);
@@ -5766,6 +5830,9 @@ function RecetasSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                     label="Emitir"
                     onClick={() => cambiarEstado(r, "Emitida")}
                   />
+                )}
+                {r.verificacion && (r.estado === "Emitida" || r.estado === "Dispensada") && (
+                  <BotonMini icon={RefreshCw} label="Cambiar QR" onClick={() => void cambiarQr(r)} />
                 )}
                 {r.estado === "Emitida" && (
                   <BotonMini

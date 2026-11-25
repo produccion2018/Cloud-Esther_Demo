@@ -80,6 +80,7 @@ import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as VerificarCodigoRouteImport } from './routes/verificar.$codigo'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
 import { Route as DemoEquipoProfesionalEspecialidadesRouteImport } from './routes/demo_.equipo-profesional_.especialidades'
@@ -440,6 +441,11 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerificarCodigoRoute = VerificarCodigoRouteImport.update({
+  id: '/verificar/$codigo',
+  path: '/verificar/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CSlugClaveRoute = CSlugClaveRouteImport.update({
   id: '/c/$slug_/clave',
   path: '/c/$slug/clave',
@@ -534,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
@@ -610,6 +617,7 @@ export interface FileRoutesByTo {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/c/$slug/clave': typeof CSlugClaveRoute
@@ -688,6 +696,7 @@ export interface FileRoutesById {
   '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/soporte': typeof DemoSoporteRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
+  '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/c/$slug_/clave': typeof CSlugClaveRoute
@@ -767,6 +776,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
     | '/c/$slug/clave'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/verificar/$codigo'
     | '/admin'
     | '/app'
     | '/c/$slug/clave'
@@ -920,6 +931,7 @@ export interface FileRouteTypes {
     | '/demo_/rrhh'
     | '/demo_/soporte'
     | '/demo_/tratamientos'
+    | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
     | '/c/$slug_/clave'
@@ -977,6 +989,7 @@ export interface RootRouteChildren {
   DemoRrhhRoute: typeof DemoRrhhRoute
   DemoSoporteRoute: typeof DemoSoporteRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
+  VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
   CSlugClaveRoute: typeof CSlugClaveRoute
   DemoEquipoProfesionalAgendasHorariosRoute: typeof DemoEquipoProfesionalAgendasHorariosRoute
@@ -1483,6 +1496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verificar/$codigo': {
+      id: '/verificar/$codigo'
+      path: '/verificar/$codigo'
+      fullPath: '/verificar/$codigo'
+      preLoaderRoute: typeof VerificarCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/c/$slug_/clave': {
       id: '/c/$slug_/clave'
       path: '/c/$slug/clave'
@@ -1615,6 +1635,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRrhhRoute: DemoRrhhRoute,
   DemoSoporteRoute: DemoSoporteRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
+  VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,
   CSlugClaveRoute: CSlugClaveRoute,
   DemoEquipoProfesionalAgendasHorariosRoute:

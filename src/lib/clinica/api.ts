@@ -7,7 +7,7 @@ import { SLUG_DEMO, pedidoDemo } from "@/lib/clinica/demo-admin";
    pestaña: al cerrarla, hay que volver a ingresar. Quien decide todo es el servidor:
    una sesión de una clínica no sirve en la dirección de otra. */
 
-const API_URL = (import.meta.env["VITE_ADMIN_API_URL"] as string | undefined)?.replace(/\/$/, "");
+export const API_URL = (import.meta.env["VITE_ADMIN_API_URL"] as string | undefined)?.replace(/\/$/, "");
 export const CLINICA_CON_SERVIDOR = Boolean(API_URL);
 
 export type RolClinica = "admin" | "odontologo" | "secretaria" | "asistente";

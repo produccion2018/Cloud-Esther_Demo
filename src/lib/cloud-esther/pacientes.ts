@@ -37,7 +37,19 @@ export type Paciente = {
   tutorTelefono?: string;
   /** Etiquetas propias de la clínica (VIP, Debe dinero, Miedo al dentista…). */
   etiquetas?: string[];
+  /** Por dónde prefiere que le escriban. */
+  canalPreferido?: "WhatsApp" | "SMS" | "Correo";
+  /** Recordatorios de turnos, estudios, encuestas… (sin dato = sí). */
+  aceptaRecordatorios?: boolean;
+  /** Promociones, campañas y novedades (sin dato = sí). Lo puede cambiar con su enlace de baja. */
+  aceptaPromociones?: boolean;
+  /** Última vez que el paciente cambió sus preferencias con su enlace (ISO). */
+  preferenciasEl?: string;
 };
+
+/** ¿Se le pueden mandar recordatorios / promociones? (sin dato = sí) */
+export const quiereRecordatorios = (p: Pick<Paciente, "aceptaRecordatorios"> | undefined | null) => p?.aceptaRecordatorios !== false;
+export const quierePromociones = (p: Pick<Paciente, "aceptaPromociones"> | undefined | null) => p?.aceptaPromociones !== false;
 
 /* Catálogo de etiquetas de cada clínica (nombre y color). Lo arma la clínica a su criterio. */
 export type Etiqueta = { nombre: string; color: string };

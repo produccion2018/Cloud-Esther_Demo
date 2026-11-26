@@ -50,6 +50,7 @@ import { Route as AdminRestablecerRouteImport } from './routes/admin.restablecer
 import { Route as AdminSoporteRouteImport } from './routes/admin.soporte'
 import { Route as ApiIaRouteImport } from './routes/api.ia'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as BajaTokenRouteImport } from './routes/baja.$token'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
@@ -296,6 +297,11 @@ const ApiIaRoute = ApiIaRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BajaTokenRoute = BajaTokenRouteImport.update({
+  id: '/baja/$token',
+  path: '/baja/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -552,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/baja/$token': typeof BajaTokenRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
@@ -636,6 +643,7 @@ export interface FileRoutesByTo {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/baja/$token': typeof BajaTokenRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo/accesos': typeof DemoAccesosRoute
@@ -722,6 +730,7 @@ export interface FileRoutesById {
   '/admin/restablecer': typeof AdminRestablecerRoute
   '/admin/soporte': typeof AdminSoporteRoute
   '/api/ia': typeof ApiIaRoute
+  '/baja/$token': typeof BajaTokenRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/c/$slug': typeof CSlugRoute
   '/demo_/accesos': typeof DemoAccesosRoute
@@ -809,6 +818,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/baja/$token'
     | '/blog/$slug'
     | '/c/$slug'
     | '/demo/accesos'
@@ -893,6 +903,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/baja/$token'
     | '/blog/$slug'
     | '/c/$slug'
     | '/demo/accesos'
@@ -978,6 +989,7 @@ export interface FileRouteTypes {
     | '/admin/restablecer'
     | '/admin/soporte'
     | '/api/ia'
+    | '/baja/$token'
     | '/blog/$slug'
     | '/c/$slug'
     | '/demo_/accesos'
@@ -1042,6 +1054,7 @@ export interface RootRouteChildren {
   PreguntasFrecuentesRoute: typeof PreguntasFrecuentesRoute
   RegistroRoute: typeof RegistroRoute
   ApiIaRoute: typeof ApiIaRoute
+  BajaTokenRoute: typeof BajaTokenRoute
   BlogSlugRoute: typeof BlogSlugRoute
   CSlugRoute: typeof CSlugRoute
   DemoAccesosRoute: typeof DemoAccesosRoute
@@ -1374,6 +1387,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/baja/$token': {
+      id: '/baja/$token'
+      path: '/baja/$token'
+      fullPath: '/baja/$token'
+      preLoaderRoute: typeof BajaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -1745,6 +1765,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreguntasFrecuentesRoute: PreguntasFrecuentesRoute,
   RegistroRoute: RegistroRoute,
   ApiIaRoute: ApiIaRoute,
+  BajaTokenRoute: BajaTokenRoute,
   BlogSlugRoute: BlogSlugRoute,
   CSlugRoute: CSlugRoute,
   DemoAccesosRoute: DemoAccesosRoute,

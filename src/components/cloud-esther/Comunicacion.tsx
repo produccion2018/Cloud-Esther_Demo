@@ -44,7 +44,7 @@ import { AppShell } from "@/components/cloud-esther/AppShell";
 import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import { CloudEstherProvider, PLANS, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
-import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { quierePromociones, quiereRecordatorios, usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
 import { useNivel, type NivelModulo } from "@/lib/cloud-esther/niveles";
@@ -1787,6 +1787,7 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
   const real = !!clinicaR;
   const waBusiness = !!useEstadoAutomatizaciones()?.whatsapp.conectado;
   const { turnos } = storeAgenda.usar();
+  const { pacientes } = usePacientes();
   const { recordatorios, config, plantillas } = storeComunicacion.usar();
   const [dias, setDias] = useState<"1" | "3" | "7">("7");
   const hoy = hoyISO();
@@ -1818,6 +1819,11 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
     }));
 
   const enviar = (t: Turno, silencioso = false) => {
+    const pac = pacientes.find((p) => `${p.nombre} ${p.apellido}`.trim().toLowerCase() === t.paciente.trim().toLowerCase());
+    if (!quiereRecordatorios(pac)) {
+      if (!silencioso) ctx.onToast(`${t.paciente} pidió no recibir recordatorios (lo podés cambiar en su ficha).`);
+      return false;
+    }
     if (real && waBusiness && clinicaR) {
       const tel = telefonoDePaciente(t.paciente);
       if (!tel) {
@@ -2668,12 +2674,14 @@ function CampanasBloqueadas() {
 function useAudiencia() {
   const { pacientes } = usePacientes();
   const { turnos } = storeAgenda.usar();
-  return (audiencia: Audiencia, filtro: string) => {
+  return (audiencia: Audiencia, filtro: string, conBajas = false) => {
     const hoy = hoyISO();
     const hace6m = sumarDias(hoy, -180);
     const mes = hoy.slice(5, 7);
     return pacientes.filter((p) => {
       if (p.estado !== "Activo") return false;
+      // Quien pidió no recibir promociones queda afuera de las campañas
+      if (!conBajas && !quierePromociones(p)) return false;
       const nombre = `${p.nombre} ${p.apellido}`;
       if (audiencia === "obra-social") return p.obraSocial === filtro;
       if (audiencia === "sucursal") return p.sucursal === filtro;
@@ -3018,6 +3026,7 @@ function CampanaForm({
       : (opcionesFiltro[0] ?? "")
     : "";
   const alcance = audienciaDe(audiencia, filtroEfectivo);
+  const bajas = audienciaDe(audiencia, filtroEfectivo, true).length - alcance.length;
 
   return (
     <form
@@ -3095,6 +3104,10 @@ function CampanaForm({
             .slice(0, 3)
             .map((p) => `${p.nombre} ${p.apellido}`)
             .join(", ")}${alcance.length > 3 ? "…" : ""}`}
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        {bajas > 0 ? `${bajas} ${bajas === 1 ? "paciente queda afuera porque pidió" : "pacientes quedan afuera porque pidieron"} no recibir promociones. ` : ""}
+        Cada mensaje sale con un enlace para que el paciente pueda darse de baja.
       </p>
       <Field label="Mensaje *">
         <div className="mb-1.5 flex flex-wrap gap-1">

@@ -39,7 +39,7 @@ import {
   Search,
 } from "lucide-react";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
-import { abrirEncuestaWhatsApp, abrirRecordatorioWhatsApp } from "@/lib/clinica/whatsapp";
+import { abrirEncuestaWhatsApp, abrirRecordatorioWhatsApp, noQuiereRecordatorios } from "@/lib/clinica/whatsapp";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { toast as avisoWhatsApp } from "sonner";
@@ -1333,11 +1333,19 @@ function TurnoCard({
   const { clinica } = useSesion();
   // Recordatorio por WhatsApp con un toque (todos los planes): se abre el WhatsApp de la clínica
   const recordarPorWhatsApp = () => {
+    if (noQuiereRecordatorios(turno.paciente)) {
+      avisoWhatsApp.warning(`${turno.paciente} pidió no recibir recordatorios (se cambia en su ficha).`);
+      return;
+    }
     if (!abrirRecordatorioWhatsApp(turno, clinica?.nombre ?? "la clínica"))
       avisoWhatsApp.warning(`${turno.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
   };
   // Encuesta después del turno (todos los planes): WhatsApp con el enlace para puntuar del 1 al 5
   const pedirOpinion = () => {
+    if (noQuiereRecordatorios(turno.paciente)) {
+      avisoWhatsApp.warning(`${turno.paciente} pidió no recibir mensajes de la clínica (se cambia en su ficha).`);
+      return;
+    }
     if (!abrirEncuestaWhatsApp(turno, clinica?.nombre ?? "la clínica")) {
       avisoWhatsApp.warning(`${turno.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
       return;

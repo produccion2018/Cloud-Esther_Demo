@@ -204,6 +204,15 @@ export async function crearEnlaceTurnoDemo(datos: { clave: string; turnoId: numb
   return (await r.json()) as { token: string };
 }
 
+/** Enlace para que el paciente elija qué mensajes recibe (o se dé de baja) en el demo. */
+export async function crearEnlaceBajaDemo(datos: { clave: string; pacienteId: number }): Promise<{ token: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/pacientes/enlace-baja", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string };
+}
+
 /** Firma para subir un archivo del demo directo a Cloudinary (carpeta del demo). */
 export async function pedirFirmaDemo<T>(): Promise<T> {
   const token = leerGuardado()?.token;

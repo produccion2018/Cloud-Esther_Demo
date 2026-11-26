@@ -1,4 +1,5 @@
-import { CODIGO_PAIS } from "@/lib/clinica/whatsapp";
+import { CODIGO_PAIS, numeroWhatsApp } from "@/lib/clinica/whatsapp";
+import { crearEnlaceBaja } from "@/lib/clinica/enlace-estudio";
 import { formatoDocumento, normalizarDocumento, reglaDocumento, useTerminologia, validarDocumento } from "@/lib/cloud-esther/terminologia";
 import { usePaisClinica, usePaisConfirmado } from "@/lib/cloud-esther/coberturas";
 import { claveTenant } from "@/lib/cloud-esther/tenant-store";
@@ -494,6 +495,9 @@ function PacienteForm({
 
   const [tutorTelefono, setTutorTelefono] =
     useState(inicial?.tutorTelefono ?? "");
+  const [canalPreferido, setCanalPreferido] = useState<Paciente["canalPreferido"]>(inicial?.canalPreferido);
+  const [aceptaRecordatorios, setAceptaRecordatorios] = useState(inicial?.aceptaRecordatorios !== false);
+  const [aceptaPromociones, setAceptaPromociones] = useState(inicial?.aceptaPromociones !== false);
 
   // Edad calculada de la fecha de nacimiento: si es menor de 18, mostramos el responsable/tutor.
   const edadAnios = (() => {
@@ -625,6 +629,9 @@ function PacienteForm({
       nota: nota.trim(),
       estado,
       foto,
+      ...(canalPreferido ? { canalPreferido } : {}),
+      aceptaRecordatorios,
+      aceptaPromociones,
     });
   };
 
@@ -893,6 +900,59 @@ function PacienteForm({
             placeholder="Av. Corrientes 1234, Buenos Aires"
           />
         </Field>
+
+        <div className="rounded-2xl border border-primary/10 bg-primary/[0.03] p-3">
+          <p className="text-[12.5px] font-semibold text-foreground/80">Mensajes que acepta recibir</p>
+          <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Canal preferido">
+            {(["WhatsApp", "SMS", "Correo"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={canalPreferido === c}
+                onClick={() => setCanalPreferido(canalPreferido === c ? undefined : c)}
+                className={`min-h-9 rounded-full px-3.5 text-xs font-semibold transition ${canalPreferido === c ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground ring-1 ring-primary/10"}`}
+              >
+                Prefiere {c}
+              </button>
+            ))}
+          </div>
+          <label className="mt-2.5 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={aceptaRecordatorios} onChange={(e) => setAceptaRecordatorios(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />
+            Recordatorios de turnos, estudios y encuestas
+          </label>
+          <label className="mt-1.5 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={aceptaPromociones} onChange={(e) => setAceptaPromociones(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />
+            Promociones, campañas y novedades
+          </label>
+          {inicial && (
+            <button
+              type="button"
+              onClick={() => {
+                const numero = numeroWhatsApp(inicial.telefono);
+                const ventana = window.open("", "_blank");
+                void crearEnlaceBaja(inicial.id).then((enlace) => {
+                  const texto = enlace
+                    ? `Hola ${inicial.nombre} 👋 Desde este enlace podés elegir qué mensajes querés recibir de nosotros (recordatorios y promociones):\n${enlace}`
+                    : `Hola ${inicial.nombre} 👋 Contanos si querés seguir recibiendo nuestros recordatorios y promociones.`;
+                  const url = `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`;
+                  if (ventana && !ventana.closed) {
+                    ventana.opener = null;
+                    ventana.location.href = url;
+                  } else window.open(url, "_blank", "noopener,noreferrer");
+                });
+              }}
+              className="mt-2 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              Mandarle el enlace para que elija él
+            </button>
+          )}
+          {inicial?.preferenciasEl && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              El paciente las eligió con su enlace el {inicial.preferenciasEl.slice(0, 10).split("-").reverse().join("/")}.
+            </p>
+          )}
+        </div>
 
         <Field label="Nota de interés">
           <textarea

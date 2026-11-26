@@ -1,7 +1,7 @@
 import { pedirAClinica } from "./api";
 import { SLUG_DEMO } from "./demo-admin";
 import { clinicaReal } from "./modo-clinica";
-import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, crearEnlaceBajaDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/enlace-estudio.ts
@@ -56,6 +56,23 @@ export async function crearEnlaceTurno(turnoId: number, pagina: "turno" | "encue
       token = (await crearEnlaceTurnoDemo({ turnoId, clave: claveDemoServidor("agenda", tenantActual()) })).token;
     } else return null;
     return `${window.location.origin}/${pagina}/${token}`;
+  } catch {
+    return null;
+  }
+}
+
+/* Enlace para que el PACIENTE elija qué mensajes recibe (recordatorios / promociones) o se dé de
+   baja. Va en las promociones y se puede mandar desde su ficha. */
+export async function crearEnlaceBaja(pacienteId: number): Promise<string | null> {
+  const slug = clinicaReal()?.slug;
+  try {
+    let token: string;
+    if (slug && slug !== SLUG_DEMO) {
+      token = (await pedirAClinica<{ token: string }>(slug, "POST", "/pacientes/enlace-baja", { pacienteId })).token;
+    } else if (demoConDatosEnServidor()) {
+      token = (await crearEnlaceBajaDemo({ pacienteId, clave: claveDemoServidor("pacientes", tenantActual()) })).token;
+    } else return null;
+    return `${window.location.origin}/baja/${token}`;
   } catch {
     return null;
   }

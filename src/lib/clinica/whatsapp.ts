@@ -26,6 +26,14 @@ export function telefonoDePaciente(nombreCompleto: string): string | null {
   return p?.telefono?.trim() || null;
 }
 
+/** ¿El paciente pidió no recibir recordatorios? (se marca en su ficha o con su enlace) */
+export function noQuiereRecordatorios(nombreCompleto: string): boolean {
+  const p = leerPacientes().find(
+    (x) => `${x.nombre} ${x.apellido}`.trim().toLowerCase() === nombreCompleto.trim().toLowerCase(),
+  );
+  return p?.aceptaRecordatorios === false;
+}
+
 /* PAÍS DE LA CLÍNICA para los teléfonos: los pacientes se cargan como se usa en cada país
    ("011 15 4444-5555", "099 123 456"…) y WhatsApp necesita el código de país. Lo fija el
    AppShell con el país de la clínica (multiempresa y multipaís). */

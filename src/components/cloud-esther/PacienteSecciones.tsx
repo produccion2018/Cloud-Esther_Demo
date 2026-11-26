@@ -80,6 +80,8 @@ import {
   MessageCircle,
   Lock,
   Ban,
+  RotateCcw,
+  ClipboardCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { audioATexto } from "@/lib/cloud-esther/esther-llm";
@@ -594,7 +596,46 @@ export type TrabajoLaboratorio = {
   avisadoPaciente?: string;
   /** Último día en que se le reclamó al laboratorio por el atraso. */
   reclamadoEl?: string;
+  /** Pruebas en boca intermedias (metal, bizcocho, enfilado…). */
+  pruebas?: PruebaLaboratorio[];
+  /** Veces que el trabajo volvió al laboratorio para rehacerlo o corregirlo. */
+  repeticiones?: RepeticionLaboratorio[];
 };
+
+export type PruebaLaboratorio = {
+  id: number;
+  etapa: string;
+  fecha: string;
+  resultado: "Aprobada" | "Ajustar";
+  nota: string;
+};
+export type RepeticionLaboratorio = {
+  id: number;
+  fecha: string;
+  motivo: string;
+  detalle: string;
+  /** Va por garantía del laboratorio (sin costo para la clínica). */
+  garantia: boolean;
+  costoExtra: number;
+  nuevaEntrega: string;
+};
+export const ETAPAS_PRUEBA_LAB = [
+  "Prueba de metal / estructura",
+  "Prueba de bizcocho",
+  "Prueba de rodetes",
+  "Prueba de dientes (enfilado)",
+  "Prueba de cera",
+  "Terminado",
+];
+export const MOTIVOS_REPETICION_LAB = [
+  "Color",
+  "Adaptación / ajuste",
+  "Oclusión",
+  "Fractura",
+  "Forma o estética",
+  "Impresión o medidas",
+  "Otro",
+];
 
 /** El trabajo ya volvió del laboratorio (listo o entregado en la clínica). */
 export const laboratorioLlego = (t: TrabajoLaboratorio) => t.estado === "Listo para retirar" || t.estado === "Entregado";
@@ -10315,6 +10356,244 @@ function LaboratorioForm({
   );
 }
 
+/** Fecha ISO dentro de n días (para proponer la nueva entrega). */
+function enDiasISO(n: number) {
+  const d = new Date(`${hoyISO()}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* Prueba en boca: si hay que ajustar, el trabajo vuelve al laboratorio con nueva entrega. */
+function PruebaLaboratorioForm({
+  trabajo,
+  onSubmit,
+  onCancel,
+}: {
+  trabajo: TrabajoLaboratorio;
+  onSubmit: (p: Omit<PruebaLaboratorio, "id">, nuevaEntrega: string) => void;
+  onCancel: () => void;
+}) {
+  const hechas = new Set((trabajo.pruebas ?? []).filter((p) => p.resultado === "Aprobada").map((p) => p.etapa));
+  const [etapa, setEtapa] = useState(ETAPAS_PRUEBA_LAB.find((e) => !hechas.has(e)) ?? ETAPAS_PRUEBA_LAB[0]!);
+  const [resultado, setResultado] = useState<PruebaLaboratorio["resultado"]>("Aprobada");
+  const [nota, setNota] = useState("");
+  const [nuevaEntrega, setNuevaEntrega] = useState(enDiasISO(7));
+  const [error, setError] = useState("");
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (resultado === "Ajustar" && !nota.trim()) {
+      setError("Contale al laboratorio qué hay que ajustar.");
+      return;
+    }
+    if (resultado === "Ajustar" && (!nuevaEntrega || nuevaEntrega < hoyISO())) {
+      setError("Indicá la nueva entrega (desde hoy en adelante).");
+      return;
+    }
+    onSubmit({ etapa, fecha: hoyISO(), resultado, nota: nota.trim() }, resultado === "Ajustar" ? nuevaEntrega : "");
+  };
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <p className="text-xs text-muted-foreground">
+        {trabajo.tipo}
+        {trabajo.pieza ? ` · pieza ${trabajo.pieza}` : ""}
+        {trabajo.proveedor ? ` · ${trabajo.proveedor}` : ""}
+      </p>
+      <Field label="Etapa">
+        <SelectField value={etapa} onChange={setEtapa} options={ETAPAS_PRUEBA_LAB} />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            ["Aprobada", "Salió bien"],
+            ["Ajustar", "Hay que ajustar"],
+          ] as const
+        ).map(([v, l]) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={resultado === v}
+            onClick={() => {
+              setResultado(v);
+              setError("");
+            }}
+            className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition ${
+              resultado === v
+                ? v === "Aprobada"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-amber-300 bg-amber-50 text-amber-700"
+                : "border-primary/15 bg-card text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      <Field label={resultado === "Ajustar" ? "Qué hay que ajustar *" : "Notas"}>
+        <textarea
+          rows={2}
+          value={nota}
+          onChange={(e) => {
+            setNota(e.target.value);
+            setError("");
+          }}
+          className={TEXTAREA}
+          placeholder={resultado === "Ajustar" ? "Ej: abrir contacto distal, bajar oclusión, aclarar el color…" : "Opcional"}
+        />
+      </Field>
+      {resultado === "Ajustar" && (
+        <Field label="Nueva entrega estimada *">
+          <input type="date" value={nuevaEntrega} min={hoyISO()} onChange={(e) => setNuevaEntrega(e.target.value)} className={INPUT} />
+        </Field>
+      )}
+      {resultado === "Ajustar" && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          El trabajo vuelve al laboratorio y queda «Enviado» de nuevo.
+        </p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Acciones etiqueta={resultado === "Ajustar" ? "Volver a enviar" : "Guardar prueba"} onCancel={onCancel} />
+    </form>
+  );
+}
+
+/* Repetición: el trabajo vuelve al laboratorio por un problema (garantía o con costo). */
+function RepeticionLaboratorioForm({
+  trabajo,
+  onSubmit,
+  onCancel,
+}: {
+  trabajo: TrabajoLaboratorio;
+  onSubmit: (r: Omit<RepeticionLaboratorio, "id">) => void;
+  onCancel: () => void;
+}) {
+  const [motivo, setMotivo] = useState(MOTIVOS_REPETICION_LAB[0]!);
+  const [detalle, setDetalle] = useState("");
+  const [garantia, setGarantia] = useState(true);
+  const [costoExtra, setCostoExtra] = useState("");
+  const [nuevaEntrega, setNuevaEntrega] = useState(enDiasISO(7));
+  const [error, setError] = useState("");
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    if (motivo === "Otro" && !detalle.trim()) {
+      setError("Escribí el motivo.");
+      return;
+    }
+    if (!nuevaEntrega || nuevaEntrega < hoyISO()) {
+      setError("Indicá la nueva entrega (desde hoy en adelante).");
+      return;
+    }
+    onSubmit({
+      fecha: hoyISO(),
+      motivo,
+      detalle: detalle.trim(),
+      garantia,
+      costoExtra: garantia ? 0 : Number(costoExtra) || 0,
+      nuevaEntrega,
+    });
+  };
+  return (
+    <form onSubmit={enviar} className="space-y-2.5">
+      <p className="text-xs text-muted-foreground">
+        {trabajo.tipo}
+        {trabajo.pieza ? ` · pieza ${trabajo.pieza}` : ""}
+        {trabajo.proveedor ? ` · ${trabajo.proveedor}` : ""}
+        {(trabajo.repeticiones?.length ?? 0) > 0 ? ` · ya volvió ${trabajo.repeticiones!.length} ${trabajo.repeticiones!.length === 1 ? "vez" : "veces"}` : ""}
+      </p>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+        <Field label="Motivo">
+          <SelectField value={motivo} onChange={(v) => { setMotivo(v); setError(""); }} options={MOTIVOS_REPETICION_LAB} />
+        </Field>
+        <Field label="Nueva entrega estimada *">
+          <input type="date" value={nuevaEntrega} min={hoyISO()} onChange={(e) => setNuevaEntrega(e.target.value)} className={INPUT} />
+        </Field>
+      </div>
+      <Field label={motivo === "Otro" ? "Detalle *" : "Detalle para el laboratorio"}>
+        <textarea
+          rows={2}
+          value={detalle}
+          onChange={(e) => {
+            setDetalle(e.target.value);
+            setError("");
+          }}
+          className={TEXTAREA}
+          placeholder="Ej: no asienta en mesial, el color quedó más oscuro que el 21…"
+        />
+      </Field>
+      <label className="flex items-center gap-2 rounded-xl border border-primary/10 bg-primary/[0.03] px-3 py-2.5 text-sm font-medium">
+        <input type="checkbox" checked={garantia} onChange={(e) => setGarantia(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />
+        Va por garantía (sin costo)
+      </label>
+      {!garantia && (
+        <Field label="Costo extra del laboratorio (ARS)">
+          <input type="number" min={0} value={costoExtra} onChange={(e) => setCostoExtra(e.target.value)} className={INPUT} placeholder="0" />
+        </Field>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Acciones etiqueta="Volver a enviar" onCancel={onCancel} />
+    </form>
+  );
+}
+
+/** El trabajo vuelve al laboratorio: queda «Enviado» de nuevo (con nueva entrega si se indicó). */
+function volverAlLaboratorio(t: TrabajoLaboratorio, nuevaEntrega: string, extra: Partial<TrabajoLaboratorio>): TrabajoLaboratorio {
+  const { avisadoPaciente: _a, reclamadoEl: _r, ...resto } = t;
+  return {
+    ...resto,
+    ...extra,
+    estado: "Enviado",
+    fechaEntregaEstimada: nuevaEntrega || "",
+    historial: [
+      ...(t.historial ?? []).filter((h) => h.estado !== "Enviado" && h.estado !== "En proceso" && h.estado !== "Listo para retirar" && h.estado !== "Entregado"),
+      { estado: "Enviado", fecha: hoyISO() },
+    ],
+  };
+}
+
+/* Pruebas y repeticiones del trabajo, en una línea compacta. */
+function SeguimientoPruebas({ t }: { t: TrabajoLaboratorio }) {
+  const pruebas = t.pruebas ?? [];
+  const reps = t.repeticiones ?? [];
+  if (!pruebas.length && !reps.length) return null;
+  return (
+    <div className="mt-2.5 space-y-1.5">
+      {pruebas.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-muted-foreground">Pruebas:</span>
+          {pruebas.map((p) => (
+            <span
+              key={p.id}
+              title={p.nota || undefined}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                p.resultado === "Aprobada" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {p.resultado === "Aprobada" ? <Check className="size-3" /> : <RotateCcw className="size-3" />}
+              {p.etapa} {formatearFecha(p.fecha).slice(0, 5)}
+            </span>
+          ))}
+        </div>
+      )}
+      {reps.map((r, i) => (
+        <p key={r.id} className="rounded-lg bg-rose-50/70 px-2.5 py-1.5 text-[11.5px] text-rose-800">
+          <span className="font-semibold">
+            Repetición {reps.length > 1 ? `${i + 1} ` : ""}· {r.motivo}
+          </span>
+          {r.detalle ? ` — ${r.detalle}` : ""}
+          <span className="text-rose-700/80">
+            {" "}
+            · {formatearFecha(r.fecha).slice(0, 5)} · {r.garantia ? "garantía" : r.costoExtra ? `costo extra ${formatearMonto(r.costoExtra)}` : "con costo"}
+          </span>
+        </p>
+      ))}
+      {pruebas.some((p) => p.resultado === "Ajustar" && p.nota) && (
+        <p className="text-[11px] text-muted-foreground">
+          Último ajuste pedido: {[...pruebas].reverse().find((p) => p.resultado === "Ajustar")?.nota}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Días entre hoy y la entrega estimada (negativo = demorado). */
 function diasParaEntrega(t: TrabajoLaboratorio) {
   if (!t.fechaEntregaEstimada) return null;
@@ -10397,7 +10676,13 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
   <h1>Orden de trabajo de laboratorio</h1><p class="meta">Emitida el ${escapar(formatearFecha(hoyISO()))}</p>
   <table>${fila("Paciente", paciente)}${fila("Trabajo", t.tipo)}${fila("Pieza / zona", t.pieza)}${fila("Material", t.material)}${fila("Color (VITA)", t.color ?? "")}
   ${fila("Laboratorio", t.proveedor)}${fila("Profesional", t.profesional ?? "")}${fila("Fecha de envío", formatearFecha(t.fechaEnvio))}
-  ${fila("Entrega estimada", t.fechaEntregaEstimada ? formatearFecha(t.fechaEntregaEstimada) : "")}${fila("Especificaciones", t.notas)}</table>
+  ${fila("Entrega estimada", t.fechaEntregaEstimada ? formatearFecha(t.fechaEntregaEstimada) : "")}${fila("Especificaciones", t.notas)}${(() => {
+    const r = t.repeticiones?.at(-1);
+    const a = [...(t.pruebas ?? [])].reverse().find((p) => p.resultado === "Ajustar");
+    const ultR = r ? `${r.motivo}${r.detalle ? `: ${r.detalle}` : ""} (${r.garantia ? "garantía" : "con costo"}, ${formatearFecha(r.fecha)})` : "";
+    const ultA = a ? `${a.etapa}: ${a.nota} (${formatearFecha(a.fecha)})` : "";
+    return (r && (!a || r.fecha >= a.fecha) ? fila("Repetición", ultR) : "") + (a && (!r || a.fecha > r.fecha) ? fila("Ajuste pedido", ultA) : "");
+  })()}</table>
   <p class="firma">Firma y sello del profesional</p><script>window.onload=()=>{window.print()}</script></body></html>`;
   const w = documentoPDF(`orden-de-laboratorio-${paciente}`);
   w.document.write(html);
@@ -10411,6 +10696,8 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const conSeguimiento = useNivel("laboratorio").desde("avanzado");
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
+  const [probar, setProbar] = useState<TrabajoLaboratorio | null>(null);
+  const [repetir, setRepetir] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
   const todos = [...datos.laboratorio].sort((a, b) =>
     `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`),
@@ -10603,6 +10890,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 </div>
 
                 {conSeguimiento && <PasosLaboratorio trabajo={t} />}
+                {conSeguimiento && <SeguimientoPruebas t={t} />}
 
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -10638,6 +10926,12 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                   {aviso?.tono === "rojo" && (
                     <BotonMini icon={MessageCircle} label="Reclamar al laboratorio" onClick={() => reclamar(t)} />
                   )}
+                  {conSeguimiento && laboratorioLlego(t) && (
+                    <BotonMini icon={ClipboardCheck} label="Registrar prueba" onClick={() => setProbar(t)} />
+                  )}
+                  {conSeguimiento && laboratorioLlego(t) && (
+                    <BotonMini icon={RotateCcw} label="Volvió al laboratorio" onClick={() => setRepetir(t)} />
+                  )}
                   {conSeguimiento && (
                     <BotonMini
                       icon={Printer}
@@ -10662,6 +10956,54 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             );
           })}
         </ul>
+      )}
+
+      {probar && (
+        <Modal title="Registrar prueba en boca" onClose={() => setProbar(null)}>
+          <PruebaLaboratorioForm
+            trabajo={probar}
+            onCancel={() => setProbar(null)}
+            onSubmit={(prueba, nuevaEntrega) => {
+              const nueva = { ...prueba, id: Date.now() };
+              cambiar("laboratorio", (prev) =>
+                prev.map((x) => {
+                  if (x.id !== probar.id) return x;
+                  const conPrueba = { ...x, pruebas: [...(x.pruebas ?? []), nueva] };
+                  return prueba.resultado === "Ajustar" ? volverAlLaboratorio(conPrueba, nuevaEntrega, {}) : conPrueba;
+                }),
+              );
+              onToast(
+                prueba.resultado === "Ajustar"
+                  ? `${probar.tipo}: vuelve al laboratorio para ajustar`
+                  : `${prueba.etapa}: prueba registrada`,
+              );
+              setProbar(null);
+            }}
+          />
+        </Modal>
+      )}
+
+      {repetir && (
+        <Modal title="Volvió al laboratorio" onClose={() => setRepetir(null)}>
+          <RepeticionLaboratorioForm
+            trabajo={repetir}
+            onCancel={() => setRepetir(null)}
+            onSubmit={(r) => {
+              cambiar("laboratorio", (prev) =>
+                prev.map((x) =>
+                  x.id === repetir.id
+                    ? volverAlLaboratorio(x, r.nuevaEntrega, {
+                        repeticiones: [...(x.repeticiones ?? []), { ...r, id: Date.now() }],
+                        costo: (x.costo || 0) + r.costoExtra,
+                      })
+                    : x,
+                ),
+              );
+              onToast(`${repetir.tipo}: vuelve al laboratorio (${r.garantia ? "garantía" : "con costo"})`);
+              setRepetir(null);
+            }}
+          />
+        </Modal>
       )}
 
       {(abierto || editar) && (

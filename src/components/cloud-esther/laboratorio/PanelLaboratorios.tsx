@@ -330,6 +330,14 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
                     {f.t.reclamadoEl ? `Reclamado ${fechaCorta(f.t.reclamadoEl).slice(0, 5)}` : "Reclamo automático"}
                   </span>
                 )}
+                {(f.t.repeticiones?.length ?? 0) > 0 && (
+                  <span
+                    title={f.t.repeticiones!.map((r) => `${r.motivo}${r.detalle ? `: ${r.detalle}` : ""}`).join(" · ")}
+                    className="rounded-full bg-rose-50 px-2.5 py-1 text-[10.5px] font-bold text-rose-700"
+                  >
+                    Repetido {f.t.repeticiones!.length === 1 ? "1 vez" : `${f.t.repeticiones!.length} veces`}
+                  </span>
+                )}
                 <div className="flex w-full flex-wrap gap-1.5 sm:w-auto">
                   {f.t.estado !== "Entregado" && (
                     <button type="button" onClick={() => avanzar(f)} className="btn-ce !min-h-9">
@@ -554,6 +562,30 @@ function Reportes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorio
     { id: "atrasos", titulo: "Atrasos por laboratorio", filas: nombres.map((n) => { const x = de(n).filter((f) => atrasado(f.t)).length; return { k: n, v: x, txt: String(x) }; }) },
     { id: "costos", titulo: "Costo de laboratorio por mes", filas: meses.map((m) => { const x = filas.filter((f) => f.t.fechaEnvio.startsWith(m)).reduce((a, f) => a + (f.t.costo || 0), 0); return { k: new Date(`${m}-15T12:00:00`).toLocaleDateString("es-AR", { month: "short", year: "2-digit" }), v: x, txt: pesos(x) }; }) },
     { id: "tiempos", titulo: "Días promedio de entrega", filas: nombres.map((n) => { const x = promedio(n); return { k: n, v: x, txt: x ? `${x} días` : "—" }; }) },
+    {
+      id: "repeticiones",
+      titulo: "Repeticiones por laboratorio",
+      filas: nombres.map((n) => {
+        const total = de(n).length;
+        const x = de(n).reduce((a, f) => a + (f.t.repeticiones?.length ?? 0), 0);
+        return { k: n, v: x, txt: x ? `${x} (${Math.round((de(n).filter((f) => f.t.repeticiones?.length).length / Math.max(1, total)) * 100)}%)` : "0" };
+      }),
+    },
+    {
+      id: "motivos",
+      titulo: "Motivos de repetición",
+      filas: (() => {
+        const reps = filas.flatMap((f) => f.t.repeticiones ?? []);
+        const motivos = [...new Set(reps.map((r) => r.motivo))];
+        return motivos
+          .map((m) => {
+            const de_m = reps.filter((r) => r.motivo === m);
+            const g = de_m.filter((r) => r.garantia).length;
+            return { k: m, v: de_m.length, txt: `${de_m.length}${g ? ` · ${g} garantía` : ""}` };
+          })
+          .sort((a, b) => b.v - a.v);
+      })(),
+    },
     { id: "profesional", titulo: "Trabajos por profesional", filas: profesionales.map((p) => { const x = filas.filter((f) => (f.t.profesional || "Sin asignar") === p).length; return { k: p, v: x, txt: String(x) }; }) },
   ];
 
@@ -579,8 +611,21 @@ function Reportes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorio
           { titulo: "Entrega", clave: "en", ancho: 12 },
           { titulo: "Estado", clave: "s", ancho: 18 },
           { titulo: "Costo", clave: "c", ancho: 14, moneda: true },
+          { titulo: "Pruebas", clave: "pr", ancho: 30 },
+          { titulo: "Repeticiones", clave: "rp", ancho: 36 },
         ],
-        filas: filas.map((f) => ({ p: f.paciente, t: f.t.tipo, pz: f.t.pieza, l: f.t.proveedor, e: fechaCorta(f.t.fechaEnvio), en: fechaCorta(f.t.fechaEntregaEstimada), s: f.t.estado, c: f.t.costo || 0 })),
+        filas: filas.map((f) => ({
+          p: f.paciente,
+          t: f.t.tipo,
+          pz: f.t.pieza,
+          l: f.t.proveedor,
+          e: fechaCorta(f.t.fechaEnvio),
+          en: fechaCorta(f.t.fechaEntregaEstimada),
+          s: f.t.estado,
+          c: f.t.costo || 0,
+          pr: (f.t.pruebas ?? []).map((x) => `${x.etapa} (${x.resultado === "Aprobada" ? "ok" : "ajustar"})`).join(", "),
+          rp: (f.t.repeticiones ?? []).map((x) => `${x.motivo}${x.garantia ? " (garantía)" : ""}`).join(", "),
+        })),
       },
     ]);
     onToast("Reportes de laboratorio exportados a Excel");

@@ -80,20 +80,41 @@ export function numeroWhatsApp(telefono: string | null | undefined): string | nu
 export function textoRecordatorioTurno(
   t: { paciente: string; fecha: string; hora: string; odontologo?: string; tratamiento?: string },
   clinica: string,
+  enlace?: string | null,
 ) {
   const nombre = t.paciente.split(" ")[0] ?? t.paciente;
   const con = t.odontologo ? ` con ${t.odontologo}` : "";
-  return `Hola ${nombre} 👋 Te recordamos tu turno ${fechaAmigable(t.fecha)} a las ${t.hora} hs${con} en ${clinica}. ¿Nos confirmás tu asistencia? Respondé SÍ para confirmar o escribinos si necesitás cambiarlo.`;
+  const pedido = enlace
+    ? `Confirmalo, pedí cambiarlo o avisanos si no podés venir desde acá:\n${enlace}`
+    : "¿Nos confirmás tu asistencia? Respondé SÍ para confirmar o escribinos si necesitás cambiarlo.";
+  return `Hola ${nombre} 👋 Te recordamos tu turno ${fechaAmigable(t.fecha)} a las ${t.hora} hs${con} en ${clinica}. ${pedido}`;
 }
 
-/** Abre WhatsApp con el recordatorio. Devuelve false si el paciente no tiene teléfono. */
+/** Abre WhatsApp con el recordatorio (con el enlace para confirmar, si se puede crear).
+    Devuelve false si el paciente no tiene teléfono. */
 export function abrirRecordatorioWhatsApp(
-  t: { paciente: string; fecha: string; hora: string; odontologo?: string; tratamiento?: string },
+  t: { id?: number; paciente: string; fecha: string; hora: string; odontologo?: string; tratamiento?: string },
   clinica: string,
 ): boolean {
   const numero = numeroWhatsApp(telefonoDePaciente(t.paciente));
   if (!numero) return false;
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(textoRecordatorioTurno(t, clinica))}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  const armar = (enlace: string | null) =>
+    `https://wa.me/${numero}?text=${encodeURIComponent(textoRecordatorioTurno(t, clinica, enlace))}`;
+  if (!t.id) {
+    window.open(armar(null), "_blank", "noopener,noreferrer");
+    return true;
+  }
+  // La ventana se abre YA (si no, el celular la bloquea) y el enlace se completa en un instante
+  const ventana = window.open("", "_blank");
+  void import("@/lib/clinica/enlace-estudio")
+    .then(({ crearEnlaceTurno }) => crearEnlaceTurno(t.id!))
+    .catch(() => null)
+    .then((enlace) => {
+      const url = armar(enlace);
+      if (ventana && !ventana.closed) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else window.open(url, "_blank", "noopener,noreferrer");
+    });
   return true;
 }

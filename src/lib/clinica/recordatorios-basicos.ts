@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { setTareasStore, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
@@ -8,6 +8,16 @@ import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
+import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
+
+/** ¿Ya llegaron del servidor estos módulos? (clínica real o demo con cuenta). Así un aviso no se
+    pierde porque las notificaciones del servidor llegan después y lo pisan. */
+function cargados(real: boolean, claves: string[]) {
+  if (real) return claves.every(moduloCargado);
+  if (demoConDatosEnServidor()) return claves.every((k) => moduloCargado(claveDemoServidor(k, tenantActual())));
+  return true;
+}
 import {
   DIAS_ORDEN_PENDIENTE,
   DIAS_TRATAMIENTO_INCONCLUSO,
@@ -288,8 +298,9 @@ export function useNovedadesLaboratorio() {
   const real = useClinicaReal();
   const puede = !real || ["admin", "secretaria", "odontologo"].includes(real.rol);
   const regs = useTodosLosRegistros();
+  const notifs = storeNotificaciones.usar();
   useEffect(() => {
-    if (!puede) return;
+    if (!puede || !cargados(!!real, ["registros", "notificaciones"])) return;
     const pendientes = Object.entries(regs).flatMap(([pid, r]) =>
       (r?.laboratorio ?? []).filter((t) => t.novedadLab && !t.novedadLab.avisada).map((t) => ({ pid: Number(pid), t })),
     );
@@ -320,5 +331,72 @@ export function useNovedadesLaboratorio() {
       cambiarRegistro(pid, "laboratorio", (prev) =>
         prev.map((x) => (x.id === t.id && x.novedadLab ? { ...x, novedadLab: { ...x.novedadLab, avisada: true } } : x)),
       );
-  }, [regs, puede]);
+  }, [regs, puede, notifs, real]);
+}
+
+/* Lo que el PACIENTE respondió con el enlace del recordatorio (confirmó, pidió cambiar o canceló):
+   aviso en Notificaciones (una vez) y, si pidió cambiar, una tarea para reprogramarlo. */
+export function useRespuestasTurnos() {
+  const real = useClinicaReal();
+  const puede = !real || ["admin", "secretaria", "odontologo"].includes(real.rol);
+  const turnos = storeAgenda.usar().turnos;
+  const notifs = storeNotificaciones.usar();
+  useEffect(() => {
+    if (!puede || !cargados(!!real, ["agenda", "notificaciones"])) return;
+    const pendientes = turnos.filter((t) => t.respuestaPaciente && !t.respuestaPaciente.avisada);
+    if (!pendientes.length) return;
+    const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
+    const ahora = new Date().toISOString();
+    const fecha = (f: string) => f.split("-").reverse().join("/").slice(0, 5);
+    const nuevos: NotifManual[] = pendientes
+      .map((t) => {
+        const r = t.respuestaPaciente!;
+        const cuando = `${fecha(t.fecha)} ${t.hora}`;
+        const titulo =
+          r.tipo === "confirmo"
+            ? `${t.paciente} confirmó su turno del ${cuando}`
+            : r.tipo === "cancelo"
+              ? `${t.paciente} canceló su turno del ${cuando}`
+              : `${t.paciente} pide cambiar su turno del ${cuando}`;
+        return {
+          id: `turno-resp-${t.id}-${r.fecha}`,
+          titulo,
+          detalle:
+            r.tipo === "confirmo"
+              ? "Lo confirmó con el enlace del recordatorio. Ya figura «Confirmada» en la Agenda."
+              : r.tipo === "cancelo"
+                ? `Lo canceló con el enlace del recordatorio: el horario quedó libre en la Agenda.${r.nota ? ` Dijo: «${r.nota}».` : ""}`
+                : `Escribile para darle otro horario.${r.nota ? ` Dijo: «${r.nota}».` : ""}`,
+          categoria: "Agenda" as const,
+          prioridad: r.tipo === "confirmo" ? ("Normal" as const) : ("Alta" as const),
+          asignado: "Recepción",
+          vence: hoyISO(),
+          horaVence: "",
+          creada: ahora,
+          creadaPor: "Paciente",
+        };
+      })
+      .filter((n) => !existentes.has(n.id));
+    if (nuevos.length) setNotificaciones("manuales", (prev) => [...nuevos, ...prev]);
+    const cambios = pendientes.filter((t) => t.respuestaPaciente!.tipo === "cambiar");
+    if (cambios.length)
+      setTareasStore((prev) => {
+        let id = Math.max(0, ...prev.map((x) => x.id));
+        return [
+          ...prev,
+          ...cambios.map((t) => ({
+            id: ++id,
+            texto: `Reprogramar el turno del ${fecha(t.fecha)} ${t.hora}${t.respuestaPaciente!.nota ? ` («${t.respuestaPaciente!.nota}»)` : ""}`,
+            categoria: "Llamar al paciente",
+            paciente: t.paciente,
+            fecha: hoyISO(),
+            hecha: false,
+          })),
+        ];
+      });
+    const ids = new Set(pendientes.map((t) => t.id));
+    setTurnosStore((prev) =>
+      prev.map((t) => (ids.has(t.id) && t.respuestaPaciente ? { ...t, respuestaPaciente: { ...t.respuestaPaciente, avisada: true } } : t)),
+    );
+  }, [turnos, puede, notifs, real]);
 }

@@ -1403,6 +1403,19 @@ function TurnoCard({
                 Falta evolución
               </span>
             )}
+            {turno.respuestaPaciente?.tipo === "cambiar" && turno.estado !== "Cancelada" && turno.estado !== "Atendida" && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                title={turno.respuestaPaciente.nota || "El paciente pidió cambiar el turno con el enlace del recordatorio"}
+              >
+                Pidió cambiarlo
+              </span>
+            )}
+            {turno.respuestaPaciente?.tipo === "confirmo" && turno.estado === "Confirmada" && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700" title="Confirmó con el enlace del recordatorio">
+                Confirmó por el enlace
+              </span>
+            )}
             {espero !== null && (
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                 <Hourglass className="size-3" />

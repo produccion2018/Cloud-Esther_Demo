@@ -32,6 +32,8 @@ export type Turno = {
   serieTotal?: number;
   /** Turno de una sesión de un tratamiento del paciente (para registrar la sesión al atenderlo). */
   tratamientoId?: number;
+  /** Lo que respondió el paciente con el enlace del recordatorio (confirmó, pidió cambiar o canceló). */
+  respuestaPaciente?: { tipo: "confirmo" | "cambiar" | "cancelo"; fecha: string; nota?: string; avisada?: boolean };
 };
 
 export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };

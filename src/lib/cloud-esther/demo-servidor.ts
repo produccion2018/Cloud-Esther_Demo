@@ -195,6 +195,15 @@ export async function crearEnlaceLaboratorioDemo(datos: { clave: string; laborat
   return (await r.json()) as { token: string; vence: string };
 }
 
+/** Enlace para que el paciente confirme su turno del demo. */
+export async function crearEnlaceTurnoDemo(datos: { clave: string; turnoId: number }): Promise<{ token: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/turnos/enlaces", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string };
+}
+
 /** Firma para subir un archivo del demo directo a Cloudinary (carpeta del demo). */
 export async function pedirFirmaDemo<T>(): Promise<T> {
   const token = leerGuardado()?.token;

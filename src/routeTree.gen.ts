@@ -85,6 +85,7 @@ import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
 import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
+import { Route as TurnoTokenRouteImport } from './routes/turno.$token'
 import { Route as VerificarCodigoRouteImport } from './routes/verificar.$codigo'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
@@ -471,6 +472,11 @@ const SubirEstudioTokenRoute = SubirEstudioTokenRouteImport.update({
   path: '/subir-estudio/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TurnoTokenRoute = TurnoTokenRouteImport.update({
+  id: '/turno/$token',
+  path: '/turno/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerificarCodigoRoute = VerificarCodigoRouteImport.update({
   id: '/verificar/$codigo',
   path: '/verificar/$codigo',
@@ -574,6 +580,7 @@ export interface FileRoutesByFullPath {
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
+  '/turno/$token': typeof TurnoTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -656,6 +663,7 @@ export interface FileRoutesByTo {
   '/demo/tratamientos': typeof DemoTratamientosRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
+  '/turno/$token': typeof TurnoTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
@@ -740,6 +748,7 @@ export interface FileRoutesById {
   '/demo_/tratamientos': typeof DemoTratamientosRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
+  '/turno/$token': typeof TurnoTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -825,6 +834,7 @@ export interface FileRouteTypes {
     | '/demo/tratamientos'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
+    | '/turno/$token'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -907,6 +917,7 @@ export interface FileRouteTypes {
     | '/demo/tratamientos'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
+    | '/turno/$token'
     | '/verificar/$codigo'
     | '/admin'
     | '/app'
@@ -990,6 +1001,7 @@ export interface FileRouteTypes {
     | '/demo_/tratamientos'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
+    | '/turno/$token'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -1052,6 +1064,7 @@ export interface RootRouteChildren {
   DemoTratamientosRoute: typeof DemoTratamientosRoute
   LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
+  TurnoTokenRoute: typeof TurnoTokenRoute
   VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -1595,6 +1608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubirEstudioTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/turno/$token': {
+      id: '/turno/$token'
+      path: '/turno/$token'
+      fullPath: '/turno/$token'
+      preLoaderRoute: typeof TurnoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verificar/$codigo': {
       id: '/verificar/$codigo'
       path: '/verificar/$codigo'
@@ -1739,6 +1759,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoTratamientosRoute: DemoTratamientosRoute,
   LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
+  TurnoTokenRoute: TurnoTokenRoute,
   VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,
   BlogIndexRoute: BlogIndexRoute,

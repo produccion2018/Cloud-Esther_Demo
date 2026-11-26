@@ -70,6 +70,7 @@ import { normalizarBusqueda } from "@/lib/utils";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { abrirRecordatorioWhatsApp, telefonoDePaciente, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
 import { enviarWhatsappBusiness } from "@/lib/clinica/api";
+import { crearEnlaceTurno } from "@/lib/clinica/enlace-estudio";
 import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { ComunicacionInterna, ElegirFondo } from "@/components/clinica/comunicacion-interna";
@@ -1823,8 +1824,13 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
         ctx.onToast(`${t.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
         return false;
       }
-      const texto = textoRecordatorioTurno(t, ctx.clinica);
-      enviarWhatsappBusiness(clinicaR.slug, { telefono: tel, texto, paciente: t.paciente })
+      // Con el enlace para que el paciente confirme / pida cambiar / cancele (la Agenda se actualiza sola)
+      let texto = textoRecordatorioTurno(t, ctx.clinica);
+      crearEnlaceTurno(t.id)
+        .then((enlace) => {
+          texto = textoRecordatorioTurno(t, ctx.clinica, enlace);
+          return enviarWhatsappBusiness(clinicaR.slug, { telefono: tel, texto, paciente: t.paciente });
+        })
         .then(() => {
           setComunicacion("recordatorios", (prev) => ({
             ...prev,

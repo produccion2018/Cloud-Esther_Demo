@@ -1,7 +1,7 @@
 import { pedirAClinica } from "./api";
 import { SLUG_DEMO } from "./demo-admin";
 import { clinicaReal } from "./modo-clinica";
-import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/enlace-estudio.ts
@@ -42,4 +42,21 @@ export async function crearEnlaceLaboratorio(laboratorio: string): Promise<{ url
     throw new Error("Esta opción funciona cuando entrás al demo con tu cuenta (así lo que marca el laboratorio llega a la clínica).");
   }
   return { url: `${window.location.origin}/laboratorio-enlace/${r.token}`, vence: r.vence };
+}
+
+/* Enlace para que el PACIENTE confirme, pida cambiar o cancele su turno (va en el recordatorio).
+   La Agenda se actualiza sola. En el demo sin cuenta no hay enlace: el recordatorio sale igual. */
+export async function crearEnlaceTurno(turnoId: number): Promise<string | null> {
+  const slug = clinicaReal()?.slug;
+  try {
+    let token: string;
+    if (slug && slug !== SLUG_DEMO) {
+      token = (await pedirAClinica<{ token: string }>(slug, "POST", "/turnos/enlaces", { turnoId })).token;
+    } else if (demoConDatosEnServidor()) {
+      token = (await crearEnlaceTurnoDemo({ turnoId, clave: claveDemoServidor("agenda", tenantActual()) })).token;
+    } else return null;
+    return `${window.location.origin}/turno/${token}`;
+  } catch {
+    return null;
+  }
 }

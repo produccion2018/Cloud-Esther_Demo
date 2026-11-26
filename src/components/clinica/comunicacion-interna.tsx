@@ -1,6 +1,9 @@
 import {
   ArrowLeft,
   AtSign,
+  ChevronDown,
+  Pin,
+  PinOff,
   ClipboardCheck,
   Building2,
   CalendarDays,
@@ -45,7 +48,10 @@ import {
   PERMISOS_CHAT_INFO,
   abrirDirecto,
   bajarArchivo,
+  buscarEnChat,
   cambiarCanal,
+  fijarMensaje,
+  verFijados,
   confirmarLectura,
   crearCanal,
   enviarComunicado,
@@ -64,6 +70,7 @@ import {
   type PermisosChat,
   type PersonaChat,
   type ReferenciaChat,
+  type ResultadoBusqueda,
   type ResumenChat,
   type RolChat,
 } from "@/lib/clinica/chat";
@@ -261,6 +268,22 @@ function ElegirPersonas({
         })}
       </ul>
     </div>
+  );
+}
+
+/** Marca lo buscado dentro del texto (sin importar acentos ni mayúsculas). */
+function Resaltar({ texto, q }: { texto: string; q: string }) {
+  const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  // Misma longitud: el texto normalizado letra por letra (las tildes se quitan de a una)
+  const plano = Array.from(texto).map((ch) => norm(ch) || ch).join("");
+  const i = plano.indexOf(norm(q));
+  if (i < 0 || plano.length !== texto.length) return <>{texto}</>;
+  return (
+    <>
+      {texto.slice(0, i)}
+      <mark className="rounded bg-amber-300/60 px-0.5 text-inherit">{texto.slice(i, i + q.length)}</mark>
+      {texto.slice(i + q.length)}
+    </>
   );
 }
 
@@ -678,6 +701,28 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
   const [canalId, setCanalId] = useState<string | null>(null);
   const [vistaMovil, setVistaMovil] = useState<"lista" | "chat">("lista");
   const [buscar, setBuscar] = useState("");
+  // Buscador de mensajes (en todas las conversaciones que la persona ve)
+  const [hallados, setHallados] = useState<ResultadoBusqueda[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
+  const [irA, setIrA] = useState<{ canalId: string; mensajeId: string } | null>(null);
+  useEffect(() => {
+    const q = buscar.trim();
+    if (q.length < 2) {
+      setHallados(null);
+      return;
+    }
+    setBuscando(true);
+    const t = setTimeout(() => {
+      buscarEnChat(q)
+        .then(setHallados)
+        .catch((e: unknown) => {
+          setHallados([]);
+          toast.error(e instanceof Error ? e.message : "No se pudo buscar.");
+        })
+        .finally(() => setBuscando(false));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [buscar]);
   const [dialogo, setDialogo] = useState<null | "comunicado" | "canal" | "privado" | "permisos" | "editar">(null);
   const version = useVersionChat();
   const real = esClinicaReal();
@@ -801,7 +846,7 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
               <Input
                 value={buscar}
                 onChange={(e) => setBuscar(e.target.value)}
-                placeholder="Buscar canal o persona"
+                placeholder="Buscar conversación o mensaje"
                 className="h-10 rounded-full border-transparent bg-card pl-10 ring-1 ring-border"
                 aria-label="Buscar conversación"
               />
@@ -813,6 +858,39 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
             </div>
           </div>
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-3 scroll-sutil">
+            {buscar.trim().length >= 2 && (
+              <GrupoLista titulo="Mensajes" cantidad={hallados?.length ?? 0}>
+                {buscando && !hallados && (
+                  <li className="flex items-center gap-2 px-2.5 py-3 text-xs text-muted-foreground">
+                    <Loader2 className="size-3.5 animate-spin" /> Buscando…
+                  </li>
+                )}
+                {hallados?.length === 0 && <li className="px-2.5 py-3 text-xs text-muted-foreground">Ningún mensaje con «{buscar.trim()}».</li>}
+                {hallados?.map((h) => (
+                  <li key={h.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIrA({ canalId: h.canalId, mensajeId: h.id });
+                        abrir(h.canalId);
+                      }}
+                      className="w-full rounded-2xl px-2.5 py-2.5 text-left transition hover:bg-card/80"
+                    >
+                      <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="truncate font-semibold text-foreground/80">
+                          {h.tipoCanal === "directo" ? h.canal : `# ${h.canal}`}
+                        </span>
+                        <span className="ml-auto shrink-0 tabular-nums">{cuandoCorto(h.fecha)}</span>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs">
+                        <span className="font-semibold">{h.autor}: </span>
+                        <Resaltar texto={h.texto} q={buscar.trim()} />
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </GrupoLista>
+            )}
             <GrupoLista titulo="Canales" cantidad={canales.length}>
               {canales.map((c) => (
                 <ItemConversacion key={c.id} c={c} activo={c.id === canalId} onClick={() => abrir(c.id)} icono={<IconoCanal c={c} activo={c.id === canalId} />} />
@@ -863,6 +941,8 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
               onVolver={() => setVistaMovil("lista")}
               onEditar={() => setDialogo("editar")}
               onLeido={cargar}
+              irAMensaje={irA?.canalId === canal.id ? irA.mensajeId : null}
+              onFueA={() => setIrA(null)}
             />
           ) : (
             <div className="grid flex-1 place-items-center p-8 text-center text-sm text-muted-foreground">Elegí una conversación.</div>
@@ -984,13 +1064,50 @@ function Conversacion({
   onVolver,
   onEditar,
   onLeido,
+  irAMensaje = null,
+  onFueA,
 }: {
   canal: CanalChat;
   res: ResumenChat;
   onVolver: () => void;
   onEditar: () => void;
   onLeido: () => void;
+  irAMensaje?: string | null;
+  onFueA?: () => void;
 }) {
+  // Mensajes fijados arriba
+  const [fijados, setFijados] = useState<MensajeChat[]>([]);
+  const [puedoFijar, setPuedoFijar] = useState(false);
+  const [verFijadosAbierto, setVerFijadosAbierto] = useState(false);
+  const traerFijados = useCallback(() => {
+    verFijados(canal.id)
+      .then((r) => {
+        setFijados(r.mensajes);
+        setPuedoFijar(r.puedoFijar);
+      })
+      .catch(() => {
+        /* sin conexión: se reintenta con el próximo cambio */
+      });
+  }, [canal.id]);
+  const fijar = async (m: MensajeChat, fijado: boolean) => {
+    try {
+      await fijarMensaje(m.id, fijado);
+      setMensajes((prev) => (prev ?? []).map((x) => (x.id === m.id ? { ...x, fijado } : x)));
+      traerFijados();
+      toast.success(fijado ? "Mensaje fijado arriba" : "Mensaje desfijado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo fijar.");
+    }
+  };
+  /** Lleva la vista hasta un mensaje y lo marca un momento */
+  const mostrarMensaje = (id: string) => {
+    const el = listaRef.current?.querySelector<HTMLElement>(`[data-msg-id="${id}"]`);
+    if (!el) return false;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ce-mensaje-marcado");
+    window.setTimeout(() => el.classList.remove("ce-mensaje-marcado"), 2600);
+    return true;
+  };
   const [mensajes, setMensajes] = useState<MensajeChat[] | null>(null);
   const [hayMas, setHayMas] = useState(false);
   const [texto, setTexto] = useState("");
@@ -1067,6 +1184,28 @@ function Conversacion({
   useEffect(() => {
     if (version > 0) traer();
   }, [version, traer]);
+  useEffect(() => {
+    traerFijados();
+  }, [traerFijados, version]);
+  // Desde el buscador: cuando llegan los mensajes, se va hasta el buscado (y si es viejo, se traen más)
+  const intentosIrA = useRef(0);
+  useEffect(() => {
+    if (!irAMensaje || !mensajes) return;
+    const t = window.setTimeout(() => {
+      if (mostrarMensaje(irAMensaje)) {
+        intentosIrA.current = 0;
+        onFueA?.();
+      } else if (hayMas && intentosIrA.current < 5) {
+        intentosIrA.current++;
+        void masViejos();
+      } else {
+        intentosIrA.current = 0;
+        onFueA?.();
+      }
+    }, 450);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [irAMensaje, mensajes]);
   // Clínica real: mensajes nuevos cada 8 segundos mientras la conversación está abierta
   useEffect(() => {
     if (!real) return;
@@ -1185,6 +1324,64 @@ function Conversacion({
         )}
       </header>
       <ElegirFondo abierto={eligiendoFondo} onCerrar={() => setEligiendoFondo(false)} fondo={fondo} nombreChat={canal.nombre} />
+      {fijados.length > 0 && (
+        <div className="border-b border-border/60 bg-amber-50/70 dark:bg-amber-500/[0.06]">
+          <button
+            type="button"
+            onClick={() => setVerFijadosAbierto((v) => !v)}
+            aria-expanded={verFijadosAbierto}
+            className="flex w-full items-center gap-2.5 px-4 py-2 text-left sm:px-5"
+          >
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+              <Pin className="size-3.5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800 dark:text-amber-300">
+                {fijados.length === 1 ? "Fijado" : `${fijados.length} fijados`}
+              </span>
+              {!verFijadosAbierto && (
+                <span className="block truncate text-xs">
+                  {fijados[0]?.texto || (fijados[0]?.referencia ? fijados[0].referencia.nombre : fijados[0]?.archivo?.nombre) || "Mensaje"}
+                </span>
+              )}
+            </span>
+            <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition", verFijadosAbierto && "rotate-180")} />
+          </button>
+          {verFijadosAbierto && (
+            <ul className="max-h-60 space-y-1 overflow-y-auto px-3 pb-3 scroll-sutil sm:px-4">
+              {fijados.map((f) => (
+                <li key={f.id} className="flex items-start gap-2 rounded-2xl bg-card px-3 py-2 ring-1 ring-amber-500/15">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!mostrarMensaje(f.id)) toast("Es un mensaje viejo: lo tenés acá arriba en Fijados.");
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="block text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground/80">{f.mio ? "Vos" : f.autor.nombre}</span> · {cuandoCorto(f.fecha)}
+                    </span>
+                    <span className="mt-0.5 block whitespace-pre-wrap break-words text-xs">
+                      {f.texto || (f.referencia ? `${f.referencia.tipo === "turno" ? "Turno" : "Paciente"}: ${f.referencia.nombre}` : f.archivo?.nombre)}
+                    </span>
+                  </button>
+                  {puedoFijar && (
+                    <button
+                      type="button"
+                      onClick={() => void fijar(f, false)}
+                      className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-amber-500/15 hover:text-amber-800"
+                      aria-label="Desfijar"
+                      title="Desfijar"
+                    >
+                      <PinOff className="size-3.5" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Mensajes */}
       <div
@@ -1230,6 +1427,7 @@ function Conversacion({
                   seguido={f.seguido}
                   res={res}
                   canalNombre={canal.tipo === "directo" ? `privado con ${canal.nombre}` : canal.nombre}
+                  onFijar={puedoFijar ? (fijado) => void fijar(f.m, fijado) : undefined}
                   onCambio={(nuevo) => setMensajes((prev) => (prev ?? []).map((x) => (x.id === nuevo.id ? nuevo : x)))}
                 />
               ),
@@ -1538,13 +1736,30 @@ function Mensaje({
   res,
   canalNombre,
   onCambio,
+  onFijar,
 }: {
   m: MensajeChat;
   seguido: boolean;
   res: ResumenChat;
   canalNombre: string;
   onCambio: (m: MensajeChat) => void;
+  onFijar?: ((fijado: boolean) => void) | undefined;
 }) {
+  const botonFijar =
+    onFijar && !m.quitado ? (
+      <button
+        type="button"
+        onClick={() => onFijar(!m.fijado)}
+        className={cn(
+          "grid size-7 shrink-0 place-items-center rounded-full transition hover:bg-amber-500/15 hover:text-amber-700 focus:opacity-100 group-hover:opacity-100",
+          m.fijado ? "text-amber-600 opacity-100" : "text-muted-foreground opacity-0 [@media(hover:none)]:opacity-60",
+        )}
+        aria-label={m.fijado ? "Desfijar" : "Fijar arriba"}
+        title={m.fijado ? "Desfijar" : "Fijar arriba"}
+      >
+        {m.fijado ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+      </button>
+    ) : null;
   const puedeTareas = usePuedeCrearTareas();
   const yaEsTarea = !!useTareaDeMensaje(m.id);
   const [haciendoTarea, setHaciendoTarea] = useState(false);
@@ -1625,7 +1840,7 @@ function Mensaje({
     const total = (c?.leyeron.length ?? 0) + (c?.faltan.length ?? 0);
     const pct = total ? Math.round(((c?.leyeron.length ?? 0) / total) * 100) : 0;
     return (
-      <div className="group py-2">
+      <div data-msg-id={m.id} className="group py-2">
         <article className="relative overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-amber-50 via-card to-card p-4 shadow-[0_14px_30px_-24px_rgba(180,83,9,0.6)] dark:from-amber-500/10 sm:p-5">
           <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-pink-400" />
           <div className="flex items-start gap-3">
@@ -1647,6 +1862,7 @@ function Mensaje({
               <ChipTarea mensajeId={m.id} clara={false} />
             </div>
             {botonTarea}
+            {botonFijar}
             {dialogoTarea}
             {puedoQuitar && (
               <button type="button" onClick={() => void quitar()} className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-50" aria-label="Quitar comunicado">
@@ -1718,7 +1934,7 @@ function Mensaje({
   }
 
   return (
-    <div className={cn("group flex items-end gap-2.5", m.mio ? "flex-row-reverse" : "", seguido ? "pt-0.5" : "pt-3")}>
+    <div data-msg-id={m.id} className={cn("group flex items-end gap-2.5", m.mio ? "flex-row-reverse" : "", seguido ? "pt-0.5" : "pt-3")}>
       {!m.mio && (seguido ? <span className="w-9 shrink-0" /> : <Avatar nombre={m.autor.nombre} rol={rol} />)}
       <div className={cn("flex min-w-0 max-w-[85%] flex-col sm:max-w-[70%]", m.mio ? "items-end" : "items-start")}>
         {!seguido && (
@@ -1734,6 +1950,7 @@ function Mensaje({
           </p>
         )}
         <div className="flex max-w-full items-center gap-1.5">
+          {m.mio && botonFijar}
           {m.mio && botonTarea}
           {dialogoTarea}
           {puedoQuitar && m.mio && (
@@ -1765,6 +1982,7 @@ function Mensaje({
             {!m.quitado && <ChipTarea mensajeId={m.id} clara={m.mio} />}
           </div>
           {!m.mio && botonTarea}
+          {!m.mio && botonFijar}
           {puedoQuitar && !m.mio && (
             <button type="button" onClick={() => void quitar()} className="grid size-7 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-50" aria-label="Quitar mensaje">
               <Trash2 className="size-3.5" />

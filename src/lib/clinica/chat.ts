@@ -49,6 +49,8 @@ export type MensajeChat = {
   /** Personas mencionadas con @ y si me mencionaron a mí */
   menciones?: { id: string; nombre: string }[];
   meMencionan?: boolean;
+  /** Fijado arriba en el canal */
+  fijado?: boolean;
   fecha: string;
   quitado: boolean;
   mio: boolean;
@@ -170,6 +172,38 @@ export function tomarPedidoAbrir(tipo: ReferenciaChat["tipo"]): number | null {
   } catch {
     return null;
   }
+}
+
+/** Resultado de buscar en el chat */
+export type ResultadoBusqueda = {
+  id: string;
+  canalId: string;
+  canal: string;
+  tipoCanal: "general" | "area" | "directo";
+  autor: string;
+  texto: string;
+  fecha: string;
+};
+
+export async function fijarMensaje(mensajeId: string, fijado: boolean): Promise<void> {
+  const slug = slugReal();
+  if (slug) await pedirAClinica(slug, "POST", `/chat/mensajes/${encodeURIComponent(mensajeId)}/fijar`, { fijado });
+  else demo.fijar(mensajeId, fijado);
+  avisarCambioChat();
+}
+
+export async function verFijados(canalId: string): Promise<{ mensajes: MensajeChat[]; puedoFijar: boolean }> {
+  const slug = slugReal();
+  if (!slug) return demo.fijados(canalId);
+  const r = await pedirAClinica<{ mensajes: MensajeChat[]; puedoFijar: boolean }>(slug, "GET", `/chat/canales/${encodeURIComponent(canalId)}/fijados`);
+  return { ...r, mensajes: r.mensajes.map(mensajesProlijos) };
+}
+
+export async function buscarEnChat(q: string): Promise<ResultadoBusqueda[]> {
+  const slug = slugReal();
+  if (!slug) return demo.buscar(q);
+  const r = await pedirAClinica<{ resultados: ResultadoBusqueda[] }>(slug, "GET", `/chat/buscar?q=${encodeURIComponent(q)}`);
+  return r.resultados.map((x) => ({ ...x, autor: x.autor === "Vos" ? x.autor : nombrePersona(x.autor), canal: x.tipoCanal === "directo" ? nombrePersona(x.canal) : x.canal }));
 }
 
 export async function enviarMensaje(
@@ -392,7 +426,7 @@ const demo = (() => {
     const g = canales.find((c) => c.tipo === "general");
     if (g) g.miembros = personas().map((p) => p.id);
   };
-  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; referencia?: ReferenciaChat | null; menciones?: string[]; fecha: string; quitado: boolean; acks: Record<string, string> };
+  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; referencia?: ReferenciaChat | null; menciones?: string[]; fijado?: string | null; fecha: string; quitado: boolean; acks: Record<string, string> };
   let seq = 0;
   const m = (canalId: string, autor: string, texto: string, min: number, extra: Partial<MsgDemo> = {}): MsgDemo => ({
     id: `demo-m${++seq}`, canalId, autor, tipo: "mensaje", texto, archivo: null, fecha: hace(min), quitado: false, acks: {}, ...extra,
@@ -414,6 +448,7 @@ const demo = (() => {
       referencia: x.quitado ? null : (x.referencia ?? null),
       menciones: x.quitado ? [] : (x.menciones ?? []).map((id) => ({ id, nombre: nom(id) })),
       meMencionan: !x.quitado && (x.menciones ?? []).includes(YO),
+      fijado: !x.quitado && !!x.fijado,
       fecha: x.fecha,
       quitado: x.quitado,
       mio: x.autor === YO,
@@ -477,6 +512,42 @@ const demo = (() => {
         permisosPorRol: permisos,
         avisos: { noLeidos: lista.reduce((s, c) => s + c.noLeidos, 0), pendientes: lista.reduce((s, c) => s + c.pendientes, 0) },
       };
+    },
+    fijar(id: string, fijado: boolean) {
+      const x = mensajes.find((k) => k.id === id);
+      if (!x || x.quitado) throw new Error("Mensaje no encontrado.");
+      if (fijado && !x.fijado && mensajes.filter((k) => k.canalId === x.canalId && k.fijado && !k.quitado).length >= 10)
+        throw new Error("Como mucho 10 mensajes fijados por conversación. Desfijá uno primero.");
+      x.fijado = fijado ? new Date().toISOString() : null;
+    },
+    fijados(canalId: string) {
+      const lista = mensajes
+        .filter((k) => k.canalId === canalId && k.fijado && !k.quitado)
+        .sort((a, b) => (b.fijado ?? "").localeCompare(a.fijado ?? ""))
+        .map(aDto);
+      return { mensajes: lista, puedoFijar: true };
+    },
+    buscar(q: string): ResultadoBusqueda[] {
+      const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const b = norm(q.trim());
+      if (b.length < 2) return [];
+      return mensajes
+        .filter((k) => !k.quitado && canales.some((c) => c.id === k.canalId && visible(c)))
+        .filter((k) => norm(`${k.texto} ${k.referencia?.nombre ?? ""}`).includes(b))
+        .sort((a, c) => c.fecha.localeCompare(a.fecha))
+        .slice(0, 30)
+        .map((k) => {
+          const c = canales.find((x) => x.id === k.canalId)!;
+          return {
+            id: k.id,
+            canalId: c.id,
+            canal: c.tipo === "directo" ? nom(c.miembros.find((id) => id !== YO) ?? "") : c.nombre,
+            tipoCanal: c.tipo,
+            autor: k.autor === YO ? "Vos" : nom(k.autor),
+            texto: (k.texto || (k.referencia ? `${k.referencia.tipo === "turno" ? "Turno" : "Paciente"}: ${k.referencia.nombre}` : "")).slice(0, 240),
+            fecha: k.fecha,
+          };
+        });
     },
     mensajes(canalId: string) {
       alDia();

@@ -2273,3 +2273,13 @@ label {
     min-height: 2.75rem;
   }
 }
+
+/* Comunicación interna: el mensaje al que se llega desde el buscador o los fijados se marca un momento */
+@keyframes ce-marcar-mensaje {
+  0%, 60% { background-color: color-mix(in oklab, #f59e0b 22%, transparent); }
+  100% { background-color: transparent; }
+}
+.ce-mensaje-marcado {
+  border-radius: 1.25rem;
+  animation: ce-marcar-mensaje 2.6s ease-out;
+}

@@ -30,6 +30,8 @@ export type Turno = {
   serie?: string;
   serieN?: number;
   serieTotal?: number;
+  /** Turno de una sesión de un tratamiento del paciente (para registrar la sesión al atenderlo). */
+  tratamientoId?: number;
 };
 
 export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };

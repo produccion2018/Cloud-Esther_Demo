@@ -4040,14 +4040,19 @@ function SesionForm({
   tratamiento,
   onSubmit,
   onCancel,
+  desdeTurno,
 }: {
   tratamiento: TratamientoPaciente;
   onSubmit: (s: Omit<SesionTratamiento, "id">) => void;
   onCancel: () => void;
+  /** Turno atendido del que sale la sesión (fecha y profesional) */
+  desdeTurno?: { fecha: string; profesional: string } | undefined;
 }) {
   const profesionales = useProfesionales();
-  const [fecha, setFecha] = useState(hoyISO());
-  const [profesional, setProfesional] = useState(tratamiento.profesional || profesionales[0] || "");
+  const [fecha, setFecha] = useState(desdeTurno?.fecha ?? hoyISO());
+  const [profesional, setProfesional] = useState(
+    desdeTurno?.profesional || tratamiento.profesional || profesionales[0] || "",
+  );
   const [detalle, setDetalle] = useState("");
   const numero = (tratamiento.sesiones?.length ?? 0) + 1;
 
@@ -4189,7 +4194,23 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
   const [abierto, setAbierto] = useState(false);
   const [editar, setEditar] = useState<TratamientoPaciente | null>(null);
   const [sesionDe, setSesionDe] = useState<TratamientoPaciente | null>(null);
+  const [sesionTurno, setSesionTurno] = useState<{ fecha: string; profesional: string } | undefined>(undefined);
+  const [agendarDe, setAgendarDe] = useState<TratamientoPaciente | null>(null);
   const [verSesiones, setVerSesiones] = useState<number | null>(null);
+  // Turnos de la Agenda conectados a cada tratamiento (de este paciente)
+  const turnosAgenda = storeAgenda.usar().turnos;
+  const pacienteNombre = (contexto?.paciente ?? "").trim().toLowerCase();
+  const turnosDe = (t: TratamientoPaciente) =>
+    turnosAgenda.filter((x) => x.tratamientoId === t.id && x.paciente.trim().toLowerCase() === pacienteNombre);
+  const proximoTurno = (t: TratamientoPaciente) =>
+    turnosDe(t)
+      .filter((x) => x.estado !== "Cancelada" && x.estado !== "Ausente" && x.estado !== "Atendida" && x.fecha >= hoyISO())
+      .sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`))[0];
+  // Turno atendido sin su sesión registrada (ese día)
+  const turnoSinSesion = (t: TratamientoPaciente) =>
+    turnosDe(t)
+      .filter((x) => x.estado === "Atendida" && !(t.sesiones ?? []).some((s) => s.fecha === x.fecha))
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<"" | "activos" | "Pendiente" | "completados" | "Cancelado">(
     "",
@@ -4435,6 +4456,8 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             const avance = esCompletado(t) ? 100 : Math.min(100, Math.round((hechas / plan) * 100));
             const presupuesto = datos.presupuestos.find((p) => p.id === t.presupuestoId);
             const cerrado = esCompletado(t) || t.estado === "Cancelado";
+            const proximo = proximoTurno(t);
+            const atendidoSinSesion = cerrado ? undefined : turnoSinSesion(t);
             return (
               <li key={t.id} className="card-grad flex flex-col p-4">
                 <div className="flex items-start gap-3">
@@ -4458,6 +4481,11 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       {!cerrado && (
                         <Badge tono={TONO_PRIORIDAD[t.prioridad ?? "Media"]}>
                           Prioridad {(t.prioridad ?? "Media").toLowerCase()}
+                        </Badge>
+                      )}
+                      {!cerrado && proximo && (
+                        <Badge tono="verde">
+                          Próxima sesión {formatearFecha(proximo.fecha).slice(0, 5)} {proximo.hora}
                         </Badge>
                       )}
                     </div>
@@ -4490,6 +4518,24 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                     />
                   </div>
                 </div>
+
+                {atendidoSinSesion && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
+                    <span className="min-w-0 flex-1">
+                      Turno del {formatearFecha(atendidoSinSesion.fecha)} atendido: ¿registrás la sesión?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSesionTurno({ fecha: atendidoSinSesion.fecha, profesional: atendidoSinSesion.odontologo });
+                        setSesionDe(t);
+                      }}
+                      className="rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Registrar sesión
+                    </button>
+                  </div>
+                )}
 
                 {(t.diagnostico || t.evolucion || t.notas) && (
                   <div className="mt-2 space-y-0.5 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -4565,11 +4611,11 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       onClick={() => cambiarEstado(t, "Completado")}
                     />
                   )}
-                  {!cerrado && onSeccion && (
+                  {!cerrado && (
                     <BotonMini
                       icon={CalendarDays}
-                      label="Turno"
-                      onClick={() => onSeccion("turnos")}
+                      label={proximo ? "Otra sesión" : "Agendar sesión"}
+                      onClick={() => setAgendarDe(t)}
                     />
                   )}
                   {presupuesto && onSeccion ? (
@@ -4670,10 +4716,45 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
         <Modal title="Registrar sesión" onClose={() => setSesionDe(null)}>
           <SesionForm
             tratamiento={sesionDe}
-            onCancel={() => setSesionDe(null)}
+            desdeTurno={sesionTurno}
+            onCancel={() => {
+              setSesionDe(null);
+              setSesionTurno(undefined);
+            }}
             onSubmit={(s) => {
               registrarSesion(sesionDe, s);
               setSesionDe(null);
+              setSesionTurno(undefined);
+            }}
+          />
+        </Modal>
+      )}
+
+      {agendarDe && (
+        <Modal title="Agendar sesión" onClose={() => setAgendarDe(null)}>
+          <TurnoForm
+            etiqueta="Agendar sesión"
+            inicialMotivo={(() => {
+              const plan = agendarDe.sesionesPlan ?? 1;
+              // Sesiones hechas + turnos atendidos sin registrar + turnos ya agendados + esta
+              const fechas = new Set((agendarDe.sesiones ?? []).map((x) => x.fecha));
+              const n =
+                fechas.size +
+                turnosDe(agendarDe).filter((x) => x.estado === "Atendida" && !fechas.has(x.fecha)).length +
+                turnosDe(agendarDe).filter((x) => x.estado !== "Cancelada" && x.estado !== "Ausente" && x.estado !== "Atendida").length +
+                1;
+              return `${agendarDe.nombre}${agendarDe.pieza ? ` pieza ${agendarDe.pieza}` : ""}${plan > 1 ? ` · sesión ${Math.min(n, plan)} de ${plan}` : ""}`;
+            })()}
+            inicialProfesional={agendarDe.profesional}
+            onCancel={() => setAgendarDe(null)}
+            onSubmit={(nuevo) => {
+              const error = agendarTurnoPaciente(nuevo, contexto?.paciente ?? "Paciente", { tratamientoId: agendarDe.id });
+              if (error) {
+                onToast(error);
+                return;
+              }
+              setAgendarDe(null);
+              onToast(`Sesión agendada el ${formatearFecha(nuevo.fecha)} a las ${nuevo.hora} (también figura en la Agenda)`);
             }}
           />
         </Modal>
@@ -9833,7 +9914,11 @@ function TurnoForm({
 }
 
 /** Agenda el turno en la Agenda de la empresa (un solo lugar de turnos). Devuelve el error, si hay. */
-function agendarTurnoPaciente(nuevo: Omit<TurnoPaciente, "id" | "estado">, paciente: string): string | null {
+function agendarTurnoPaciente(
+  nuevo: Omit<TurnoPaciente, "id" | "estado">,
+  paciente: string,
+  extra: { tratamientoId?: number } = {},
+): string | null {
   const choque = storeAgenda
     .leer()
     .turnos.some(
@@ -9853,6 +9938,7 @@ function agendarTurnoPaciente(nuevo: Omit<TurnoPaciente, "id" | "estado">, pacie
       gabinete: "Consultorio 1",
       estado: "Pendiente",
       notas: "",
+      ...extra,
     },
   ]);
   return null;

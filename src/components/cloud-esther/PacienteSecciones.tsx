@@ -334,7 +334,15 @@ export type TratamientoPaciente = {
   arancelId?: string;
   /** Día en que se invitó al paciente a retomar el tratamiento (si quedó por la mitad). */
   invitadoRetomar?: string;
+  /** Etapa del plan de tratamiento (urgencia, saneamiento, rehabilitación…). */
+  etapa?: string;
+  /** Alternativa del plan: «A» o «B» (vacío = va en cualquier caso). */
+  opcion?: "" | "A" | "B";
+  /** Día en que el paciente aceptó el plan que incluye este tratamiento. */
+  aceptado?: string;
 };
+
+export const ETAPAS_PLAN = ["Urgencia", "Saneamiento", "Rehabilitación", "Estética", "Mantenimiento"];
 
 /** Días sin venir (ni turno agendado) para considerar un tratamiento «sin terminar». */
 export const DIAS_TRATAMIENTO_INCONCLUSO = 30;
@@ -3827,6 +3835,8 @@ function TratamientoForm({
   const [diagnostico, setDiagnostico] = useState(inicial?.diagnostico ?? "");
   const [evolucion, setEvolucion] = useState(inicial?.evolucion ?? "");
   const [presupuestoId, setPresupuestoId] = useState<number | null>(inicial?.presupuestoId ?? null);
+  const [etapa, setEtapa] = useState(inicial?.etapa ?? "");
+  const [opcion, setOpcion] = useState<"" | "A" | "B">(inicial?.opcion ?? "");
   const [error, setError] = useState("");
 
   // Al elegir una práctica se sugieren sesiones y valor (se pueden cambiar).
@@ -3891,6 +3901,9 @@ function TratamientoForm({
       historial: inicial?.historial ?? [{ estado, fecha: inicio || hoyISO() }],
       ...(inicial?.fin ? { fin: inicial.fin } : {}),
       ...(arancelId ? { arancelId } : {}),
+      ...(etapa ? { etapa } : {}),
+      ...(opcion ? { opcion } : {}),
+      ...(inicial?.aceptado ? { aceptado: inicial.aceptado } : {}),
     });
   };
 
@@ -3958,6 +3971,17 @@ function TratamientoForm({
             value={prioridad}
             onChange={(v) => setPrioridad(v as PrioridadTratamiento)}
             options={PRIORIDADES_TRATAMIENTO}
+          />
+        </Field>
+        <Field label="Etapa del plan">
+          <SelectField value={etapa} onChange={setEtapa} options={ETAPAS_PLAN} placeholder="Sin etapa" />
+        </Field>
+        <Field label="Alternativa">
+          <SelectField
+            value={opcion ? `Opción ${opcion}` : ""}
+            onChange={(v) => setOpcion(v === "Opción A" ? "A" : v === "Opción B" ? "B" : "")}
+            options={["Opción A", "Opción B"]}
+            placeholder="Va en cualquier caso"
           />
         </Field>
         <Field label="Profesional">
@@ -4178,28 +4202,208 @@ function PasosTratamiento({ tratamiento }: { tratamiento: TratamientoPaciente })
 }
 
 /* Plan de tratamiento para imprimir o entregar al paciente. */
-function imprimirPlanTratamiento(lista: TratamientoPaciente[], paciente: string) {
-  const filas = lista
+/** Agrupa el plan por etapa (en el orden de ETAPAS_PLAN; lo que no tiene etapa va al final). */
+function etapasDelPlan(lista: TratamientoPaciente[]) {
+  const orden = [...ETAPAS_PLAN, ""];
+  return orden
+    .map((e) => ({ etapa: e, items: lista.filter((t) => (t.etapa ?? "") === e || (e === "" && t.etapa && !ETAPAS_PLAN.includes(t.etapa))) }))
+    .filter((g) => g.items.length);
+}
+/** Totales del plan: lo común + cada alternativa (si hay). */
+function totalesPlan(lista: TratamientoPaciente[]) {
+  const suma = (l: TratamientoPaciente[]) => l.reduce((a, t) => a + (t.costo ?? 0), 0);
+  const comun = suma(lista.filter((t) => !t.opcion));
+  const hayA = lista.some((t) => t.opcion === "A");
+  const hayB = lista.some((t) => t.opcion === "B");
+  return {
+    comun,
+    conOpciones: hayA || hayB,
+    A: hayA ? comun + suma(lista.filter((t) => t.opcion === "A")) : null,
+    B: hayB ? comun + suma(lista.filter((t) => t.opcion === "B")) : null,
+    total: comun + suma(lista.filter((t) => t.opcion)),
+  };
+}
+
+function imprimirPlanTratamiento(lista: TratamientoPaciente[], paciente: string, membrete = "") {
+  const fila = (t: TratamientoPaciente) =>
+    `<tr><td>${escapar(t.nombre)}${t.opcion ? ` <span class="op">Opción ${t.opcion}</span>` : ""}${t.estado === "Completado" || t.estado === "Finalizado" ? ` <span class="ok">Hecho</span>` : ""}</td><td>${escapar(t.pieza || "—")}</td><td>${t.sesionesPlan ?? 1}</td><td class="n">${escapar(formatearMonto(t.costo ?? 0))}</td></tr>`;
+  const grupos = etapasDelPlan(lista)
     .map(
-      (t) =>
-        `<tr><td>${escapar(t.nombre)}</td><td>${escapar(t.pieza || "—")}</td><td>${escapar(t.prioridad ?? "Media")}</td><td>${escapar(t.estado)}</td><td>${t.sesiones?.length ?? 0} / ${t.sesionesPlan ?? 1}</td><td class="n">${escapar(formatearMonto(t.costo ?? 0))}</td></tr>`,
+      (g, i) =>
+        `<tr class="etapa"><td colspan="4">${g.etapa ? `${i + 1}. ${escapar(g.etapa)}` : "Otros tratamientos"}</td></tr>${g.items.map(fila).join("")}`,
     )
     .join("");
-  const total = lista.reduce((acc, t) => acc + (t.costo ?? 0), 0);
+  const tot = totalesPlan(lista);
+  const pie = tot.conOpciones
+    ? `${tot.A !== null ? `<tr><td colspan="3">Total con la opción A</td><td class="n">${escapar(formatearMonto(tot.A))}</td></tr>` : ""}${tot.B !== null ? `<tr><td colspan="3">Total con la opción B</td><td class="n">${escapar(formatearMonto(tot.B))}</td></tr>` : ""}`
+    : `<tr><td colspan="3">Total estimado</td><td class="n">${escapar(formatearMonto(tot.comun))}</td></tr>`;
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Plan de tratamiento · ${escapar(paciente)}</title>
   <style>@page{size:A4;margin:16mm}body{font-family:system-ui,sans-serif;color:#1f1535;font-size:13px}h1{font-size:20px;margin:0 0 4px}
   .meta{color:#6b6480;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee8fb}
   th{color:#6d28d9;font-weight:600;font-size:12px}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #6d28d9}
+  tr.etapa td{background:#f5f0ff;color:#5b21b6;font-weight:700;font-size:12px;letter-spacing:.02em}
+  .op{display:inline-block;background:#fef3c7;color:#92400e;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700}
+  .ok{display:inline-block;background:#dcfce7;color:#166534;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700}
   .firma{display:flex;gap:48px;margin-top:56px}.firma p{border-top:1px solid #999;width:220px;padding-top:6px;font-size:11px;color:#6b6480}</style></head><body>
-  <h1>Plan de tratamiento</h1><p class="meta">Paciente: <b>${escapar(paciente)}</b> · Emitido el ${escapar(formatearFecha(hoyISO()))}</p>
-  <table><thead><tr><th>Tratamiento</th><th>Pieza</th><th>Prioridad</th><th>Estado</th><th>Sesiones</th><th class="n">Valor</th></tr></thead>
-  <tbody>${filas}</tbody><tfoot><tr><td colspan="5">Total estimado</td><td class="n">${escapar(formatearMonto(total))}</td></tr></tfoot></table>
-  <p class="meta" style="margin-top:12px">Los valores y la cantidad de sesiones son estimados y pueden cambiar según la evolución clínica.</p>
-  <div class="firma"><p>Firma del profesional</p><p>Conformidad del paciente</p></div><script>window.onload=()=>{window.print()}</script></body></html>`;
+  ${membrete}<h1>Plan de tratamiento</h1><p class="meta">Paciente: <b>${escapar(paciente)}</b> · Emitido el ${escapar(formatearFecha(hoyISO()))}</p>
+  <table><thead><tr><th>Tratamiento</th><th>Pieza</th><th>Sesiones</th><th class="n">Valor</th></tr></thead>
+  <tbody>${grupos}</tbody><tfoot>${pie}</tfoot></table>
+  ${tot.conOpciones ? `<p class="meta" style="margin-top:12px">Las opciones A y B son alternativas: se elige una de las dos.</p>` : ""}
+  <p class="meta" style="margin-top:8px">Los valores y la cantidad de sesiones son estimados y pueden cambiar según la evolución clínica.</p>
+  <div class="firma"><p>Firma del profesional</p><p>Conformidad del paciente${tot.conOpciones ? " (opción elegida: ___)" : ""}</p></div><script>window.onload=()=>{window.print()}</script></body></html>`;
   const w = documentoPDF(`plan-de-tratamiento-${paciente}`);
   w.document.write(html);
   w.document.close();
   return true;
+}
+
+/* Plan de tratamiento para el paciente: por etapas, con alternativas, PDF, WhatsApp y aceptación. */
+function PlanParaPaciente({
+  lista,
+  contexto,
+  onAceptar,
+  onCerrar,
+  onToast,
+}: {
+  lista: TratamientoPaciente[];
+  contexto?: ContextoPaciente | undefined;
+  onAceptar: (opcion: "" | "A" | "B") => void;
+  onCerrar: () => void;
+  onToast: (m: string) => void;
+}) {
+  const marca = useMarca();
+  const paciente = contexto?.paciente ?? "Paciente";
+  const tot = totalesPlan(lista);
+  const [elegida, setElegida] = useState<"" | "A" | "B">(tot.A !== null ? "A" : tot.B !== null ? "B" : "");
+  const aceptado = lista.length > 0 && lista.every((t) => t.aceptado);
+  const fechaAceptado = aceptado ? lista.map((t) => t.aceptado!).sort().pop()! : "";
+  const textoWhatsApp = () => {
+    const nombre = paciente.trim().split(" ")[0] ?? "";
+    const lineas = etapasDelPlan(lista).flatMap((g) => [
+      g.etapa ? `*${g.etapa}*` : "*Otros tratamientos*",
+      ...g.items.map((t) => `• ${t.nombre}${t.pieza ? ` (pieza ${t.pieza})` : ""}${t.opcion ? ` — opción ${t.opcion}` : ""}: ${formatearMonto(t.costo ?? 0)}`),
+    ]);
+    const totales = tot.conOpciones
+      ? [tot.A !== null ? `Total con la opción A: ${formatearMonto(tot.A)}` : "", tot.B !== null ? `Total con la opción B: ${formatearMonto(tot.B)}` : ""].filter(Boolean)
+      : [`Total estimado: ${formatearMonto(tot.comun)}`];
+    return `Hola${nombre ? ` ${nombre}` : ""} 👋 Te compartimos tu plan de tratamiento:\n\n${lineas.join("\n")}\n\n${totales.join("\n")}${tot.conOpciones ? "\n\nLas opciones A y B son alternativas: elegís una." : ""}\n\nCualquier duda, respondé este mensaje.${contexto?.clinica ? `\n${contexto.clinica}` : ""}`;
+  };
+  return (
+    <div className="space-y-3">
+      {aceptado && (
+        <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+          <Check className="size-4" /> Plan aceptado por el paciente el {formatearFecha(fechaAceptado)}
+        </p>
+      )}
+      <div className="space-y-2.5">
+        {etapasDelPlan(lista).map((g, i) => (
+          <section key={g.etapa || "otros"} className="rounded-2xl border border-primary/10 bg-card p-3">
+            <p className="flex items-center justify-between gap-2 text-xs font-bold text-primary">
+              <span>{g.etapa ? `${i + 1}. ${g.etapa}` : "Otros tratamientos"}</span>
+              <span className="tabular-nums">
+                {g.items.some((t) => !t.opcion)
+                  ? formatearMonto(g.items.filter((t) => !t.opcion).reduce((a, t) => a + (t.costo ?? 0), 0))
+                  : "Según la opción"}
+              </span>
+            </p>
+            <ul className="mt-1.5 space-y-1">
+              {g.items.map((t) => (
+                <li key={t.id} className="flex items-start gap-2 text-xs">
+                  <span className="min-w-0 flex-1">
+                    {t.nombre}
+                    {t.pieza ? <span className="text-muted-foreground"> · pieza {t.pieza}</span> : null}
+                    {t.opcion && <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">Opción {t.opcion}</span>}
+                    {(t.estado === "Completado" || t.estado === "Finalizado") && (
+                      <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">Hecho</span>
+                    )}
+                  </span>
+                  <span className="shrink-0 tabular-nums font-semibold">{formatearMonto(t.costo ?? 0)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+      <div className="rounded-2xl bg-primary/[0.05] px-3 py-2.5 text-sm">
+        {tot.conOpciones ? (
+          <div className="space-y-1">
+            {tot.A !== null && (
+              <p className="flex justify-between gap-2">
+                <span>Total con la opción A</span>
+                <b className="tabular-nums">{formatearMonto(tot.A)}</b>
+              </p>
+            )}
+            {tot.B !== null && (
+              <p className="flex justify-between gap-2">
+                <span>Total con la opción B</span>
+                <b className="tabular-nums">{formatearMonto(tot.B)}</b>
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="flex justify-between gap-2">
+            <span>Total estimado</span>
+            <b className="tabular-nums">{formatearMonto(tot.comun)}</b>
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            imprimirPlanTratamiento(lista, paciente, membreteHTML(marca, contexto?.clinica || "Clínica"));
+            onToast("Plan de tratamiento listo para imprimir o guardar en PDF");
+          }}
+          className="btn-ce-outline !min-h-11"
+        >
+          <Printer className="size-4" /> PDF
+        </button>
+        <a
+          href={`https://wa.me/${numeroWhatsApp(contexto?.telefono) ?? ""}?text=${encodeURIComponent(textoWhatsApp())}`}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-wa !min-h-11 justify-center"
+        >
+          <MessageCircle className="size-4" /> WhatsApp
+        </a>
+      </div>
+      {!aceptado && (
+        <div className="space-y-2 rounded-2xl border border-primary/10 p-3">
+          <p className="text-xs font-semibold">¿El paciente aceptó el plan?</p>
+          {tot.conOpciones && (
+            <div className="flex flex-wrap gap-1.5">
+              {(["A", "B"] as const)
+                .filter((o) => tot[o] !== null)
+                .map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    aria-pressed={elegida === o}
+                    onClick={() => setElegida(o)}
+                    className={`min-h-9 rounded-full px-3.5 text-xs font-semibold transition ${elegida === o ? "bg-primary text-primary-foreground" : "bg-primary/[0.07] text-muted-foreground"}`}
+                  >
+                    Eligió la opción {o}
+                  </button>
+                ))}
+            </div>
+          )}
+          {tot.conOpciones && elegida && (
+            <p className="text-[11px] text-muted-foreground">
+              Los tratamientos de la opción {elegida === "A" ? "B" : "A"} quedan cancelados (eran la alternativa).
+            </p>
+          )}
+          <button type="button" onClick={() => onAceptar(elegida)} className={`${BTN_PRIMARIO} w-full justify-center`}>
+            <Check className="size-4" /> Marcar plan aceptado
+          </button>
+        </div>
+      )}
+      <div className="flex justify-end">
+        <button type="button" onClick={onCerrar} className="btn-ce-outline !min-h-10">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: PropsSeccion) {
@@ -4208,6 +4412,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
   const [sesionDe, setSesionDe] = useState<TratamientoPaciente | null>(null);
   const [sesionTurno, setSesionTurno] = useState<{ fecha: string; profesional: string } | undefined>(undefined);
   const [agendarDe, setAgendarDe] = useState<TratamientoPaciente | null>(null);
+  const [verPlan, setVerPlan] = useState(false);
   const [verSesiones, setVerSesiones] = useState<number | null>(null);
   // Turnos de la Agenda conectados a cada tratamiento (de este paciente)
   const turnosAgenda = storeAgenda.usar().turnos;
@@ -4453,23 +4658,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             placeholder="Buscar tratamiento, pieza o profesional"
             className="ml-auto h-8 w-full rounded-full border border-border bg-background px-3 text-xs outline-none focus:border-primary sm:w-64"
           />
-          <button
-            type="button"
-            className={BTN_SECUNDARIO}
-            onClick={() => {
-              const ok = imprimirPlanTratamiento(
-                todos.filter((t) => t.estado !== "Cancelado"),
-                contexto?.paciente ?? "Paciente",
-              );
-              onToast(
-                ok
-                  ? "Plan de tratamiento listo para imprimir"
-                  : "Permití las ventanas emergentes para imprimir",
-              );
-            }}
-          >
+          <button type="button" className={BTN_SECUNDARIO} onClick={() => setVerPlan(true)}>
             <Printer className="size-4" />
-            Imprimir plan
+            Plan para el paciente
           </button>
         </div>
       )}
@@ -4526,6 +4717,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                           Próxima sesión {formatearFecha(proximo.fecha).slice(0, 5)} {proximo.hora}
                         </Badge>
                       )}
+                      {t.etapa && <Badge tono="gris">{t.etapa}</Badge>}
+                      {t.opcion && <Badge tono="ambar">Opción {t.opcion}</Badge>}
+                      {t.aceptado && !cerrado && <Badge tono="verde">Plan aceptado</Badge>}
                       {quieto && (
                         <Badge tono={quieto.invitado ? "gris" : "ambar"}>
                           {quieto.invitado
@@ -4773,6 +4967,37 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
               registrarSesion(sesionDe, s);
               setSesionDe(null);
               setSesionTurno(undefined);
+            }}
+          />
+        </Modal>
+      )}
+
+      {verPlan && (
+        <Modal title="Plan de tratamiento" onClose={() => setVerPlan(false)}>
+          <PlanParaPaciente
+            lista={todos.filter((t) => t.estado !== "Cancelado")}
+            contexto={contexto}
+            onToast={onToast}
+            onCerrar={() => setVerPlan(false)}
+            onAceptar={(opcion) => {
+              const hoy = hoyISO();
+              cambiar("tratamientos", (prev) =>
+                prev.map((x) => {
+                  if (x.estado === "Cancelado") return x;
+                  // La alternativa no elegida queda cancelada
+                  if (opcion && x.opcion && x.opcion !== opcion)
+                    return {
+                      ...x,
+                      estado: "Cancelado" as const,
+                      historial: [...(x.historial ?? []), { estado: "Cancelado" as const, fecha: hoy }],
+                      notas: [x.notas, `No elegida: el paciente eligió la opción ${opcion}.`].filter(Boolean).join(" "),
+                    };
+                  return { ...x, aceptado: hoy };
+                }),
+              );
+              agregarAuditoria(`El paciente aceptó el plan de tratamiento${opcion ? ` (opción ${opcion})` : ""}`);
+              onToast(`Plan aceptado${opcion ? ` con la opción ${opcion}` : ""}`);
+              setVerPlan(false);
             }}
           />
         </Modal>

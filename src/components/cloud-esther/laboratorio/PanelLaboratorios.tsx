@@ -20,10 +20,14 @@ import {
   Link2,
   Copy,
   Loader2,
+  ListOrdered,
+  ChevronDown,
+  CalendarDays,
 } from "lucide-react";
 
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import {
+  TIPOS_TRABAJO_LAB,
   laboratorioLlego,
   textoAvisoLaboratorio,
   textoReclamoLaboratorio,
@@ -335,6 +339,11 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
                     {f.t.reclamadoEl ? `Reclamado ${fechaCorta(f.t.reclamadoEl).slice(0, 5)}` : "Reclamo automático"}
                   </span>
                 )}
+                {f.t.colocacion && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
+                    <CalendarDays className="size-3" /> Colocación {fechaCorta(f.t.colocacion.fecha).slice(0, 5)} {f.t.colocacion.hora}
+                  </span>
+                )}
                 {(f.t.archivos?.length ?? 0) > 0 && (
                   <span title={f.t.archivos!.map((a) => a.nombre).join(", ")} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10.5px] font-bold text-primary">
                     <Paperclip className="size-3" /> {f.t.archivos!.length}
@@ -379,6 +388,71 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
 
 /* ───────────── Directorio y cuenta corriente ───────────── */
 
+/* Lista de precios del laboratorio: al cargar una orden se completan el costo y la entrega. */
+function ListaPrecios({ l, onToast }: { l: Laboratorio; onToast: (m: string) => void }) {
+  const [abierta, setAbierta] = useState(false);
+  const [trabajo, setTrabajo] = useState(TIPOS_TRABAJO_LAB[0] ?? "");
+  const [precio, setPrecio] = useState("");
+  const [dias, setDias] = useState(String(l.plazoDias || 7));
+  const precios = l.precios ?? [];
+  const poner = (lista: NonNullable<Laboratorio["precios"]>) =>
+    cambiarLaboratorios((e) => ({ ...e, laboratorios: e.laboratorios.map((x) => (x.id === l.id ? { ...x, precios: lista } : x)) }));
+  const agregar = () => {
+    const n = Number(precio.replace(/[^0-9]/g, ""));
+    const nombre = trabajo.trim();
+    if (!nombre || !n) return;
+    const resto = precios.filter((p) => p.trabajo.trim().toLowerCase() !== nombre.toLowerCase());
+    poner([...resto, { id: `pr-${Date.now()}`, trabajo: nombre.slice(0, 60), precio: n, dias: Math.max(0, Math.min(120, Number(dias) || 0)) }]);
+    setPrecio("");
+    onToast(resto.length < precios.length ? `Precio de ${nombre} actualizado` : `${nombre} agregado a la lista`);
+  };
+  return (
+    <div className="relative mt-3 border-t border-border/60 pt-2.5">
+      <button type="button" onClick={() => setAbierta((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold">
+        <span className="flex items-center gap-1.5">
+          <ListOrdered className="size-4 text-primary" /> Lista de precios {precios.length ? `(${precios.length})` : ""}
+        </span>
+        <ChevronDown className={`size-4 text-muted-foreground transition ${abierta ? "rotate-180" : ""}`} />
+      </button>
+      {abierta && (
+        <div className="mt-2 space-y-2">
+          {precios.length > 0 ? (
+            <ul className="space-y-1">
+              {[...precios]
+                .sort((a, b) => a.trabajo.localeCompare(b.trabajo))
+                .map((p) => (
+                  <li key={p.id} className="flex items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-1.5 text-xs">
+                    <span className="min-w-0 flex-1 truncate font-semibold">{p.trabajo}</span>
+                    <span className="shrink-0 text-muted-foreground">{p.dias ? `${p.dias} días` : ""}</span>
+                    <b className="shrink-0 tabular-nums">{pesos(p.precio)}</b>
+                    <button type="button" aria-label={`Quitar ${p.trabajo}`} onClick={() => poner(precios.filter((x) => x.id !== p.id))} className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">Cargá cuánto cobra y cuánto tarda cada trabajo: al enviar una orden se completan solos.</p>
+          )}
+          <div className="grid grid-cols-[1fr_auto] gap-1.5 sm:grid-cols-[1fr_96px_64px_auto]">
+            <input list={`dl-trabajos-${l.id}`} value={trabajo} onChange={(e) => setTrabajo(e.target.value)} placeholder="Trabajo" className="col-span-2 h-9 rounded-lg border border-primary/15 bg-card px-2 text-xs sm:col-span-1" />
+            <datalist id={`dl-trabajos-${l.id}`}>
+              {TIPOS_TRABAJO_LAB.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <input inputMode="numeric" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Precio" aria-label="Precio" className="h-9 rounded-lg border border-primary/15 bg-card px-2 text-right text-xs tabular-nums" />
+            <input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value)} placeholder="Días" aria-label="Días que tarda" className="h-9 w-16 rounded-lg border border-primary/15 bg-card px-2 text-right text-xs tabular-nums max-sm:w-full" />
+            <button type="button" onClick={agregar} disabled={!trabajo.trim() || !precio.trim()} className="btn-ce !min-h-9 disabled:opacity-50 max-sm:col-span-2">
+              <Plus className="size-4" /> Guardar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) => void }) {
   const { laboratorios, pagos } = storeLaboratorios.usar();
   const { plan } = useCloudEsther();
@@ -395,8 +469,10 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
   const crearEnlace = async (l: Laboratorio) => {
     setCreandoEnlace(l.id);
     try {
-      const url = await crearEnlaceLaboratorio(l.nombre);
+      const { url, vence } = await crearEnlaceLaboratorio(l.nombre);
       setEnlaces((e) => ({ ...e, [l.id]: url }));
+      // Se guarda hasta cuándo anda: la clínica recibe el aviso antes de que venza
+      cambiarLaboratorios((e) => ({ ...e, laboratorios: e.laboratorios.map((x) => (x.id === l.id ? { ...x, enlaceVence: vence } : x)) }));
     } catch (e) {
       onToast(e instanceof Error ? e.message : "No se pudo crear el enlace. Probá de nuevo.");
     } finally {
@@ -526,6 +602,17 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
                   </p>
                 </div>
               )}
+              {l.enlaceVence && !enlaces[l.id] && (() => {
+                const dias = Math.ceil((new Date(l.enlaceVence).getTime() - Date.now()) / 86_400_000);
+                return (
+                  <p className={`relative mt-2 rounded-xl px-3 py-2 text-[11px] ${dias <= 0 ? "bg-rose-50 text-rose-700" : dias <= 15 ? "bg-amber-50 text-amber-800" : "bg-muted/50 text-muted-foreground"}`}>
+                    {dias <= 0
+                      ? "El enlace del laboratorio venció: creá uno nuevo y mandáselo."
+                      : `Enlace del laboratorio vigente hasta el ${fechaCorta(l.enlaceVence.slice(0, 10))}${dias <= 15 ? `: vence en ${dias} ${dias === 1 ? "día" : "días"}, creá uno nuevo y mandáselo.` : "."}`}
+                  </p>
+                );
+              })()}
+              <ListaPrecios l={l} onToast={onToast} />
               {pagando === l.id && (
                 <div className="relative mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs">
                   <input inputMode="numeric" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="Importe" className="h-9 w-28 rounded-lg border border-emerald-200 bg-card px-2 text-right tabular-nums" />

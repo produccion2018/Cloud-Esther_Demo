@@ -16,7 +16,18 @@ export type Laboratorio = {
   /** Días que suele tardar (para avisar atrasos si el trabajo no tiene fecha) */
   plazoDias: number;
   notas: string;
+  /** Lista de precios: cuánto cobra y cuánto tarda cada trabajo (completa la orden sola). */
+  precios?: PrecioLaboratorio[];
+  /** Hasta cuándo anda el enlace que tiene el laboratorio para ver sus órdenes (ISO). */
+  enlaceVence?: string;
 };
+export type PrecioLaboratorio = { id: string; trabajo: string; precio: number; dias: number };
+/** Precio de lista de ese trabajo en ese laboratorio (sin distinguir mayúsculas). */
+export function precioDeLista(labs: Laboratorio[], proveedor: string, trabajo: string): PrecioLaboratorio | null {
+  const k = (v: string) => v.trim().toLowerCase();
+  const lab = labs.find((l) => k(l.nombre) === k(proveedor));
+  return lab?.precios?.find((p) => k(p.trabajo) === k(trabajo)) ?? null;
+}
 export type PagoLaboratorio = {
   id: string;
   labId: string;

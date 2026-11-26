@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
+import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { setNotificaciones, storeNotificaciones, type NotifManual } from "@/lib/cloud-esther/notificaciones-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
@@ -201,6 +202,26 @@ export function useRecordatoriosBasicos() {
             categoria: "Laboratorio",
             prioridad: "Alta",
           });
+      }
+
+      // 6) Enlace del laboratorio por vencer: avisar para crear uno nuevo y mandárselo
+      //    (un aviso a los 15 días, otro a los 3 y otro si ya venció)
+      for (const l of storeLaboratorios.leer().laboratorios) {
+        if (!l.enlaceVence) continue;
+        const dias = Math.ceil((new Date(l.enlaceVence).getTime() - Date.now()) / 86_400_000);
+        if (dias > 15 || dias < -30) continue;
+        const etapa = dias <= 0 ? "vencido" : dias <= 3 ? "3" : "15";
+        const id = `basico-lab-enlace-${l.id}-${l.enlaceVence.slice(0, 10)}-${etapa}`;
+        if (existentes.has(id)) continue;
+        const fecha = l.enlaceVence.slice(0, 10).split("-").reverse().join("/");
+        nuevos.push({
+          ...base,
+          id,
+          titulo: dias <= 0 ? `Venció el enlace de ${l.nombre}` : `El enlace de ${l.nombre} vence en ${dias} ${dias === 1 ? "día" : "días"}`,
+          detalle: `${dias <= 0 ? `Venció el ${fecha}` : `Vence el ${fecha}`}: el laboratorio no va a poder ver sus órdenes. Creá uno nuevo en Laboratorio → Todos los laboratorios → Laboratorios → «Nuevo enlace» y mandáselo por WhatsApp.`,
+          categoria: "Laboratorio",
+          prioridad: dias <= 3 ? "Alta" : "Normal",
+        });
       }
 
       if (nuevos.length) setNotificaciones("manuales", (prev) => [...nuevos, ...prev.filter((p) => !nuevos.some((n) => n.id === p.id))]);

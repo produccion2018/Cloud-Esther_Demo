@@ -34,7 +34,7 @@ type Trabajo = {
   repeticion: string;
   archivos: { nombre: string; url: string; categoria: string }[];
 };
-type Info = { clinica: string; laboratorio: string; trabajos: Trabajo[] };
+type Info = { clinica: string; laboratorio: string; vence?: string; trabajos: Trabajo[] };
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise<T> {
   const r = await fetch(`${API_URL}${ruta}`, {
@@ -115,6 +115,14 @@ function EnlaceLaboratorio() {
 
         {info && (
           <>
+            {info.vence && (() => {
+              const dias = Math.ceil((new Date(info.vence).getTime() - Date.now()) / 86_400_000);
+              return dias <= 30 ? (
+                <p className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <b>Este enlace vence {dias <= 1 ? "mañana" : `en ${dias} días`}</b> ({fecha(info.vence.slice(0, 10))}). Pedile a {info.clinica} uno nuevo para seguir viendo las órdenes.
+                </p>
+              ) : null;
+            })()}
             <section className="rounded-[26px] border border-primary/15 bg-card p-5 shadow-[0_30px_70px_-35px_rgba(76,29,149,0.6)]">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Laboratorio</p>
               <h1 className="mt-0.5 text-xl font-extrabold leading-tight">{info.laboratorio}</h1>

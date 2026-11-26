@@ -31,15 +31,15 @@ export async function crearEnlaceEstudio(datos: {
 /* Enlace para el LABORATORIO: ve sus órdenes (paciente abreviado, archivos) y actualiza el
    estado, la fecha de entrega o deja una nota, sin crearse cuenta. Vence en un año; al crear
    uno nuevo para el mismo laboratorio, el anterior deja de andar. */
-export async function crearEnlaceLaboratorio(laboratorio: string): Promise<string> {
+export async function crearEnlaceLaboratorio(laboratorio: string): Promise<{ url: string; vence: string }> {
   const slug = clinicaReal()?.slug;
-  let token: string;
+  let r: { token: string; vence: string };
   if (slug && slug !== SLUG_DEMO) {
-    token = (await pedirAClinica<{ token: string }>(slug, "POST", "/laboratorio/enlaces", { laboratorio })).token;
+    r = await pedirAClinica<{ token: string; vence: string }>(slug, "POST", "/laboratorio/enlaces", { laboratorio });
   } else if (demoConDatosEnServidor()) {
-    token = (await crearEnlaceLaboratorioDemo({ laboratorio, clave: claveDemoServidor("registros", tenantActual()) })).token;
+    r = await crearEnlaceLaboratorioDemo({ laboratorio, clave: claveDemoServidor("registros", tenantActual()) });
   } else {
     throw new Error("Esta opción funciona cuando entrás al demo con tu cuenta (así lo que marca el laboratorio llega a la clínica).");
   }
-  return `${window.location.origin}/laboratorio-enlace/${token}`;
+  return { url: `${window.location.origin}/laboratorio-enlace/${r.token}`, vence: r.vence };
 }

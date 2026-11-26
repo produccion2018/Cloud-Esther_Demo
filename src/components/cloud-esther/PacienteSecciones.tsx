@@ -88,7 +88,7 @@ import { audioATexto } from "@/lib/cloud-esther/esther-llm";
 import { blobABase64, descargarBlob, descargarPDF, documentoPDF, pdfBlobDeHtml } from "@/lib/descargas";
 import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { membreteHTML, useMarca } from "@/lib/cloud-esther/marca";
-import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
+import { precioDeLista, storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import {
   PeriodontogramaSec,
   type EvaluacionPerio,
@@ -221,7 +221,7 @@ const MEDIOS_PAGO = [
 ];
 const ROLES_PROFESIONAL = ["Principal", "Interconsulta", "Derivación"] as const;
 
-const TIPOS_TRABAJO_LAB = [
+export const TIPOS_TRABAJO_LAB = [
   "Corona",
   "Puente",
   "Prótesis removible",
@@ -602,6 +602,8 @@ export type TrabajoLaboratorio = {
   repeticiones?: RepeticionLaboratorio[];
   /** Fotos del color, escaneos (STL), impresiones… Guardados en Cloudinary (acá solo la dirección). */
   archivos?: ArchivoLaboratorio[];
+  /** Turno agendado para colocar el trabajo (fecha y hora). */
+  colocacion?: { fecha: string; hora: string; profesional: string };
   /** Nota que dejó el laboratorio desde su enlace. */
   notaLaboratorio?: string;
   /** Último cambio que hizo el laboratorio desde su enlace (la clínica recibe el aviso). */
@@ -663,7 +665,10 @@ export const laboratorioLlego = (t: TrabajoLaboratorio) => t.estado === "Listo p
 /** Mensaje para avisarle al paciente que su trabajo llegó y coordinar el turno de colocación. */
 export function textoAvisoLaboratorio(t: TrabajoLaboratorio, paciente: string, clinica?: string) {
   const nombre = paciente.trim().split(" ")[0] || "";
-  return `Hola${nombre ? ` ${nombre}` : ""} 👋 Ya tenemos tu ${t.tipo.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""} del laboratorio. Respondé este mensaje y coordinamos el turno para colocarlo.${clinica ? `\n\n${clinica}` : ""}`;
+  const turno = t.colocacion
+    ? `Te esperamos el ${t.colocacion.fecha.split("-").reverse().join("/")} a las ${t.colocacion.hora} para colocarlo.`
+    : "Respondé este mensaje y coordinamos el turno para colocarlo.";
+  return `Hola${nombre ? ` ${nombre}` : ""} 👋 Ya tenemos tu ${t.tipo.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""} del laboratorio. ${turno}${clinica ? `\n\n${clinica}` : ""}`;
 }
 
 /** Mensaje para reclamarle al laboratorio un trabajo atrasado. */
@@ -9656,15 +9661,23 @@ function turnoDeAgenda(t: TurnoAgenda): TurnoPaciente {
 function TurnoForm({
   onSubmit,
   onCancel,
+  inicialMotivo = "",
+  inicialProfesional = "",
+  etiqueta = "Agendar turno",
 }: {
   onSubmit: (t: Omit<TurnoPaciente, "id" | "estado">) => void;
   onCancel: () => void;
+  inicialMotivo?: string;
+  inicialProfesional?: string;
+  etiqueta?: string;
 }) {
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState(inicialMotivo);
   const profesionales = useProfesionales();
-  const [profesional, setProfesional] = useState(profesionales[0] ?? "");
+  const [profesional, setProfesional] = useState(
+    inicialProfesional && profesionales.includes(inicialProfesional) ? inicialProfesional : (profesionales[0] ?? ""),
+  );
   const [sucursal, setSucursal] = useState(SUCURSALES[0] ?? "");
 
   const enviar = (e: FormEvent) => {
@@ -9723,9 +9736,35 @@ function TurnoForm({
           />
         </Field>
       </div>
-      <Acciones etiqueta="Agendar turno" onCancel={onCancel} />
+      <Acciones etiqueta={etiqueta} onCancel={onCancel} />
     </form>
   );
+}
+
+/** Agenda el turno en la Agenda de la empresa (un solo lugar de turnos). Devuelve el error, si hay. */
+function agendarTurnoPaciente(nuevo: Omit<TurnoPaciente, "id" | "estado">, paciente: string): string | null {
+  const choque = storeAgenda
+    .leer()
+    .turnos.some(
+      (t) => t.estado !== "Cancelada" && t.fecha === nuevo.fecha && t.hora === nuevo.hora && t.odontologo === nuevo.profesional,
+    );
+  if (choque) return `${nuevo.profesional} ya tiene un turno a las ${nuevo.hora}`;
+  setTurnosStore((prev) => [
+    ...prev,
+    {
+      id: Date.now(),
+      fecha: nuevo.fecha,
+      hora: nuevo.hora,
+      paciente,
+      tratamiento: nuevo.motivo,
+      odontologo: nuevo.profesional,
+      sucursal: nuevo.sucursal || SUCURSALES[0] || "",
+      gabinete: "Consultorio 1",
+      estado: "Pendiente",
+      notas: "",
+    },
+  ]);
+  return null;
 }
 
 function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
@@ -9814,35 +9853,12 @@ function TurnosSec({ datos, onToast, contexto }: PropsSeccion) {
           <TurnoForm
             onCancel={() => setAbierto(false)}
             onSubmit={(nuevo) => {
-              const choque = storeAgenda
-                .leer()
-                .turnos.some(
-                  (t) =>
-                    t.estado !== "Cancelada" &&
-                    t.fecha === nuevo.fecha &&
-                    t.hora === nuevo.hora &&
-                    t.odontologo === nuevo.profesional,
-                );
-              if (choque) {
-                onToast(`${nuevo.profesional} ya tiene un turno a las ${nuevo.hora}`);
+              // Se agenda en la Agenda de la empresa: aparece también en Agenda y Dashboard.
+              const error = agendarTurnoPaciente(nuevo, contexto?.paciente ?? "Paciente");
+              if (error) {
+                onToast(error);
                 return;
               }
-              // Se agenda en la Agenda de la empresa: aparece también en Agenda y Dashboard.
-              setTurnosStore((prev) => [
-                ...prev,
-                {
-                  id: Date.now(),
-                  fecha: nuevo.fecha,
-                  hora: nuevo.hora,
-                  paciente: contexto?.paciente ?? "Paciente",
-                  tratamiento: nuevo.motivo,
-                  odontologo: nuevo.profesional,
-                  sucursal: nuevo.sucursal || SUCURSALES[0] || "",
-                  gabinete: "Consultorio 1",
-                  estado: "Pendiente",
-                  notas: "",
-                },
-              ]);
               setAbierto(false);
               onToast("Turno agendado (también figura en la Agenda)");
             }}
@@ -10273,6 +10289,17 @@ function LaboratorioForm({
   const [costo, setCosto] = useState(inicial?.costo ? String(inicial.costo) : "");
   const [notas, setNotas] = useState(inicial?.notas ?? "");
   const [error, setError] = useState("");
+  // Lista de precios del laboratorio: completa costo y entrega (si no los tocaste a mano)
+  const directorio = storeLaboratorios.usar().laboratorios;
+  const lista = precioDeLista(directorio, proveedor, tipo);
+  const [costoAMano, setCostoAMano] = useState(!!inicial);
+  const [entregaAMano, setEntregaAMano] = useState(!!inicial?.fechaEntregaEstimada);
+  useEffect(() => {
+    if (!lista) return;
+    if (!costoAMano) setCosto(String(lista.precio || ""));
+    if (!entregaAMano && lista.dias > 0 && fechaEnvio) setFechaEntregaEstimada(sumarDiasLab(fechaEnvio, lista.dias));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista?.id, lista?.precio, lista?.dias, fechaEnvio]);
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
@@ -10343,7 +10370,10 @@ function LaboratorioForm({
           <input
             type="date"
             value={fechaEntregaEstimada}
-            onChange={(e) => setFechaEntregaEstimada(e.target.value)}
+            onChange={(e) => {
+              setFechaEntregaEstimada(e.target.value);
+              setEntregaAMano(true);
+            }}
             className={INPUT}
           />
         </Field>
@@ -10352,12 +10382,35 @@ function LaboratorioForm({
             type="number"
             min={0}
             value={costo}
-            onChange={(e) => setCosto(e.target.value)}
+            onChange={(e) => {
+              setCosto(e.target.value);
+              setCostoAMano(true);
+            }}
             className={INPUT}
             placeholder="0"
           />
         </Field>
       </div>
+      {lista && (
+        <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-xs text-muted-foreground">
+          Lista de {proveedor.trim()}: <b className="text-foreground">{formatearMonto(lista.precio)}</b>
+          {lista.dias > 0 ? ` · tarda ${lista.dias} días` : ""}
+          {(costoAMano && Number(costo) !== lista.precio) || (entregaAMano && lista.dias > 0) ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCostoAMano(false);
+                setEntregaAMano(false);
+                setCosto(String(lista.precio || ""));
+                if (lista.dias > 0 && fechaEnvio) setFechaEntregaEstimada(sumarDiasLab(fechaEnvio, lista.dias));
+              }}
+              className="ml-2 font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              Usar la lista
+            </button>
+          ) : null}
+        </p>
+      )}
       <Field label="Notas / especificaciones">
         <textarea
           rows={2}
@@ -10374,6 +10427,13 @@ function LaboratorioForm({
       />
     </form>
   );
+}
+
+/** Fecha ISO `n` días después de `f`. */
+function sumarDiasLab(f: string, n: number) {
+  const d = new Date(`${f}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Fecha ISO dentro de n días (para proponer la nueva entrega). */
@@ -10918,6 +10978,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [probar, setProbar] = useState<TrabajoLaboratorio | null>(null);
   const [repetir, setRepetir] = useState<TrabajoLaboratorio | null>(null);
   const [adjuntar, setAdjuntar] = useState<TrabajoLaboratorio | null>(null);
+  const [colocar, setColocar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
   const todos = [...datos.laboratorio].sort((a, b) =>
     `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`),
@@ -11090,6 +11151,11 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
                       {conSeguimiento && aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                      {t.colocacion && (
+                        <Badge tono="verde">
+                          Colocación {formatearFecha(t.colocacion.fecha).slice(0, 5)} {t.colocacion.hora}
+                        </Badge>
+                      )}
                       {t.avisadoPaciente && laboratorioLlego(t) && (
                         <Badge tono="verde">Paciente avisado {formatearFecha(t.avisadoPaciente).slice(0, 5)}</Badge>
                       )}
@@ -11152,6 +11218,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                   {laboratorioLlego(t) && !t.avisadoPaciente && (
                     <BotonMini icon={MessageCircle} label="Avisar al paciente" onClick={() => avisarPaciente(t)} />
                   )}
+                  {laboratorioLlego(t) && !t.colocacion && (
+                    <BotonMini icon={CalendarDays} label="Agendar colocación" onClick={() => setColocar(t)} />
+                  )}
                   {aviso?.tono === "rojo" && (
                     <BotonMini icon={MessageCircle} label="Reclamar al laboratorio" onClick={() => reclamar(t)} />
                   )}
@@ -11190,6 +11259,31 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             );
           })}
         </ul>
+      )}
+
+      {colocar && (
+        <Modal title="Agendar colocación" onClose={() => setColocar(null)}>
+          <TurnoForm
+            etiqueta="Agendar colocación"
+            inicialMotivo={`Colocación de ${colocar.tipo.toLowerCase()}${colocar.pieza ? ` (pieza ${colocar.pieza})` : ""}`}
+            inicialProfesional={colocar.profesional ?? ""}
+            onCancel={() => setColocar(null)}
+            onSubmit={(nuevo) => {
+              const error = agendarTurnoPaciente(nuevo, contexto?.paciente ?? "Paciente");
+              if (error) {
+                onToast(error);
+                return;
+              }
+              cambiar("laboratorio", (prev) =>
+                prev.map((x) =>
+                  x.id === colocar.id ? { ...x, colocacion: { fecha: nuevo.fecha, hora: nuevo.hora, profesional: nuevo.profesional } } : x,
+                ),
+              );
+              setColocar(null);
+              onToast(`Colocación agendada el ${formatearFecha(nuevo.fecha)} a las ${nuevo.hora} (también figura en la Agenda)`);
+            }}
+          />
+        </Modal>
       )}
 
       {adjuntar && (

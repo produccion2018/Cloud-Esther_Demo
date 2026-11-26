@@ -105,6 +105,8 @@ import {
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
+import { PAISES_BASE } from "@/lib/paises";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { crearEnlaceEstudio } from "@/lib/clinica/enlace-estudio";
 import { clavePublicacion, puedePublicarPortal, setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { completarPlantilla, usePlantillasInforme } from "@/components/cloud-esther/pacientes/PlantillasInforme";
@@ -328,6 +330,8 @@ type TratamientoPaciente = {
   costo?: number;
   fin?: string;
   historial?: { estado: EstadoTratamiento; fecha: string }[];
+  /** Arancel de la clínica del que salió el valor */
+  arancelId?: string;
 };
 
 type PrioridadTratamiento = "Alta" | "Media" | "Baja";
@@ -786,6 +790,8 @@ export type ContextoPaciente = {
   nacimiento?: string;
   /** Id del paciente (para el enlace con el que sube sus estudios) */
   pacienteId?: number;
+  /** Cobertura del paciente (obra social, prepaga…) */
+  cobertura?: string | undefined;
 };
 
 const VACIO: Registros = {
@@ -3748,6 +3754,26 @@ const TONO_PRIORIDAD: Record<PrioridadTratamiento, Tono> = {
 const PASOS_TRATAMIENTO = ["Pendiente", "Planificado", "En tratamiento", "Completado"] as const;
 
 /** Piezas válidas en notación FDI (permanentes 11–48 y temporales 51–85). */
+/** Código de la moneda de la clínica (ARS, UYU, CLP…) según su país. */
+function useCodigoMoneda() {
+  const pais = usePaisClinica();
+  return PAISES_BASE.find((p) => p.codigo === pais)?.moneda.split(/[\s·/]/)[0] || "ARS";
+}
+
+/** Cantidad de piezas escritas («36, 37» → 2). Sin piezas = 1. */
+const cantidadPiezas = (pieza: string) => Math.max(1, pieza.split(/[,\s-]+/).filter((p) => /^\d{2}$/.test(p)).length);
+
+/** Lo que reconoce la cobertura del paciente para ese arancel (nomenclador de Coberturas). */
+function coberturaDeArancel(arancelId: string, cobertura: string | undefined) {
+  if (!cobertura?.trim()) return null;
+  const { coberturas = [], nomenclador = [] } = storePresupuestos.leer();
+  const k = cobertura.trim().toLowerCase();
+  const c = coberturas.find((x) => x.activa && x.nombre.trim().toLowerCase() === k);
+  if (!c) return null;
+  const v = nomenclador.find((n) => n.arancelId === arancelId)?.valores[c.id];
+  return v && (v.cubre > 0 || v.coseguro > 0) ? { nombre: c.nombre, ...v } : null;
+}
+
 function piezaValida(pieza: string) {
   return pieza
     .split(/[,\s-]+/)
@@ -3760,13 +3786,22 @@ function TratamientoForm({
   presupuestos,
   onSubmit,
   onCancel,
+  cobertura,
 }: {
   inicial?: TratamientoPaciente | undefined;
   presupuestos: PresupuestoPaciente[];
   onSubmit: (t: Omit<TratamientoPaciente, "id">) => void;
   onCancel: () => void;
+  /** Cobertura del paciente (obra social, prepaga…): muestra lo que reconoce */
+  cobertura?: string | undefined;
 }) {
   const profesionales = useProfesionales();
+  const moneda = useCodigoMoneda();
+  // Aranceles de la clínica (Presupuestos → Aranceles). Sin aranceles cargados: catálogo orientativo.
+  const aranceles = storePresupuestos.usar().aranceles.filter((a) => a.activo);
+  const [arancelId, setArancelId] = useState<string | null>(inicial?.arancelId ?? null);
+  const [costoAMano, setCostoAMano] = useState(!!inicial);
+  const arancel = aranceles.find((a) => a.id === arancelId) ?? null;
   const [nombre, setNombre] = useState(inicial?.nombre ?? "");
   const [pieza, setPieza] = useState(inicial?.pieza ?? "");
   const [estado, setEstado] = useState<EstadoTratamiento>(inicial?.estado ?? "Planificado");
@@ -3781,15 +3816,43 @@ function TratamientoForm({
   const [presupuestoId, setPresupuestoId] = useState<number | null>(inicial?.presupuestoId ?? null);
   const [error, setError] = useState("");
 
-  // Al elegir una práctica del catálogo se sugieren sesiones y valor (se pueden cambiar).
+  // Al elegir una práctica se sugieren sesiones y valor (se pueden cambiar).
+  // Primero los ARANCELES de la clínica (su precio, en su moneda); si no tiene, el catálogo orientativo.
   const elegirNombre = (v: string) => {
     setNombre(v);
-    const sugerido = CATALOGO_TRATAMIENTOS[v];
+    const k = v.trim().toLowerCase();
+    const a = aranceles.find((x) => x.nombre.trim().toLowerCase() === k || `${x.codigo} · ${x.nombre}`.toLowerCase() === k);
+    if (a) {
+      setNombre(a.nombre);
+      setArancelId(a.id);
+      if (!inicial) setSesionesPlan(String(a.sesiones ?? 1));
+      if (!costoAMano) setCosto(String(a.precio * cantidadPiezas(pieza)));
+      return;
+    }
+    if (arancelId && aranceles.find((x) => x.id === arancelId)?.nombre.trim().toLowerCase() !== k) setArancelId(null);
+    const sugerido = aranceles.length ? undefined : CATALOGO_TRATAMIENTOS[v];
     if (sugerido && !inicial) {
       setSesionesPlan(String(sugerido.sesiones));
-      setCosto(String(sugerido.precio));
+      if (!costoAMano) setCosto(String(sugerido.precio));
     }
   };
+  // Varias piezas: el valor se multiplica por pieza (si no lo cambiaste a mano)
+  const cambiarPieza = (v: string) => {
+    setPieza(v);
+    if (arancel && !costoAMano) setCosto(String(arancel.precio * cantidadPiezas(v)));
+  };
+  const sugerirPractica = (t: string) => {
+    const q = normalizarBusqueda(t);
+    if (!aranceles.length)
+      return Object.keys(CATALOGO_TRATAMIENTOS)
+        .filter((n) => !q || normalizarBusqueda(n).includes(q))
+        .slice(0, 8);
+    return aranceles
+      .filter((a) => !q || normalizarBusqueda(`${a.codigo} ${a.nombre} ${a.categoria}`).includes(q))
+      .slice(0, 8)
+      .map((a) => a.nombre);
+  };
+  const cubre = arancel ? coberturaDeArancel(arancel.id, cobertura) : null;
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
@@ -3817,32 +3880,58 @@ function TratamientoForm({
       sesiones: inicial?.sesiones ?? [],
       historial: inicial?.historial ?? [{ estado, fecha: inicio || hoyISO() }],
       ...(inicial?.fin ? { fin: inicial.fin } : {}),
+      ...(arancelId ? { arancelId } : {}),
     });
   };
 
   return (
     <form onSubmit={enviar} className="space-y-2.5">
       <Field label="Tratamiento *">
-        <input
-          autoFocus
-          required
-          list="dl-tratamientos"
+        <Autocompletar
           value={nombre}
-          onChange={(e) => elegirNombre(e.target.value)}
+          onChange={elegirNombre}
+          sugerir={sugerirPractica}
           className={INPUT}
           placeholder="Ej: Endodoncia, restauración estética"
+          ariaLabel="Tratamiento"
         />
-        <datalist id="dl-tratamientos">
-          {Object.keys(CATALOGO_TRATAMIENTOS).map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
       </Field>
+      {arancel && (
+        <p className="-mt-1 rounded-xl bg-primary/[0.05] px-3 py-2 text-xs text-muted-foreground">
+          Arancel {arancel.codigo}: <b className="text-foreground">{formatearMonto(arancel.precio)}</b>
+          {cantidadPiezas(pieza) > 1 ? ` por pieza × ${cantidadPiezas(pieza)}` : ""}
+          {(arancel.sesiones ?? 1) > 1 ? ` · ${arancel.sesiones} sesiones` : ""}
+          {cubre && (
+            <span className="mt-0.5 block text-emerald-700">
+              {cubre.nombre} reconoce {formatearMonto(cubre.cubre)}
+              {cubre.coseguro ? ` · coseguro ${formatearMonto(cubre.coseguro)}` : ""}
+              {cubre.autorizacion ? " · requiere autorización" : ""}
+            </span>
+          )}
+          {costoAMano && Number(costo) !== arancel.precio * cantidadPiezas(pieza) && (
+            <button
+              type="button"
+              onClick={() => {
+                setCostoAMano(false);
+                setCosto(String(arancel.precio * cantidadPiezas(pieza)));
+              }}
+              className="ml-2 font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              Usar el arancel
+            </button>
+          )}
+        </p>
+      )}
+      {!aranceles.length && !inicial && (
+        <p className="-mt-1 text-[11px] text-muted-foreground">
+          Valores orientativos: cargá tus precios en Presupuestos → Aranceles y se completan solos.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
         <Field label="Pieza dental">
           <input
             value={pieza}
-            onChange={(e) => setPieza(e.target.value)}
+            onChange={(e) => cambiarPieza(e.target.value)}
             className={INPUT}
             placeholder="Ej: 21 o 36, 37"
           />
@@ -3887,12 +3976,15 @@ function TratamientoForm({
             className={INPUT}
           />
         </Field>
-        <Field label="Valor (ARS)">
+        <Field label={`Valor (${moneda})`}>
           <input
             type="number"
             min={0}
             value={costo}
-            onChange={(e) => setCosto(e.target.value)}
+            onChange={(e) => {
+              setCosto(e.target.value);
+              setCostoAMano(true);
+            }}
             className={INPUT}
             placeholder="0"
           />
@@ -4538,6 +4630,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
           <TratamientoForm
             inicial={editar ?? undefined}
             presupuestos={datos.presupuestos}
+            cobertura={contexto?.cobertura}
             onCancel={() => {
               setAbierto(false);
               setEditar(null);
@@ -10276,6 +10369,7 @@ function LaboratorioForm({
   onCancel: () => void;
 }) {
   const profesionales = useProfesionales();
+  const moneda = useCodigoMoneda();
   const [tipo, setTipo] = useState(inicial?.tipo ?? TIPOS_TRABAJO_LAB[0] ?? "");
   const [pieza, setPieza] = useState(inicial?.pieza ?? "");
   const [material, setMaterial] = useState(inicial?.material ?? MATERIALES_LAB[0] ?? "");
@@ -10377,7 +10471,7 @@ function LaboratorioForm({
             className={INPUT}
           />
         </Field>
-        <Field label="Costo del laboratorio (ARS)">
+        <Field label={`Costo del laboratorio (${moneda})`}>
           <input
             type="number"
             min={0}
@@ -10546,6 +10640,7 @@ function RepeticionLaboratorioForm({
   onSubmit: (r: Omit<RepeticionLaboratorio, "id">) => void;
   onCancel: () => void;
 }) {
+  const moneda = useCodigoMoneda();
   const [motivo, setMotivo] = useState(MOTIVOS_REPETICION_LAB[0]!);
   const [detalle, setDetalle] = useState("");
   const [garantia, setGarantia] = useState(true);
@@ -10604,7 +10699,7 @@ function RepeticionLaboratorioForm({
         Va por garantía (sin costo)
       </label>
       {!garantia && (
-        <Field label="Costo extra del laboratorio (ARS)">
+        <Field label={`Costo extra del laboratorio (${moneda})`}>
           <input type="number" min={0} value={costoExtra} onChange={(e) => setCostoExtra(e.target.value)} className={INPUT} placeholder="0" />
         </Field>
       )}

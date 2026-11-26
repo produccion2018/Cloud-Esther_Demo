@@ -273,7 +273,7 @@ export function PacienteClinico({
             datos={r}
             cambiar={(clave, fn) => registros.cambiar(paciente.id, clave, fn)}
             onToast={onToast}
-            contexto={{ paciente: nombre(paciente), email: paciente.email, telefono: paciente.telefono, nacimiento: paciente.fechaNacimiento, pacienteId: paciente.id }}
+            contexto={{ paciente: nombre(paciente), email: paciente.email, telefono: paciente.telefono, nacimiento: paciente.fechaNacimiento, pacienteId: paciente.id, cobertura: paciente.obraSocial }}
           />
         ) : null}
       </div>

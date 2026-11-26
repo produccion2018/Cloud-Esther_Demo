@@ -29,6 +29,8 @@ export type Arancel = {
   precio: number;
   duracion: number; // minutos
   activo: boolean;
+  /** Sesiones que suele llevar (para planificar el tratamiento). Sin dato = 1. */
+  sesiones?: number;
 };
 
 export type Plantilla = {

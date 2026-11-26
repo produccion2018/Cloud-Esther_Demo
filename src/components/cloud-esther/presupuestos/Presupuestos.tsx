@@ -1889,7 +1889,7 @@ function Aranceles({ ctx }: { ctx: Ctx }) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{a.nombre}</p>
               <p className="text-[11px] text-muted-foreground">
-                {a.categoria} · {a.duracion} min{a.activo ? "" : " · inactiva"}
+                {a.categoria} · {a.duracion} min{(a.sesiones ?? 1) > 1 ? ` · ${a.sesiones} sesiones` : ""}{a.activo ? "" : " · inactiva"}
               </p>
             </div>
             <p className="text-sm font-bold text-primary">{ars(a.precio)}</p>
@@ -1961,6 +1961,7 @@ function ArancelForm({
     categoria: inicial?.categoria ?? ("Operatoria" as CategoriaArancel),
     precio: String(inicial?.precio ?? ""),
     duracion: String(inicial?.duracion ?? 30),
+    sesiones: String(inicial?.sesiones ?? 1),
     activo: inicial?.activo ?? true,
   });
   const [error, setError] = useState("");
@@ -1976,6 +1977,7 @@ function ArancelForm({
           categoria: f.categoria,
           precio: Number(f.precio),
           duracion: Number(f.duracion) || 30,
+          sesiones: Math.max(1, Math.min(60, Math.round(Number(f.sesiones) || 1))),
           activo: f.activo,
         };
         if (inicial)
@@ -2033,6 +2035,17 @@ function ArancelForm({
           />
         </Field>
       </div>
+      <Field label="Sesiones que suele llevar">
+        <input
+          type="number"
+          min={1}
+          max={60}
+          value={f.sesiones}
+          onChange={(e) => setF((p) => ({ ...p, sesiones: e.target.value }))}
+          className={`${INPUT} sm:max-w-[160px]`}
+          aria-label="Sesiones que suele llevar"
+        />
+      </Field>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

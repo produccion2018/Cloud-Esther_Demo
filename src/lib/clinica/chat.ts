@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { pedirAClinica, nombrePersona, type RolClinica } from "@/lib/clinica/api";
 import { clinicaReal } from "@/lib/clinica/modo-clinica";
-import { EQUIPO_DEMO } from "@/lib/clinica/demo-admin";
+import { personasDemoChat } from "@/lib/clinica/demo-admin";
 
 /* Ubicación: src/lib/clinica/chat.ts
    COMUNICACIÓN INTERNA (estilo Teams) — todos los planes.
@@ -22,6 +22,8 @@ export type CanalChat = {
   soyMiembro: boolean;
   puedoAdministrar: boolean;
   noLeidos: number;
+  /** Mensajes sin leer en los que me mencionaron con @ */
+  menciones?: number;
   pendientes: number;
   ultimo: { autor: string; texto: string; tipo: "mensaje" | "comunicado"; fecha: string; archivo: boolean } | null;
   creado: string;
@@ -31,7 +33,7 @@ export type ResumenChat = {
   personas: PersonaChat[];
   canales: CanalChat[];
   permisosPorRol: Record<RolChat, PermisosChat> | null;
-  avisos: { noLeidos: number; pendientes: number };
+  avisos: { noLeidos: number; menciones?: number; pendientes: number };
 };
 export type ArchivoChat = { id: string; nombre: string; tipo: string; tamano: number };
 /** Paciente o turno del que se habla en el mensaje (se toca y abre la ficha o el turno). */
@@ -44,6 +46,9 @@ export type MensajeChat = {
   texto: string;
   archivo: ArchivoChat | null;
   referencia?: ReferenciaChat | null;
+  /** Personas mencionadas con @ y si me mencionaron a mí */
+  menciones?: { id: string; nombre: string }[];
+  meMencionan?: boolean;
   fecha: string;
   quitado: boolean;
   mio: boolean;
@@ -55,8 +60,9 @@ export type MensajeChat = {
 };
 export type AvisosChat = {
   noLeidos: number;
+  menciones?: number;
   pendientes: number;
-  ultimo: { id: string; canalId: string; autor: string; texto: string; tipo: "mensaje" | "comunicado"; fecha: string } | null;
+  ultimo: { id: string; canalId: string; autor: string; texto: string; tipo: "mensaje" | "comunicado"; fecha: string; mencion?: boolean } | null;
 };
 export type ArchivoNuevo = { nombre: string; tipo: string; contenido: string };
 
@@ -114,6 +120,7 @@ const conNombres = (r: ResumenChat): ResumenChat => ({
 const mensajesProlijos = (m: MensajeChat): MensajeChat => ({
   ...m,
   autor: { ...m.autor, nombre: nombrePersona(m.autor.nombre) },
+  menciones: (m.menciones ?? []).map((x) => ({ ...x, nombre: nombrePersona(x.nombre) })),
   confirmaciones: m.confirmaciones
     ? {
         ...m.confirmaciones,
@@ -167,7 +174,13 @@ export function tomarPedidoAbrir(tipo: ReferenciaChat["tipo"]): number | null {
 
 export async function enviarMensaje(
   canalId: string,
-  datos: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined },
+  datos: {
+    texto: string;
+    tipo: "mensaje" | "comunicado";
+    archivo?: ArchivoNuevo | undefined;
+    referencia?: ReferenciaChat | undefined;
+    menciones?: string[] | undefined;
+  },
 ): Promise<MensajeChat> {
   const slug = slugReal();
   const m = slug
@@ -359,7 +372,9 @@ const demo = (() => {
     asistente: "Asistente",
   };
   const YO = "demo-yo";
-  const personas: PersonaChat[] = EQUIPO_DEMO.map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol, rolNombre: NOMBRE_ROL[p.rol], estado: "activa" }));
+  // El equipo del demo: el administrador y quienes se sumen en Equipo
+  const personas = (): PersonaChat[] =>
+    personasDemoChat().map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol, rolNombre: NOMBRE_ROL[p.rol], estado: "activa" }));
   const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
   let permisos: Record<RolChat, PermisosChat> = {
     odontologo: { comunicados: false, canales: false, directos: true, archivos: true },
@@ -369,10 +384,15 @@ const demo = (() => {
   type CanalDemo = Omit<CanalChat, "noLeidos" | "pendientes" | "ultimo" | "soyMiembro" | "puedoAdministrar"> & { leido: string };
   /* Solo el canal General (existe siempre). Sin canales por área, privados ni mensajes de ejemplo. */
   const canales: CanalDemo[] = [
-    { id: "demo-general", tipo: "general", nombre: "General", descripcion: "Toda la clínica", area: "", miembros: personas.map((p) => p.id), creado: hace(9000), leido: hace(200) },
+    { id: "demo-general", tipo: "general", nombre: "General", descripcion: "Toda la clínica", area: "", miembros: [], creado: hace(9000), leido: hace(200) },
   ];
-  const nom = (id: string) => personas.find((p) => p.id === id)?.nombre ?? "Persona";
-  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; referencia?: ReferenciaChat | null; fecha: string; quitado: boolean; acks: Record<string, string> };
+  const nom = (id: string) => personas().find((p) => p.id === id)?.nombre ?? "Persona";
+  /** El General es de toda la clínica: sus miembros son el equipo de hoy */
+  const alDia = () => {
+    const g = canales.find((c) => c.tipo === "general");
+    if (g) g.miembros = personas().map((p) => p.id);
+  };
+  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; referencia?: ReferenciaChat | null; menciones?: string[]; fecha: string; quitado: boolean; acks: Record<string, string> };
   let seq = 0;
   const m = (canalId: string, autor: string, texto: string, min: number, extra: Partial<MsgDemo> = {}): MsgDemo => ({
     id: `demo-m${++seq}`, canalId, autor, tipo: "mensaje", texto, archivo: null, fecha: hace(min), quitado: false, acks: {}, ...extra,
@@ -392,6 +412,8 @@ const demo = (() => {
       texto: x.quitado ? "" : x.texto,
       archivo: x.quitado ? null : x.archivo,
       referencia: x.quitado ? null : (x.referencia ?? null),
+      menciones: x.quitado ? [] : (x.menciones ?? []).map((id) => ({ id, nombre: nom(id) })),
+      meMencionan: !x.quitado && (x.menciones ?? []).includes(YO),
       fecha: x.fecha,
       quitado: x.quitado,
       mio: x.autor === YO,
@@ -405,14 +427,20 @@ const demo = (() => {
           : null,
     };
   };
-  const nuevoMsg = (canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined }) => {
+  const nuevoMsg = (
+    canalId: string,
+    d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined; menciones?: string[] | undefined },
+  ) => {
     let archivo: ArchivoChat | null = null;
     if (d.archivo) {
       const id = `demo-a${++seq}`;
       archivos[id] = d.archivo.contenido;
       archivo = { id, nombre: d.archivo.nombre, tipo: d.archivo.tipo, tamano: Math.round((d.archivo.contenido.length * 3) / 4) };
     }
-    const x = m(canalId, YO, d.texto, 0, { tipo: d.tipo, archivo, referencia: d.referencia ?? null });
+    alDia();
+    const canalM = canales.find((k) => k.id === canalId);
+    const menciones = [...new Set(d.menciones ?? [])].filter((id) => id !== YO && (canalM?.miembros ?? []).includes(id));
+    const x = m(canalId, YO, d.texto, 0, { tipo: d.tipo, archivo, referencia: d.referencia ?? null, menciones });
     mensajes.push(x);
     const c = canales.find((k) => k.id === canalId);
     if (c) c.leido = new Date().toISOString();
@@ -420,6 +448,7 @@ const demo = (() => {
   };
   return {
     resumen(): ResumenChat {
+      alDia();
       const lista = canales.filter(visible).map((c) => {
         const suyos = mensajes.filter((x) => x.canalId === c.id && !x.quitado);
         const ult = suyos[suyos.length - 1];
@@ -428,6 +457,7 @@ const demo = (() => {
           soyMiembro: true,
           puedoAdministrar: c.tipo === "area",
           noLeidos: suyos.filter((x) => x.autor !== YO && x.fecha > c.leido).length,
+          menciones: suyos.filter((x) => x.autor !== YO && x.fecha > c.leido && (x.menciones ?? []).includes(YO)).length,
           pendientes: suyos.filter((x) => x.tipo === "comunicado" && x.autor !== YO && !x.acks[YO]).length,
           ultimo: ult
             ? {
@@ -442,18 +472,22 @@ const demo = (() => {
       });
       return {
         yo: { id: YO, rol: "admin", permisos: { comunicados: true, canales: true, directos: true, archivos: true } },
-        personas,
+        personas: personas(),
         canales: lista,
         permisosPorRol: permisos,
         avisos: { noLeidos: lista.reduce((s, c) => s + c.noLeidos, 0), pendientes: lista.reduce((s, c) => s + c.pendientes, 0) },
       };
     },
     mensajes(canalId: string) {
+      alDia();
       const c = canales.find((k) => k.id === canalId);
       if (c) c.leido = new Date().toISOString();
       return { mensajes: mensajes.filter((x) => x.canalId === canalId).map(aDto), hayMas: false };
     },
-    enviar(canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined }) {
+    enviar(
+      canalId: string,
+      d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined; menciones?: string[] | undefined },
+    ) {
       return aDto(nuevoMsg(canalId, d));
     },
     comunicado(d: { texto: string; destino: "todos" | string[]; archivo?: ArchivoNuevo | undefined }) {

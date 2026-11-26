@@ -90,6 +90,13 @@ const estado = (() => {
   return { personas, porRol, limite: 15, rolesPropios };
 })();
 
+/** Personas del equipo del demo para la Comunicación interna (las que se suman en Equipo también). */
+export function personasDemoChat(): { id: string; nombre: string; rol: RolClinica }[] {
+  return visibles()
+    .filter((p) => p.estado !== "desactivada")
+    .map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol }));
+}
+
 const rolPropioDe = (p: PersonaDemo) => (p.rolPropio ? estado.rolesPropios.find((r) => r.codigo === p.rolPropio) : undefined);
 /** Personas que se ven: en Start y Pro no están las de roles propios */
 const visibles = () => estado.personas.filter((p) => conRolesPropios() || !p.rolPropio);

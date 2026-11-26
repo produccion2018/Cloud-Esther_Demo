@@ -11,10 +11,14 @@ export function AvisosChatGlobal({ onVer, silencio = false }: { onVer: (canalId:
     (u: NonNullable<AvisosChat["ultimo"]>) => {
       // Si ya está mirando el chat, no hace falta avisar
       if (silencio || (typeof window !== "undefined" && window.location.pathname.includes("comunicacion-interna"))) return;
-      const titulo = u.tipo === "comunicado" ? `📣 Comunicado de ${u.autor}` : `💬 ${u.autor}`;
+      const titulo = u.mencion
+        ? `@ ${u.autor} te mencionó`
+        : u.tipo === "comunicado"
+          ? `📣 Comunicado de ${u.autor}`
+          : `💬 ${u.autor}`;
       toast(titulo, {
         description: u.texto ? (u.texto.length > 90 ? `${u.texto.slice(0, 90)}…` : u.texto) : "Te mandó un archivo",
-        duration: 8000,
+        duration: u.mencion ? 12000 : 8000,
         action: { label: "Ver", onClick: () => onVer(u.canalId) },
       });
     },

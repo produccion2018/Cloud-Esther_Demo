@@ -378,11 +378,16 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
                       {!off && m.id === "comunicacion-interna" && montado && chat.noLeidos + chat.pendientes > 0 && (
                         <span
                           className={cn(
-                            "ml-auto grid min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold",
-                            chat.pendientes > 0 ? "bg-amber-500 text-white" : "bg-sidebar-primary text-sidebar-primary-foreground",
+                            "ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                            (chat.menciones ?? 0) > 0
+                              ? "bg-fuchsia-500 text-white"
+                              : chat.pendientes > 0
+                                ? "bg-amber-500 text-white"
+                                : "bg-sidebar-primary text-sidebar-primary-foreground",
                           )}
-                          aria-label={`${chat.noLeidos} mensajes sin leer, ${chat.pendientes} comunicados por confirmar`}
+                          aria-label={`${chat.noLeidos} mensajes sin leer, ${chat.pendientes} comunicados por confirmar${(chat.menciones ?? 0) > 0 ? `, te mencionaron ${chat.menciones}` : ""}`}
                         >
+                          {(chat.menciones ?? 0) > 0 ? "@" : ""}
                           {chat.noLeidos + chat.pendientes > 99 ? "99+" : chat.noLeidos + chat.pendientes}
                         </span>
                       )}

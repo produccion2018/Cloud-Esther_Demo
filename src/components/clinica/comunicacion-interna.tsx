@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  AtSign,
   Building2,
   CalendarDays,
   ChevronRight,
@@ -249,6 +250,30 @@ function ElegirPersonas({
         })}
       </ul>
     </div>
+  );
+}
+
+/* ─────────── Menciones con @ ─────────── */
+const sinAcentosChat = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const escaparRegex = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** El texto con las menciones («@Nombre») resaltadas. */
+function TextoConMenciones({ texto, menciones, clara }: { texto: string; menciones: { id: string; nombre: string }[]; clara: boolean }) {
+  if (!menciones.length) return <>{texto}</>;
+  const nombres = [...menciones.map((m) => m.nombre)].sort((a, b) => b.length - a.length).map(escaparRegex);
+  const partes = texto.split(new RegExp(`(@(?:${nombres.join("|")}))`, "g"));
+  return (
+    <>
+      {partes.map((p, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className={cn("rounded-md px-1 font-semibold", clara ? "bg-white/20" : "bg-primary/10 text-primary")}>
+            {p}
+          </span>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
   );
 }
 
@@ -745,14 +770,25 @@ function ItemConversacion({ c, activo, onClick, icono }: { c: CanalChat; activo:
           </span>
           <span className="mt-0.5 flex items-center gap-2">
             <span className={cn("truncate text-xs", c.noLeidos > 0 ? "text-foreground/80" : "text-muted-foreground")}>{vista}</span>
+            {(c.menciones ?? 0) > 0 && (
+              <span className="ml-auto grid size-5 shrink-0 place-items-center rounded-full bg-fuchsia-500 text-white" title="Te mencionaron" aria-label="Te mencionaron">
+                <AtSign className="size-3" />
+              </span>
+            )}
             {c.pendientes > 0 && (
-              <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300" title="Comunicados por confirmar">
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300",
+                  !(c.menciones ?? 0) && "ml-auto",
+                )}
+                title="Comunicados por confirmar"
+              >
                 <Megaphone className="size-3" />
                 {c.pendientes}
               </span>
             )}
             {c.noLeidos > 0 && (
-              <span className={cn("grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-1.5 text-[10px] font-bold text-white", c.pendientes === 0 && "ml-auto")}>
+              <span className={cn("grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-1.5 text-[10px] font-bold text-white", c.pendientes === 0 && !(c.menciones ?? 0) && "ml-auto")}>
                 {c.noLeidos > 99 ? "99+" : c.noLeidos}
               </span>
             )}
@@ -783,6 +819,11 @@ function Conversacion({
   const [archivo, setArchivo] = useState<ArchivoNuevo | null>(null);
   const [referencia, setReferencia] = useState<ReferenciaChat | null>(null);
   const [eligiendoRef, setEligiendoRef] = useState(false);
+  // Menciones: al escribir «@» aparece la lista de quienes están en esta conversación
+  const textoRef = useRef<HTMLTextAreaElement>(null);
+  const [mencionados, setMencionados] = useState<{ id: string; nombre: string }[]>([]);
+  const [arroba, setArroba] = useState<{ q: string; desde: number; hasta: number } | null>(null);
+  const [selArroba, setSelArroba] = useState(0);
   const [comoComunicado, setComoComunicado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -793,6 +834,34 @@ function Conversacion({
   const p = res.yo.permisos;
   const esAdmin = res.yo.rol === "admin";
   const puedoEscribir = canal.tipo !== "area" || canal.soyMiembro || esAdmin;
+  const mencionables = res.personas.filter((x) => x.id !== res.yo.id && (canal.tipo === "general" || canal.miembros.includes(x.id)));
+  const candidatos = arroba
+    ? mencionables
+        .filter((x) => {
+          const q = sinAcentosChat(arroba.q);
+          return !q || sinAcentosChat(x.nombre).split(/\s+/).some((w) => w.startsWith(q)) || sinAcentosChat(x.nombre).startsWith(q);
+        })
+        .slice(0, 6)
+    : [];
+  const detectarArroba = (valor: string, cursor: number) => {
+    const antes = valor.slice(0, cursor);
+    const m = /(?:^|\s)@([\p{L}\p{N}.]{0,20})$/u.exec(antes);
+    if (!m) return setArroba(null);
+    setArroba({ q: m[1] ?? "", desde: cursor - (m[1]?.length ?? 0) - 1, hasta: cursor });
+    setSelArroba(0);
+  };
+  const mencionar = (x: { id: string; nombre: string }) => {
+    if (!arroba) return;
+    const nuevo = `${texto.slice(0, arroba.desde)}@${x.nombre} ${texto.slice(arroba.hasta)}`;
+    const cursor = arroba.desde + x.nombre.length + 2;
+    setTexto(nuevo);
+    setMencionados((prev) => (prev.some((p) => p.id === x.id) ? prev : [...prev, { id: x.id, nombre: x.nombre }]));
+    setArroba(null);
+    requestAnimationFrame(() => {
+      textoRef.current?.focus();
+      textoRef.current?.setSelectionRange(cursor, cursor);
+    });
+  };
 
   const traer = useCallback(
     (bajar = false) => {
@@ -849,11 +918,14 @@ function Conversacion({
         tipo: comoComunicado ? "comunicado" : "mensaje",
         archivo: archivo ?? undefined,
         referencia: referencia ?? undefined,
+        menciones: mencionados.filter((x) => t.includes(`@${x.nombre}`)).map((x) => x.id),
       });
       setMensajes((prev) => [...(prev ?? []).filter((x) => x.id !== m.id), m]);
       setTexto("");
       setArchivo(null);
       setReferencia(null);
+      setMencionados([]);
+      setArroba(null);
       setComoComunicado(false);
       requestAnimationFrame(() => finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
     } catch (e) {
@@ -1013,6 +1085,43 @@ function Conversacion({
               {archivo && <Adjuntar archivo={archivo} onArchivo={setArchivo} />}
             </div>
           )}
+          {arroba && (
+            <div className="relative">
+              <div
+                role="listbox"
+                aria-label="Mencionar a"
+                className="absolute bottom-2 left-0 z-20 w-72 max-w-full overflow-hidden rounded-2xl border border-primary/15 bg-card p-1.5 shadow-[0_18px_40px_-18px_rgba(76,29,149,0.55)]"
+              >
+                <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Mencionar a</p>
+                {candidatos.length === 0 ? (
+                  <p className="px-2.5 py-2 text-xs text-muted-foreground">
+                    {mencionables.length === 0 ? "Todavía no hay más personas en esta conversación." : "Nadie con ese nombre acá."}
+                  </p>
+                ) : (
+                  candidatos.map((x, i) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      role="option"
+                      aria-selected={i === selArroba}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => mencionar(x)}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition",
+                        i === selArroba ? "bg-primary/[0.08]" : "hover:bg-primary/[0.05]",
+                      )}
+                    >
+                      <Avatar nombre={x.nombre} rol={x.rol} tam="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{x.nombre}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">{x.rolNombre}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex items-end gap-1.5 rounded-3xl bg-background p-1.5 ring-1 ring-border transition focus-within:ring-2 focus-within:ring-primary/40">
             {p.archivos && !archivo && <Adjuntar archivo={null} onArchivo={setArchivo} compacto />}
             {!referencia && (
@@ -1042,17 +1151,44 @@ function Conversacion({
               </button>
             )}
             <Textarea
+              ref={textoRef}
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                detectarArroba(e.target.value, e.target.selectionStart ?? e.target.value.length);
+              }}
               onKeyDown={(e) => {
+                if (arroba && candidatos.length > 0) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSelArroba((i) => (i + (e.key === "ArrowDown" ? 1 : candidatos.length - 1)) % candidatos.length);
+                    return;
+                  }
+                  if (e.key === "Enter" || e.key === "Tab") {
+                    e.preventDefault();
+                    const c = candidatos[selArroba] ?? candidatos[0];
+                    if (c) mencionar(c);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setArroba(null);
+                    return;
+                  }
+                }
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   void enviar();
                 }
               }}
+              onBlur={() => window.setTimeout(() => setArroba(null), 150)}
               rows={1}
               maxLength={4000}
-              placeholder={canal.tipo === "directo" ? `Mensaje para ${canal.nombre}` : `Escribí en ${canal.nombre}`}
+              placeholder={
+                canal.tipo === "directo"
+                  ? `Mensaje para ${canal.nombre}`
+                  : `Escribí en ${canal.nombre}${mencionables.length ? " · @ para mencionar" : ""}`
+              }
               className="max-h-36 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none focus-visible:ring-0"
               aria-label="Mensaje"
             />
@@ -1296,7 +1432,9 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
                   {m.mio ? "Vos" : m.autor.nombre} · {fechaHora(m.fecha)}
                 </span>
               </p>
-              <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.texto}</p>
+              <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+                <TextoConMenciones texto={m.texto} menciones={m.menciones ?? []} clara={false} />
+              </p>
               {m.referencia && <TarjetaReferencia r={m.referencia} clara={false} />}
               {archivo}
             </div>
@@ -1377,6 +1515,11 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
           <p className={cn("mb-1 flex items-center gap-2 px-1 text-[11px]", m.mio && "flex-row-reverse")}>
             <span className="font-semibold">{m.mio ? "Vos" : m.autor.nombre}</span>
             {!m.mio && autor && <span className={cn("rounded-full px-1.5 py-px text-[9px] font-bold", CHIP_ROL[rol])}>{autor.rolNombre}</span>}
+            {!m.mio && m.meMencionan && !m.quitado && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-fuchsia-500 px-1.5 py-px text-[9px] font-bold text-white">
+                <AtSign className="size-2.5" /> Te mencionó
+              </span>
+            )}
             <span className="tabular-nums text-muted-foreground">{hora(m.fecha)}</span>
           </p>
         )}
@@ -1393,10 +1536,18 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
                 ? "bg-muted/60 italic text-muted-foreground"
                 : m.mio
                   ? "rounded-br-lg bg-gradient-to-br from-primary to-fuchsia-600 text-white shadow-[0_12px_24px_-16px_rgba(124,58,237,0.9)]"
-                  : "rounded-bl-lg bg-card shadow-[0_1px_2px_rgba(30,0,60,0.06)] ring-1 ring-border/70",
+                  : m.meMencionan
+                    ? "rounded-bl-lg bg-fuchsia-50 shadow-[0_10px_24px_-18px_rgba(192,38,211,0.8)] ring-2 ring-fuchsia-400/60 dark:bg-fuchsia-500/10"
+                    : "rounded-bl-lg bg-card shadow-[0_1px_2px_rgba(30,0,60,0.06)] ring-1 ring-border/70",
             )}
           >
-            {m.quitado ? "Mensaje quitado" : m.texto && <p className="whitespace-pre-wrap break-words">{m.texto}</p>}
+            {m.quitado
+              ? "Mensaje quitado"
+              : m.texto && (
+                  <p className="whitespace-pre-wrap break-words">
+                    <TextoConMenciones texto={m.texto} menciones={m.menciones ?? []} clara={m.mio} />
+                  </p>
+                )}
             {!m.quitado && m.referencia && <TarjetaReferencia r={m.referencia} clara={m.mio} />}
             {!m.quitado && archivo}
           </div>

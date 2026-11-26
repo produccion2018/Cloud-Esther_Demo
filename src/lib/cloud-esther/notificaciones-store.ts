@@ -141,6 +141,39 @@ export function generarRutinasDeHoy(): number {
   return nuevas.length;
 }
 
+/** DEMO (sin servidor): sube a Dirección las tareas urgentes o altas sin atender.
+    En una clínica real lo hace el servidor cada 15 minutos (aunque nadie tenga la app abierta). */
+export function subirTareasSinAtenderLocal(): number {
+  const est = storeNotificaciones.leer();
+  const cfg = { ...ESCALAR_POR_DEFECTO, ...(est.preferencias.escalar ?? {}) };
+  if (!cfg.activo) return 0;
+  const ids = new Set(est.manuales.map((m) => m.id));
+  const ahora = Date.now();
+  const hoy = diaLocalRutina();
+  const nuevas: NotifManual[] = [];
+  for (const m of est.manuales) {
+    if (m.id.startsWith("esc-") || m.id.startsWith("hecha-") || ids.has(`esc-${m.id}`)) continue;
+    if (est.estados[m.id]?.completada || est.estados[m.id]?.oculta) continue;
+    const horas = m.prioridad === "Urgente" ? cfg.horasUrgente : m.prioridad === "Alta" ? cfg.horasAlta : 0;
+    const creada = Date.parse(m.creada);
+    if (!horas || !Number.isFinite(creada) || ahora - creada < horas * 3_600_000) continue;
+    nuevas.push({
+      id: `esc-${m.id}`,
+      titulo: `Sin atender: ${m.titulo}`.slice(0, 160),
+      detalle: `Es ${m.prioridad.toLowerCase()} y nadie la completó en ${horas} h.${m.asignado ? ` Estaba para ${m.asignado}.` : " No tiene responsable."}`,
+      categoria: m.categoria,
+      prioridad: "Urgente",
+      asignado: cfg.a || "Dirección",
+      vence: hoy,
+      horaVence: "",
+      creada: new Date().toISOString(),
+      creadaPor: "Cloud Esther",
+    });
+  }
+  if (nuevas.length) setNotificaciones("manuales", (prev) => [...nuevas, ...prev]);
+  return nuevas.length;
+}
+
 /** Tilda o destilda un paso de la lista. Devuelve true si con esto quedó todo hecho. */
 export function marcarPaso(notifId: string, indice: number, hecho: boolean, usuario: string): boolean {
   let completa = false;
@@ -169,7 +202,12 @@ export type PreferenciaCategoria = {
   whatsapp: boolean;
 };
 
+/** Si una tarea Urgente o Alta nadie la completa en X horas, se avisa a Dirección (Pro en adelante). */
+export type EscalarTareas = { activo: boolean; horasUrgente: number; horasAlta: number; a: string };
+export const ESCALAR_POR_DEFECTO: EscalarTareas = { activo: true, horasUrgente: 2, horasAlta: 24, a: "Dirección" };
+
 export type Preferencias = {
+  escalar?: EscalarTareas;
   categorias: Record<CategoriaNotif, PreferenciaCategoria>;
   resumenDiario: { activo: boolean; hora: string };
   noMolestar: { activo: boolean; desde: string; hasta: string };
@@ -267,7 +305,11 @@ export function cambiarEstadoNotif(
   const antes = storeNotificaciones.leer();
   setNotificaciones("estados", (prev) => {
     const sig = { ...prev };
-    for (const n of items) sig[n.id] = { ...sig[n.id], ...cambio };
+    for (const n of items) {
+      sig[n.id] = { ...sig[n.id], ...cambio };
+      // Si se resuelve una tarea que había «subido» a Dirección, el aviso de Dirección también
+      if (cambio.completada && antes.manuales.some((m) => m.id === `esc-${n.id}`)) sig[`esc-${n.id}`] = { ...sig[`esc-${n.id}`], completada: cambio.completada, leida: true };
+    }
     return sig;
   });
   // Tarea hecha → aviso a quien la creó (le llega en la app y, si lo activó, en el celular)

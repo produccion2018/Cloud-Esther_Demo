@@ -46,6 +46,7 @@ import {
   PRIORIDADES_NOTIF,
   cambiarEstadoNotif,
   esParaMi,
+  ESCALAR_POR_DEFECTO,
   generarRutinasDeHoy,
   marcarPaso,
   DIAS_SEMANA,
@@ -1837,6 +1838,50 @@ function RutinaForm({
   );
 }
 
+/* ───────────── Si nadie la atiende, sube (Pro en adelante) ───────────── */
+function SiNadieLaAtiende({ onToast }: { onToast: (m: string) => void }) {
+  const { preferencias } = storeNotificaciones.usar();
+  const { miembros } = useEquipo();
+  const cfg = { ...ESCALAR_POR_DEFECTO, ...(preferencias.escalar ?? {}) };
+  const set = (cambio: Partial<typeof cfg>) => {
+    setNotificaciones("preferencias", (p) => ({ ...p, escalar: { ...ESCALAR_POR_DEFECTO, ...(p.escalar ?? {}), ...cambio } }));
+    onToast("Guardado");
+  };
+  const destinos = ["Dirección", "Administración", ...miembros.filter((m) => m.status !== "inactivo").map((m) => `${m.firstName} ${m.lastName}`.trim())];
+  const opcionesHoras = (lista: number[]) => lista.map((h) => ({ value: String(h), label: h < 24 ? `${h} h` : h === 24 ? "1 día" : `${h / 24} días` }));
+  return (
+    <div className="card-grad space-y-3 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${cfg.activo ? "bg-rose-500/10 text-rose-600" : "bg-primary/10 text-primary"}`}>
+            <CircleAlert className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold">Si nadie la atiende, sube</p>
+            <p className="text-xs text-muted-foreground">
+              Si una tarea urgente o alta sigue sin hacerse, se le avisa a {cfg.a || "Dirección"} (en la bandeja y en el celular). Una sola vez por tarea.
+            </p>
+          </div>
+        </div>
+        <Interruptor activo={cfg.activo} onChange={(v) => set({ activo: v })} etiqueta="Avisar las tareas sin atender" />
+      </div>
+      {cfg.activo && (
+        <div data-movil="1col" className="grid gap-3 sm:grid-cols-3">
+          <Field label="Urgentes, después de">
+            <Select value={String(cfg.horasUrgente)} onChange={(v) => set({ horasUrgente: Number(v) })} opciones={opcionesHoras([1, 2, 4, 8])} />
+          </Field>
+          <Field label="Altas, después de">
+            <Select value={String(cfg.horasAlta)} onChange={(v) => set({ horasAlta: Number(v) })} opciones={opcionesHoras([4, 8, 24, 48])} />
+          </Field>
+          <Field label="Avisar a">
+            <Select value={cfg.a} onChange={(v) => set({ a: v })} opciones={destinos.map((n) => ({ value: n, label: n }))} />
+          </Field>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ───────────── Avisos en este dispositivo (push: aunque la app esté cerrada) ───────────── */
 function AvisosEnEsteDispositivo({ onToast }: { onToast: (m: string) => void }) {
   const real = useClinicaReal();
@@ -1991,6 +2036,8 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
       </EncabezadoSeccion>
 
       <AvisosEnEsteDispositivo onToast={onToast} />
+
+      <SiNadieLaAtiende onToast={onToast} />
 
       <div className="card-grad overflow-hidden">
         <div className="overflow-x-auto">

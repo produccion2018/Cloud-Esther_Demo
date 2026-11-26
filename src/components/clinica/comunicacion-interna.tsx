@@ -52,6 +52,7 @@ import {
   cambiarCanal,
   fijarMensaje,
   verFijados,
+  verLoPerdido,
   confirmarLectura,
   crearCanal,
   enviarComunicado,
@@ -70,6 +71,7 @@ import {
   type PermisosChat,
   type PersonaChat,
   type ReferenciaChat,
+  type PerdidoChat,
   type ResultadoBusqueda,
   type ResumenChat,
   type RolChat,
@@ -85,6 +87,9 @@ import {
 } from "@/lib/cloud-esther/notificaciones-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { puedeVer } from "@/lib/clinica/permisos";
+import { useConIA } from "@/lib/cloud-esther/niveles";
+import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
+import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { esClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -268,6 +273,155 @@ function ElegirPersonas({
         })}
       </ul>
     </div>
+  );
+}
+
+/* ─────────── Mientras no estabas ─────────── */
+/** Resumen sin IA: quién te nombró, qué falta confirmar y dónde hubo más movimiento. */
+function resumenPorReglas(lista: PerdidoChat[]): string[] {
+  const lineas: string[] = [];
+  const conMencion = lista.filter((c) => c.menciones > 0);
+  if (conMencion.length) {
+    const quien = conMencion.flatMap((c) => c.ultimos.filter((u) => u.mencion).map((u) => u.autor));
+    lineas.push(`Te nombraron en ${conMencion.map((c) => c.canal).join(", ")}${quien.length ? ` (${[...new Set(quien)].join(", ")})` : ""}.`);
+  }
+  const pend = lista.reduce((s, c) => s + c.pendientes, 0);
+  if (pend) lineas.push(`Tenés ${pend} comunicado${pend === 1 ? "" : "s"} por confirmar.`);
+  const privados = lista.filter((c) => c.tipoCanal === "directo" && c.nuevos > 0).map((c) => c.canal);
+  if (privados.length) lineas.push(`Te escribieron por privado: ${privados.join(", ")}.`);
+  const top = [...lista].filter((c) => c.tipoCanal !== "directo").sort((a, b) => b.nuevos - a.nuevos)[0];
+  if (top && top.nuevos) {
+    const ult = top.ultimos[top.ultimos.length - 1];
+    lineas.push(`Donde más se habló: ${top.canal}${ult ? ` — lo último, ${ult.autor}: «${ult.texto.slice(0, 80)}${ult.texto.length > 80 ? "…" : ""}»` : ""}.`);
+  }
+  return lineas.slice(0, 3);
+}
+
+function MientrasNoEstabas({ onAbrir }: { onAbrir: (canalId: string) => void }) {
+  const [lista, setLista] = useState<PerdidoChat[] | null>(null);
+  const [cerrado, setCerrado] = useState(false);
+  const [resumen, setResumen] = useState<string[] | null>(null);
+  const [resumiendo, setResumiendo] = useState(false);
+  const conIA = useConIA();
+  useEffect(() => {
+    verLoPerdido()
+      .then(setLista)
+      .catch(() => setLista([]));
+  }, []);
+  if (cerrado || !lista || lista.length === 0) return null;
+  const totalNuevos = lista.reduce((s, c) => s + c.nuevos, 0);
+  const desde = lista
+    .map((c) => c.desde)
+    .filter((x): x is string => !!x)
+    .sort()[0];
+  const resumir = async () => {
+    setResumiendo(true);
+    try {
+      const contexto = lista
+        .map(
+          (c) =>
+            `Conversación ${c.tipoCanal === "directo" ? `privada con ${c.canal}` : c.canal} (${c.nuevos} nuevos${c.pendientes ? `, ${c.pendientes} comunicados por confirmar` : ""}):\n` +
+            c.ultimos.map((u) => `- ${u.autor}${u.tipo === "comunicado" ? " (comunicado)" : ""}${u.mencion ? " (me nombra)" : ""}: ${u.texto}`).join("\n"),
+        )
+        .join("\n\n");
+      const r = await preguntarIA({
+        data: {
+          pregunta:
+            "Resumí para esta persona del equipo de la clínica lo que se perdió en el chat interno, en EXACTAMENTE 3 líneas cortas, en español rioplatense. Primero lo que la nombra o le piden a ella y lo que tiene que confirmar; después lo más importante. Sin saludos ni viñetas, una idea por línea. No inventes nada que no esté en el contexto.",
+          contexto,
+        },
+      }).catch(() => null);
+      const lineas = (r?.text ?? "")
+        .split("\n")
+        .map((l) => l.replace(/^[-•*\d.)\s]+/, "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      setResumen(lineas.length ? lineas : resumenPorReglas(lista));
+    } finally {
+      setResumiendo(false);
+    }
+  };
+  return (
+    <section className="ce-tarjeta relative overflow-hidden p-4 sm:p-5" aria-label="Mientras no estabas">
+      <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-fuchsia-500 to-amber-400" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold tracking-tight">Mientras no estabas</h2>
+          <p className="text-xs text-muted-foreground">
+            {totalNuevos} mensaje{totalNuevos === 1 ? "" : "s"} en {lista.length} conversaci{lista.length === 1 ? "ón" : "ones"}
+            {desde ? ` · desde ${cuandoCorto(desde)}` : ""}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {conIA && !resumen && (
+            <Button onClick={() => void resumir()} disabled={resumiendo} className="ce-boton h-9 rounded-full px-4 text-xs">
+              {resumiendo ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <CaraEsther className="mr-1.5 size-4" />}
+              Que Esther lo resuma
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setCerrado(true)} className="h-9 rounded-full px-4 text-xs">
+            Listo
+          </Button>
+        </div>
+      </div>
+      {resumen && (
+        <div className="mt-3 flex gap-3 rounded-2xl bg-gradient-to-br from-primary/[0.07] to-fuchsia-500/[0.05] p-3 ring-1 ring-primary/15">
+          <CaraEsther className="size-7 shrink-0" />
+          <ul className="min-w-0 space-y-1 text-[13px] leading-relaxed">
+            {resumen.map((l, i) => (
+              <li key={i}>{l}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <ul data-movil="1col" className="mt-3 grid gap-2 sm:grid-cols-2">
+        {lista.slice(0, 4).map((c) => {
+          const ult = c.ultimos[c.ultimos.length - 1];
+          return (
+            <li key={c.canalId}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCerrado(true);
+                  onAbrir(c.canalId);
+                }}
+                className="flex w-full items-start gap-3 rounded-2xl bg-background/70 p-3 text-left ring-1 ring-border/70 transition hover:ring-primary/40"
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  {c.tipoCanal === "directo" ? <Lock className="size-4" /> : c.tipoCanal === "general" ? <Building2 className="size-4" /> : <Hash className="size-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold">{c.canal}</span>
+                    {c.nuevos > 0 && (
+                      <span className="rounded-full bg-gradient-to-r from-primary to-fuchsia-500 px-1.5 py-px text-[10px] font-bold text-white">{c.nuevos}</span>
+                    )}
+                    {c.menciones > 0 && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-fuchsia-500 px-1.5 py-px text-[10px] font-bold text-white">
+                        <AtSign className="size-2.5" /> te nombran
+                      </span>
+                    )}
+                    {c.pendientes > 0 && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                        <Megaphone className="size-2.5" /> {c.pendientes} por confirmar
+                      </span>
+                    )}
+                  </span>
+                  {ult && (
+                    <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground/80">{ult.autor}:</span> {ult.texto || "📎 Archivo"}
+                    </span>
+                  )}
+                </span>
+                <ChevronRight className="mt-2 size-4 shrink-0 text-muted-foreground" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {lista.length > 4 && <p className="mt-2 text-xs text-muted-foreground">Y {lista.length - 4} conversaciones más en la lista.</p>}
+      {!conIA && <p className="mt-3 text-[11px] text-muted-foreground">Desde el plan Plus, Esther te lo resume en 3 líneas.</p>}
+    </section>
   );
 }
 
@@ -825,6 +979,7 @@ export function ComunicacionInterna({ conEncabezado = true }: { conEncabezado?: 
         />
       )}
       {!conEncabezado && <div className="flex flex-wrap justify-end gap-2">{acciones}</div>}
+      <MientrasNoEstabas onAbrir={abrir} />
 
       <section
         className={cn(

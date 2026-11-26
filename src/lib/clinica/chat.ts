@@ -185,6 +185,29 @@ export type ResultadoBusqueda = {
   fecha: string;
 };
 
+/** Lo que la persona se perdió desde la última vez, por conversación (no marca nada como leído). */
+export type PerdidoChat = {
+  canalId: string;
+  canal: string;
+  tipoCanal: "general" | "area" | "directo";
+  nuevos: number;
+  menciones: number;
+  pendientes: number;
+  desde: string | null;
+  ultimos: { autor: string; texto: string; tipo: "mensaje" | "comunicado"; fecha: string; mencion: boolean }[];
+};
+
+export async function verLoPerdido(): Promise<PerdidoChat[]> {
+  const slug = slugReal();
+  if (!slug) return demo.perdido();
+  const r = await pedirAClinica<{ canales: PerdidoChat[] }>(slug, "GET", "/chat/perdido");
+  return r.canales.map((c) => ({
+    ...c,
+    canal: c.tipoCanal === "directo" ? nombrePersona(c.canal) : c.canal,
+    ultimos: c.ultimos.map((u) => ({ ...u, autor: nombrePersona(u.autor) })),
+  }));
+}
+
 export async function fijarMensaje(mensajeId: string, fijado: boolean): Promise<void> {
   const slug = slugReal();
   if (slug) await pedirAClinica(slug, "POST", `/chat/mensajes/${encodeURIComponent(mensajeId)}/fijar`, { fijado });
@@ -513,6 +536,31 @@ const demo = (() => {
         avisos: { noLeidos: lista.reduce((s, c) => s + c.noLeidos, 0), pendientes: lista.reduce((s, c) => s + c.pendientes, 0) },
       };
     },
+    perdido(): PerdidoChat[] {
+      alDia();
+      return canales
+        .filter(visible)
+        .map((c) => {
+          const nuevos = mensajes.filter((x) => x.canalId === c.id && !x.quitado && x.autor !== YO && x.fecha > c.leido);
+          const pendientes = mensajes.filter((x) => x.canalId === c.id && !x.quitado && x.tipo === "comunicado" && x.autor !== YO && !x.acks[YO]).length;
+          return {
+            canalId: c.id,
+            canal: c.tipo === "directo" ? nom(c.miembros.find((id) => id !== YO) ?? "") : c.nombre,
+            tipoCanal: c.tipo,
+            nuevos: nuevos.length,
+            menciones: nuevos.filter((x) => (x.menciones ?? []).includes(YO)).length,
+            pendientes,
+            desde: c.leido,
+            ultimos: nuevos.slice(-6).map((x) => ({ autor: nom(x.autor), texto: x.texto.slice(0, 220), tipo: x.tipo, fecha: x.fecha, mencion: (x.menciones ?? []).includes(YO) })),
+          };
+        })
+        .filter((x) => x.nuevos > 0 || x.pendientes > 0)
+        .sort((a, b) => b.menciones - a.menciones || b.pendientes - a.pendientes || b.nuevos - a.nuevos);
+    },
+    /** Solo para probar en desarrollo: un mensaje que «llega» de otra persona del equipo */
+    llegaDe(canalId: string, autor: string, texto: string, minutos = 5, menciones: string[] = []) {
+      mensajes.push(m(canalId, autor, texto, minutos, { menciones }));
+    },
     fijar(id: string, fijado: boolean) {
       const x = mensajes.find((k) => k.id === id);
       if (!x || x.quitado) throw new Error("Mensaje no encontrado.");
@@ -612,3 +660,5 @@ const demo = (() => {
     },
   };
 })();
+// En desarrollo, para probar lo que llega de otras personas en el demo
+if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __chatDemo?: typeof demo }).__chatDemo = demo;

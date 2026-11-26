@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
+import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
 import type { FormEvent, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -14,6 +15,7 @@ import {
   Copy,
   Download,
   FileText,
+  Loader2,
   FolderOpen,
   Inbox,
   Lock,
@@ -47,7 +49,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { quierePromociones, quiereRecordatorios, usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useIntegraciones } from "@/lib/cloud-esther/integraciones";
-import { useNivel, type NivelModulo } from "@/lib/cloud-esther/niveles";
+import { useConIA, useNivel, type NivelModulo } from "@/lib/cloud-esther/niveles";
 import { setTurnosStore, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
 import {
   CANALES,
@@ -180,6 +182,26 @@ function rellenar(texto: string, datos: DatosVariables) {
     /\{\{(\w+)\}\}/g,
     (todo, clave: string) => datos[clave as keyof DatosVariables] || todo,
   );
+}
+
+/** Respuesta sugerida sin IA (o si la IA no responde): según lo último que escribió el paciente. */
+function sugerenciaPorReglas(ultimo: string, datos: DatosVariables): string {
+  const t = ultimo.toLowerCase();
+  const nombre = datos.paciente ? ` ${datos.paciente}` : "";
+  if (/dolor|duele|urgen|sangr|hinch|infla|se me rompi|se me cay|fiebre/.test(t))
+    return `Hola${nombre}, lamentamos lo que te pasa. Te damos un turno de urgencia lo antes posible: ¿podés venir hoy? Si se pone peor o aparece fiebre o hinchazón, avisanos enseguida.`;
+  if (/cancel|no puedo ir|no voy a poder|reprogram|cambiar (el|mi) turno|otro d[ií]a|otro horario/.test(t))
+    return `¡Gracias por avisar${nombre}! ¿Qué días y horarios te quedan mejor? Así te buscamos otro turno.`;
+  if (/turno|cita|horario|disponib|agend|cu[aá]ndo/.test(t))
+    return datos.fecha
+      ? `Hola${nombre}, tenés turno el ${datos.fecha} a las ${datos.hora} hs${datos.profesional ? ` con ${datos.profesional}` : ""}. ¿Te sirve o preferís cambiarlo?`
+      : `Hola${nombre}, ¡claro! ¿Qué días y horarios te quedan mejor? Te paso las opciones disponibles.`;
+  if (/precio|cu[aá]nto|costo|sale|presupuesto|valor|cuotas|pagar|tarjeta/.test(t))
+    return `Hola${nombre}, el valor depende de la evaluación de tu caso. Te preparamos el presupuesto y te lo mandamos por acá. ¿Querés que te demos un turno para la evaluación?`;
+  if (/d[oó]nde|direcci[oó]n|ubicaci|c[oó]mo llego|estacionamiento/.test(t))
+    return `Hola${nombre}, te pasamos la dirección y cómo llegar en un momento. ¡Te esperamos!`;
+  if (/gracias|genial|perfecto|dale|ok\b|listo/.test(t)) return `¡A vos${nombre}! Cualquier cosa nos escribís. 😊`;
+  return `Hola${nombre}, gracias por escribirnos. ¿En qué te podemos ayudar?`;
 }
 
 function proximoTurno(turnos: Turno[], paciente: string) {
@@ -1238,6 +1260,9 @@ function Chat({
   const [nota, setNota] = useState(false);
   const [verPlantillas, setVerPlantillas] = useState(false);
   const [verEtiquetas, setVerEtiquetas] = useState(false);
+  const [elegidoSlash, setElegidoSlash] = useState(0);
+  const [sugiriendo, setSugiriendo] = useState(false);
+  const conIA = useConIA();
   const finRef = useRef<HTMLDivElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   // Fondo del chat: lo elige cada persona, solo en su navegador y separado por clínica
@@ -1327,6 +1352,49 @@ function Chat({
   const plantillasCanal = plantillas.filter(
     (p) => p.canal === conv.canal || conv.canal !== "Email",
   );
+
+  // Respuestas rápidas con «/»: escribís /turno y elegís la plantilla (ya completa con sus datos)
+  const slash = /(^|\s)\/([^\s/]*)$/.exec(texto);
+  const consultaSlash = slash ? normalizarBusqueda(slash[2] ?? "") : null;
+  const opcionesSlash =
+    consultaSlash === null
+      ? []
+      : plantillasCanal
+          .filter((p) => !consultaSlash || normalizarBusqueda(`${p.nombre} ${p.categoria}`).includes(consultaSlash))
+          .sort((a, b) => b.usos - a.usos)
+          .slice(0, 6);
+  const usarPlantilla = (p: Plantilla) => {
+    const lleno = rellenar(p.texto, ctx.datosDe(conv.paciente));
+    setTexto((t) => (slash ? `${t.slice(0, slash.index + (slash[1]?.length ?? 0))}${lleno}` : lleno));
+    setElegidoSlash(0);
+    setComunicacion("plantillas", (prev) => prev.map((x) => (x.id === p.id ? { ...x, usos: x.usos + 1 } : x)));
+  };
+
+  // Esther sugiere la respuesta (planes con IA): con la conversación y el próximo turno del paciente
+  const sugerir = async () => {
+    const ultimos = conv.mensajes.filter((m) => m.de === "paciente" || m.de === "clinica").slice(-6);
+    const ultimoPaciente = [...ultimos].reverse().find((m) => m.de === "paciente")?.texto ?? "";
+    const datos = ctx.datosDe(conv.paciente);
+    setSugiriendo(true);
+    try {
+      const contexto = [
+        `Clínica: ${ctx.clinica}. Paciente: ${conv.paciente}. Canal: ${conv.canal}.`,
+        datos.fecha ? `Próximo turno: ${datos.fecha} ${datos.hora} hs con ${datos.profesional ?? "el profesional"} (${datos.tratamiento ?? "consulta"}).` : "No tiene turno agendado.",
+        "Conversación (de la más vieja a la más nueva):",
+        ...ultimos.map((m) => `${m.de === "paciente" ? "Paciente" : "Clínica"}: ${m.texto.slice(0, 300)}`),
+      ].join("\n");
+      const r = await preguntarIA({
+        data: {
+          pregunta:
+            "Redactá la respuesta que la clínica le manda al paciente a su último mensaje: corta (máximo 3 oraciones), cálida, en español rioplatense, sin inventar precios ni horarios que no estén en el contexto. Devolvé solo el texto del mensaje.",
+          contexto,
+        },
+      }).catch(() => null);
+      setTexto(r?.text?.trim() || sugerenciaPorReglas(ultimoPaciente, datos));
+    } finally {
+      setSugiriendo(false);
+    }
+  };
 
   return (
     <div className="card-grad flex h-[620px] min-w-0 flex-col overflow-hidden">
@@ -1499,7 +1567,47 @@ function Chat({
             ))}
           </div>
         )}
+        {consultaSlash !== null && (
+          <div className="mb-2 max-h-48 overflow-y-auto rounded-xl border border-primary/15 bg-white p-1.5 shadow-lg" role="listbox" aria-label="Respuestas rápidas">
+            {opcionesSlash.length === 0 ? (
+              <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                {plantillasCanal.length ? "Ninguna plantilla coincide." : "Todavía no hay plantillas: creálas en la pestaña Plantillas."}
+              </p>
+            ) : (
+              opcionesSlash.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i === elegidoSlash}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    usarPlantilla(p);
+                  }}
+                  className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left ${i === elegidoSlash ? "bg-primary/10" : "hover:bg-primary/5"}`}
+                >
+                  <FileText className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold">/{p.nombre}</span>
+                    <span className="block truncate text-[11px] text-muted-foreground">{rellenar(p.texto, ctx.datosDe(conv.paciente))}</span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
         <div className="mb-2 flex flex-wrap gap-1">
+          {conIA && !nota && (
+            <button
+              type="button"
+              disabled={sugiriendo}
+              onClick={() => void sugerir()}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/10 disabled:opacity-60"
+            >
+              {sugiriendo ? <Loader2 className="size-3 animate-spin" /> : <CaraEsther className="size-3.5" />}
+              {sugiriendo ? "Esther está pensando…" : "Que Esther sugiera la respuesta"}
+            </button>
+          )}
           {RESPUESTAS_RAPIDAS.map((r) => (
             <button
               key={r}
@@ -1542,8 +1650,25 @@ function Chat({
           <textarea
             rows={1}
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              setElegidoSlash(0);
+            }}
             onKeyDown={(e) => {
+              if (opcionesSlash.length) {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  const n = opcionesSlash.length;
+                  setElegidoSlash((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  const p = opcionesSlash[Math.min(elegidoSlash, opcionesSlash.length - 1)];
+                  if (p) usarPlantilla(p);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 enviar(texto);
@@ -1552,7 +1677,7 @@ function Chat({
             placeholder={
               nota
                 ? "Nota interna para el equipo (el paciente no la ve)…"
-                : `Escribí por ${conv.canal}…`
+                : `Escribí por ${conv.canal}… (/ para respuestas rápidas)`
             }
             className="max-h-28 min-h-8 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />

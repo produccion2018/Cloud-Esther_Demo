@@ -54,6 +54,7 @@ import { setTurnosStore, storeAgenda, type Turno } from "@/lib/cloud-esther/agen
 import {
   CANALES,
   CATEGORIAS_PLANTILLA,
+  plantillaCumple,
   setComunicacion,
   storeComunicacion,
   type Audiencia,
@@ -70,7 +71,7 @@ import {
 } from "@/lib/cloud-esther/comunicacion-store";
 import { normalizarBusqueda } from "@/lib/utils";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { abrirRecordatorioWhatsApp, telefonoDePaciente, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
+import { abrirRecordatorioWhatsApp, numeroWhatsApp, telefonoDePaciente, textoRecordatorioTurno } from "@/lib/clinica/whatsapp";
 import { enviarWhatsappBusiness } from "@/lib/clinica/api";
 import { crearEnlaceTurno } from "@/lib/clinica/enlace-estudio";
 import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
@@ -2368,6 +2369,70 @@ function Recordatorios({ ctx }: { ctx: Ctx }) {
         </div>
         )}
       </div>
+      <CumpleanosHoy ctx={ctx} />
+    </div>
+  );
+}
+
+/* Cumpleaños de hoy: saludo con la plantilla de la clínica. A mano en todos los planes; con el flujo
+   «Saludo de cumpleaños» de Automatizaciones (Plus en adelante) sale solo cada mañana. */
+function CumpleanosHoy({ ctx }: { ctx: Ctx }) {
+  const { pacientes } = usePacientes();
+  const { plantillas, cumpleSaludados = {} } = storeComunicacion.usar();
+  const hoy = hoyISO();
+  const anio = Number(hoy.slice(0, 4));
+  const cumplen = pacientes.filter((p) => p.estado === "Activo" && (p.fechaNacimiento ?? "").slice(5, 10) === hoy.slice(5));
+  if (!cumplen.length) return null;
+  const pl = plantillaCumple(plantillas);
+  const texto = (nombre: string) =>
+    pl ? rellenar(pl.texto, { paciente: nombre, clinica: ctx.clinica }) : `¡Feliz cumpleaños ${nombre}! 🎉 Todo el equipo de ${ctx.clinica} te desea un gran día.`;
+  const saludar = (p: (typeof cumplen)[number]) => {
+    const numero = numeroWhatsApp(p.telefono);
+    window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto(p.nombre))}`, "_blank", "noopener,noreferrer");
+    setComunicacion("cumpleSaludados", (prev) => ({ ...(prev ?? {}), [String(p.id)]: anio }));
+    if (pl) setComunicacion("plantillas", (prev) => prev.map((x) => (x.id === pl.id ? { ...x, usos: x.usos + 1 } : x)));
+  };
+  return (
+    <div className="rounded-3xl border border-primary/12 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(124,58,237,0.5)]">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-display text-sm font-bold">Cumpleaños de hoy</p>
+          <p className="text-[11.5px] text-muted-foreground">
+            {pl ? `Con tu plantilla «${pl.nombre}».` : "Creá una plantilla «Feliz cumpleaños» para usar tu propio texto."}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{cumplen.length}</span>
+      </div>
+      <ul className="space-y-2">
+        {cumplen.map((p) => {
+          const saludado = cumpleSaludados[String(p.id)] === anio;
+          const noAcepta = !quierePromociones(p);
+          return (
+            <li key={p.id} className="flex items-center justify-between gap-2 rounded-2xl border border-primary/10 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold">
+                  {p.nombre} {p.apellido}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {noAcepta ? "Pidió no recibir novedades" : saludado ? "Ya lo saludaste" : p.telefono || "Sin teléfono"}
+                </p>
+              </div>
+              {!noAcepta && (
+                <button
+                  type="button"
+                  onClick={() => saludar(p)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+                    saludado ? "border border-primary/15 bg-white text-muted-foreground" : "bg-[#25D366] text-white hover:brightness-95"
+                  }`}
+                >
+                  <IconoWhatsApp className="size-3.5" />
+                  {saludado ? "Otra vez" : "Saludar"}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

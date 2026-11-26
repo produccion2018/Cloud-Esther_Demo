@@ -120,7 +120,21 @@ export type EstadoComunicacion = {
   envios: Envio[];
   recordatorios: Record<number, RecordatorioTurno>; // por id de turno de la Agenda
   config: ConfigComunicacion;
+  /** Saludos de cumpleaños ya enviados: id del paciente → año. */
+  cumpleSaludados?: Record<string, number>;
 };
+
+const sinAcentosCom = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+/** Plantillas de indicaciones / cuidados después del tratamiento (las escribe la clínica). La que
+    nombra el tratamiento va primero («Indicaciones post extracción» para una extracción). */
+export function plantillasIndicaciones(plantillas: Plantilla[], tratamiento = ""): Plantilla[] {
+  const post = plantillas.filter((p) => /post|indicac|cuidado/.test(sinAcentosCom(`${p.nombre} ${p.categoria}`)));
+  const palabras = sinAcentosCom(tratamiento).split(/[^a-z]+/).filter((w) => w.length >= 5);
+  const nombra = (p: Plantilla) => palabras.some((w) => sinAcentosCom(p.nombre).includes(w.slice(0, 6)));
+  return [...post.filter(nombra), ...post.filter((p) => !nombra(p))];
+}
+/** Plantilla de saludo de cumpleaños de la clínica (si tiene). */
+export const plantillaCumple = (plantillas: Plantilla[]) => plantillas.find((p) => /cumple/.test(sinAcentosCom(p.nombre)));
 
 /* ───────────── Datos base ───────────── */
 

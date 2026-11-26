@@ -17,6 +17,7 @@ import {
   cambiarRegistro,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
+import { plantillaCumple, plantillasIndicaciones, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import {
   estadoComprobante,
   paisFiscal,
@@ -288,6 +289,50 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
         });
       break;
     }
+    case "indicaciones_postoperatorias": {
+      // Sesiones registradas hoy en tratamientos que tienen plantilla de indicaciones de la clínica
+      const hoy = hoyISO();
+      const plantillas = storeComunicacion.leer().plantillas;
+      const clinica = clinicaReal()?.sesion.clinica.nombre ?? "la clínica";
+      lista = pacientes.flatMap((p) =>
+        (regs[p.id]?.tratamientos ?? [])
+          .filter((t) => (t.sesiones ?? []).some((s) => s.fecha === hoy) && t.indicacionesEl !== hoy)
+          .flatMap((t) => {
+            const pl = plantillasIndicaciones(plantillas, t.nombre)[0];
+            if (!pl) return [];
+            return [
+              {
+                titulo: `Indicaciones de ${t.nombre} para ${nombre(p)}`,
+                paciente: nombre(p),
+                pacienteId: p.id,
+                telefono: p.telefono,
+                sede: p.sucursal,
+                monto: 0,
+                dato: pl.texto.replaceAll("{{paciente}}", p.nombre).replaceAll("{{clinica}}", String(clinica)).replace(/\{\{\w+\}\}/g, ""),
+              },
+            ];
+          }),
+      );
+      break;
+    }
+    case "cumpleanos": {
+      const hoy = hoyISO().slice(5);
+      const pl = plantillaCumple(storeComunicacion.leer().plantillas);
+      lista = pacientes
+        .filter((p) => p.estado === "Activo" && (p.fechaNacimiento ?? "").slice(5, 10) === hoy && p.aceptaPromociones !== false)
+        .map((p) => ({
+          titulo: `Cumpleaños de ${nombre(p)}`,
+          paciente: nombre(p),
+          pacienteId: p.id,
+          telefono: p.telefono,
+          sede: p.sucursal,
+          monto: 0,
+          dato: pl
+            ? pl.texto.replaceAll("{{paciente}}", p.nombre).replaceAll("{{clinica}}", clinicaReal()?.sesion.clinica.nombre ?? "la clínica").replace(/\{\{\w+\}\}/g, "")
+            : `¡Feliz cumpleaños ${p.nombre}! 🎉`,
+        }));
+      break;
+    }
     case "tratamiento_inconcluso": {
       // En tratamiento, sin turno agendado y sin venir hace 30 días o más
       const turnos = storeAgenda.leer().turnos;
@@ -401,6 +446,9 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Reposición sugerida: ${d.dato}.`;
     case "estudio_pendiente":
       return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
+    case "indicaciones_postoperatorias":
+    case "cumpleanos":
+      return d.dato;
     case "encuesta_satisfaccion":
       return `Hola ${n}, ¡gracias por venir! ¿Nos contás cómo te atendimos? Es un toque: ${d.dato}`;
     case "tratamiento_inconcluso":

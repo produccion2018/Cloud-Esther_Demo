@@ -247,6 +247,25 @@ export function useRecordatoriosBasicos() {
           });
       }
 
+      // 5b) Cumpleaños de hoy (sin el flujo automático: saludo a mano desde Comunicación)
+      if (!flujoActivo("cumpleanos") && !existentes.has(`basico-cumple-${hoy}`)) {
+        const cumplen = leerPacientes().filter(
+          (p) => p.estado === "Activo" && (p.fechaNacimiento ?? "").slice(5, 10) === hoy.slice(5) && p.aceptaPromociones !== false,
+        );
+        if (cumplen.length)
+          nuevos.push({
+            ...base,
+            id: `basico-cumple-${hoy}`,
+            titulo: `Hoy ${cumplen.length === 1 ? "cumple" : "cumplen"} años ${cumplen.length === 1 ? `${cumplen[0]?.nombre ?? ""} ${cumplen[0]?.apellido ?? ""}` : `${cumplen.length} pacientes`}`,
+            detalle: `${cumplen
+              .slice(0, 3)
+              .map((x) => `${x.nombre} ${x.apellido}`)
+              .join(", ")}${cumplen.length > 3 ? ` y ${cumplen.length - 3} más` : ""}. Saludalos con un toque desde Comunicación → Recordatorios → «Cumpleaños de hoy».`,
+            categoria: "Pacientes",
+            prioridad: "Baja",
+          });
+      }
+
       // 6) Enlace del laboratorio por vencer: avisar para crear uno nuevo y mandárselo
       //    (un aviso a los 15 días, otro a los 3 y otro si ya venció)
       for (const l of storeLaboratorios.leer().laboratorios) {

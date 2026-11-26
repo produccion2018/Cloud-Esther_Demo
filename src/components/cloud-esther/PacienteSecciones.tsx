@@ -107,6 +107,7 @@ import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { Autocompletar } from "@/components/ui/autocompletar";
 import { PAISES_BASE } from "@/lib/paises";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
+import { plantillasIndicaciones, setComunicacion, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import { crearEnlaceEstudio } from "@/lib/clinica/enlace-estudio";
 import { clavePublicacion, puedePublicarPortal, setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { completarPlantilla, usePlantillasInforme } from "@/components/cloud-esther/pacientes/PlantillasInforme";
@@ -340,6 +341,8 @@ export type TratamientoPaciente = {
   opcion?: "" | "A" | "B";
   /** Día en que el paciente aceptó el plan que incluye este tratamiento. */
   aceptado?: string;
+  /** Día en que se le mandaron las indicaciones / cuidados después del tratamiento. */
+  indicacionesEl?: string;
 };
 
 export const ETAPAS_PLAN = ["Urgencia", "Saneamiento", "Rehabilitación", "Estética", "Mantenimiento"];
@@ -4413,6 +4416,20 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
   const [sesionTurno, setSesionTurno] = useState<{ fecha: string; profesional: string } | undefined>(undefined);
   const [agendarDe, setAgendarDe] = useState<TratamientoPaciente | null>(null);
   const [verPlan, setVerPlan] = useState(false);
+  const [indicacionesDe, setIndicacionesDe] = useState<TratamientoPaciente | null>(null);
+  // Plantillas de indicaciones que escribió la clínica (Comunicación → Plantillas)
+  const plantillasCom = storeComunicacion.usar().plantillas;
+  const mandarIndicaciones = (t: TratamientoPaciente, texto: string, plantillaId: number) => {
+    const numero = numeroWhatsApp(contexto?.telefono);
+    const nombre = (contexto?.paciente ?? "").trim().split(" ")[0] ?? "";
+    const lleno = texto.replaceAll("{{paciente}}", nombre).replaceAll("{{clinica}}", contexto?.clinica ?? "la clínica").replace(/\{\{\w+\}\}/g, "");
+    window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(lleno)}`, "_blank", "noopener,noreferrer");
+    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, indicacionesEl: hoyISO() } : x)));
+    setComunicacion("plantillas", (prev) => prev.map((x) => (x.id === plantillaId ? { ...x, usos: x.usos + 1 } : x)));
+    agregarAuditoria(`Envió las indicaciones de ${t.nombre}`);
+    if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+    setIndicacionesDe(null);
+  };
   const [verSesiones, setVerSesiones] = useState<number | null>(null);
   // Turnos de la Agenda conectados a cada tratamiento (de este paciente)
   const turnosAgenda = storeAgenda.usar().turnos;
@@ -4720,6 +4737,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       {t.etapa && <Badge tono="gris">{t.etapa}</Badge>}
                       {t.opcion && <Badge tono="ambar">Opción {t.opcion}</Badge>}
                       {t.aceptado && !cerrado && <Badge tono="verde">Plan aceptado</Badge>}
+                      {t.indicacionesEl && <Badge tono="gris">Indicaciones {formatearFecha(t.indicacionesEl).slice(0, 5)}</Badge>}
                       {quieto && (
                         <Badge tono={quieto.invitado ? "gris" : "ambar"}>
                           {quieto.invitado
@@ -4860,6 +4878,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                   {quieto && !quieto.invitado && (
                     <BotonMini icon={MessageCircle} label="Invitar a retomar" onClick={() => invitarRetomar(t)} />
                   )}
+                  {t.estado !== "Cancelado" && t.estado !== "Pendiente" && (hechas > 0 || esCompletado(t)) && (
+                    <BotonMini icon={ClipboardCheck} label="Indicaciones" onClick={() => setIndicacionesDe(t)} />
+                  )}
                   {presupuesto && onSeccion ? (
                     <BotonMini
                       icon={ReceiptText}
@@ -4969,6 +4990,43 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
               setSesionTurno(undefined);
             }}
           />
+        </Modal>
+      )}
+
+      {indicacionesDe && (
+        <Modal title="Indicaciones para el paciente" onClose={() => setIndicacionesDe(null)}>
+          {(() => {
+            const opciones = plantillasIndicaciones(plantillasCom, indicacionesDe.nombre);
+            const nombre = (contexto?.paciente ?? "").trim().split(" ")[0] ?? "";
+            return opciones.length === 0 ? (
+              <div className="space-y-2 text-sm">
+                <p>Todavía no tenés plantillas de indicaciones.</p>
+                <p className="text-xs text-muted-foreground">
+                  Creálas en Comunicación → Plantillas con un nombre como «Indicaciones post extracción» o «Cuidados después del blanqueamiento»: las escribe tu clínica con sus propias indicaciones.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {indicacionesDe.nombre}
+                  {indicacionesDe.pieza ? ` · pieza ${indicacionesDe.pieza}` : ""} — elegí qué mandarle por WhatsApp:
+                </p>
+                {opciones.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => mandarIndicaciones(indicacionesDe, p.texto, p.id)}
+                    className="w-full rounded-2xl border border-primary/12 bg-card p-3 text-left transition hover:border-primary/35 hover:bg-primary/[0.03]"
+                  >
+                    <span className="block text-sm font-semibold">{p.nombre}</span>
+                    <span className="mt-0.5 line-clamp-3 block text-xs text-muted-foreground">
+                      {p.texto.replaceAll("{{paciente}}", nombre).replaceAll("{{clinica}}", contexto?.clinica ?? "la clínica")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </Modal>
       )}
 

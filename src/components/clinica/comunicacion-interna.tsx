@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   AtSign,
+  ClipboardCheck,
   Building2,
   CalendarDays,
   ChevronRight,
@@ -67,6 +68,16 @@ import {
   type RolChat,
 } from "@/lib/clinica/chat";
 import { useNavigate } from "@tanstack/react-router";
+import { Seleccion } from "@/components/ui/seleccion";
+import {
+  PRIORIDADES_NOTIF,
+  cambiarEstadoNotif,
+  setNotificaciones,
+  storeNotificaciones,
+  type PrioridadNotif,
+} from "@/lib/cloud-esther/notificaciones-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { puedeVer } from "@/lib/clinica/permisos";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { esClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -274,6 +285,173 @@ function TextoConMenciones({ texto, menciones, clara }: { texto: string; mencion
         ),
       )}
     </>
+  );
+}
+
+/* ─────────── Convertir un mensaje en tarea (va a Notificaciones) ─────────── */
+const AREAS_TAREA = ["Recepción", "Administración", "Dirección"];
+const idTareaDe = (mensajeId: string) => `chat-${mensajeId}`;
+
+/** ¿Puede esta persona crear tareas? (necesita ver Notificaciones) */
+function usePuedeCrearTareas() {
+  const real = useClinicaReal();
+  return !real || puedeVer(real.rol, "notificaciones", real.sesion.usuario.modulos);
+}
+
+/** Estado de la tarea que salió de un mensaje (la ven todos en la conversación). */
+function useTareaDeMensaje(mensajeId: string) {
+  const { manuales, estados } = storeNotificaciones.usar();
+  const id = idTareaDe(mensajeId);
+  const t = manuales.find((x) => x.id === id);
+  return t ? { ...t, hecha: !!estados[id]?.completada } : null;
+}
+
+function TareaDesdeMensaje({
+  m,
+  res,
+  canalNombre,
+  onCerrar,
+}: {
+  m: MensajeChat;
+  res: ResumenChat;
+  canalNombre: string;
+  onCerrar: () => void;
+}) {
+  const yo = res.personas.find((p) => p.id === res.yo.id)?.nombre ?? "Equipo";
+  const base = (m.texto || (m.referencia ? `${m.referencia.tipo === "turno" ? "Turno de" : "Paciente:"} ${m.referencia.nombre}` : "")).replace(/\s+/g, " ").trim();
+  const [titulo, setTitulo] = useState(base.length > 80 ? `${base.slice(0, 77)}…` : base);
+  const [asignado, setAsignado] = useState(m.mio ? "" : m.autor.id === res.yo.id ? "" : yo);
+  const [vence, setVence] = useState(diaLocal());
+  const [hora, setHora] = useState("");
+  const [prioridad, setPrioridad] = useState<PrioridadNotif>("Normal");
+  const [error, setError] = useState("");
+  const personas = res.personas.map((p) => p.nombre);
+  const guardar = () => {
+    if (!titulo.trim()) return setError("Escribí qué hay que hacer.");
+    if (vence && vence < diaLocal()) return setError("La fecha no puede ser pasada.");
+    const id = idTareaDe(m.id);
+    const ref = m.referencia ? `\n${m.referencia.tipo === "turno" ? "Turno" : "Paciente"}: ${m.referencia.nombre}${m.referencia.detalle ? ` (${m.referencia.detalle})` : ""}` : "";
+    const detalle = `${m.mio ? yo : m.autor.nombre} en ${canalNombre}: «${m.texto.slice(0, 500)}»${ref}`.trim();
+    setNotificaciones("manuales", (prev) => [
+      {
+        id,
+        titulo: titulo.trim(),
+        detalle,
+        categoria: "Comunicación",
+        prioridad,
+        asignado,
+        vence,
+        horaVence: hora,
+        creada: new Date().toISOString(),
+        creadaPor: yo,
+      },
+      ...prev.filter((x) => x.id !== id),
+    ]);
+    cambiarEstadoNotif([{ id, titulo: titulo.trim() }], {}, "Creó desde el chat", yo);
+    toast.success(asignado ? `Tarea creada para ${asignado}` : "Tarea creada", { description: "Está en Notificaciones." });
+    onCerrar();
+  };
+  const campo = "h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10";
+  return (
+    <Dialog open onOpenChange={(v) => !v && onCerrar()}>
+      <DialogContent className="max-w-md rounded-3xl">
+        <DialogHeader>
+          <DialogTitle>Convertir en tarea</DialogTitle>
+          <DialogDescription>Queda en Notificaciones con responsable y fecha. El mensaje muestra cuando está hecha.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold">Qué hay que hacer</span>
+            <Input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={120} className="h-11 rounded-2xl" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold">Responsable</span>
+            <Seleccion value={asignado} onChange={(e) => setAsignado(e.target.value)} className={`${campo} appearance-none pr-8`}>
+              <option value="">Sin asignar</option>
+              <optgroup label="Personas">
+                {personas.map((n) => (
+                  <option key={n} value={n}>
+                    {n === yo ? `${n} (yo)` : n}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Áreas">
+                {AREAS_TAREA.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </optgroup>
+            </Seleccion>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold">Para el</span>
+              <input type="date" value={vence} min={diaLocal()} onChange={(e) => setVence(e.target.value)} className={campo} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold">Hora (opcional)</span>
+              <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className={campo} />
+            </label>
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-semibold">Prioridad</span>
+            <div className="grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">
+              {PRIORIDADES_NOTIF.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPrioridad(p)}
+                  aria-pressed={prioridad === p}
+                  className={cn(
+                    "rounded-xl py-1.5 text-xs font-semibold transition",
+                    prioridad === p ? (p === "Urgente" ? "bg-rose-500 text-white" : "bg-card text-primary shadow-sm") : "text-muted-foreground",
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={onCerrar} className="rounded-full">
+              Cancelar
+            </Button>
+            <Button onClick={guardar} className="ce-boton rounded-full px-5">
+              <ClipboardCheck className="mr-1.5 size-4" /> Crear tarea
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Chip debajo del mensaje cuando ya es una tarea */
+function ChipTarea({ mensajeId, clara }: { mensajeId: string; clara: boolean }) {
+  const t = useTareaDeMensaje(mensajeId);
+  if (!t) return null;
+  return (
+    <span
+      className={cn(
+        "mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+        t.hecha
+          ? clara
+            ? "bg-white/20"
+            : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+          : clara
+            ? "bg-white/15"
+            : "bg-primary/[0.08] text-primary",
+      )}
+    >
+      {t.hecha ? <CheckCheck className="size-3.5 shrink-0" /> : <ClipboardCheck className="size-3.5 shrink-0" />}
+      <span className="truncate">
+        {t.hecha ? "Tarea hecha" : "Tarea"}
+        {t.asignado ? ` · ${t.asignado}` : ""}
+        {!t.hecha && t.vence ? ` · ${t.vence === diaLocal() ? "hoy" : formatearFecha(t.vence).slice(0, 5)}` : ""}
+      </span>
+    </span>
   );
 }
 
@@ -1051,6 +1229,7 @@ function Conversacion({
                   m={f.m}
                   seguido={f.seguido}
                   res={res}
+                  canalNombre={canal.tipo === "directo" ? `privado con ${canal.nombre}` : canal.nombre}
                   onCambio={(nuevo) => setMensajes((prev) => (prev ?? []).map((x) => (x.id === nuevo.id ? nuevo : x)))}
                 />
               ),
@@ -1353,7 +1532,35 @@ export function ElegirFondo({
   );
 }
 
-function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boolean; res: ResumenChat; onCambio: (m: MensajeChat) => void }) {
+function Mensaje({
+  m,
+  seguido,
+  res,
+  canalNombre,
+  onCambio,
+}: {
+  m: MensajeChat;
+  seguido: boolean;
+  res: ResumenChat;
+  canalNombre: string;
+  onCambio: (m: MensajeChat) => void;
+}) {
+  const puedeTareas = usePuedeCrearTareas();
+  const yaEsTarea = !!useTareaDeMensaje(m.id);
+  const [haciendoTarea, setHaciendoTarea] = useState(false);
+  const botonTarea =
+    puedeTareas && !m.quitado && !yaEsTarea ? (
+      <button
+        type="button"
+        onClick={() => setHaciendoTarea(true)}
+        className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-primary/10 hover:text-primary focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+        aria-label="Convertir en tarea"
+        title="Convertir en tarea"
+      >
+        <ClipboardCheck className="size-3.5" />
+      </button>
+    ) : null;
+  const dialogoTarea = haciendoTarea && <TareaDesdeMensaje m={m} res={res} canalNombre={canalNombre} onCerrar={() => setHaciendoTarea(false)} />;
   const autor = res.personas.find((x) => x.id === m.autor.id);
   const rol = autor?.rol ?? "asistente";
   const puedoQuitar = !m.quitado && (m.mio || res.yo.rol === "admin");
@@ -1437,7 +1644,10 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
               </p>
               {m.referencia && <TarjetaReferencia r={m.referencia} clara={false} />}
               {archivo}
+              <ChipTarea mensajeId={m.id} clara={false} />
             </div>
+            {botonTarea}
+            {dialogoTarea}
             {puedoQuitar && (
               <button type="button" onClick={() => void quitar()} className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-50" aria-label="Quitar comunicado">
                 <Trash2 className="size-4" />
@@ -1524,6 +1734,8 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
           </p>
         )}
         <div className="flex max-w-full items-center gap-1.5">
+          {m.mio && botonTarea}
+          {dialogoTarea}
           {puedoQuitar && m.mio && (
             <button type="button" onClick={() => void quitar()} className="grid size-7 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-50" aria-label="Quitar mensaje">
               <Trash2 className="size-3.5" />
@@ -1550,7 +1762,9 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
                 )}
             {!m.quitado && m.referencia && <TarjetaReferencia r={m.referencia} clara={m.mio} />}
             {!m.quitado && archivo}
+            {!m.quitado && <ChipTarea mensajeId={m.id} clara={m.mio} />}
           </div>
+          {!m.mio && botonTarea}
           {puedoQuitar && !m.mio && (
             <button type="button" onClick={() => void quitar()} className="grid size-7 place-items-center rounded-full text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-50" aria-label="Quitar mensaje">
               <Trash2 className="size-3.5" />

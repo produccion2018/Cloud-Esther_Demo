@@ -3728,21 +3728,22 @@ function HistoriaSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
 /* ───────────── Tratamientos ───────────── */
 
-/* Catálogo orientativo: sesiones y valor sugerido para autocompletar el formulario. */
-const CATALOGO_TRATAMIENTOS: Record<string, { sesiones: number; precio: number }> = {
-  "Primera consulta": { sesiones: 1, precio: 15000 },
-  Control: { sesiones: 1, precio: 10000 },
-  "Limpieza dental": { sesiones: 1, precio: 25000 },
-  Restauración: { sesiones: 1, precio: 40000 },
-  "Restauración estética": { sesiones: 2, precio: 60000 },
-  Endodoncia: { sesiones: 3, precio: 120000 },
-  Extracción: { sesiones: 1, precio: 45000 },
-  "Control de ortodoncia": { sesiones: 12, precio: 480000 },
-  Blanqueamiento: { sesiones: 2, precio: 90000 },
-  "Evaluación de implante": { sesiones: 1, precio: 20000 },
-  Implante: { sesiones: 4, precio: 650000 },
-  Corona: { sesiones: 3, precio: 280000 },
-  Urgencia: { sesiones: 1, precio: 30000 },
+/* Nombres de prácticas y sesiones orientativas (SIN precios: los precios los pone cada clínica en
+   Presupuestos → Aranceles, en su moneda y para su país). Solo se usa si la clínica no cargó aranceles. */
+const CATALOGO_TRATAMIENTOS: Record<string, { sesiones: number }> = {
+  "Primera consulta": { sesiones: 1 },
+  Control: { sesiones: 1 },
+  "Limpieza dental": { sesiones: 1 },
+  Restauración: { sesiones: 1 },
+  "Restauración estética": { sesiones: 2 },
+  Endodoncia: { sesiones: 3 },
+  Extracción: { sesiones: 1 },
+  "Control de ortodoncia": { sesiones: 12 },
+  Blanqueamiento: { sesiones: 2 },
+  "Evaluación de implante": { sesiones: 1 },
+  Implante: { sesiones: 4 },
+  Corona: { sesiones: 3 },
+  Urgencia: { sesiones: 1 },
 };
 
 const PRIORIDADES_TRATAMIENTO = ["Alta", "Media", "Baja"] as const;
@@ -3831,10 +3832,7 @@ function TratamientoForm({
     }
     if (arancelId && aranceles.find((x) => x.id === arancelId)?.nombre.trim().toLowerCase() !== k) setArancelId(null);
     const sugerido = aranceles.length ? undefined : CATALOGO_TRATAMIENTOS[v];
-    if (sugerido && !inicial) {
-      setSesionesPlan(String(sugerido.sesiones));
-      if (!costoAMano) setCosto(String(sugerido.precio));
-    }
+    if (sugerido && !inicial) setSesionesPlan(String(sugerido.sesiones));
   };
   // Varias piezas: el valor se multiplica por pieza (si no lo cambiaste a mano)
   const cambiarPieza = (v: string) => {
@@ -3924,7 +3922,7 @@ function TratamientoForm({
       )}
       {!aranceles.length && !inicial && (
         <p className="-mt-1 text-[11px] text-muted-foreground">
-          Valores orientativos: cargá tus precios en Presupuestos → Aranceles y se completan solos.
+          Cargá tus precios en Presupuestos → Aranceles y el valor se completa solo.
         </p>
       )}
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">

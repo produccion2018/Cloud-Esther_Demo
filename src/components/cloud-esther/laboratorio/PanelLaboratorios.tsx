@@ -16,6 +16,7 @@ import {
   Search,
   Trash2,
   Wallet,
+  Paperclip,
 } from "lucide-react";
 
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
@@ -328,6 +329,11 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
                 {tarde && (f.t.reclamadoEl || autoAtraso) && (
                   <span className="rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-bold text-muted-foreground">
                     {f.t.reclamadoEl ? `Reclamado ${fechaCorta(f.t.reclamadoEl).slice(0, 5)}` : "Reclamo automático"}
+                  </span>
+                )}
+                {(f.t.archivos?.length ?? 0) > 0 && (
+                  <span title={f.t.archivos!.map((a) => a.nombre).join(", ")} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10.5px] font-bold text-primary">
+                    <Paperclip className="size-3" /> {f.t.archivos!.length}
                   </span>
                 )}
                 {(f.t.repeticiones?.length ?? 0) > 0 && (

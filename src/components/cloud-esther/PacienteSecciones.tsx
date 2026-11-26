@@ -135,7 +135,7 @@ import {
   useMedicamentosFrecuentes,
   type MedicamentoUso,
 } from "@/components/cloud-esther/pacientes/MedicamentosFrecuentes";
-import { achicarFoto, guardarArchivo, urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
+import { achicarFoto, archivosEnLaNube, guardarArchivo, urlPersistenteImagen } from "@/lib/clinica/subir-imagen";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* ───────────── Catálogos ─────────────
@@ -600,7 +600,23 @@ export type TrabajoLaboratorio = {
   pruebas?: PruebaLaboratorio[];
   /** Veces que el trabajo volvió al laboratorio para rehacerlo o corregirlo. */
   repeticiones?: RepeticionLaboratorio[];
+  /** Fotos del color, escaneos (STL), impresiones… Guardados en Cloudinary (acá solo la dirección). */
+  archivos?: ArchivoLaboratorio[];
 };
+
+export type ArchivoLaboratorio = {
+  id: number;
+  nombre: string;
+  url: string;
+  categoria: string;
+  fecha: string;
+  /** Tamaño en bytes. */
+  peso: number;
+};
+export const CATEGORIAS_ARCHIVO_LAB = ["Foto del color", "Escaneo intraoral", "Impresión / modelo", "Radiografía", "Otro"];
+/** ¿Es una imagen que se puede mostrar en miniatura? */
+export const esImagenLab = (a: ArchivoLaboratorio) =>
+  /^data:image\//.test(a.url) || /\.(jpe?g|png|webp|heic|gif)$/i.test(a.url.split("?")[0] ?? "") || /\.(jpe?g|png|webp|heic|gif)$/i.test(a.nombre);
 
 export type PruebaLaboratorio = {
   id: number;
@@ -10594,6 +10610,198 @@ function SeguimientoPruebas({ t }: { t: TrabajoLaboratorio }) {
   );
 }
 
+const MAX_ARCHIVOS_LAB = 10;
+const MAX_PESO_LAB = 10 * 1024 * 1024;
+const pesoLegible = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+/** Etiqueta corta del tipo de archivo (STL, PDF, ZIP…). */
+const extensionLab = (nombre: string) => (nombre.split(".").pop() ?? "").slice(0, 4).toUpperCase() || "ARCH";
+
+/* Fotos y archivos del trabajo: van SIEMPRE a Cloudinary (en los datos queda solo la dirección). */
+function ArchivosLaboratorio({
+  trabajo,
+  onGuardar,
+  onCerrar,
+  onToast,
+}: {
+  trabajo: TrabajoLaboratorio;
+  onGuardar: (archivos: ArchivoLaboratorio[]) => void;
+  onCerrar: () => void;
+  onToast: (m: string) => void;
+}) {
+  const [archivos, setArchivos] = useState<ArchivoLaboratorio[]>(trabajo.archivos ?? []);
+  const [categoria, setCategoria] = useState(CATEGORIAS_ARCHIVO_LAB[0]!);
+  const [subiendo, setSubiendo] = useState<{ hecho: number; total: number } | null>(null);
+  const camara = useRef<HTMLInputElement>(null);
+  const selector = useRef<HTMLInputElement>(null);
+
+  const agregar = async (lista: FileList | null) => {
+    if (!lista?.length) return;
+    const libres = MAX_ARCHIVOS_LAB - archivos.length;
+    if (libres <= 0) {
+      onToast(`Hasta ${MAX_ARCHIVOS_LAB} archivos por trabajo`);
+      return;
+    }
+    const todos = Array.from(lista);
+    const grandes = todos.filter((f) => f.size > MAX_PESO_LAB);
+    const validos = todos.filter((f) => f.size <= MAX_PESO_LAB).slice(0, libres);
+    if (grandes.length) onToast(`${grandes.map((f) => f.name).join(", ")}: supera los 10 MB`);
+    setSubiendo({ hecho: 0, total: validos.length });
+    const nuevos: ArchivoLaboratorio[] = [];
+    let fallaron = 0;
+    for (const [i, f] of validos.entries()) {
+      try {
+        const esFoto = f.type.startsWith("image/") && !/heic/i.test(f.type);
+        const enNube = archivosEnLaNube();
+        // Sin nube (demo en este navegador) las fotos quedan más chicas y no entran archivos pesados
+        const archivo = esFoto ? await achicarFoto(f, enNube ? 2400 : 1200) : f;
+        if (!enNube && archivo.size > 1_500_000) throw new Error("En este demo, los archivos de más de 1,5 MB no se pueden guardar.");
+        const url = await guardarArchivo(archivo, { nombre: f.name });
+        if (!url) throw new Error("vacío");
+        nuevos.push({ id: Date.now() + i, nombre: f.name, url, categoria, fecha: hoyISO(), peso: archivo.size });
+      } catch (e) {
+        fallaron++;
+        if (fallaron === 1 && e instanceof Error && e.message) onToast(e.message);
+      }
+      setSubiendo({ hecho: i + 1, total: validos.length });
+    }
+    setSubiendo(null);
+    if (nuevos.length) {
+      const total = [...archivos, ...nuevos];
+      setArchivos(total);
+      onGuardar(total);
+      onToast(`${nuevos.length} archivo${nuevos.length === 1 ? "" : "s"} adjuntado${nuevos.length === 1 ? "" : "s"}`);
+    }
+  };
+
+  const quitar = (a: ArchivoLaboratorio) => {
+    const total = archivos.filter((x) => x.id !== a.id);
+    setArchivos(total);
+    onGuardar(total);
+    onToast("Archivo quitado del trabajo");
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        {trabajo.tipo}
+        {trabajo.pieza ? ` · pieza ${trabajo.pieza}` : ""}
+        {trabajo.proveedor ? ` · ${trabajo.proveedor}` : ""}
+      </p>
+      <div>
+        <p className="mb-1.5 text-[12.5px] font-semibold text-foreground/80">¿Qué vas a adjuntar?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIAS_ARCHIVO_LAB.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={categoria === c}
+              onClick={() => setCategoria(c)}
+              className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition ${
+                categoria === c ? "bg-primary text-primary-foreground" : "bg-primary/[0.06] text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" disabled={!!subiendo} onClick={() => camara.current?.click()} className="btn-ce-outline !min-h-11">
+          <Camera className="size-4" /> Sacar foto
+        </button>
+        <button type="button" disabled={!!subiendo} onClick={() => selector.current?.click()} className="btn-ce !min-h-11">
+          <Upload className="size-4" /> Subir archivos
+        </button>
+        <input
+          ref={camara}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            void agregar(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={selector}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.stl,.ply,.obj,.zip,.dcm"
+          className="hidden"
+          onChange={(e) => {
+            void agregar(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Fotos, PDF, escaneos STL / PLY / OBJ o ZIP · hasta {MAX_ARCHIVOS_LAB} archivos de 10 MB cada uno.
+      </p>
+      {subiendo && (
+        <p className="flex items-center gap-2 rounded-xl bg-primary/[0.06] px-3 py-2 text-xs font-medium text-primary">
+          <Loader2 className="size-4 animate-spin" /> Subiendo {subiendo.hecho + 1 > subiendo.total ? subiendo.total : subiendo.hecho + 1} de {subiendo.total}…
+        </p>
+      )}
+      {archivos.length > 0 && (
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {archivos.map((a) => (
+            <li key={a.id} className="flex items-center gap-2.5 rounded-xl border border-primary/10 bg-card p-2">
+              <a href={a.url} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-2.5">
+                {esImagenLab(a) ? (
+                  <img src={a.url} alt={a.nombre} className="size-11 shrink-0 rounded-lg object-cover" loading="lazy" />
+                ) : (
+                  <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-[10px] font-bold text-primary">
+                    {extensionLab(a.nombre)}
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold">{a.nombre}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {a.categoria} · {pesoLegible(a.peso)}
+                  </span>
+                </span>
+              </a>
+              <BotonBorrar etiqueta={`Quitar ${a.nombre}`} compacto onClick={() => quitar(a)} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex justify-end">
+        <button type="button" onClick={onCerrar} disabled={!!subiendo} className={BTN_PRIMARIO}>
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Miniaturas de los archivos del trabajo (abren el original). */
+function MiniaturasLaboratorio({ t, onAbrir }: { t: TrabajoLaboratorio; onAbrir: () => void }) {
+  const archivos = t.archivos ?? [];
+  if (!archivos.length) return null;
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      {archivos.slice(0, 6).map((a) => (
+        <a key={a.id} href={a.url} target="_blank" rel="noreferrer" title={`${a.categoria}: ${a.nombre}`} className="shrink-0">
+          {esImagenLab(a) ? (
+            <img src={a.url} alt={a.nombre} className="size-10 rounded-lg border border-primary/10 object-cover" loading="lazy" />
+          ) : (
+            <span className="grid size-10 place-items-center rounded-lg border border-primary/10 bg-primary/[0.06] text-[9.5px] font-bold text-primary">
+              {extensionLab(a.nombre)}
+            </span>
+          )}
+        </a>
+      ))}
+      {archivos.length > 6 && (
+        <button type="button" onClick={onAbrir} className="grid size-10 place-items-center rounded-lg bg-muted text-[11px] font-bold text-muted-foreground">
+          +{archivos.length - 6}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Días entre hoy y la entrega estimada (negativo = demorado). */
 function diasParaEntrega(t: TrabajoLaboratorio) {
   if (!t.fechaEntregaEstimada) return null;
@@ -10682,7 +10890,14 @@ function imprimirOrdenLaboratorio(t: TrabajoLaboratorio, paciente: string) {
     const ultR = r ? `${r.motivo}${r.detalle ? `: ${r.detalle}` : ""} (${r.garantia ? "garantía" : "con costo"}, ${formatearFecha(r.fecha)})` : "";
     const ultA = a ? `${a.etapa}: ${a.nota} (${formatearFecha(a.fecha)})` : "";
     return (r && (!a || r.fecha >= a.fecha) ? fila("Repetición", ultR) : "") + (a && (!r || a.fecha > r.fecha) ? fila("Ajuste pedido", ultA) : "");
-  })()}</table>
+  })()}${
+    t.archivos?.length
+      ? `<tr><th>Archivos adjuntos</th><td>${t.archivos
+          .filter((x) => /^https:/.test(x.url))
+          .map((x) => `<a href="${escapar(x.url)}">${escapar(x.categoria)}: ${escapar(x.nombre)}</a>`)
+          .join("<br>") || `${t.archivos.length} archivo(s) en Cloud Esther`}</td></tr>`
+      : ""
+  }</table>
   <p class="firma">Firma y sello del profesional</p><script>window.onload=()=>{window.print()}</script></body></html>`;
   const w = documentoPDF(`orden-de-laboratorio-${paciente}`);
   w.document.write(html);
@@ -10698,6 +10913,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
   const [editar, setEditar] = useState<TrabajoLaboratorio | null>(null);
   const [probar, setProbar] = useState<TrabajoLaboratorio | null>(null);
   const [repetir, setRepetir] = useState<TrabajoLaboratorio | null>(null);
+  const [adjuntar, setAdjuntar] = useState<TrabajoLaboratorio | null>(null);
   const [filtro, setFiltro] = useState<"" | "activos" | EstadoLaboratorio>("");
   const todos = [...datos.laboratorio].sort((a, b) =>
     `${b.fechaEnvio}${b.id}`.localeCompare(`${a.fechaEnvio}${a.id}`),
@@ -10891,6 +11107,7 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
 
                 {conSeguimiento && <PasosLaboratorio trabajo={t} />}
                 {conSeguimiento && <SeguimientoPruebas t={t} />}
+                <MiniaturasLaboratorio t={t} onAbrir={() => setAdjuntar(t)} />
 
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -10932,6 +11149,11 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                   {conSeguimiento && laboratorioLlego(t) && (
                     <BotonMini icon={RotateCcw} label="Volvió al laboratorio" onClick={() => setRepetir(t)} />
                   )}
+                  <BotonMini
+                    icon={Paperclip}
+                    label={t.archivos?.length ? `Archivos (${t.archivos.length})` : "Adjuntar"}
+                    onClick={() => setAdjuntar(t)}
+                  />
                   {conSeguimiento && (
                     <BotonMini
                       icon={Printer}
@@ -10956,6 +11178,19 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
             );
           })}
         </ul>
+      )}
+
+      {adjuntar && (
+        <Modal title="Fotos y archivos del trabajo" onClose={() => setAdjuntar(null)}>
+          <ArchivosLaboratorio
+            trabajo={adjuntar}
+            onToast={onToast}
+            onCerrar={() => setAdjuntar(null)}
+            onGuardar={(archivos) =>
+              cambiar("laboratorio", (prev) => prev.map((x) => (x.id === adjuntar.id ? { ...x, archivos } : x)))
+            }
+          />
+        </Modal>
       )}
 
       {probar && (

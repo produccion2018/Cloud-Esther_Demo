@@ -10,6 +10,9 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
 import {
   DIAS_ORDEN_PENDIENTE,
+  DIAS_TRATAMIENTO_INCONCLUSO,
+  diasDesdeFecha,
+  ultimaActividadTratamiento,
   cambiarRegistro,
   laboratorioLlego,
   leerRegistros,
@@ -201,6 +204,36 @@ export function useRecordatoriosBasicos() {
             detalle: `${resumen(atrasados)}. Reclamale al laboratorio por WhatsApp desde Laboratorio → «Reclamar».`,
             categoria: "Laboratorio",
             prioridad: "Alta",
+          });
+      }
+
+      // 7) Tratamientos que quedaron por la mitad (en curso, sin turno y sin venir hace 30 días)
+      //    Con la automatización «tratamiento_inconcluso» activa, Esther los invita sola.
+      if (conRegistros && !flujoActivo("tratamiento_inconcluso") && !existentes.has(`basico-trat-${hoy}`)) {
+        const pacs = leerPacientes();
+        const parados: string[] = [];
+        for (const [pid, reg] of Object.entries(leerRegistros())) {
+          const p = pacs.find((x) => String(x.id) === pid);
+          if (!p) continue;
+          const n = `${p.nombre} ${p.apellido}`.trim().toLowerCase();
+          const suyos = turnos.filter((x) => x.paciente.trim().toLowerCase() === n);
+          if (suyos.some((x) => x.fecha >= hoy && x.estado !== "Cancelada" && x.estado !== "Ausente")) continue;
+          const visita = suyos.filter((x) => x.fecha < hoy && x.estado === "Atendida").map((x) => x.fecha).sort().pop() ?? "";
+          for (const t of reg?.tratamientos ?? []) {
+            if (t.estado !== "En tratamiento") continue;
+            const u = ultimaActividadTratamiento(t, visita);
+            if (!u || diasDesdeFecha(u) < DIAS_TRATAMIENTO_INCONCLUSO || (t.invitadoRetomar && t.invitadoRetomar > u)) continue;
+            parados.push(`${p.nombre} ${p.apellido} (${t.nombre.toLowerCase()})`);
+          }
+        }
+        if (parados.length)
+          nuevos.push({
+            ...base,
+            id: `basico-trat-${hoy}`,
+            titulo: `${parados.length} tratamiento${parados.length === 1 ? "" : "s"} sin terminar`,
+            detalle: `${parados.slice(0, 3).join(", ")}${parados.length > 3 ? ` y ${parados.length - 3} más` : ""}. Hace ${DIAS_TRATAMIENTO_INCONCLUSO} días o más que no vienen y no tienen turno: invitalos a retomar desde la ficha → Tratamientos → «Invitar a retomar».`,
+            categoria: "Pacientes",
+            prioridad: "Normal",
           });
       }
 

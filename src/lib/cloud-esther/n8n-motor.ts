@@ -9,6 +9,9 @@ import { storeAgenda, setTareasStore } from "@/lib/cloud-esther/agenda-store";
 import { leerPacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import {
   DIAS_ORDEN_PENDIENTE,
+  DIAS_TRATAMIENTO_INCONCLUSO,
+  diasDesdeFecha,
+  ultimaActividadTratamiento,
   laboratorioLlego,
   leerRegistros,
   cambiarRegistro,
@@ -265,6 +268,33 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
       );
       break;
     }
+    case "tratamiento_inconcluso": {
+      // En tratamiento, sin turno agendado y sin venir hace 30 días o más
+      const turnos = storeAgenda.leer().turnos;
+      const hoy = hoyISO();
+      lista = pacientes.flatMap((p) => {
+        const n = nombre(p).trim().toLowerCase();
+        const suyos = turnos.filter((x) => x.paciente.trim().toLowerCase() === n);
+        if (suyos.some((x) => x.fecha >= hoy && x.estado !== "Cancelada" && x.estado !== "Ausente")) return [];
+        const visita = suyos.filter((x) => x.fecha < hoy && x.estado === "Atendida").map((x) => x.fecha).sort().pop() ?? "";
+        return (regs[p.id]?.tratamientos ?? [])
+          .filter((t) => {
+            if (t.estado !== "En tratamiento") return false;
+            const u = ultimaActividadTratamiento(t, visita);
+            return !!u && diasDesdeFecha(u) >= DIAS_TRATAMIENTO_INCONCLUSO && !(t.invitadoRetomar && t.invitadoRetomar > u);
+          })
+          .map((t) => ({
+            titulo: `${nombre(p)}: ${t.nombre} sin terminar`,
+            paciente: nombre(p),
+            pacienteId: p.id,
+            telefono: p.telefono,
+            sede: p.sucursal,
+            monto: 0,
+            dato: `${t.nombre.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""}`,
+          }));
+      });
+      break;
+    }
     case "laboratorio_listo":
       // Trabajos que volvieron del laboratorio y todavía no se le avisó al paciente
       lista = pacientes.flatMap((p) =>
@@ -351,6 +381,8 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Reposición sugerida: ${d.dato}.`;
     case "estudio_pendiente":
       return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
+    case "tratamiento_inconcluso":
+      return `Hola ${n}, ¿cómo estás? Vimos que tu ${d.dato} quedó sin terminar. Respondé este mensaje y te damos un turno para continuarlo.`;
     case "laboratorio_listo":
       return `Hola ${n}, ya tenemos tu ${d.dato} del laboratorio. Respondé este mensaje y coordinamos el turno para colocarlo.`;
     case "laboratorio_atrasado":

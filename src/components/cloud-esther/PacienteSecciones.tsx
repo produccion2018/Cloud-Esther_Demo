@@ -311,7 +311,7 @@ function horasRestantes(r: ProteccionLegal) {
   return Math.max(0, Math.ceil(HORAS_EDICION - (Date.now() - new Date(r.creada).getTime()) / 3_600_000));
 }
 
-type TratamientoPaciente = {
+export type TratamientoPaciente = {
   id: number;
   nombre: string;
   pieza: string;
@@ -332,7 +332,19 @@ type TratamientoPaciente = {
   historial?: { estado: EstadoTratamiento; fecha: string }[];
   /** Arancel de la clínica del que salió el valor */
   arancelId?: string;
+  /** Día en que se invitó al paciente a retomar el tratamiento (si quedó por la mitad). */
+  invitadoRetomar?: string;
 };
+
+/** Días sin venir (ni turno agendado) para considerar un tratamiento «sin terminar». */
+export const DIAS_TRATAMIENTO_INCONCLUSO = 30;
+/** Última actividad del tratamiento: inicio, sesiones o la última visita atendida del paciente. */
+export function ultimaActividadTratamiento(t: TratamientoPaciente, ultimaVisita = "") {
+  return [t.inicio, ...(t.sesiones ?? []).map((s) => s.fecha), ultimaVisita].filter(Boolean).sort().pop() ?? "";
+}
+/** Días entre una fecha ISO y hoy. */
+export const diasDesdeFecha = (f: string) =>
+  f ? Math.floor((new Date(`${hoyISO()}T12:00:00`).getTime() - new Date(`${f}T12:00:00`).getTime()) / 86_400_000) : 0;
 
 type PrioridadTratamiento = "Alta" | "Media" | "Baja";
 type SesionTratamiento = { id: number; fecha: string; profesional: string; detalle: string };
@@ -4206,6 +4218,31 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
     turnosDe(t)
       .filter((x) => x.estado !== "Cancelada" && x.estado !== "Ausente" && x.estado !== "Atendida" && x.fecha >= hoyISO())
       .sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`))[0];
+  // ¿El paciente tiene algún turno agendado? ¿Cuándo vino por última vez?
+  const delPaciente = turnosAgenda.filter((x) => x.paciente.trim().toLowerCase() === pacienteNombre);
+  const conTurnoFuturo = delPaciente.some((x) => x.fecha >= hoyISO() && x.estado !== "Cancelada" && x.estado !== "Ausente");
+  const ultimaVisita = delPaciente
+    .filter((x) => x.fecha < hoyISO() && x.estado === "Atendida")
+    .map((x) => x.fecha)
+    .sort()
+    .pop() ?? "";
+  /** Días parado (sin turno ni visita) si el tratamiento quedó por la mitad; si no, null. */
+  const parado = (t: TratamientoPaciente) => {
+    if (t.estado !== "En tratamiento" || conTurnoFuturo) return null;
+    const ultima = ultimaActividadTratamiento(t, ultimaVisita);
+    const dias = diasDesdeFecha(ultima);
+    if (!ultima || dias < DIAS_TRATAMIENTO_INCONCLUSO) return null;
+    return { dias, invitado: !!t.invitadoRetomar && t.invitadoRetomar > ultima };
+  };
+  const invitarRetomar = (t: TratamientoPaciente) => {
+    const nombre = (contexto?.paciente ?? "").trim().split(" ")[0] ?? "";
+    const texto = `Hola${nombre ? ` ${nombre}` : ""} 👋 ¿Cómo estás? Vimos que tu ${t.nombre.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""} quedó sin terminar. Respondé este mensaje y te damos un turno para continuarlo.${contexto?.clinica ? `\n\n${contexto.clinica}` : ""}`;
+    const numero = numeroWhatsApp(contexto?.telefono);
+    window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, invitadoRetomar: hoyISO() } : x)));
+    agregarAuditoria(`Invitó a retomar ${t.nombre}`);
+    if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+  };
   // Turno atendido sin su sesión registrada (ese día)
   const turnoSinSesion = (t: TratamientoPaciente) =>
     turnosDe(t)
@@ -4458,6 +4495,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
             const cerrado = esCompletado(t) || t.estado === "Cancelado";
             const proximo = proximoTurno(t);
             const atendidoSinSesion = cerrado ? undefined : turnoSinSesion(t);
+            const quieto = parado(t);
             return (
               <li key={t.id} className="card-grad flex flex-col p-4">
                 <div className="flex items-start gap-3">
@@ -4486,6 +4524,13 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       {!cerrado && proximo && (
                         <Badge tono="verde">
                           Próxima sesión {formatearFecha(proximo.fecha).slice(0, 5)} {proximo.hora}
+                        </Badge>
+                      )}
+                      {quieto && (
+                        <Badge tono={quieto.invitado ? "gris" : "ambar"}>
+                          {quieto.invitado
+                            ? `Invitado a retomar ${formatearFecha(t.invitadoRetomar ?? "").slice(0, 5)}`
+                            : `Sin venir hace ${quieto.dias} días`}
                         </Badge>
                       )}
                     </div>
@@ -4617,6 +4662,9 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
                       label={proximo ? "Otra sesión" : "Agendar sesión"}
                       onClick={() => setAgendarDe(t)}
                     />
+                  )}
+                  {quieto && !quieto.invitado && (
+                    <BotonMini icon={MessageCircle} label="Invitar a retomar" onClick={() => invitarRetomar(t)} />
                   )}
                   {presupuesto && onSeccion ? (
                     <BotonMini

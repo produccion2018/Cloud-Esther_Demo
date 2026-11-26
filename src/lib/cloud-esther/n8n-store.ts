@@ -22,6 +22,7 @@ export type EventoId =
   | "estudio_pendiente"
   | "laboratorio_listo"
   | "laboratorio_atrasado"
+  | "tratamiento_inconcluso"
   | "mensaje_contact_center";
 
 export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo: string }> = {
@@ -81,6 +82,11 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Trabajo de laboratorio atrasado",
     detalle: "Pasó la fecha de entrega y el trabajo no llegó: reclamar al laboratorio",
     modulo: "Laboratorio",
+  },
+  tratamiento_inconcluso: {
+    nombre: "Tratamiento sin terminar",
+    detalle: "Tratamiento en curso sin turno y sin venir hace 30 días: invitar a retomarlo",
+    modulo: "Tratamientos",
   },
   mensaje_contact_center: {
     nombre: "Mensaje del Contact Center",
@@ -361,6 +367,19 @@ export const PLANTILLAS: {
       p("whatsapp", {
         mensaje:
           "Hola {paciente}, te escribimos por el trabajo de {dato}. Todavía no lo recibimos: ¿nos confirmás para cuándo lo tenés? ¡Gracias!",
+      }),
+      p("notificar", { canal: "Aviso interno" }),
+    ],
+  },
+  {
+    id: "tratamiento-inconcluso",
+    nombre: "Retomar tratamientos sin terminar",
+    descripcion:
+      "Si un paciente dejó un tratamiento por la mitad (30 días sin venir ni turno), se le escribe por WhatsApp para retomarlo y se avisa al equipo.",
+    evento: "tratamiento_inconcluso",
+    pasos: () => [
+      p("whatsapp", {
+        mensaje: "Hola {paciente}, ¿cómo estás? Vimos que tu {dato} quedó sin terminar. Respondé este mensaje y te damos un turno para continuarlo.",
       }),
       p("notificar", { canal: "Aviso interno" }),
     ],

@@ -23,6 +23,7 @@ import {
 import type { Registros, SeccionRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { OdontogramaGate } from "@/components/cloud-esther/OdontogramaGate";
 import { PanelLaboratorios } from "@/components/cloud-esther/laboratorio/PanelLaboratorios";
+import { PanelTratamientos } from "@/components/cloud-esther/tratamientos/PanelTratamientos";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
@@ -282,13 +283,13 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
           className="relative mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6 lg:px-8"
           style={{ fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif' }}
         >
-          {/* Laboratorio: por paciente o el panel de todos los laboratorios (órdenes, cuenta corriente, reportes) */}
-          {seccion === "laboratorio" && (
+          {/* Laboratorio y Tratamientos: por paciente o el panel de todos (órdenes / tratamientos y reportes) */}
+          {(seccion === "laboratorio" || seccion === "tratamientos") && (
             <div className="mb-4 inline-flex gap-1 rounded-2xl border border-primary/10 bg-card/90 p-1 shadow-[inset_0_1px_3px_rgba(76,29,149,0.08),0_10px_26px_-22px_rgba(76,29,149,0.6)]" role="tablist">
               {(
                 [
                   [false, "Por paciente"],
-                  [true, "Todos los laboratorios"],
+                  [true, seccion === "tratamientos" ? "Todos los tratamientos" : "Todos los laboratorios"],
                 ] as const
               ).map(([v, l]) => (
                 <button
@@ -310,6 +311,14 @@ function SeccionDirectaInner({ seccion, titulo, descripcion, icon: Icon }: Props
           )}
           {seccion === "laboratorio" && panelLab ? (
             <PanelLaboratorios onToast={show} />
+          ) : seccion === "tratamientos" && panelLab ? (
+            <PanelTratamientos
+              onAbrir={(pid) => {
+                setActivoId(pid);
+                setPanelLab(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
           ) : !activo ? (
             /* Acceso a Historia clínica: solo se mejora esta pantalla; la lógica queda intacta. */
             <>

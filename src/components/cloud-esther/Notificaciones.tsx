@@ -44,6 +44,7 @@ import {
   CATEGORIAS_NOTIF,
   PRIORIDADES_NOTIF,
   cambiarEstadoNotif,
+  esParaMi,
   setNotificaciones,
   storeNotificaciones,
   type CategoriaNotif,
@@ -735,6 +736,21 @@ function Bandeja({
   const [busqueda, setBusqueda] = useState("");
   const [asignado, setAsignado] = useState("");
   const texto = normalizarBusqueda(busqueda);
+  // «Mis tareas»: lo asignado a mi nombre o a mi área (Recepción, Administración, Dirección)
+  const real = useClinicaReal();
+  const miRol = real ? real.rol : "admin";
+  const esMia = (n: Notif) => esParaMi(n.asignado, usuario, miRol);
+  const mias = notificaciones.filter((n) => !n.estado.completada && esMia(n));
+  const hoyBandeja = hoyISO();
+  const miasHoy = mias.filter((n) => n.vence === hoyBandeja).length;
+  const miasVencidas = mias.filter((n) => n.vence && n.vence < hoyBandeja).length;
+  // Al entrar, si tengo tareas, arranco viendo las mías
+  const arranco = useRef(false);
+  useEffect(() => {
+    if (arranco.current || mias.length === 0) return;
+    arranco.current = true;
+    setAsignado("__mias");
+  }, [mias.length]);
   const equipo = [
     ...ROLES_FIJOS,
     ...miembros
@@ -750,7 +766,7 @@ function Bandeja({
       if (filtroCategoria && n.categoria !== filtroCategoria) return false;
       if (filtroPrioridad === "altas" && n.prioridad !== "Urgente" && n.prioridad !== "Alta")
         return false;
-      if (asignado === "__mias" && n.asignado !== usuario) return false;
+      if (asignado === "__mias" && !esMia(n)) return false;
       if (asignado === "__sin" && n.asignado) return false;
       if (asignado && !asignado.startsWith("__") && n.asignado !== asignado) return false;
       if (texto && !normalizarBusqueda(`${n.titulo} ${n.detalle} ${n.asignado}`).includes(texto))
@@ -797,6 +813,47 @@ function Bandeja({
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
+        {/* Mis tareas */}
+        {mias.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/[0.07] to-fuchsia-500/[0.04] px-3.5 py-2.5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-[0_8px_18px_-10px_rgba(124,58,237,0.9)]">
+              <UserRound className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                Para vos: {mias.length} pendiente{mias.length === 1 ? "" : "s"}
+              </p>
+              <p className="text-[11.5px] text-muted-foreground">
+                {[miasVencidas ? `${miasVencidas} vencida${miasVencidas === 1 ? "" : "s"}` : "", miasHoy ? `${miasHoy} para hoy` : ""]
+                  .filter(Boolean)
+                  .join(" · ") || "Las tuyas y las de tu área"}
+              </p>
+            </div>
+            <div className="flex w-full rounded-full bg-white p-0.5 ring-1 ring-primary/12 sm:w-auto">
+              {(
+                [
+                  ["__mias", "Las mías"],
+                  ["", "Todo el equipo"],
+                ] as const
+              ).map(([v, l]) => (
+                <button
+                  key={l}
+                  onClick={() => {
+                    setAsignado(v);
+                    if (v === "__mias") setFiltroEstado("pendientes");
+                  }}
+                  aria-pressed={asignado === v}
+                  className={`flex-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors sm:flex-none ${
+                    asignado === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Filtros */}
         <div className="card-grad space-y-2 p-2.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -839,7 +896,7 @@ function Bandeja({
               onChange={setAsignado}
               opciones={[
                 { value: "", label: "Todos los responsables" },
-                { value: "__mias", label: `Asignadas a mí` },
+                { value: "__mias", label: `Asignadas a mí${mias.length ? ` (${mias.length})` : ""}` },
                 { value: "__sin", label: "Sin asignar" },
                 ...equipo.map((n) => ({ value: n, label: n })),
               ]}

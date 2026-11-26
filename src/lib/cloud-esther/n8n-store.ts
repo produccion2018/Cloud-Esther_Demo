@@ -20,6 +20,8 @@ export type EventoId =
   | "factura_vencida"
   | "stock_bajo"
   | "estudio_pendiente"
+  | "laboratorio_listo"
+  | "laboratorio_atrasado"
   | "mensaje_contact_center";
 
 export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo: string }> = {
@@ -69,6 +71,16 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Estudio pedido sin recibir",
     detalle: "Orden de estudio pendiente hace 7 días o más",
     modulo: "Estudios",
+  },
+  laboratorio_listo: {
+    nombre: "Trabajo de laboratorio listo",
+    detalle: "El trabajo volvió del laboratorio (listo o entregado): avisar al paciente",
+    modulo: "Laboratorio",
+  },
+  laboratorio_atrasado: {
+    nombre: "Trabajo de laboratorio atrasado",
+    detalle: "Pasó la fecha de entrega y el trabajo no llegó: reclamar al laboratorio",
+    modulo: "Laboratorio",
   },
   mensaje_contact_center: {
     nombre: "Mensaje del Contact Center",
@@ -321,6 +333,34 @@ export const PLANTILLAS: {
       p("whatsapp", {
         mensaje:
           "Hola {paciente}, te recordamos que tenés pendiente tu estudio ({dato}). Cuando lo tengas, mandanos una foto o el archivo por acá.",
+      }),
+      p("notificar", { canal: "Aviso interno" }),
+    ],
+  },
+  {
+    id: "laboratorio-listo",
+    nombre: "Avisar que llegó el trabajo de laboratorio",
+    descripcion:
+      "Cuando la corona, prótesis o placa vuelve del laboratorio, se le avisa al paciente por WhatsApp para coordinar la colocación.",
+    evento: "laboratorio_listo",
+    pasos: () => [
+      p("whatsapp", {
+        mensaje:
+          "Hola {paciente}, ya tenemos tu {dato} del laboratorio. Respondé este mensaje y coordinamos el turno para colocarlo.",
+      }),
+      p("notificar", { canal: "Aviso interno" }),
+    ],
+  },
+  {
+    id: "laboratorio-atrasado",
+    nombre: "Reclamar trabajos de laboratorio atrasados",
+    descripcion:
+      "Si pasó la fecha de entrega y el trabajo no llegó, se le escribe al laboratorio por WhatsApp y se avisa al equipo.",
+    evento: "laboratorio_atrasado",
+    pasos: () => [
+      p("whatsapp", {
+        mensaje:
+          "Hola {paciente}, te escribimos por el trabajo de {dato}. Todavía no lo recibimos: ¿nos confirmás para cuándo lo tenés? ¡Gracias!",
       }),
       p("notificar", { canal: "Aviso interno" }),
     ],

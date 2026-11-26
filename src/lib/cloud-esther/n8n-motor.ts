@@ -7,7 +7,13 @@
 
 import { storeAgenda, setTareasStore } from "@/lib/cloud-esther/agenda-store";
 import { leerPacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
-import { DIAS_ORDEN_PENDIENTE, leerRegistros, cambiarRegistro } from "@/components/cloud-esther/PacienteSecciones";
+import {
+  DIAS_ORDEN_PENDIENTE,
+  laboratorioLlego,
+  leerRegistros,
+  cambiarRegistro,
+} from "@/components/cloud-esther/PacienteSecciones";
+import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import {
   estadoComprobante,
   paisFiscal,
@@ -48,6 +54,20 @@ function diaISO(n: number) {
   const d = new Date();
   d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sumarDias(f: string, n: number) {
+  const d = new Date(`${f}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+/** Textos de ejemplo de las plantillas («Confirmación del turno»…) no se envían tal cual. */
+const ETIQUETAS_MENSAJE = new Set(["Mensaje redactado por Esther Infinity", "Confirmación del turno"]);
+/** Completa {paciente} y {dato} del mensaje escrito en el paso (si es un mensaje y no una etiqueta). */
+export function mensajeDelPaso(mensaje: string | undefined, d: Pick<Disparo, "paciente" | "dato">, laboratorio = false) {
+  const m = (mensaje ?? "").trim();
+  if (!m || ETIQUETAS_MENSAJE.has(m)) return "";
+  const quien = laboratorio ? d.paciente : (d.paciente.split(" ")[0] ?? d.paciente);
+  return m.replaceAll("{paciente}", quien).replaceAll("{dato}", d.dato);
 }
 const fecha = (f: string) => (f ? f.slice(0, 10).split("-").reverse().join("/") : "—");
 const $ = (n: number) => formatoMoneda(n, paisFiscal(storeFacturacion.leer().config.pais).moneda);
@@ -245,6 +265,47 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
       );
       break;
     }
+    case "laboratorio_listo":
+      // Trabajos que volvieron del laboratorio y todavía no se le avisó al paciente
+      lista = pacientes.flatMap((p) =>
+        (regs[p.id]?.laboratorio ?? [])
+          .filter((t) => laboratorioLlego(t) && !t.avisadoPaciente)
+          .map((t) => ({
+            titulo: `${t.tipo} de ${nombre(p)} llegó del laboratorio`,
+            paciente: nombre(p),
+            pacienteId: p.id,
+            telefono: p.telefono,
+            sede: p.sucursal,
+            monto: 0,
+            dato: `${t.tipo.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""}`,
+          })),
+      );
+      break;
+    case "laboratorio_atrasado": {
+      // Trabajos en curso con la entrega vencida: el mensaje va al LABORATORIO
+      const hoy = hoyISO();
+      const labs = storeLaboratorios.leer().laboratorios;
+      lista = pacientes.flatMap((p) =>
+        (regs[p.id]?.laboratorio ?? []).flatMap((t) => {
+          if (t.estado !== "Enviado" && t.estado !== "En proceso") return [];
+          const lab = labs.find((l) => l.nombre.trim().toLowerCase() === t.proveedor.trim().toLowerCase());
+          const entrega = t.fechaEntregaEstimada || (lab?.plazoDias ? sumarDias(t.fechaEnvio, lab.plazoDias) : "");
+          if (!entrega || entrega >= hoy) return [];
+          return [
+            {
+              titulo: `${t.tipo} de ${nombre(p)} atrasado (${t.proveedor || "sin laboratorio"})`,
+              paciente: lab?.contacto || lab?.nombre || t.proveedor,
+              pacienteId: null,
+              telefono: lab?.telefono ?? "",
+              sede: p.sucursal,
+              monto: 0,
+              dato: `${t.tipo}${t.pieza ? ` (pieza ${t.pieza})` : ""} del paciente ${nombre(p)}, que tenía entrega el ${fecha(entrega)}`,
+            },
+          ];
+        }),
+      );
+      break;
+    }
     case "mensaje_contact_center": {
       const p = pacientes.find((x) => x.estado === "Activo") ?? pacientes[0];
       if (p)
@@ -290,6 +351,10 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Reposición sugerida: ${d.dato}.`;
     case "estudio_pendiente":
       return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
+    case "laboratorio_listo":
+      return `Hola ${n}, ya tenemos tu ${d.dato} del laboratorio. Respondé este mensaje y coordinamos el turno para colocarlo.`;
+    case "laboratorio_atrasado":
+      return `Hola ${d.paciente}, te escribimos por el trabajo de ${d.dato}. Todavía no lo recibimos: ¿nos confirmás para cuándo lo tenés? ¡Gracias!`;
     case "mensaje_contact_center":
       return `Hola ${n}, ¡claro! Tengo horarios disponibles esta semana. ¿Preferís mañana o tarde?`;
   }
@@ -392,10 +457,13 @@ export function ejecutarFlujo(
           resultado = "WhatsApp Business no está conectado (Automatizaciones › Conexión)";
           e = "error";
         } else if (!d.telefono) {
-          resultado = "El paciente no tiene teléfono cargado";
+          resultado = flujo.evento === "laboratorio_atrasado" ? "El laboratorio no tiene WhatsApp cargado (Laboratorio → Laboratorios)" : "El paciente no tiene teléfono cargado";
           e = "error";
-        } else
-          resultado = `Enviado a ${d.telefono}: "${(ctx.texto || paso.config.mensaje || "").slice(0, 90)}${(ctx.texto || "").length > 90 ? "…" : ""}" (simulado)`;
+        } else {
+          const texto =
+            ctx.texto || mensajeDelPaso(paso.config.mensaje, d, flujo.evento === "laboratorio_atrasado") || redactar(flujo, d);
+          resultado = `Enviado a ${d.telefono}: "${texto.slice(0, 90)}${texto.length > 90 ? "…" : ""}" (simulado)`;
+        }
         break;
       case "email":
         resultado = conectada("smtp")

@@ -7,7 +7,12 @@ import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
-import { DIAS_ORDEN_PENDIENTE, leerRegistros, type Registros } from "@/components/cloud-esther/PacienteSecciones";
+import {
+  DIAS_ORDEN_PENDIENTE,
+  laboratorioLlego,
+  leerRegistros,
+  type Registros,
+} from "@/components/cloud-esther/PacienteSecciones";
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
@@ -150,6 +155,49 @@ export function useRecordatoriosBasicos() {
               .join(", ")}${atrasadas.length > 3 ? ` y ${atrasadas.length - 3} más` : ""}. Recordáselo por WhatsApp desde la ficha → Estudios → «Enviar por WhatsApp».`,
             categoria: "Pacientes",
             prioridad: "Normal",
+          });
+      }
+
+      // 5) Laboratorio: trabajos que llegaron sin avisar al paciente, y trabajos atrasados
+      //    (con las automatizaciones «laboratorio» activas, Esther avisa y reclama sola)
+      if (conRegistros) {
+        const pacs = leerPacientes();
+        const nombreDe = (pid: string) => {
+          const p = pacs.find((x) => String(x.id) === pid);
+          return p ? `${p.nombre} ${p.apellido}` : "Paciente";
+        };
+        const sinAvisar: string[] = [];
+        const atrasados: string[] = [];
+        for (const [pid, reg] of Object.entries(leerRegistros())) {
+          for (const t of reg?.laboratorio ?? []) {
+            if (laboratorioLlego(t) && !t.avisadoPaciente) sinAvisar.push(`${nombreDe(pid)} (${t.tipo.toLowerCase()})`);
+            else if (
+              (t.estado === "Enviado" || t.estado === "En proceso") &&
+              t.fechaEntregaEstimada &&
+              t.fechaEntregaEstimada < hoy &&
+              t.reclamadoEl !== hoy
+            )
+              atrasados.push(`${nombreDe(pid)} (${t.tipo.toLowerCase()}${t.proveedor ? `, ${t.proveedor}` : ""})`);
+          }
+        }
+        const resumen = (l: string[]) => `${l.slice(0, 3).join(", ")}${l.length > 3 ? ` y ${l.length - 3} más` : ""}`;
+        if (sinAvisar.length && !flujoActivo("laboratorio_listo") && !existentes.has(`basico-lab-listo-${hoy}`))
+          nuevos.push({
+            ...base,
+            id: `basico-lab-listo-${hoy}`,
+            titulo: `${sinAvisar.length} trabajo${sinAvisar.length === 1 ? "" : "s"} de laboratorio listo${sinAvisar.length === 1 ? "" : "s"} para avisar al paciente`,
+            detalle: `${resumen(sinAvisar)}. Avisales para coordinar la colocación desde Laboratorio o la ficha → Laboratorio → «Avisar al paciente».`,
+            categoria: "Laboratorio",
+            prioridad: "Normal",
+          });
+        if (atrasados.length && !flujoActivo("laboratorio_atrasado") && !existentes.has(`basico-lab-atraso-${hoy}`))
+          nuevos.push({
+            ...base,
+            id: `basico-lab-atraso-${hoy}`,
+            titulo: `${atrasados.length} trabajo${atrasados.length === 1 ? "" : "s"} de laboratorio atrasado${atrasados.length === 1 ? "" : "s"}`,
+            detalle: `${resumen(atrasados)}. Reclamale al laboratorio por WhatsApp desde Laboratorio → «Reclamar».`,
+            categoria: "Laboratorio",
+            prioridad: "Alta",
           });
       }
 

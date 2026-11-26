@@ -20,11 +20,15 @@ import {
 
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import {
+  laboratorioLlego,
+  textoAvisoLaboratorio,
+  textoReclamoLaboratorio,
   useRegistrosPacientes,
   useTodosLosRegistros,
   type TrabajoLaboratorio,
 } from "@/components/cloud-esther/PacienteSecciones";
-import { useCloudEsther, planLevel } from "@/lib/cloud-esther/data";
+import { storeN8n } from "@/lib/cloud-esther/n8n-store";
+import { MODULES, availableIn, useCloudEsther, planLevel } from "@/lib/cloud-esther/data";
 import { SUCURSAL_GENERAL, setFinanzas, storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
 import {
   cambiarLaboratorios,
@@ -50,7 +54,7 @@ import { Seleccion } from "@/components/ui/seleccion";
    Los trabajos se cargan en la ficha del paciente (sección Laboratorio). Datos por empresa. */
 
 type Vista = "ordenes" | "laboratorios" | "reportes";
-type Fila = { pid: number; paciente: string; t: TrabajoLaboratorio };
+type Fila = { pid: number; paciente: string; telefono: string; t: TrabajoLaboratorio };
 
 const ESTADOS = ["Enviado", "En proceso", "Listo para retirar", "Entregado"] as const;
 const COLOR_ESTADO: Record<string, string> = {
@@ -91,7 +95,7 @@ export function PanelLaboratorios({ onToast }: { onToast: (m: string) => void })
   const filas: Fila[] = useMemo(
     () =>
       pacientes.flatMap((p) =>
-        (registros[p.id]?.laboratorio ?? []).map((t) => ({ pid: p.id, paciente: `${p.nombre} ${p.apellido}`, t })),
+        (registros[p.id]?.laboratorio ?? []).map((t) => ({ pid: p.id, paciente: `${p.nombre} ${p.apellido}`, telefono: p.telefono ?? "", t })),
       ),
     [pacientes, registros],
   );
@@ -190,6 +194,7 @@ function saldoDe(l: Laboratorio, filas: Fila[], pagos: { labId: string; monto: n
 
 function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios: Laboratorio[]; onToast: (m: string) => void }) {
   const { cambiar } = useRegistrosPacientes();
+  const { plan } = useCloudEsther();
   const marca = useMarca();
   const { clinica } = useSesion();
   const [q, setQ] = useState("");
@@ -209,8 +214,20 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
     cambiar(f.pid, "laboratorio", (prev) =>
       prev.map((x) => (x.id === f.t.id ? { ...x, estado: sig, historial: [...(x.historial ?? []).filter((h) => h.estado !== sig), { estado: sig, fecha: hoyISO() }] } : x)),
     );
-    onToast(`${f.t.tipo} de ${f.paciente}: ${sig.toLowerCase()}`);
+    onToast(
+      laboratorioLlego({ ...f.t, estado: sig }) && !f.t.avisadoPaciente && !autoListo
+        ? `${f.t.tipo} de ${f.paciente}: ${sig.toLowerCase()}. Avisale para coordinar la colocación`
+        : `${f.t.tipo} de ${f.paciente}: ${sig.toLowerCase()}`,
+    );
   };
+  // Con la automatización activa (planes con Automatizaciones), Esther avisa / reclama sola
+  const modAuto = MODULES.find((m) => m.id === "automatizaciones");
+  const flujos = storeN8n.usar().flujos;
+  const conAuto = !!modAuto && availableIn(modAuto, plan);
+  const autoListo = conAuto && flujos.some((x) => x.activo && x.evento === "laboratorio_listo");
+  const autoAtraso = conAuto && flujos.some((x) => x.activo && x.evento === "laboratorio_atrasado");
+  const marcar = (f: Fila, campo: "avisadoPaciente" | "reclamadoEl") =>
+    cambiar(f.pid, "laboratorio", (prev) => prev.map((x) => (x.id === f.t.id ? { ...x, [campo]: hoyISO() } : x)));
   const pdf = async (f: Fila) => {
     const l = labDe(f.t);
     const html = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -274,8 +291,15 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
             const l = labDe(f.t);
             const tarde = atrasado(f.t);
             const wa = l
-              ? whatsapp(l.telefono, `Hola ${l.contacto || l.nombre}, te escribimos por el trabajo de ${f.t.tipo}${f.t.pieza ? ` (pieza ${f.t.pieza})` : ""} del paciente ${f.paciente}, enviado el ${fechaCorta(f.t.fechaEnvio)}. ¿Cómo viene?`)
+              ? whatsapp(
+                  l.telefono,
+                  tarde
+                    ? textoReclamoLaboratorio(f.t, f.paciente, l.contacto || l.nombre)
+                    : `Hola ${l.contacto || l.nombre}, te escribimos por el trabajo de ${f.t.tipo}${f.t.pieza ? ` (pieza ${f.t.pieza})` : ""} del paciente ${f.paciente}, enviado el ${fechaCorta(f.t.fechaEnvio)}. ¿Cómo viene?`,
+                )
               : null;
+            const llego = laboratorioLlego(f.t);
+            const waPaciente = llego && !f.t.avisadoPaciente && !autoListo ? whatsapp(f.telefono, textoAvisoLaboratorio(f.t, f.paciente, clinica?.nombre)) : null;
             return (
               <li key={`${f.pid}-${f.t.id}`} className={`flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-3 shadow-[0_14px_30px_-26px_rgba(76,29,149,0.7)] ${tarde ? "border-rose-300 ring-2 ring-rose-100" : "border-primary/10"}`}>
                 <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/15 to-fuchsia-500/10 text-primary">
@@ -296,15 +320,30 @@ function Ordenes({ filas, laboratorios, onToast }: { filas: Fila[]; laboratorios
                   </span>
                 )}
                 <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${COLOR_ESTADO[f.t.estado] ?? "bg-muted"}`}>{f.t.estado}</span>
+                {llego && (f.t.avisadoPaciente || autoListo) && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
+                    <CheckCircle2 className="size-3" /> {f.t.avisadoPaciente ? `Paciente avisado ${fechaCorta(f.t.avisadoPaciente).slice(0, 5)}` : "Aviso automático al paciente"}
+                  </span>
+                )}
+                {tarde && (f.t.reclamadoEl || autoAtraso) && (
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-bold text-muted-foreground">
+                    {f.t.reclamadoEl ? `Reclamado ${fechaCorta(f.t.reclamadoEl).slice(0, 5)}` : "Reclamo automático"}
+                  </span>
+                )}
                 <div className="flex w-full flex-wrap gap-1.5 sm:w-auto">
                   {f.t.estado !== "Entregado" && (
                     <button type="button" onClick={() => avanzar(f)} className="btn-ce !min-h-9">
                       <CheckCircle2 className="size-4" /> {f.t.estado === "Listo para retirar" ? "Entregado" : "Avanzar"}
                     </button>
                   )}
+                  {waPaciente && (
+                    <a href={waPaciente} target="_blank" rel="noreferrer" onClick={() => marcar(f, "avisadoPaciente")} className="btn-wa !min-h-9">
+                      <IconoWhatsApp /> Avisar al paciente
+                    </a>
+                  )}
                   {wa && (
-                    <a href={wa} target="_blank" rel="noreferrer" className="btn-wa !min-h-9">
-                      <IconoWhatsApp /> WhatsApp
+                    <a href={wa} target="_blank" rel="noreferrer" onClick={() => tarde && marcar(f, "reclamadoEl")} className={waPaciente ? "btn-ce-outline !min-h-9" : "btn-wa !min-h-9"}>
+                      <IconoWhatsApp /> {tarde ? "Reclamar" : waPaciente ? "Laboratorio" : "WhatsApp"}
                     </a>
                   )}
                   <button type="button" onClick={() => void pdf(f)} className="btn-ce-outline !min-h-9">

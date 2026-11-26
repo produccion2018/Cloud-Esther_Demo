@@ -590,7 +590,26 @@ export type TrabajoLaboratorio = {
   profesional?: string;
   /** Fecha de cada cambio de estado (para el seguimiento). */
   historial?: { estado: EstadoLaboratorio; fecha: string }[];
+  /** Día en que se le avisó al paciente que el trabajo llegó (para coordinar la colocación). */
+  avisadoPaciente?: string;
+  /** Último día en que se le reclamó al laboratorio por el atraso. */
+  reclamadoEl?: string;
 };
+
+/** El trabajo ya volvió del laboratorio (listo o entregado en la clínica). */
+export const laboratorioLlego = (t: TrabajoLaboratorio) => t.estado === "Listo para retirar" || t.estado === "Entregado";
+
+/** Mensaje para avisarle al paciente que su trabajo llegó y coordinar el turno de colocación. */
+export function textoAvisoLaboratorio(t: TrabajoLaboratorio, paciente: string, clinica?: string) {
+  const nombre = paciente.trim().split(" ")[0] || "";
+  return `Hola${nombre ? ` ${nombre}` : ""} 👋 Ya tenemos tu ${t.tipo.toLowerCase()}${t.pieza ? ` (pieza ${t.pieza})` : ""} del laboratorio. Respondé este mensaje y coordinamos el turno para colocarlo.${clinica ? `\n\n${clinica}` : ""}`;
+}
+
+/** Mensaje para reclamarle al laboratorio un trabajo atrasado. */
+export function textoReclamoLaboratorio(t: TrabajoLaboratorio, paciente: string, contacto?: string) {
+  const entrega = t.fechaEntregaEstimada ? t.fechaEntregaEstimada.split("-").reverse().join("/") : "";
+  return `Hola${contacto ? ` ${contacto}` : ""}, te escribimos por el trabajo de ${t.tipo}${t.pieza ? ` (pieza ${t.pieza})` : ""} del paciente ${paciente}${entrega ? `, que tenía entrega el ${entrega}` : ""}. Todavía no lo recibimos: ¿nos confirmás para cuándo lo tenés? ¡Gracias!`;
+}
 
 /* Antecedentes y alertas médicas del paciente (alergias, enfermedades, medicación…). */
 export type Antecedentes = {
@@ -10427,7 +10446,35 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
           : x,
       ),
     );
-    onToast(`${t.tipo}: ${estado.toLowerCase()}`);
+    onToast(
+      (estado === "Listo para retirar" || estado === "Entregado") && !t.avisadoPaciente
+        ? `${t.tipo}: ${estado.toLowerCase()}. Avisale al paciente para coordinar la colocación`
+        : `${t.tipo}: ${estado.toLowerCase()}`,
+    );
+  };
+  const directorioLabs = storeLaboratorios.usar().laboratorios;
+  const marcar = (t: TrabajoLaboratorio, campo: "avisadoPaciente" | "reclamadoEl") =>
+    cambiar("laboratorio", (prev) => prev.map((x) => (x.id === t.id ? { ...x, [campo]: hoyISO() } : x)));
+  const avisarPaciente = (t: TrabajoLaboratorio) => {
+    const numero = numeroWhatsApp(contexto?.telefono);
+    window.open(
+      `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(textoAvisoLaboratorio(t, contexto?.paciente ?? "", contexto?.clinica))}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    marcar(t, "avisadoPaciente");
+    if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+  };
+  const reclamar = (t: TrabajoLaboratorio) => {
+    const lab = directorioLabs.find((l) => l.nombre.trim().toLowerCase() === t.proveedor.trim().toLowerCase());
+    const numero = numeroWhatsApp(lab?.telefono);
+    window.open(
+      `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(textoReclamoLaboratorio(t, contexto?.paciente ?? "el paciente", lab?.contacto || lab?.nombre))}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    marcar(t, "reclamadoEl");
+    if (!numero) onToast("El laboratorio no tiene WhatsApp cargado: elegí el contacto en WhatsApp");
   };
 
   const FILTROS: { id: typeof filtro; label: string }[] = [
@@ -10536,6 +10583,12 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       )}
                       <Badge tono={TONO_LABORATORIO[t.estado]}>{t.estado}</Badge>
                       {conSeguimiento && aviso && <Badge tono={aviso.tono}>{aviso.texto}</Badge>}
+                      {t.avisadoPaciente && laboratorioLlego(t) && (
+                        <Badge tono="verde">Paciente avisado {formatearFecha(t.avisadoPaciente).slice(0, 5)}</Badge>
+                      )}
+                      {t.reclamadoEl && !laboratorioLlego(t) && aviso?.tono === "rojo" && (
+                        <Badge tono="gris">Reclamado {formatearFecha(t.reclamadoEl).slice(0, 5)}</Badge>
+                      )}
                     </div>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       {t.material && <span>{t.material}</span>}
@@ -10578,6 +10631,12 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       label="Marcar entregado"
                       onClick={() => cambiarEstado(t, "Entregado")}
                     />
+                  )}
+                  {laboratorioLlego(t) && !t.avisadoPaciente && (
+                    <BotonMini icon={MessageCircle} label="Avisar al paciente" onClick={() => avisarPaciente(t)} />
+                  )}
+                  {aviso?.tono === "rojo" && (
+                    <BotonMini icon={MessageCircle} label="Reclamar al laboratorio" onClick={() => reclamar(t)} />
                   )}
                   {conSeguimiento && (
                     <BotonMini

@@ -27,6 +27,7 @@ import {
   Plus,
   Search,
   Settings2,
+  Smartphone,
   Trash2,
   UserRound,
   Users,
@@ -53,6 +54,17 @@ import {
 import { useNotificaciones, type Notif } from "@/components/cloud-esther/useNotificaciones";
 import { normalizarBusqueda } from "@/lib/utils";
 import { Seleccion } from "@/components/ui/seleccion";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import {
+  TIPOS_AVISO,
+  activarAvisos,
+  cambiarTiposAvisos,
+  desactivarAvisos,
+  estadoAvisos,
+  probarAvisos,
+  type EstadoAvisos,
+  type TipoAviso,
+} from "@/lib/clinica/push-clinica";
 
 /* Ubicación: src/components/cloud-esther/Notificaciones.tsx
 
@@ -604,6 +616,13 @@ function NotificacionesInner() {
             {!montado ? (
               <div className="card-grad h-[520px] animate-pulse" />
             ) : seccionVisible === "bandeja" ? (
+              <>
+              {/* Start y Pro no tienen «Preferencias»: los avisos en el celular se activan acá */}
+              {!conReglas && (
+                <div className="mb-4">
+                  <AvisosEnEsteDispositivo onToast={onToast} />
+                </div>
+              )}
               <Bandeja
                 conFiltros={conReglas}
                 notificaciones={notificaciones}
@@ -618,6 +637,7 @@ function NotificacionesInner() {
                 filtroPrioridad={filtroPrioridad}
                 setFiltroPrioridad={setFiltroPrioridad}
               />
+              </>
             ) : seccionVisible === "pospuestas" ? (
               <Pospuestas pospuestas={pospuestas} usuario={usuario} onToast={onToast} />
             ) : seccionVisible === "preferencias" ? (
@@ -1457,6 +1477,114 @@ function Pospuestas({
 
 /* ───────────── Preferencias ───────────── */
 
+/* ───────────── Avisos en este dispositivo (push: aunque la app esté cerrada) ───────────── */
+function AvisosEnEsteDispositivo({ onToast }: { onToast: (m: string) => void }) {
+  const real = useClinicaReal();
+  const [estado, setEstado] = useState<EstadoAvisos | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const esAdmin = !real || real.rol === "admin";
+  const tiposVisibles = TIPOS_AVISO.filter((t) => t.id !== "urgentes" || esAdmin);
+  const cargar = () => {
+    estadoAvisos()
+      .then(setEstado)
+      .catch(() => setEstado(null));
+  };
+  useEffect(cargar, []);
+  const hacer = async (fn: () => Promise<void>, ok: string) => {
+    setOcupado(true);
+    setError(null);
+    try {
+      await fn();
+      onToast(ok);
+      cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo.");
+    } finally {
+      setOcupado(false);
+    }
+  };
+  const cambiarTipo = (id: TipoAviso, on: boolean) => {
+    if (!estado) return;
+    const tipos = on ? [...new Set([...estado.tipos, id])] : estado.tipos.filter((t) => t !== id);
+    setEstado({ ...estado, tipos });
+    if (estado.activo) void hacer(() => cambiarTiposAvisos(tipos), "Listo, guardado para este dispositivo");
+  };
+  if (!estado) return null;
+  const esIphone = typeof navigator !== "undefined" && /iphone|ipad/i.test(navigator.userAgent);
+  return (
+    <div className="card-grad space-y-3 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`grid size-10 shrink-0 place-items-center rounded-2xl ${estado.activo ? "bg-emerald-500/12 text-emerald-600" : "bg-primary/10 text-primary"}`}
+          >
+            <Smartphone className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold">Avisos en este dispositivo</p>
+            <p className="text-xs text-muted-foreground">
+              {estado.activo
+                ? "Activados: te suena en este celular o compu aunque Cloud Esther esté cerrada."
+                : "Que te suene en el celular o la compu aunque Cloud Esther esté cerrada, como un WhatsApp."}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {estado.activo ? (
+            <>
+              <button className={BTN_SECUNDARIO} disabled={ocupado} onClick={() => void hacer(probarAvisos, "Aviso de prueba enviado")}>
+                <BellRing className="size-4" /> Probar
+              </button>
+              <button className={BTN_SECUNDARIO} disabled={ocupado} onClick={() => void hacer(desactivarAvisos, "Avisos desactivados en este dispositivo")}>
+                <BellOff className="size-4" /> Desactivar
+              </button>
+            </>
+          ) : (
+            <button
+              className={BTN_PRIMARIO}
+              disabled={ocupado || !estado.soportado || !estado.disponible}
+              onClick={() => void hacer(() => activarAvisos(estado.tipos), "¡Avisos activados en este dispositivo!")}
+            >
+              <Bell className="size-4" /> Activar en este dispositivo
+            </button>
+          )}
+        </div>
+      </div>
+      {!estado.soportado && (
+        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
+          {esIphone
+            ? "En iPhone, primero instalá Cloud Esther: Compartir → «Agregar a inicio». Después abrila desde el ícono y activá los avisos."
+            : "Este navegador no permite avisos. Probá con Chrome, Edge o Safari actualizados."}
+        </p>
+      )}
+      {estado.soportado && !estado.disponible && (
+        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-800">Los avisos en el celular todavía no están encendidos para tu clínica.</p>
+      )}
+      {estado.permiso === "denied" && (
+        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
+          Bloqueaste los avisos para Cloud Esther. Habilitalos desde el candado de la barra de direcciones (o en Ajustes del celular) y volvé a intentar.
+        </p>
+      )}
+      {error && <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
+      <div data-movil="1col" className="grid gap-2 sm:grid-cols-2">
+        {tiposVisibles.map((t) => (
+          <label key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-white/70 px-3 py-2.5">
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold">{t.label}</span>
+              <span className="block text-[11px] text-muted-foreground">{t.detalle}</span>
+            </span>
+            <Interruptor activo={estado.tipos.includes(t.id)} onChange={(v) => cambiarTipo(t.id, v)} etiqueta={t.label} />
+          </label>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        El aviso dice quién y dónde, sin mostrar el mensaje: así no quedan datos de pacientes en la pantalla bloqueada. Cada persona lo activa en sus propios dispositivos.
+      </p>
+    </div>
+  );
+}
+
 function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
   const { preferencias } = storeNotificaciones.usar();
   const { tiene } = useNotificaciones();
@@ -1501,6 +1629,8 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
           Probar notificación
         </button>
       </EncabezadoSeccion>
+
+      <AvisosEnEsteDispositivo onToast={onToast} />
 
       <div className="card-grad overflow-hidden">
         <div className="overflow-x-auto">

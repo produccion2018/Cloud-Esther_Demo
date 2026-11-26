@@ -72,25 +72,30 @@ self.addEventListener("push", (event) => {
       tag: data.tag || undefined,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
-      data: { url: data.url || "/admin/notificaciones" },
+      // url: a dónde ir · prefijo: qué pestañas sirven (panel /admin o clínica /demo) ·
+      // abrir: qué abrir si no hay ninguna (la clínica entra por /c/<dirección>#ir=…)
+      data: { url: data.url || "/admin/notificaciones", prefijo: data.prefijo || "/admin", abrir: data.abrir || data.url || "/admin/notificaciones" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/admin/notificaciones";
+  const d = event.notification.data || {};
+  const url = d.url || "/admin/notificaciones";
+  const prefijo = d.prefijo || "/admin";
+  const abrir = d.abrir || url;
   event.waitUntil(
     (async () => {
       const ventanas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (const v of ventanas) {
-        if (new URL(v.url).pathname.startsWith("/admin")) {
+        if (new URL(v.url).pathname.startsWith(prefijo)) {
           await v.focus();
           if ("navigate" in v) await v.navigate(url).catch(() => {});
           return;
         }
       }
-      await self.clients.openWindow(url);
+      await self.clients.openWindow(abrir);
     })(),
   );
 });

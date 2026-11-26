@@ -303,7 +303,17 @@ function Entrando({ sesion }: { sesion: SesionClinica }) {
   useEffect(() => {
     entrarAClinica(sesion);
     const h = window.location.hash.replace(/^#/, "");
-    window.location.assign(DESTINO[h] ?? "/demo");
+    // Desde un aviso en el celular: #ir=/demo/… (solo direcciones de la app de la clínica)
+    let ir: string | null = null;
+    if (h.startsWith("ir=")) {
+      try {
+        const destino = decodeURIComponent(h.slice(3));
+        if (/^\/demo(\/[\w\-/]*)?(#[\w=\-]*)?$/.test(destino)) ir = destino;
+      } catch {
+        ir = null;
+      }
+    }
+    window.location.assign(ir ?? DESTINO[h] ?? "/demo");
   }, [sesion]);
   return (
     <MarcoClinica nombre={sesion.clinica.nombre}>

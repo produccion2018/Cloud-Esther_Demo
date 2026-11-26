@@ -34,6 +34,10 @@ export type Turno = {
   tratamientoId?: number;
   /** Lo que respondió el paciente con el enlace del recordatorio (confirmó, pidió cambiar o canceló). */
   respuestaPaciente?: { tipo: "confirmo" | "cambiar" | "cancelo"; fecha: string; nota?: string; avisada?: boolean };
+  /** Día en que se le pidió su opinión (encuesta después del turno). */
+  encuestaEnviada?: string;
+  /** Lo que respondió en la encuesta después del turno (1 a 5). */
+  encuesta?: { puntaje: number; comentario?: string; fecha: string; avisada?: boolean };
 };
 
 export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };

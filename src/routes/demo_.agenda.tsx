@@ -33,12 +33,13 @@ import {
   FileDown,
   Repeat,
   Hourglass,
+  Smile,
   ChevronLeft,
   ChevronRight,
   Search,
 } from "lucide-react";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
-import { abrirRecordatorioWhatsApp } from "@/lib/clinica/whatsapp";
+import { abrirEncuestaWhatsApp, abrirRecordatorioWhatsApp } from "@/lib/clinica/whatsapp";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { toast as avisoWhatsApp } from "sonner";
@@ -1335,6 +1336,15 @@ function TurnoCard({
     if (!abrirRecordatorioWhatsApp(turno, clinica?.nombre ?? "la clínica"))
       avisoWhatsApp.warning(`${turno.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
   };
+  // Encuesta después del turno (todos los planes): WhatsApp con el enlace para puntuar del 1 al 5
+  const pedirOpinion = () => {
+    if (!abrirEncuestaWhatsApp(turno, clinica?.nombre ?? "la clínica")) {
+      avisoWhatsApp.warning(`${turno.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.`);
+      return;
+    }
+    const hoy = new Date().toISOString().slice(0, 10);
+    setTurnosStore((prev) => prev.map((x) => (x.id === turno.id ? { ...x, encuestaEnviada: hoy } : x)));
+  };
   const ICONO_BTN =
     "grid size-8 place-items-center rounded-xl border border-primary/12 bg-white text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary";
 
@@ -1414,6 +1424,19 @@ function TurnoCard({
             {turno.respuestaPaciente?.tipo === "confirmo" && turno.estado === "Confirmada" && (
               <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700" title="Confirmó con el enlace del recordatorio">
                 Confirmó por el enlace
+              </span>
+            )}
+            {turno.encuesta && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${turno.encuesta.puntaje >= 4 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : turno.encuesta.puntaje === 3 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-rose-200 bg-rose-50 text-rose-700"}`}
+                title={turno.encuesta.comentario || "Opinión del paciente"}
+              >
+                <Smile className="size-3" /> Opinión {turno.encuesta.puntaje}/5
+              </span>
+            )}
+            {!turno.encuesta && turno.encuestaEnviada && turno.estado === "Atendida" && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <Smile className="size-3" /> Opinión pedida
               </span>
             )}
             {espero !== null && (
@@ -1498,6 +1521,17 @@ function TurnoCard({
           )}
           {turno.estado === "Atendida" && (
             <BotonAccion label="Marcar ausente" onClick={() => onEstado(turno, "Ausente")} />
+          )}
+          {turno.estado === "Atendida" && !turno.encuesta && (
+            <button
+              type="button"
+              onClick={pedirOpinion}
+              className={ICONO_BTN}
+              aria-label="Pedir su opinión por WhatsApp"
+              title={turno.encuestaEnviada ? "Opinión pedida: volver a pedir" : "Pedir su opinión (encuesta)"}
+            >
+              <Smile className="size-3.5" />
+            </button>
           )}
           {activo && (
             <button

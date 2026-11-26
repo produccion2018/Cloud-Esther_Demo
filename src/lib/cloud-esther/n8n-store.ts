@@ -23,6 +23,7 @@ export type EventoId =
   | "laboratorio_listo"
   | "laboratorio_atrasado"
   | "tratamiento_inconcluso"
+  | "encuesta_satisfaccion"
   | "mensaje_contact_center";
 
 export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo: string }> = {
@@ -87,6 +88,11 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Tratamiento sin terminar",
     detalle: "Tratamiento en curso sin turno y sin venir hace 30 días: invitar a retomarlo",
     modulo: "Tratamientos",
+  },
+  encuesta_satisfaccion: {
+    nombre: "Encuesta después del turno",
+    detalle: "Al marcar un turno como Atendida: pedirle su opinión (1 a 5) con un enlace",
+    modulo: "Agenda",
   },
   mensaje_contact_center: {
     nombre: "Mensaje del Contact Center",
@@ -383,6 +389,14 @@ export const PLANTILLAS: {
       }),
       p("notificar", { canal: "Aviso interno" }),
     ],
+  },
+  {
+    id: "encuesta-satisfaccion",
+    nombre: "Encuesta después del turno",
+    descripcion:
+      "Cuando el turno queda Atendida, se le manda al paciente un enlace para puntuar la atención. Si pone 4 o 5 se lo invita a dejar su reseña en Google; si pone 1 a 3, la clínica recibe la alerta.",
+    evento: "encuesta_satisfaccion",
+    pasos: () => [p("whatsapp", { mensaje: "Hola {paciente}, ¡gracias por venir! ¿Nos contás cómo te atendimos? Es un toque: {dato}" })],
   },
   {
     id: "contact-center",

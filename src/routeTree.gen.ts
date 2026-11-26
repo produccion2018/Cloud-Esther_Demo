@@ -83,6 +83,7 @@ import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as EncuestaTokenRouteImport } from './routes/encuesta.$token'
 import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as TurnoTokenRouteImport } from './routes/turno.$token'
@@ -462,6 +463,11 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EncuestaTokenRoute = EncuestaTokenRouteImport.update({
+  id: '/encuesta/$token',
+  path: '/encuesta/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LaboratorioEnlaceTokenRoute = LaboratorioEnlaceTokenRouteImport.update({
   id: '/laboratorio-enlace/$token',
   path: '/laboratorio-enlace/$token',
@@ -578,6 +584,7 @@ export interface FileRoutesByFullPath {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -661,6 +668,7 @@ export interface FileRoutesByTo {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -746,6 +754,7 @@ export interface FileRoutesById {
   '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/soporte': typeof DemoSoporteRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
+  '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -832,6 +841,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -915,6 +925,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -999,6 +1010,7 @@ export interface FileRouteTypes {
     | '/demo_/rrhh'
     | '/demo_/soporte'
     | '/demo_/tratamientos'
+    | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -1062,6 +1074,7 @@ export interface RootRouteChildren {
   DemoRrhhRoute: typeof DemoRrhhRoute
   DemoSoporteRoute: typeof DemoSoporteRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
+  EncuestaTokenRoute: typeof EncuestaTokenRoute
   LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   TurnoTokenRoute: typeof TurnoTokenRoute
@@ -1594,6 +1607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/encuesta/$token': {
+      id: '/encuesta/$token'
+      path: '/encuesta/$token'
+      fullPath: '/encuesta/$token'
+      preLoaderRoute: typeof EncuestaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/laboratorio-enlace/$token': {
       id: '/laboratorio-enlace/$token'
       path: '/laboratorio-enlace/$token'
@@ -1757,6 +1777,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRrhhRoute: DemoRrhhRoute,
   DemoSoporteRoute: DemoSoporteRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
+  EncuestaTokenRoute: EncuestaTokenRoute,
   LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   TurnoTokenRoute: TurnoTokenRoute,

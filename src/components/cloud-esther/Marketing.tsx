@@ -2358,8 +2358,13 @@ function Estrellas({ n, tam = "size-3.5" }: { n: number; tam?: string }) {
 }
 
 function Resenas({ ctx }: { ctx: Ctx }) {
-  const { resenas, solicitudes } = storeMarketing.usar();
+  const { resenas, solicitudes, enlaceResenas = "" } = storeMarketing.usar();
   const { turnos } = storeAgenda.usar();
+  // Encuestas después del turno (Agenda → «Pedir su opinión» o la automatización)
+  const encuestas = turnos.filter((t) => t.encuesta).map((t) => t.encuesta!.puntaje);
+  const promedioEncuestas = encuestas.length ? encuestas.reduce((a, b) => a + b, 0) / encuestas.length : 0;
+  const [enlace, setEnlace] = useState(enlaceResenas);
+  const enlaceValido = !enlace.trim() || /^https:\/\/\S+$/.test(enlace.trim());
   const [responder, setResponder] = useState<Resena | null>(null);
   const [texto, setTexto] = useState("");
   const [filtro, setFiltro] = useState<"" | "sin" | "bajas">("");
@@ -2421,6 +2426,36 @@ function Resenas({ ctx }: { ctx: Ctx }) {
                 </div>
               );
             })}
+          </div>
+          <div className="card-grad space-y-2 p-4">
+            <p className="text-sm font-semibold">Encuestas después del turno</p>
+            {encuestas.length ? (
+              <p className="text-xs">
+                Promedio <b>{promedioEncuestas.toFixed(1).replace(".", ",")}/5</b> · {encuestas.length} respuestas ·{" "}
+                <b className="text-rose-600">{encuestas.filter((n) => n <= 3).length}</b> con 3 o menos
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Todavía no hay respuestas. Se piden desde la Agenda (turno atendido → carita).</p>
+            )}
+            <label className="block text-xs font-semibold">
+              Enlace de tu ficha de Google para reseñas
+              <input
+                value={enlace}
+                onChange={(e) => setEnlace(e.target.value)}
+                onBlur={() => {
+                  if (!enlaceValido || enlace.trim() === enlaceResenas) return;
+                  setMarketing("enlaceResenas", () => enlace.trim());
+                  ctx.onToast(enlace.trim() ? "Enlace de reseñas guardado" : "Enlace de reseñas quitado");
+                }}
+                placeholder="https://g.page/r/…/review"
+                className={`${INPUT} mt-1 font-normal`}
+              />
+            </label>
+            <p className={`text-[11px] ${enlaceValido ? "text-muted-foreground" : "text-rose-600"}`}>
+              {enlaceValido
+                ? "Quien puntúa 4 o 5 en la encuesta recibe la invitación a dejar su reseña acá. Quien pone 3 o menos, no: te llega la alerta para resolverlo."
+                : "Tiene que empezar con https://"}
+            </p>
           </div>
           <div className="card-grad space-y-2 p-4">
             <p className="text-sm font-semibold">Pedir reseñas</p>

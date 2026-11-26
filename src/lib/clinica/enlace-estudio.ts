@@ -46,7 +46,7 @@ export async function crearEnlaceLaboratorio(laboratorio: string): Promise<{ url
 
 /* Enlace para que el PACIENTE confirme, pida cambiar o cancele su turno (va en el recordatorio).
    La Agenda se actualiza sola. En el demo sin cuenta no hay enlace: el recordatorio sale igual. */
-export async function crearEnlaceTurno(turnoId: number): Promise<string | null> {
+export async function crearEnlaceTurno(turnoId: number, pagina: "turno" | "encuesta" = "turno"): Promise<string | null> {
   const slug = clinicaReal()?.slug;
   try {
     let token: string;
@@ -55,7 +55,7 @@ export async function crearEnlaceTurno(turnoId: number): Promise<string | null> 
     } else if (demoConDatosEnServidor()) {
       token = (await crearEnlaceTurnoDemo({ turnoId, clave: claveDemoServidor("agenda", tenantActual()) })).token;
     } else return null;
-    return `${window.location.origin}/turno/${token}`;
+    return `${window.location.origin}/${pagina}/${token}`;
   } catch {
     return null;
   }

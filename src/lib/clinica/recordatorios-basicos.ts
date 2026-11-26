@@ -343,6 +343,34 @@ export function useRespuestasTurnos() {
   const notifs = storeNotificaciones.usar();
   useEffect(() => {
     if (!puede || !cargados(!!real, ["agenda", "notificaciones"])) return;
+    // Encuestas respondidas (después del turno): aviso, con prioridad si la opinión es baja
+    const encuestas = turnos.filter((t) => t.encuesta && !t.encuesta.avisada);
+    if (encuestas.length) {
+      const existentesE = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
+      const nuevasE: NotifManual[] = encuestas
+        .map((t) => {
+          const e = t.encuesta!;
+          const baja = e.puntaje <= 3;
+          return {
+            id: `encuesta-${t.id}-${e.fecha}`,
+            titulo: baja ? `Opinión baja: ${t.paciente} puntuó ${e.puntaje}/5` : `${t.paciente} puntuó ${e.puntaje}/5 su atención`,
+            detalle: `${e.comentario ? `«${e.comentario}». ` : ""}${baja ? "Contactalo para saber qué pasó y resolverlo." : "¡Bien! Si cargaste el enlace de Google en Marketing → Reseñas, se lo invitó a dejar su reseña."}`,
+            categoria: "Pacientes" as const,
+            prioridad: baja ? ("Alta" as const) : ("Normal" as const),
+            asignado: "Recepción",
+            vence: hoyISO(),
+            horaVence: "",
+            creada: new Date().toISOString(),
+            creadaPor: "Paciente",
+          };
+        })
+        .filter((n) => !existentesE.has(n.id));
+      if (nuevasE.length) setNotificaciones("manuales", (prev) => [...nuevasE, ...prev]);
+      const idsE = new Set(encuestas.map((t) => t.id));
+      setTurnosStore((prev) =>
+        prev.map((t) => (idsE.has(t.id) && t.encuesta ? { ...t, encuesta: { ...t.encuesta, avisada: true } } : t)),
+      );
+    }
     const pendientes = turnos.filter((t) => t.respuestaPaciente && !t.respuestaPaciente.avisada);
     if (!pendientes.length) return;
     const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));

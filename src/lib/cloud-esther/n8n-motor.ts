@@ -268,6 +268,26 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
       );
       break;
     }
+    case "encuesta_satisfaccion": {
+      // Turnos atendidos hoy sin encuesta respondida (en la clínica real el enlace lo arma el servidor)
+      const hoy = hoyISO();
+      lista = storeAgenda
+        .leer()
+        .turnos.filter((t) => t.fecha === hoy && t.estado === "Atendida" && !t.encuesta)
+        .map((t) => {
+          const p = pacientes.find((x) => nombre(x).trim().toLowerCase() === t.paciente.trim().toLowerCase());
+          return {
+            titulo: `Encuesta para ${t.paciente}`,
+            paciente: t.paciente,
+            pacienteId: p?.id ?? null,
+            telefono: p?.telefono ?? "",
+            sede: t.sucursal,
+            monto: 0,
+            dato: "(enlace de la encuesta)",
+          };
+        });
+      break;
+    }
     case "tratamiento_inconcluso": {
       // En tratamiento, sin turno agendado y sin venir hace 30 días o más
       const turnos = storeAgenda.leer().turnos;
@@ -381,6 +401,8 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Reposición sugerida: ${d.dato}.`;
     case "estudio_pendiente":
       return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
+    case "encuesta_satisfaccion":
+      return `Hola ${n}, ¡gracias por venir! ¿Nos contás cómo te atendimos? Es un toque: ${d.dato}`;
     case "tratamiento_inconcluso":
       return `Hola ${n}, ¿cómo estás? Vimos que tu ${d.dato} quedó sin terminar. Respondé este mensaje y te damos un turno para continuarlo.`;
     case "laboratorio_listo":

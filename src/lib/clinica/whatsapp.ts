@@ -118,3 +118,29 @@ export function abrirRecordatorioWhatsApp(
     });
   return true;
 }
+
+/** Abre WhatsApp con el pedido de opinión después del turno (enlace a la encuesta de 1 a 5).
+    Devuelve false si el paciente no tiene teléfono. */
+export function abrirEncuestaWhatsApp(t: { id: number; paciente: string }, clinica: string): boolean {
+  const numero = numeroWhatsApp(telefonoDePaciente(t.paciente));
+  if (!numero) return false;
+  const nombre = t.paciente.split(" ")[0] ?? t.paciente;
+  const armar = (enlace: string | null) =>
+    `https://wa.me/${numero}?text=${encodeURIComponent(
+      enlace
+        ? `Hola ${nombre} 👋 ¡Gracias por venir a ${clinica}! ¿Nos contás cómo te atendimos? Es un toque:\n${enlace}`
+        : `Hola ${nombre} 👋 ¡Gracias por venir a ${clinica}! ¿Cómo te atendimos? Contanos del 1 al 5 respondiendo este mensaje.`,
+    )}`;
+  const ventana = window.open("", "_blank");
+  void import("@/lib/clinica/enlace-estudio")
+    .then(({ crearEnlaceTurno }) => crearEnlaceTurno(t.id, "encuesta"))
+    .catch(() => null)
+    .then((enlace) => {
+      const url = armar(enlace);
+      if (ventana && !ventana.closed) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else window.open(url, "_blank", "noopener,noreferrer");
+    });
+  return true;
+}

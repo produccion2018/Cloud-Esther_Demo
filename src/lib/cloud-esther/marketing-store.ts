@@ -113,6 +113,8 @@ export type EstadoMarketing = {
   solicitudes: SolicitudResena[];
   referidos: ConfigReferidos;
   formulario: { titulo: string; subtitulo: string; boton: string; tratamientos: string[] };
+  /** Enlace de la ficha de Google de la clínica para dejar reseñas (se ofrece a quien puntúa 4 o 5). */
+  enlaceResenas?: string;
 };
 
 export const storeMarketing = crearStorePorEmpresa<EstadoMarketing>(

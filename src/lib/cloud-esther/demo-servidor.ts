@@ -186,6 +186,15 @@ export async function crearEnlaceEstudioDemo(datos: {
   return (await r.json()) as { token: string; vence: string };
 }
 
+/** Enlace para que el LABORATORIO vea y actualice sus órdenes del demo. */
+export async function crearEnlaceLaboratorioDemo(datos: { clave: string; laboratorio: string }): Promise<{ token: string; vence: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/laboratorio/enlaces", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string; vence: string };
+}
+
 /** Firma para subir un archivo del demo directo a Cloudinary (carpeta del demo). */
 export async function pedirFirmaDemo<T>(): Promise<T> {
   const token = leerGuardado()?.token;

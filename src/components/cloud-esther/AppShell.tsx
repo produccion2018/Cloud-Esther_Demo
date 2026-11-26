@@ -1,6 +1,6 @@
 import { fijarPaisTelefonos } from "@/lib/clinica/whatsapp";
 import { usePaisClinica as usePaisClinicaApp } from "@/lib/cloud-esther/coberturas";
-import { useRecordatoriosBasicos } from "@/lib/clinica/recordatorios-basicos";
+import { useNovedadesLaboratorio, useRecordatoriosBasicos } from "@/lib/clinica/recordatorios-basicos";
 import { useEffect, useId, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
@@ -1308,6 +1308,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useBandejaAutomatizaciones();
   // Recordatorios básicos de todos los planes (una vez por día, en Notificaciones)
   useRecordatoriosBasicos();
+  useNovedadesLaboratorio();
   // Multipaís: los teléfonos de los pacientes llevan el código del país de ESTA clínica (WhatsApp)
   const paisConfigurado = usePaisClinicaApp();
   const paisClinicaApp = real?.sesion.clinica.pais || paisConfigurado;

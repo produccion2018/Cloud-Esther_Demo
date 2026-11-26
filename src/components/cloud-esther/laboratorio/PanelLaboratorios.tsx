@@ -17,6 +17,9 @@ import {
   Trash2,
   Wallet,
   Paperclip,
+  Link2,
+  Copy,
+  Loader2,
 } from "lucide-react";
 
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
@@ -29,6 +32,7 @@ import {
   type TrabajoLaboratorio,
 } from "@/components/cloud-esther/PacienteSecciones";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
+import { crearEnlaceLaboratorio } from "@/lib/clinica/enlace-estudio";
 import { MODULES, availableIn, useCloudEsther, planLevel } from "@/lib/cloud-esther/data";
 import { SUCURSAL_GENERAL, setFinanzas, storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
 import {
@@ -385,6 +389,22 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
   const [pagando, setPagando] = useState<string | null>(null);
   const [monto, setMonto] = useState("");
   const [medio, setMedio] = useState("Transferencia");
+  // Enlace para que el laboratorio vea sus órdenes y actualice el estado (sin cuenta)
+  const [enlaces, setEnlaces] = useState<Record<string, string>>({});
+  const [creandoEnlace, setCreandoEnlace] = useState<string | null>(null);
+  const crearEnlace = async (l: Laboratorio) => {
+    setCreandoEnlace(l.id);
+    try {
+      const url = await crearEnlaceLaboratorio(l.nombre);
+      setEnlaces((e) => ({ ...e, [l.id]: url }));
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "No se pudo crear el enlace. Probá de nuevo.");
+    } finally {
+      setCreandoEnlace(null);
+    }
+  };
+  const textoEnlace = (l: Laboratorio, url: string) =>
+    `Hola ${l.contacto || l.nombre} 👋 Te pasamos el enlace para ver nuestras órdenes de laboratorio, con las indicaciones y los archivos. Ahí podés marcar cuando empezás y cuando está listo, cambiar la fecha o dejarnos una nota:\n${url}`;
   // Pasar el pago a Finanzas: plan con Finanzas (Pro+) y, en una clínica real, solo el Administrador
   const aFinanzas = planLevel(plan) >= 2 && (!real || real.rol === "admin") && fin.cuentas.length > 0;
   const quien = usuario?.nombre ?? "Administración";
@@ -419,8 +439,8 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-      <ul className="grid gap-3 md:grid-cols-2">
+    <div data-movil="1col" className="grid gap-4 xl:grid-cols-[1fr_340px]">
+      <ul data-movil="1col" className="grid gap-3 md:grid-cols-2">
         {laboratorios.map((l) => {
           const trabajos = filas.filter((f) => mismo(f.t.proveedor, l.nombre));
           const debe = trabajos.filter((f) => adeuda(f.t)).reduce((a, f) => a + (f.t.costo || 0), 0);
@@ -470,7 +490,42 @@ function Directorio({ filas, onToast }: { filas: Fila[]; onToast: (m: string) =>
                 <button type="button" onClick={() => { setPagando(l.id); setMonto(saldo ? String(saldo) : ""); }} className="btn-ce !min-h-9">
                   <Wallet className="size-4" /> Registrar pago
                 </button>
+                <button type="button" disabled={creandoEnlace === l.id} onClick={() => void crearEnlace(l)} className="btn-ce-outline !min-h-9">
+                  {creandoEnlace === l.id ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />} {enlaces[l.id] ? "Nuevo enlace" : "Enlace para el laboratorio"}
+                </button>
               </div>
+              {enlaces[l.id] && (
+                <div className="relative mt-3 space-y-2 rounded-2xl border border-primary/15 bg-primary/[0.04] p-3 text-xs">
+                  <p className="font-semibold">Enlace de {l.nombre}</p>
+                  <p className="break-all rounded-lg bg-card px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{enlaces[l.id]}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tel ? (
+                      <a href={whatsapp(l.telefono, textoEnlace(l, enlaces[l.id]!)) ?? "#"} target="_blank" rel="noreferrer" className="btn-wa !min-h-9">
+                        <IconoWhatsApp /> Mandar por WhatsApp
+                      </a>
+                    ) : (
+                      <a href={`https://wa.me/?text=${encodeURIComponent(textoEnlace(l, enlaces[l.id]!))}`} target="_blank" rel="noreferrer" className="btn-wa !min-h-9">
+                        <IconoWhatsApp /> Mandar por WhatsApp
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(enlaces[l.id]!).then(
+                          () => onToast("Enlace copiado"),
+                          () => onToast("No se pudo copiar: mantené apretado el enlace"),
+                        );
+                      }}
+                      className="btn-ce-outline !min-h-9"
+                    >
+                      <Copy className="size-4" /> Copiar
+                    </button>
+                  </div>
+                  <p className="text-[10.5px] text-muted-foreground">
+                    Ve solo sus órdenes (con el paciente abreviado) y lo que marque te llega como aviso. Si creás uno nuevo, el anterior deja de andar.
+                  </p>
+                </div>
+              )}
               {pagando === l.id && (
                 <div className="relative mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs">
                   <input inputMode="numeric" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="Importe" className="h-9 w-28 rounded-lg border border-emerald-200 bg-card px-2 text-right tabular-nums" />

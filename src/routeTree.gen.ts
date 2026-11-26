@@ -83,6 +83,7 @@ import { Route as DemoRecetasRouteImport } from './routes/demo_.recetas'
 import { Route as DemoRrhhRouteImport } from './routes/demo_.rrhh'
 import { Route as DemoSoporteRouteImport } from './routes/demo_.soporte'
 import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamientos'
+import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as VerificarCodigoRouteImport } from './routes/verificar.$codigo'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
@@ -460,6 +461,11 @@ const DemoTratamientosRoute = DemoTratamientosRouteImport.update({
   path: '/demo/tratamientos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LaboratorioEnlaceTokenRoute = LaboratorioEnlaceTokenRouteImport.update({
+  id: '/laboratorio-enlace/$token',
+  path: '/laboratorio-enlace/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubirEstudioTokenRoute = SubirEstudioTokenRouteImport.update({
   id: '/subir-estudio/$token',
   path: '/subir-estudio/$token',
@@ -566,6 +572,7 @@ export interface FileRoutesByFullPath {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
@@ -647,6 +654,7 @@ export interface FileRoutesByTo {
   '/demo/rrhh': typeof DemoRrhhRoute
   '/demo/soporte': typeof DemoSoporteRoute
   '/demo/tratamientos': typeof DemoTratamientosRoute
+  '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
@@ -730,6 +738,7 @@ export interface FileRoutesById {
   '/demo_/rrhh': typeof DemoRrhhRoute
   '/demo_/soporte': typeof DemoSoporteRoute
   '/demo_/tratamientos': typeof DemoTratamientosRoute
+  '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
@@ -814,6 +823,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin/'
@@ -895,6 +905,7 @@ export interface FileRouteTypes {
     | '/demo/rrhh'
     | '/demo/soporte'
     | '/demo/tratamientos'
+    | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin'
@@ -977,6 +988,7 @@ export interface FileRouteTypes {
     | '/demo_/rrhh'
     | '/demo_/soporte'
     | '/demo_/tratamientos'
+    | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/verificar/$codigo'
     | '/admin/'
@@ -1038,6 +1050,7 @@ export interface RootRouteChildren {
   DemoRrhhRoute: typeof DemoRrhhRoute
   DemoSoporteRoute: typeof DemoSoporteRoute
   DemoTratamientosRoute: typeof DemoTratamientosRoute
+  LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -1568,6 +1581,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTratamientosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/laboratorio-enlace/$token': {
+      id: '/laboratorio-enlace/$token'
+      path: '/laboratorio-enlace/$token'
+      fullPath: '/laboratorio-enlace/$token'
+      preLoaderRoute: typeof LaboratorioEnlaceTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subir-estudio/$token': {
       id: '/subir-estudio/$token'
       path: '/subir-estudio/$token'
@@ -1717,6 +1737,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRrhhRoute: DemoRrhhRoute,
   DemoSoporteRoute: DemoSoporteRoute,
   DemoTratamientosRoute: DemoTratamientosRoute,
+  LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,

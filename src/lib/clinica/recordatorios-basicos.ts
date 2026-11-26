@@ -9,8 +9,10 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
 import {
   DIAS_ORDEN_PENDIENTE,
+  cambiarRegistro,
   laboratorioLlego,
   leerRegistros,
+  useTodosLosRegistros,
   type Registros,
 } from "@/components/cloud-esther/PacienteSecciones";
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
@@ -224,4 +226,45 @@ export function useRecordatoriosBasicos() {
       document.removeEventListener("visibilitychange", alVolver);
     };
   }, [real?.slug, real?.rol, plan, puede]);
+}
+
+/* Lo que el LABORATORIO cambia desde su enlace (estado, entrega, nota) llega a la clínica:
+   aviso en Notificaciones (una vez por novedad) y el trabajo queda marcado como avisado. */
+export function useNovedadesLaboratorio() {
+  const real = useClinicaReal();
+  const puede = !real || ["admin", "secretaria", "odontologo"].includes(real.rol);
+  const regs = useTodosLosRegistros();
+  useEffect(() => {
+    if (!puede) return;
+    const pendientes = Object.entries(regs).flatMap(([pid, r]) =>
+      (r?.laboratorio ?? []).filter((t) => t.novedadLab && !t.novedadLab.avisada).map((t) => ({ pid: Number(pid), t })),
+    );
+    if (!pendientes.length) return;
+    const pacs = leerPacientes();
+    const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
+    const ahora = new Date().toISOString();
+    const nuevos: NotifManual[] = pendientes
+      .map(({ pid, t }) => {
+        const p = pacs.find((x) => x.id === pid);
+        const texto = t.novedadLab!.texto;
+        return {
+          id: `lab-nov-${pid}-${t.id}-${t.novedadLab!.fecha}`,
+          titulo: `${t.proveedor || "El laboratorio"} actualizó ${t.tipo.toLowerCase()}${p ? ` de ${p.nombre} ${p.apellido}` : ""}`,
+          detalle: `${texto.charAt(0).toUpperCase()}${texto.slice(1)}.${t.notaLaboratorio && !texto.includes(t.notaLaboratorio) ? ` Nota del laboratorio: «${t.notaLaboratorio}».` : ""}`,
+          categoria: "Laboratorio" as const,
+          prioridad: t.estado === "Listo para retirar" ? ("Alta" as const) : ("Normal" as const),
+          asignado: "Recepción",
+          vence: hoyISO(),
+          horaVence: "",
+          creada: ahora,
+          creadaPor: "Laboratorio",
+        };
+      })
+      .filter((n) => !existentes.has(n.id));
+    if (nuevos.length) setNotificaciones("manuales", (prev) => [...nuevos, ...prev]);
+    for (const { pid, t } of pendientes)
+      cambiarRegistro(pid, "laboratorio", (prev) =>
+        prev.map((x) => (x.id === t.id && x.novedadLab ? { ...x, novedadLab: { ...x.novedadLab, avisada: true } } : x)),
+      );
+  }, [regs, puede]);
 }

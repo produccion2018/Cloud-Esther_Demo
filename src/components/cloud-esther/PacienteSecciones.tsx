@@ -602,6 +602,10 @@ export type TrabajoLaboratorio = {
   repeticiones?: RepeticionLaboratorio[];
   /** Fotos del color, escaneos (STL), impresiones… Guardados en Cloudinary (acá solo la dirección). */
   archivos?: ArchivoLaboratorio[];
+  /** Nota que dejó el laboratorio desde su enlace. */
+  notaLaboratorio?: string;
+  /** Último cambio que hizo el laboratorio desde su enlace (la clínica recibe el aviso). */
+  novedadLab?: { fecha: string; texto: string; avisada?: boolean };
 };
 
 export type ArchivoLaboratorio = {
@@ -11089,6 +11093,9 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                       {t.avisadoPaciente && laboratorioLlego(t) && (
                         <Badge tono="verde">Paciente avisado {formatearFecha(t.avisadoPaciente).slice(0, 5)}</Badge>
                       )}
+                      {t.novedadLab && Date.now() - new Date(t.novedadLab.fecha).getTime() < 7 * 86_400_000 && (
+                        <Badge tono="primary">Actualizado por el laboratorio {formatearFecha(t.novedadLab.fecha.slice(0, 10)).slice(0, 5)}</Badge>
+                      )}
                       {t.reclamadoEl && !laboratorioLlego(t) && aviso?.tono === "rojo" && (
                         <Badge tono="gris">Reclamado {formatearFecha(t.reclamadoEl).slice(0, 5)}</Badge>
                       )}
@@ -11112,6 +11119,11 @@ function LaboratorioSec({ datos, cambiar, onToast, contexto }: PropsSeccion) {
                 {t.notas && (
                   <p className="mt-2 rounded-lg bg-primary/[0.04] px-2.5 py-1.5 text-xs text-muted-foreground">
                     {t.notas}
+                  </p>
+                )}
+                {t.notaLaboratorio && (
+                  <p className="mt-2 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs text-sky-900">
+                    <span className="font-semibold">Nota del laboratorio:</span> {t.notaLaboratorio}
                   </p>
                 )}
 

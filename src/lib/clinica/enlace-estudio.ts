@@ -1,7 +1,7 @@
 import { pedirAClinica } from "./api";
 import { SLUG_DEMO } from "./demo-admin";
 import { clinicaReal } from "./modo-clinica";
-import { crearEnlaceEstudioDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/enlace-estudio.ts
@@ -26,4 +26,20 @@ export async function crearEnlaceEstudio(datos: {
     throw new Error("Esta opción funciona cuando entrás al demo con tu cuenta (así lo que sube el paciente llega a la ficha).");
   }
   return `${window.location.origin}/subir-estudio/${token}`;
+}
+
+/* Enlace para el LABORATORIO: ve sus órdenes (paciente abreviado, archivos) y actualiza el
+   estado, la fecha de entrega o deja una nota, sin crearse cuenta. Vence en un año; al crear
+   uno nuevo para el mismo laboratorio, el anterior deja de andar. */
+export async function crearEnlaceLaboratorio(laboratorio: string): Promise<string> {
+  const slug = clinicaReal()?.slug;
+  let token: string;
+  if (slug && slug !== SLUG_DEMO) {
+    token = (await pedirAClinica<{ token: string }>(slug, "POST", "/laboratorio/enlaces", { laboratorio })).token;
+  } else if (demoConDatosEnServidor()) {
+    token = (await crearEnlaceLaboratorioDemo({ laboratorio, clave: claveDemoServidor("registros", tenantActual()) })).token;
+  } else {
+    throw new Error("Esta opción funciona cuando entrás al demo con tu cuenta (así lo que marca el laboratorio llega a la clínica).");
+  }
+  return `${window.location.origin}/laboratorio-enlace/${token}`;
 }

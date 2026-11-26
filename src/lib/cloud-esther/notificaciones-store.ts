@@ -32,7 +32,128 @@ export type NotifManual = {
   horaVence: string; // hh:mm o ""
   creada: string; // ISO
   creadaPor: string;
+  /** Lista de pasos para tildar (las tareas que salen de una rutina) */
+  checklist?: { texto: string; hecho: boolean; quien?: string }[];
+  /** Rutina de la que salió (apertura, cierre, esterilización…) */
+  rutinaId?: string;
 };
+
+/* ───────────── RUTINAS: tareas que se crean solas (apertura, cierre, esterilización…) ───────────── */
+export type FrecuenciaRutina = "diaria" | "semanal" | "mensual";
+export type Rutina = {
+  id: string;
+  nombre: string;
+  pasos: string[];
+  asignado: string;
+  categoria: CategoriaNotif;
+  prioridad: PrioridadNotif;
+  frecuencia: FrecuenciaRutina;
+  /** Diaria: qué días de la semana (0 = domingo … 6 = sábado). Semanal: el día (uno solo). */
+  dias: number[];
+  /** Mensual: el día del mes (1 a 28) */
+  diaMes: number;
+  /** Hora límite (opcional) */
+  hora: string;
+  activa: boolean;
+  creadaPor: string;
+  creada: string;
+};
+export const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+/** Rutinas listas para usar (la clínica las cambia a su manera). */
+export const PLANTILLAS_RUTINA: { nombre: string; pasos: string[]; asignado: string; categoria: CategoriaNotif; frecuencia: FrecuenciaRutina; hora: string }[] = [
+  {
+    nombre: "Apertura del consultorio",
+    pasos: ["Encender equipos y compresor", "Revisar la agenda del día", "Preparar los consultorios", "Controlar insumos de cada sillón"],
+    asignado: "Recepción",
+    categoria: "Agenda",
+    frecuencia: "diaria",
+    hora: "09:00",
+  },
+  {
+    nombre: "Cierre del día",
+    pasos: ["Confirmar los turnos de mañana", "Cerrar la caja", "Apagar equipos y compresor", "Dejar los consultorios ordenados"],
+    asignado: "Recepción",
+    categoria: "Administración",
+    frecuencia: "diaria",
+    hora: "19:00",
+  },
+  {
+    nombre: "Esterilización",
+    pasos: ["Lavar y secar el instrumental", "Embolsar y rotular", "Cargar la autoclave", "Registrar el ciclo"],
+    asignado: "",
+    categoria: "Insumos",
+    frecuencia: "diaria",
+    hora: "",
+  },
+  {
+    nombre: "Control de heladera",
+    pasos: ["Anotar la temperatura", "Revisar vencimientos", "Avisar si algo falta"],
+    asignado: "",
+    categoria: "Insumos",
+    frecuencia: "semanal",
+    hora: "",
+  },
+  {
+    nombre: "Revisión de stock",
+    pasos: ["Contar lo que está por debajo del mínimo", "Armar el pedido al proveedor"],
+    asignado: "Administración",
+    categoria: "Insumos",
+    frecuencia: "mensual",
+    hora: "",
+  },
+];
+
+const diaLocalRutina = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** ¿A esta rutina le toca hoy? */
+export function rutinaTocaHoy(r: Rutina, d = new Date()): boolean {
+  if (!r.activa) return false;
+  if (r.frecuencia === "mensual") return d.getDate() === Math.min(28, Math.max(1, r.diaMes || 1));
+  return r.dias.includes(d.getDay());
+}
+
+/** Crea las tareas de hoy de cada rutina que toca (una sola vez por día: el id lleva la fecha). */
+export function generarRutinasDeHoy(): number {
+  const est = storeNotificaciones.leer();
+  const rutinas = est.rutinas ?? [];
+  if (rutinas.length === 0) return 0;
+  const hoy = diaLocalRutina();
+  const existentes = new Set(est.manuales.map((m) => m.id));
+  const nuevas: NotifManual[] = rutinas
+    .filter((r) => rutinaTocaHoy(r) && !existentes.has(`rut-${r.id}-${hoy}`))
+    .map((r) => ({
+      id: `rut-${r.id}-${hoy}`,
+      titulo: r.nombre,
+      detalle: r.frecuencia === "diaria" ? "Rutina de todos los días." : r.frecuencia === "semanal" ? "Rutina semanal." : "Rutina mensual.",
+      categoria: r.categoria,
+      prioridad: r.prioridad,
+      asignado: r.asignado,
+      vence: hoy,
+      horaVence: r.hora,
+      creada: new Date().toISOString(),
+      creadaPor: "Rutinas",
+      checklist: r.pasos.filter(Boolean).map((texto) => ({ texto, hecho: false })),
+      rutinaId: r.id,
+    }));
+  if (nuevas.length) setNotificaciones("manuales", (prev) => [...nuevas, ...prev]);
+  return nuevas.length;
+}
+
+/** Tilda o destilda un paso de la lista. Devuelve true si con esto quedó todo hecho. */
+export function marcarPaso(notifId: string, indice: number, hecho: boolean, usuario: string): boolean {
+  let completa = false;
+  setNotificaciones("manuales", (prev) =>
+    prev.map((m) => {
+      if (m.id !== notifId || !m.checklist) return m;
+      const checklist = m.checklist.map((p, i) => (i === indice ? { ...p, hecho, quien: hecho ? usuario : "" } : p));
+      completa = checklist.length > 0 && checklist.every((p) => p.hecho);
+      return { ...m, checklist };
+    }),
+  );
+  return completa;
+}
 
 export type EstadoNotif = {
   leida?: boolean;
@@ -68,6 +189,8 @@ export type EstadoNotificaciones = {
   estados: Record<string, EstadoNotif>;
   preferencias: Preferencias;
   historial: EventoNotif[];
+  /** Tareas que se repiten (apertura, cierre…) */
+  rutinas?: Rutina[];
 };
 
 const PREF = (email = false, whatsapp = false): PreferenciaCategoria => ({
@@ -132,7 +255,7 @@ export function esParaMi(asignado: string, miNombre: string, miRol?: string | nu
   return !!miRol && (AREAS_TAREAS[a] ?? []).includes(miRol);
 }
 /** Quién creó una tarea es una persona (no un recordatorio automático del sistema) */
-const esPersona = (n: string) => !!n.trim() && !["recordatorios", "automatizaciones", "sistema", "esther"].includes(normNombre(n));
+const esPersona = (n: string) => !!n.trim() && !["recordatorios", "rutinas", "automatizaciones", "sistema", "esther"].includes(normNombre(n));
 
 /** Cambia el estado de una o varias notificaciones y lo deja en el historial. */
 export function cambiarEstadoNotif(

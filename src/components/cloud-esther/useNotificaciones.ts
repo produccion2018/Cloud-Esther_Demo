@@ -41,6 +41,8 @@ export type Notif = {
   creadaPor: string;
   accion?: { label: string; to: string };
   estado: EstadoNotif;
+  /** Pasos para tildar (tareas de una rutina) */
+  checklist?: { texto: string; hecho: boolean; quien?: string }[];
 };
 
 function hoyISO() {
@@ -449,6 +451,7 @@ export function useNotificaciones() {
       asignado: m.asignado,
       creadaPor: m.creadaPor,
       estado: estados[m.id] ?? {},
+      ...(m.checklist ? { checklist: m.checklist } : {}),
     })),
   ].filter((n) => {
     const modulo = MODULO_DE_CATEGORIA[n.categoria];

@@ -26,6 +26,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Repeat,
   Settings2,
   Smartphone,
   Trash2,
@@ -45,6 +46,12 @@ import {
   PRIORIDADES_NOTIF,
   cambiarEstadoNotif,
   esParaMi,
+  generarRutinasDeHoy,
+  marcarPaso,
+  DIAS_SEMANA,
+  PLANTILLAS_RUTINA,
+  type FrecuenciaRutina,
+  type Rutina,
   setNotificaciones,
   storeNotificaciones,
   type CategoriaNotif,
@@ -73,7 +80,7 @@ import {
    para el equipo, con prioridades, vencimientos, posponer, preferencias por área e historial.
    Separado por empresa. TODO backend: API de notificaciones + push/correo/WhatsApp. */
 
-type Seccion = "bandeja" | "pospuestas" | "preferencias" | "historial";
+type Seccion = "bandeja" | "rutinas" | "pospuestas" | "preferencias" | "historial";
 type FiltroEstado = "pendientes" | "sinLeer" | "completadas" | "todas";
 
 const CATEGORIA_ESTILO: Record<CategoriaNotif, { icon: LucideIcon; color: string }> = {
@@ -465,6 +472,7 @@ function NotificacionesInner() {
     reglas?: boolean;
   }[] = [
     { id: "bandeja", label: "Bandeja", icon: Bell, contador: sinLeer },
+    { id: "rutinas", label: "Rutinas", icon: Repeat },
     {
       id: "pospuestas",
       label: "Pospuestas",
@@ -641,6 +649,8 @@ function NotificacionesInner() {
               </>
             ) : seccionVisible === "pospuestas" ? (
               <Pospuestas pospuestas={pospuestas} usuario={usuario} onToast={onToast} />
+            ) : seccionVisible === "rutinas" ? (
+              <RutinasSec usuario={usuario} onToast={onToast} />
             ) : seccionVisible === "preferencias" ? (
               <PreferenciasSec onToast={onToast} />
             ) : (
@@ -1129,7 +1139,7 @@ function TarjetaNotif({
     <li
       className={`card-grad group relative flex min-w-0 flex-col gap-2 overflow-visible p-3 pl-3.5 transition-all hover:-translate-y-0.5 sm:flex-row sm:gap-3 sm:p-3.5 sm:pl-4 ${
         completada ? "opacity-70" : ""
-      }`}
+      } ${n.checklist?.length ? "col-span-2" : ""}`}
       onClick={() => {
         if (!leida && !completada) cambiarEstadoNotif(item, { leida: true }, null, usuario);
       }}
@@ -1172,6 +1182,44 @@ function TarjetaNotif({
         <p className="mt-1 line-clamp-3 text-[11.5px] leading-[1.45] text-muted-foreground sm:mt-0.5 sm:line-clamp-none sm:text-xs sm:leading-5">
           {n.detalle}
         </p>
+        {n.checklist && n.checklist.length > 0 && (
+          <div className="mt-2 rounded-xl border border-primary/10 bg-white/70 p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-1.5 flex items-center gap-2 px-1">
+              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/10">
+                <span
+                  className="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"
+                  style={{ width: `${Math.round((n.checklist.filter((p) => p.hecho).length / n.checklist.length) * 100)}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-muted-foreground">
+                {n.checklist.filter((p) => p.hecho).length}/{n.checklist.length}
+              </span>
+            </div>
+            <ul className="space-y-0.5">
+              {n.checklist.map((p, i) => (
+                <li key={i}>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-[12.5px] transition hover:bg-primary/[0.04]">
+                    <input
+                      type="checkbox"
+                      checked={p.hecho}
+                      disabled={completada}
+                      onChange={(e) => {
+                        const todo = marcarPaso(n.id, i, e.target.checked, usuario);
+                        if (todo && !completada) {
+                          cambiarEstadoNotif(item, { completada: new Date().toISOString(), leida: true }, "Completó", usuario);
+                          onToast("¡Lista completa! Tarea hecha");
+                        }
+                      }}
+                      className="size-4 shrink-0 accent-[#7c3aed]"
+                    />
+                    <span className={p.hecho ? "text-muted-foreground line-through" : ""}>{p.texto}</span>
+                    {p.hecho && p.quien && <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{p.quien}</span>}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10.5px] text-muted-foreground sm:text-[11px]">
           <span className="font-medium text-foreground/70">{n.categoria}</span>
           {n.asignado ? (
@@ -1533,6 +1581,261 @@ function Pospuestas({
 }
 
 /* ───────────── Preferencias ───────────── */
+
+/* ───────────── RUTINAS: tareas que se crean solas ───────────── */
+const textoFrecuencia = (r: Pick<Rutina, "frecuencia" | "dias" | "diaMes" | "hora">) => {
+  const hora = r.hora ? ` · hasta las ${r.hora}` : "";
+  if (r.frecuencia === "mensual") return `Todos los meses, el día ${r.diaMes}${hora}`;
+  if (r.frecuencia === "semanal") return `Todas las semanas, los ${DIAS_SEMANA[r.dias[0] ?? 1]}${hora}`;
+  const d = [...r.dias].sort();
+  const lista =
+    d.length === 7 ? "Todos los días" : d.join() === "1,2,3,4,5" ? "De lunes a viernes" : d.join() === "1,2,3,4,5,6" ? "De lunes a sábado" : d.map((x) => DIAS_SEMANA[x]).join(", ");
+  return `${lista}${hora}`;
+};
+
+function RutinasSec({ usuario, onToast }: { usuario: string; onToast: (m: string) => void }) {
+  const { rutinas = [] } = storeNotificaciones.usar();
+  const [editando, setEditando] = useState<Rutina | "nueva" | null>(null);
+  const guardar = (r: Rutina) => {
+    setNotificaciones("rutinas", (prev = []) => (prev.some((x) => x.id === r.id) ? prev.map((x) => (x.id === r.id ? r : x)) : [...prev, r]));
+    const n = generarRutinasDeHoy();
+    onToast(n ? "Rutina guardada. La de hoy ya está en la bandeja." : "Rutina guardada");
+    setEditando(null);
+  };
+  return (
+    <div className="space-y-3">
+      <EncabezadoSeccion
+        icon={Repeat}
+        titulo="Rutinas"
+        descripcion="Tareas que se crean solas: apertura, cierre, esterilización… con su lista para tildar."
+      >
+        <button className={BTN_PRIMARIO} onClick={() => setEditando("nueva")}>
+          <Plus className="size-4" /> Nueva rutina
+        </button>
+      </EncabezadoSeccion>
+      {rutinas.length === 0 ? (
+        <div className="card-grad p-4">
+          <p className="text-sm font-semibold">Empezá con una de estas (después la cambiás a tu manera):</p>
+          <div data-movil="1col" className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {PLANTILLAS_RUTINA.map((p) => (
+              <button
+                key={p.nombre}
+                onClick={() =>
+                  setEditando({
+                    id: `r-${Date.now()}`,
+                    nombre: p.nombre,
+                    pasos: p.pasos,
+                    asignado: p.asignado,
+                    categoria: p.categoria,
+                    prioridad: "Normal",
+                    frecuencia: p.frecuencia,
+                    dias: p.frecuencia === "semanal" ? [1] : [1, 2, 3, 4, 5, 6],
+                    diaMes: 1,
+                    hora: p.hora,
+                    activa: true,
+                    creadaPor: usuario,
+                    creada: new Date().toISOString(),
+                  })
+                }
+                className="rounded-2xl border border-primary/12 bg-white p-3 text-left transition hover:border-primary/35 hover:bg-primary/[0.03]"
+              >
+                <span className="block text-sm font-semibold">{p.nombre}</span>
+                <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                  {p.pasos.length} pasos · {p.frecuencia === "diaria" ? "todos los días" : p.frecuencia === "semanal" ? "una vez por semana" : "una vez por mes"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {rutinas.map((r) => (
+            <li key={r.id} className={`card-grad flex flex-wrap items-center gap-3 p-3.5 ${r.activa ? "" : "opacity-60"}`}>
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Repeat className="size-4.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{r.nombre}</p>
+                <p className="text-[11.5px] text-muted-foreground">
+                  {textoFrecuencia(r)} · {r.pasos.length} pasos · {r.asignado || "Sin asignar"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Interruptor
+                  activo={r.activa}
+                  onChange={(v) => {
+                    setNotificaciones("rutinas", (prev = []) => prev.map((x) => (x.id === r.id ? { ...x, activa: v } : x)));
+                    if (v) generarRutinasDeHoy();
+                    onToast(v ? "Rutina activada" : "Rutina en pausa");
+                  }}
+                  etiqueta={`Rutina ${r.nombre} activa`}
+                />
+                <button className={BTN_ICONO} onClick={() => setEditando(r)} aria-label={`Editar ${r.nombre}`}>
+                  <Pencil className="size-4" />
+                </button>
+                <button
+                  className={BTN_ICONO}
+                  aria-label={`Borrar ${r.nombre}`}
+                  onClick={() => {
+                    if (!window.confirm(`¿Borrar la rutina «${r.nombre}»? Las tareas que ya se crearon quedan.`)) return;
+                    setNotificaciones("rutinas", (prev = []) => prev.filter((x) => x.id !== r.id));
+                    onToast("Rutina borrada");
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="px-1 text-[11px] text-muted-foreground">
+        Cada día que toca, la tarea aparece en la bandeja de quien la tenga asignada (y en su celular, si activó los avisos). Al tildar todos los pasos, queda hecha.
+      </p>
+      {editando && (
+        <Modal titulo={editando === "nueva" || !rutinas.some((x) => x.id === editando.id) ? "Nueva rutina" : "Editar rutina"} onClose={() => setEditando(null)}>
+          <RutinaForm inicial={editando === "nueva" ? null : editando} usuario={usuario} onCancel={() => setEditando(null)} onSubmit={guardar} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function RutinaForm({
+  inicial,
+  usuario,
+  onCancel,
+  onSubmit,
+}: {
+  inicial: Rutina | null;
+  usuario: string;
+  onCancel: () => void;
+  onSubmit: (r: Rutina) => void;
+}) {
+  const { miembros } = useEquipo();
+  const equipo = [...ROLES_FIJOS, ...miembros.filter((m) => m.status !== "inactivo").map((m) => `${m.firstName} ${m.lastName}`.trim())];
+  const [nombre, setNombre] = useState(inicial?.nombre ?? "");
+  const [pasos, setPasos] = useState((inicial?.pasos ?? []).join("\n"));
+  const [asignado, setAsignado] = useState(inicial?.asignado ?? "");
+  const [categoria, setCategoria] = useState<CategoriaNotif>(inicial?.categoria ?? "Administración");
+  const [prioridad, setPrioridad] = useState<PrioridadNotif>(inicial?.prioridad ?? "Normal");
+  const [frecuencia, setFrecuencia] = useState<FrecuenciaRutina>(inicial?.frecuencia ?? "diaria");
+  const [dias, setDias] = useState<number[]>(inicial?.dias ?? [1, 2, 3, 4, 5, 6]);
+  const [diaMes, setDiaMes] = useState(inicial?.diaMes ?? 1);
+  const [hora, setHora] = useState(inicial?.hora ?? "");
+  const [error, setError] = useState("");
+  return (
+    <form
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        const lista = pasos
+          .split("\n")
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .slice(0, 20);
+        if (!nombre.trim()) return setError("Escribí el nombre de la rutina.");
+        if (frecuencia !== "mensual" && dias.length === 0) return setError("Elegí al menos un día.");
+        onSubmit({
+          id: inicial?.id ?? `r-${Date.now()}`,
+          nombre: nombre.trim().slice(0, 80),
+          pasos: lista,
+          asignado,
+          categoria,
+          prioridad,
+          frecuencia,
+          dias: frecuencia === "semanal" ? dias.slice(0, 1) : dias,
+          diaMes,
+          hora,
+          activa: inicial?.activa ?? true,
+          creadaPor: inicial?.creadaPor ?? usuario,
+          creada: inicial?.creada ?? new Date().toISOString(),
+        });
+      }}
+      className="space-y-3"
+    >
+      <Field label="Nombre *">
+        <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder="Ej: Apertura del consultorio" />
+      </Field>
+      <Field label="Pasos (uno por renglón)">
+        <textarea
+          rows={5}
+          value={pasos}
+          onChange={(e) => setPasos(e.target.value)}
+          className="w-full resize-y rounded-xl border border-primary/12 bg-white px-3 py-2 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+          placeholder={"Encender equipos\nRevisar la agenda del día"}
+        />
+      </Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Asignar a">
+          <Select value={asignado} onChange={setAsignado} opciones={[{ value: "", label: "Sin asignar" }, ...equipo.map((n) => ({ value: n, label: n }))]} />
+        </Field>
+        <Field label="Área">
+          <Select value={categoria} onChange={setCategoria} opciones={CATEGORIAS_NOTIF.map((c) => ({ value: c, label: c }))} />
+        </Field>
+        <Field label="Se repite">
+          <Select
+            value={frecuencia}
+            onChange={(v) => {
+              setFrecuencia(v);
+              if (v === "semanal") setDias((d) => [d[0] ?? 1]);
+            }}
+            opciones={[
+              { value: "diaria", label: "Algunos días de la semana" },
+              { value: "semanal", label: "Una vez por semana" },
+              { value: "mensual", label: "Una vez por mes" },
+            ]}
+          />
+        </Field>
+        <Field label="Hasta qué hora (opcional)">
+          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className={INPUT} />
+        </Field>
+      </div>
+      {frecuencia === "mensual" ? (
+        <Field label="Qué día del mes">
+          <Select
+            value={String(diaMes)}
+            onChange={(v) => setDiaMes(Number(v))}
+            opciones={Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: `El ${i + 1}` }))}
+          />
+        </Field>
+      ) : (
+        <div>
+          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            {frecuencia === "semanal" ? "Qué día" : "Qué días"}
+          </span>
+          <div className="grid grid-cols-7 gap-1">
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+              const on = dias.includes(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setDias((prev) => (frecuencia === "semanal" ? [d] : on ? prev.filter((x) => x !== d) : [...prev, d]))}
+                  className={`rounded-xl py-2 text-xs font-semibold transition ${on ? "bg-primary text-primary-foreground shadow-sm" : "bg-primary/[0.06] text-muted-foreground hover:text-foreground"}`}
+                >
+                  {DIAS_SEMANA[d]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <Field label="Prioridad">
+        <Select value={prioridad} onChange={setPrioridad} opciones={PRIORIDADES_NOTIF.map((p) => ({ value: p, label: p }))} />
+      </Field>
+      {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" className={BTN_SECUNDARIO} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="submit" className={BTN_PRIMARIO}>
+          <Check className="size-4" /> Guardar rutina
+        </button>
+      </div>
+    </form>
+  );
+}
 
 /* ───────────── Avisos en este dispositivo (push: aunque la app esté cerrada) ───────────── */
 function AvisosEnEsteDispositivo({ onToast }: { onToast: (m: string) => void }) {

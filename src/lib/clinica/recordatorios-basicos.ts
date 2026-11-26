@@ -3,7 +3,7 @@ import { setTareasStore, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/
 import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
-import { setNotificaciones, storeNotificaciones, type NotifManual } from "@/lib/cloud-esther/notificaciones-store";
+import { setNotificaciones, storeNotificaciones, type NotifManual, generarRutinasDeHoy } from "@/lib/cloud-esther/notificaciones-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -91,6 +91,8 @@ export function useRecordatoriosBasicos() {
       const modAuto = MODULES.find((m) => m.id === "automatizaciones");
       const conAuto = !!modAuto && availableIn(modAuto, plan);
       const flujoActivo = (evento: string) => conAuto && storeN8n.leer().flujos.some((f) => f.activo && f.evento === evento);
+      // Rutinas (apertura, cierre…): las tareas de hoy se crean solas, una vez por día
+      generarRutinasDeHoy();
       const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
       const nuevos: NotifManual[] = [];
       const base = { asignado: "Recepción", vence: hoy, horaVence: "", creada: new Date().toISOString(), creadaPor: "Recordatorios" };

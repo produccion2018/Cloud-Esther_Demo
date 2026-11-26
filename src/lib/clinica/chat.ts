@@ -34,6 +34,8 @@ export type ResumenChat = {
   avisos: { noLeidos: number; pendientes: number };
 };
 export type ArchivoChat = { id: string; nombre: string; tipo: string; tamano: number };
+/** Paciente o turno del que se habla en el mensaje (se toca y abre la ficha o el turno). */
+export type ReferenciaChat = { tipo: "paciente" | "turno"; id: number; nombre: string; detalle: string };
 export type MensajeChat = {
   id: string;
   canalId: string;
@@ -41,6 +43,7 @@ export type MensajeChat = {
   tipo: "mensaje" | "comunicado";
   texto: string;
   archivo: ArchivoChat | null;
+  referencia?: ReferenciaChat | null;
   fecha: string;
   quitado: boolean;
   mio: boolean;
@@ -138,9 +141,33 @@ export async function verMensajes(canalId: string, antes?: string): Promise<{ me
   return { ...r, mensajes: r.mensajes.map(mensajesProlijos) };
 }
 
+/* Abrir la ficha del paciente o el turno desde un mensaje: la página destino lo lee al cargar. */
+export const CLAVE_ABRIR_PACIENTE = "cloud-esther:abrir-paciente";
+export const CLAVE_ABRIR_TURNO = "cloud-esther:abrir-turno";
+export function pedirAbrir(ref: ReferenciaChat) {
+  try {
+    sessionStorage.setItem(ref.tipo === "turno" ? CLAVE_ABRIR_TURNO : CLAVE_ABRIR_PACIENTE, String(ref.id));
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+/** Lee (y borra) el pedido de abrir un paciente o turno. */
+export function tomarPedidoAbrir(tipo: ReferenciaChat["tipo"]): number | null {
+  try {
+    const clave = tipo === "turno" ? CLAVE_ABRIR_TURNO : CLAVE_ABRIR_PACIENTE;
+    const v = sessionStorage.getItem(clave);
+    if (!v) return null;
+    sessionStorage.removeItem(clave);
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function enviarMensaje(
   canalId: string,
-  datos: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined },
+  datos: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined },
 ): Promise<MensajeChat> {
   const slug = slugReal();
   const m = slug
@@ -345,7 +372,7 @@ const demo = (() => {
     { id: "demo-general", tipo: "general", nombre: "General", descripcion: "Toda la clínica", area: "", miembros: personas.map((p) => p.id), creado: hace(9000), leido: hace(200) },
   ];
   const nom = (id: string) => personas.find((p) => p.id === id)?.nombre ?? "Persona";
-  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; fecha: string; quitado: boolean; acks: Record<string, string> };
+  type MsgDemo = { id: string; canalId: string; autor: string; tipo: "mensaje" | "comunicado"; texto: string; archivo: ArchivoChat | null; referencia?: ReferenciaChat | null; fecha: string; quitado: boolean; acks: Record<string, string> };
   let seq = 0;
   const m = (canalId: string, autor: string, texto: string, min: number, extra: Partial<MsgDemo> = {}): MsgDemo => ({
     id: `demo-m${++seq}`, canalId, autor, tipo: "mensaje", texto, archivo: null, fecha: hace(min), quitado: false, acks: {}, ...extra,
@@ -364,6 +391,7 @@ const demo = (() => {
       tipo: x.tipo,
       texto: x.quitado ? "" : x.texto,
       archivo: x.quitado ? null : x.archivo,
+      referencia: x.quitado ? null : (x.referencia ?? null),
       fecha: x.fecha,
       quitado: x.quitado,
       mio: x.autor === YO,
@@ -377,14 +405,14 @@ const demo = (() => {
           : null,
     };
   };
-  const nuevoMsg = (canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined }) => {
+  const nuevoMsg = (canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined }) => {
     let archivo: ArchivoChat | null = null;
     if (d.archivo) {
       const id = `demo-a${++seq}`;
       archivos[id] = d.archivo.contenido;
       archivo = { id, nombre: d.archivo.nombre, tipo: d.archivo.tipo, tamano: Math.round((d.archivo.contenido.length * 3) / 4) };
     }
-    const x = m(canalId, YO, d.texto, 0, { tipo: d.tipo, archivo });
+    const x = m(canalId, YO, d.texto, 0, { tipo: d.tipo, archivo, referencia: d.referencia ?? null });
     mensajes.push(x);
     const c = canales.find((k) => k.id === canalId);
     if (c) c.leido = new Date().toISOString();
@@ -402,7 +430,13 @@ const demo = (() => {
           noLeidos: suyos.filter((x) => x.autor !== YO && x.fecha > c.leido).length,
           pendientes: suyos.filter((x) => x.tipo === "comunicado" && x.autor !== YO && !x.acks[YO]).length,
           ultimo: ult
-            ? { autor: ult.autor === YO ? "Vos" : nom(ult.autor), texto: ult.texto.slice(0, 140), tipo: ult.tipo, fecha: ult.fecha, archivo: !!ult.archivo }
+            ? {
+                autor: ult.autor === YO ? "Vos" : nom(ult.autor),
+                texto: (ult.texto || (ult.referencia ? `${ult.referencia.tipo === "turno" ? "Turno" : "Paciente"}: ${ult.referencia.nombre}` : "")).slice(0, 140),
+                tipo: ult.tipo,
+                fecha: ult.fecha,
+                archivo: !!ult.archivo,
+              }
             : null,
         };
       });
@@ -419,7 +453,7 @@ const demo = (() => {
       if (c) c.leido = new Date().toISOString();
       return { mensajes: mensajes.filter((x) => x.canalId === canalId).map(aDto), hayMas: false };
     },
-    enviar(canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined }) {
+    enviar(canalId: string, d: { texto: string; tipo: "mensaje" | "comunicado"; archivo?: ArchivoNuevo | undefined; referencia?: ReferenciaChat | undefined }) {
       return aDto(nuevoMsg(canalId, d));
     },
     comunicado(d: { texto: string; destino: "todos" | string[]; archivo?: ArchivoNuevo | undefined }) {

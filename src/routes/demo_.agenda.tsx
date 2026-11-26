@@ -87,6 +87,7 @@ import { normalizarBusqueda } from "@/lib/utils";
 import { descargarPDF } from "@/lib/descargas";
 import { CLAVE_TURNO_PARA } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { Seleccion } from "@/components/ui/seleccion";
+import { CLAVE_ABRIR_TURNO, tomarPedidoAbrir } from "@/lib/clinica/chat";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/agenda")({
@@ -1358,6 +1359,7 @@ function TurnoCard({
 
   return (
     <div
+      data-turno-id={turno.id}
       className={`group relative overflow-hidden rounded-2xl border bg-gradient-to-r from-white via-white to-primary/[0.05] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${accent.soft}`}
     >
       <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${accent.bar}`} />
@@ -2699,6 +2701,38 @@ function AgendaInner() {
   }, [odontologosConAdmin.join("|"), real?.rol, turnos.length]);
 
   const cerrarModal = () => setModal(null);
+
+  // Viene de Comunicación interna (tocó un turno en un mensaje): se va a ese día y se abre el turno
+  useEffect(() => {
+    let pedido: string | null = null;
+    try {
+      pedido = sessionStorage.getItem(CLAVE_ABRIR_TURNO);
+    } catch {
+      return;
+    }
+    if (!pedido || turnos.length === 0) return;
+    const t = turnos.find((x) => String(x.id) === pedido);
+    tomarPedidoAbrir("turno");
+    if (!t) {
+      show("Ese turno ya no está en la agenda.");
+      return;
+    }
+    setFiltros({ sucursal: "", odontologo: "", gabinete: "", tratamiento: "" });
+    setVista("dia");
+    setFechaVista(t.fecha);
+    // Se marca el turno en el día; si no se ve (otra vista o filtro), se abre su detalle
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-turno-id="${t.id}"]`);
+      if (!el) {
+        setModal({ tipo: "cita", turno: t });
+        return;
+      }
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary", "ring-offset-2");
+      window.setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 3500);
+    }, 500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnos.length]);
 
   // Viene de Pacientes → "Dar turno": se abre Nuevo turno con ese paciente cargado
   useEffect(() => {

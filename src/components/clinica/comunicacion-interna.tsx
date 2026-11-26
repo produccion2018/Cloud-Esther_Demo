@@ -1,6 +1,9 @@
 import {
   ArrowLeft,
   Building2,
+  CalendarDays,
+  ChevronRight,
+  UserRound,
   Check,
   CheckCheck,
   Download,
@@ -46,6 +49,7 @@ import {
   enviarComunicado,
   enviarMensaje,
   guardarPermisosChat,
+  pedirAbrir,
   pesoArchivo,
   prepararArchivo,
   quitarMensaje,
@@ -57,9 +61,13 @@ import {
   type MensajeChat,
   type PermisosChat,
   type PersonaChat,
+  type ReferenciaChat,
   type ResumenChat,
   type RolChat,
 } from "@/lib/clinica/chat";
+import { useNavigate } from "@tanstack/react-router";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { esClinicaReal } from "@/lib/clinica/modo-clinica";
 
 /* Ubicación: src/components/clinica/comunicacion-interna.tsx
@@ -241,6 +249,175 @@ function ElegirPersonas({
         })}
       </ul>
     </div>
+  );
+}
+
+/* ─────────── Hablar de un paciente o un turno ─────────── */
+const diaLocal = (masDias = 0) => {
+  const d = new Date(Date.now() + masDias * 86_400_000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const hoyISO = () => diaLocal();
+const formatearFecha = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
+const diaTurno = (fecha: string) =>
+  fecha === diaLocal() ? "Hoy" : fecha === diaLocal(1) ? "Mañana" : formatearFecha(fecha).slice(0, 5);
+
+/** Ventana para elegir el paciente o el turno del que se habla. */
+function ElegirReferencia({ abierto, onCerrar, onElegir }: { abierto: boolean; onCerrar: () => void; onElegir: (r: ReferenciaChat) => void }) {
+  const [tab, setTab] = useState<"paciente" | "turno">("paciente");
+  const [q, setQ] = useState("");
+  const { pacientes } = usePacientes();
+  const { turnos } = storeAgenda.usar();
+  const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const busca = norm(q.trim());
+  const listaPac = pacientes
+    .filter((p) => !busca || norm(`${p.nombre} ${p.apellido} ${p.documento ?? ""}`).includes(busca))
+    .sort((a, b) => `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`))
+    .slice(0, 40);
+  // Turnos de la última semana en adelante, los más cercanos primero
+  const desde = diaLocal(-7);
+  const hoy = hoyISO();
+  const listaTur = turnos
+    .filter((t) => t.fecha >= desde && (!busca || norm(`${t.paciente} ${t.tratamiento} ${t.odontologo}`).includes(busca)))
+    .sort((a, b) => {
+      const fa = a.fecha >= hoy ? 0 : 1;
+      const fb = b.fecha >= hoy ? 0 : 1;
+      return fa - fb || (fa === 0 ? `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`) : `${b.fecha}${b.hora}`.localeCompare(`${a.fecha}${a.hora}`));
+    })
+    .slice(0, 40);
+  const elegir = (r: ReferenciaChat) => {
+    onElegir(r);
+    setQ("");
+    onCerrar();
+  };
+  const fila = "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-primary/[0.06] focus-visible:bg-primary/[0.06] focus-visible:outline-none";
+  return (
+    <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
+      <DialogContent className="max-w-md rounded-3xl p-0">
+        <DialogHeader className="px-5 pt-5">
+          <DialogTitle>¿De quién hablás?</DialogTitle>
+          <DialogDescription>Tu compañero toca el mensaje y abre la ficha o el turno.</DialogDescription>
+        </DialogHeader>
+        <div className="px-5">
+          <div className="grid grid-cols-2 rounded-full bg-muted p-1" role="tablist">
+            {(
+              [
+                ["paciente", "Paciente", UserRound],
+                ["turno", "Turno", CalendarDays],
+              ] as const
+            ).map(([id, label, Icono]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-semibold transition",
+                  tab === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icono className="size-4" /> {label}
+              </button>
+            ))}
+          </div>
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={tab === "paciente" ? "Buscar por nombre o documento" : "Buscar por paciente, tratamiento o profesional"}
+              className="h-11 rounded-full pl-9"
+              aria-label="Buscar"
+            />
+          </div>
+        </div>
+        <div className="mt-2 max-h-[52vh] overflow-y-auto px-2 pb-4">
+          {tab === "paciente" ? (
+            listaPac.length === 0 ? (
+              <p className="px-3 py-8 text-center text-sm text-muted-foreground">{q ? "Ningún paciente con ese nombre." : "Todavía no hay pacientes."}</p>
+            ) : (
+              listaPac.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={fila}
+                  onClick={() =>
+                    elegir({ tipo: "paciente", id: p.id, nombre: `${p.nombre} ${p.apellido}`.trim(), detalle: p.documento ? `DNI ${p.documento}` : (p.telefono ?? "") })
+                  }
+                >
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                    <UserRound className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {p.nombre} {p.apellido}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">{p.documento ? `DNI ${p.documento}` : p.telefono || "—"}</span>
+                  </span>
+                </button>
+              ))
+            )
+          ) : listaTur.length === 0 ? (
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">{q ? "Ningún turno con esa búsqueda." : "No hay turnos desde la semana pasada."}</p>
+          ) : (
+            listaTur.map((t) => {
+              const detalle = `${diaTurno(t.fecha)} ${t.hora} · ${t.tratamiento}${t.odontologo ? ` · ${t.odontologo}` : ""}`;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={fila}
+                  onClick={() => elegir({ tipo: "turno", id: t.id, nombre: t.paciente, detalle: `${formatearFecha(t.fecha).slice(0, 5)} ${t.hora} · ${t.tratamiento}`.slice(0, 160) })}
+                >
+                  <span className="grid w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 py-1.5 text-primary">
+                    <span className="text-[10px] font-bold uppercase leading-none">{diaTurno(t.fecha)}</span>
+                    <span className="mt-0.5 text-xs font-bold tabular-nums leading-none">{t.hora}</span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{t.paciente}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {detalle.split(" · ").slice(1).join(" · ")} · {t.estado}
+                    </span>
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Tarjeta del paciente o turno dentro del mensaje: al tocarla abre la ficha o el turno. */
+function TarjetaReferencia({ r, clara }: { r: ReferenciaChat; clara: boolean }) {
+  const navigate = useNavigate();
+  const Icono = r.tipo === "turno" ? CalendarDays : UserRound;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        pedirAbrir(r);
+        void navigate({ to: r.tipo === "turno" ? "/demo/agenda" : "/demo/pacientes" });
+      }}
+      className={cn(
+        "mt-2 flex w-72 max-w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition first:mt-0",
+        clara ? "bg-white/15 hover:bg-white/25" : "bg-background ring-1 ring-border hover:ring-primary/40",
+      )}
+    >
+      <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl", clara ? "bg-white/20" : "bg-primary/10 text-primary")}>
+        <Icono className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.1em] opacity-70">{r.tipo === "turno" ? "Turno" : "Paciente"}</span>
+        <span className="block truncate text-xs font-semibold">{r.nombre}</span>
+        {r.detalle && <span className="block truncate text-[11px] opacity-75">{r.detalle}</span>}
+      </span>
+      <span className="inline-flex shrink-0 items-center text-[11px] font-semibold opacity-80">
+        {r.tipo === "turno" ? "Ver" : "Ficha"} <ChevronRight className="size-3.5" />
+      </span>
+    </button>
   );
 }
 
@@ -604,6 +781,8 @@ function Conversacion({
   const [hayMas, setHayMas] = useState(false);
   const [texto, setTexto] = useState("");
   const [archivo, setArchivo] = useState<ArchivoNuevo | null>(null);
+  const [referencia, setReferencia] = useState<ReferenciaChat | null>(null);
+  const [eligiendoRef, setEligiendoRef] = useState(false);
   const [comoComunicado, setComoComunicado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -662,13 +841,19 @@ function Conversacion({
 
   const enviar = async () => {
     const t = texto.trim();
-    if ((!t && !archivo) || enviando) return;
+    if ((!t && !archivo && !referencia) || enviando) return;
     setEnviando(true);
     try {
-      const m = await enviarMensaje(canal.id, { texto: t, tipo: comoComunicado ? "comunicado" : "mensaje", archivo: archivo ?? undefined });
+      const m = await enviarMensaje(canal.id, {
+        texto: t,
+        tipo: comoComunicado ? "comunicado" : "mensaje",
+        archivo: archivo ?? undefined,
+        referencia: referencia ?? undefined,
+      });
       setMensajes((prev) => [...(prev ?? []).filter((x) => x.id !== m.id), m]);
       setTexto("");
       setArchivo(null);
+      setReferencia(null);
       setComoComunicado(false);
       requestAnimationFrame(() => finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
     } catch (e) {
@@ -806,8 +991,20 @@ function Conversacion({
       {/* Escribir */}
       {puedoEscribir ? (
         <div data-ce-composer className="border-t border-border/60 bg-card/70 p-3 backdrop-blur sm:px-5">
-          {(archivo || comoComunicado) && (
+          {(archivo || comoComunicado || referencia) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
+              {referencia && (
+                <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-primary/[0.08] py-1 pl-3 pr-1 text-xs font-semibold text-primary">
+                  {referencia.tipo === "turno" ? <CalendarDays className="size-3.5 shrink-0" /> : <UserRound className="size-3.5 shrink-0" />}
+                  <span className="truncate">
+                    {referencia.nombre}
+                    {referencia.tipo === "turno" && referencia.detalle ? ` · ${referencia.detalle.split(" · ")[0]}` : ""}
+                  </span>
+                  <button type="button" onClick={() => setReferencia(null)} className="grid size-6 place-items-center rounded-full hover:bg-primary/15" aria-label="Quitar paciente o turno">
+                    <X className="size-3.5" />
+                  </button>
+                </span>
+              )}
               {comoComunicado && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-200">
                   <Megaphone className="size-3.5" /> Se envía como comunicado (piden confirmar lectura)
@@ -818,6 +1015,17 @@ function Conversacion({
           )}
           <div className="flex items-end gap-1.5 rounded-3xl bg-background p-1.5 ring-1 ring-border transition focus-within:ring-2 focus-within:ring-primary/40">
             {p.archivos && !archivo && <Adjuntar archivo={null} onArchivo={setArchivo} compacto />}
+            {!referencia && (
+              <button
+                type="button"
+                onClick={() => setEligiendoRef(true)}
+                className="grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                title="Hablar de un paciente o un turno"
+                aria-label="Hablar de un paciente o un turno"
+              >
+                <UserRound className="size-[18px]" />
+              </button>
+            )}
             {p.comunicados && (
               <button
                 type="button"
@@ -850,7 +1058,7 @@ function Conversacion({
             />
             <Button
               onClick={() => void enviar()}
-              disabled={enviando || (!texto.trim() && !archivo)}
+              disabled={enviando || (!texto.trim() && !archivo && !referencia)}
               className="ce-boton size-10 shrink-0 rounded-full p-0"
               aria-label="Enviar"
             >
@@ -858,6 +1066,7 @@ function Conversacion({
             </Button>
           </div>
           <p className="mt-1.5 hidden px-2 text-[10px] text-muted-foreground sm:block">Enter para enviar · Shift + Enter para otra línea</p>
+          <ElegirReferencia abierto={eligiendoRef} onCerrar={() => setEligiendoRef(false)} onElegir={setReferencia} />
         </div>
       ) : (
         <p className="border-t border-border/60 p-4 text-center text-xs text-muted-foreground">Solo las personas del canal pueden escribir acá.</p>
@@ -1088,6 +1297,7 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
                 </span>
               </p>
               <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.texto}</p>
+              {m.referencia && <TarjetaReferencia r={m.referencia} clara={false} />}
               {archivo}
             </div>
             {puedoQuitar && (
@@ -1187,6 +1397,7 @@ function Mensaje({ m, seguido, res, onCambio }: { m: MensajeChat; seguido: boole
             )}
           >
             {m.quitado ? "Mensaje quitado" : m.texto && <p className="whitespace-pre-wrap break-words">{m.texto}</p>}
+            {!m.quitado && m.referencia && <TarjetaReferencia r={m.referencia} clara={m.mio} />}
             {!m.quitado && archivo}
           </div>
           {puedoQuitar && !m.mio && (

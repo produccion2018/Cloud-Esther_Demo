@@ -75,6 +75,7 @@ import type {
   EstadoPaciente,
 } from "@/lib/cloud-esther/pacientes";
 import { Seleccion } from "@/components/ui/seleccion";
+import { CLAVE_ABRIR_PACIENTE, tomarPedidoAbrir } from "@/lib/clinica/chat";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/pacientes")({
@@ -1440,6 +1441,31 @@ function PacientesInner() {
   };
   const [filtroObra, setFiltroObra] = useState("");
   const [filtroEtiqueta, setFiltroEtiqueta] = useState("");
+
+  // Viene de Comunicación interna (tocó el paciente de un mensaje): se busca y se abre su carpeta
+  useEffect(() => {
+    let pedido: string | null = null;
+    try {
+      pedido = sessionStorage.getItem(CLAVE_ABRIR_PACIENTE);
+    } catch {
+      return;
+    }
+    if (!pedido || pacientes.length === 0) return;
+    const p = pacientes.find((x) => String(x.id) === pedido);
+    tomarPedidoAbrir("paciente");
+    if (!p) {
+      show("No encontramos a ese paciente (puede que lo hayan dado de baja).");
+      return;
+    }
+    setFiltroEstado("");
+    setFiltroSucursal("");
+    setFiltroObra("");
+    setFiltroEtiqueta("");
+    setBusqueda(`${p.nombre} ${p.apellido}`.trim());
+    setAbiertoId(p.id);
+    window.setTimeout(() => document.querySelector(`[data-paciente-id="${p.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pacientes.length]);
   const { catalogo: etiquetasClinica } = useEtiquetas();
 
   const cerrarModal = () =>
@@ -1998,6 +2024,7 @@ function PacientesInner() {
                     return (
                       <li
                         key={p.id}
+                        data-paciente-id={p.id}
                         className={`transition-colors ${abierto ? "bg-primary/[0.03]" : "hover:bg-primary/[0.02]"}`}
                       >
                         <div className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 md:px-5 lg:grid-cols-[minmax(220px,1.6fr)_1.1fr_0.9fr_0.9fr_1fr_auto] lg:gap-4">

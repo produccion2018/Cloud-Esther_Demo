@@ -44,6 +44,7 @@ import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-confi
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
+import { FichaProfesional } from "@/components/cloud-esther/FichaProfesional"
 import { AusenciasEquipo, DesempenoEquipo, OcupacionEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
 import { Seleccion } from "@/components/ui/seleccion";
 
@@ -1293,6 +1294,51 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
                     />
                   </Field>
                 </div>
+
+                {/* Ficha para pacientes: se ve en el portal del paciente */}
+                <div className="space-y-3 rounded-2xl border border-primary/12 bg-primary/[0.03] p-3.5 sm:col-span-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold">Ficha para pacientes</p>
+                      <p className="text-[11.5px] text-muted-foreground">Así lo ven los pacientes en su portal y al pedir turno.</p>
+                    </div>
+                    <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={draft.mostrarEnPortal !== false}
+                        onChange={(e) => setDraft({ ...draft, mostrarEnPortal: e.target.checked })}
+                        className="size-4 accent-[#7c3aed]"
+                      />
+                      Mostrar
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+                    <FirmaOSello
+                      label="Foto"
+                      ayuda="Cuadrada, de frente y con buena luz."
+                      valor={draft.avatarUrl ?? ""}
+                      onCambio={(url) => {
+                        const { avatarUrl: _vieja, ...resto } = draft
+                        setDraft(url ? { ...resto, avatarUrl: url } : resto)
+                      }}
+                    />
+                    <Field label="Presentación corta">
+                      <textarea
+                        rows={3}
+                        maxLength={280}
+                        value={draft.bioPublica ?? ""}
+                        onChange={(e) => setDraft({ ...draft, bioPublica: e.target.value })}
+                        placeholder="Ej: Especialista en ortodoncia. Atiende a chicos y adultos."
+                        className="w-full resize-none rounded-xl border border-primary/12 bg-white px-3 py-2 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+                      />
+                      <span className="mt-0.5 block text-right text-[10.5px] text-muted-foreground">{(draft.bioPublica ?? "").length}/280</span>
+                    </Field>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Vista previa</p>
+                    <FichaProfesional m={draft} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1300,11 +1346,12 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
               <div className="flex items-center gap-2">
                 <input
                   type="time"
-                  value={draft.schedule[0].start}
+                  value={draft.schedule[0]?.start ?? ""}
                   onChange={(e) =>
                     setDraft({
                       ...draft,
-                      schedule: draft.schedule.map((d) =>
+                      // Sin horario cargado: se arranca del horario por defecto
+                      schedule: (draft.schedule.length ? draft.schedule : emptyMember().schedule).map((d) =>
                         d.active
                           ? {
                               ...d,
@@ -1321,11 +1368,12 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
 
                 <input
                   type="time"
-                  value={draft.schedule[0].end}
+                  value={draft.schedule[0]?.end ?? ""}
                   onChange={(e) =>
                     setDraft({
                       ...draft,
-                      schedule: draft.schedule.map((d) =>
+                      // Sin horario cargado: se arranca del horario por defecto
+                      schedule: (draft.schedule.length ? draft.schedule : emptyMember().schedule).map((d) =>
                         d.active
                           ? {
                               ...d,

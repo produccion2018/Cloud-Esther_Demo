@@ -50,6 +50,7 @@ import { useTerminologia } from "@/lib/cloud-esther/terminologia";
 import { ErrorClinica, pedirAClinica } from "@/lib/clinica/api";
 import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { FichaProfesional, visibleParaPacientes } from "@/components/cloud-esther/FichaProfesional";
 import {
   TRATAMIENTOS as PRACTICAS,
   setTurnosStore,
@@ -1292,7 +1293,26 @@ function Inicio({ ctx }: { ctx: Ctx }) {
           </div>
         </Tarjeta>
       </div>
+      <TuEquipo />
     </div>
+  );
+}
+
+/* «Tu equipo»: los profesionales de la clínica con su ficha (la carga la clínica en Equipo) */
+function TuEquipo() {
+  const { miembros } = useEquipo();
+  const lista = miembros.filter(visibleParaPacientes);
+  if (lista.length === 0) return null;
+  return (
+    <Tarjeta>
+      <p className="font-display text-base font-semibold">Nuestro equipo</p>
+      <p className="text-xs text-muted-foreground">Los profesionales que te pueden atender.</p>
+      <div data-movil="1col" className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+        {lista.map((m) => (
+          <FichaProfesional key={m.id} m={m} />
+        ))}
+      </div>
+    </Tarjeta>
   );
 }
 
@@ -1505,9 +1525,8 @@ function SolicitudForm({
 }) {
   const { miembros } = useEquipo();
   const { turnos } = storeAgenda.usar();
-  const odontologos = miembros
-    .filter((m) => m.role === "odontologo" && m.status === "activo")
-    .map((m) => `${m.firstName} ${m.lastName}`);
+  const profesionales = miembros.filter((m) => m.role === "odontologo" && m.status === "activo");
+  const odontologos = profesionales.map((m) => `${m.firstName} ${m.lastName}`);
   const [tratamiento, setTratamiento] = useState(inicial?.tratamiento ?? "Control");
   const [odontologo, setOdontologo] = useState(inicial?.odontologo ?? odontologos[0] ?? "");
   const [fecha, setFecha] = useState(
@@ -1576,6 +1595,11 @@ function SolicitudForm({
           </Seleccion>
         </Field>
       </div>
+      {(() => {
+        // La ficha del profesional elegido (si la clínica lo muestra a pacientes)
+        const m = profesionales.find((x) => `${x.firstName} ${x.lastName}` === odontologo);
+        return m && m.mostrarEnPortal !== false ? <FichaProfesional m={m} compacta /> : null;
+      })()}
       <Field label="Día">
         <input
           type="date"

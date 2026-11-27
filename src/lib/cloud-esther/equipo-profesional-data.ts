@@ -37,6 +37,10 @@ export interface TeamMember {
   email: string;
   phone: string;
   avatarUrl?: string;
+  /** Presentación corta para pacientes (portal y reserva de turnos) */
+  bioPublica?: string;
+  /** Mostrarlo en el portal del paciente (por defecto, sí) */
+  mostrarEnPortal?: boolean;
   status: MemberStatus;
   schedule: ScheduleDay[];
   assistantOf?: string[];

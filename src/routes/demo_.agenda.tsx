@@ -8,6 +8,7 @@ import {
   CalendarX,
   Check,
   Clock,
+  Globe,
   X,
   Lock,
   Pencil,
@@ -89,6 +90,7 @@ import { descargarPDF } from "@/lib/descargas";
 import { CLAVE_TURNO_PARA } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { Seleccion } from "@/components/ui/seleccion";
 import { CLAVE_ABRIR_TURNO, tomarPedidoAbrir } from "@/lib/clinica/chat";
+import { TurnosOnlinePanel } from "@/components/cloud-esther/TurnosOnline";
 
 // "demo_" (con guion bajo) hace que esta ruta NO quede anidada dentro de demo.tsx
 export const Route = createFileRoute("/demo_/agenda")({
@@ -107,6 +109,7 @@ type ModalActivo =
   | { tipo: "espera" }
   | { tipo: "tarea" }
   | { tipo: "tiempos" }
+  | { tipo: "online" }
   | null;
 /* ───────────── Datos ───────────── */
 
@@ -3175,6 +3178,14 @@ function AgendaInner() {
                       <Clock className="size-3.5" />
                       Tiempos · {intervalo} min
                     </button>
+                    <button
+                      onClick={() => setModal({ tipo: "online" })}
+                      className="btn-ce-outline"
+                      title="Tu página pública para que los pacientes saquen turno"
+                    >
+                      <Globe className="size-3.5" />
+                      Turnos online
+                    </button>
                     {agendaAvanzada && (
                     <button
                       onClick={() => setModal({ tipo: "bloqueo" })}
@@ -3903,11 +3914,22 @@ function AgendaInner() {
               duracion={duracionHabitual}
               onCancel={cerrarModal}
               onSubmit={(a) => {
-                setAjustesAgendaStore(a);
+                // Solo los tiempos: el resto de los ajustes (turnos online, "volver a llamar") se conserva
+                setAjustesAgendaStore((prev) => ({ ...(prev ?? {}), ...a }));
                 cerrarModal();
                 show(`Agenda cada ${a.intervaloMin} min · turnos de ${a.duracionMin} min`);
               }}
             />
+          </Modal>
+        )}
+
+        {modal?.tipo === "online" && (
+          <Modal
+            title="Turnos online"
+            subtitle="Tu página para que los pacientes saquen turno solos, las 24 horas."
+            onClose={cerrarModal}
+          >
+            <TurnosOnlinePanel onToast={show} />
           </Modal>
         )}
 

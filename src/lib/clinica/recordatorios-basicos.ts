@@ -431,6 +431,34 @@ export function useRespuestasTurnos() {
         prev.map((t) => (idsE.has(t.id) && t.encuesta ? { ...t, encuesta: { ...t.encuesta, avisada: true } } : t)),
       );
     }
+    // Turnos que los pacientes sacaron solos en la página pública de turnos
+    const online = turnos.filter((t) => t.reservaOnline && !t.reservaOnline.avisada);
+    if (online.length) {
+      const existentesO = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
+      const fechaO = (f: string) => f.split("-").reverse().join("/").slice(0, 5);
+      const nuevasO: NotifManual[] = online
+        .map((t) => ({
+          id: `turno-online-${t.id}`,
+          titulo: `Turno online: ${t.paciente} · ${fechaO(t.fecha)} ${t.hora}`,
+          detalle:
+            t.estado === "Confirmada"
+              ? `Lo sacó solo en tu página de turnos (${t.tratamiento} con ${t.odontologo}). Quedó confirmado. WhatsApp: ${t.reservaOnline!.telefono}.`
+              : `Lo pidió en tu página de turnos (${t.tratamiento} con ${t.odontologo}). Confirmalo en la Agenda y escribile por WhatsApp: ${t.reservaOnline!.telefono}.`,
+          categoria: "Agenda" as const,
+          prioridad: t.estado === "Confirmada" ? ("Normal" as const) : ("Alta" as const),
+          asignado: "Recepción",
+          vence: hoyISO(),
+          horaVence: "",
+          creada: new Date().toISOString(),
+          creadaPor: "Paciente",
+        }))
+        .filter((n) => !existentesO.has(n.id));
+      if (nuevasO.length) setNotificaciones("manuales", (prev) => [...nuevasO, ...prev]);
+      const idsO = new Set(online.map((t) => t.id));
+      setTurnosStore((prev) =>
+        prev.map((t) => (idsO.has(t.id) && t.reservaOnline ? { ...t, reservaOnline: { ...t.reservaOnline, avisada: true } } : t)),
+      );
+    }
     const pendientes = turnos.filter((t) => t.respuestaPaciente && !t.respuestaPaciente.avisada);
     if (!pendientes.length) return;
     const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));

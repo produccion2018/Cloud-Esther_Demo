@@ -88,6 +88,7 @@ import { Route as EncuestaTokenRouteImport } from './routes/encuesta.$token'
 import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as TurnoTokenRouteImport } from './routes/turno.$token'
+import { Route as TurnosSlugRouteImport } from './routes/turnos.$slug'
 import { Route as VerificarCodigoRouteImport } from './routes/verificar.$codigo'
 import { Route as CSlugClaveRouteImport } from './routes/c.$slug_.clave'
 import { Route as DemoEquipoProfesionalAgendasHorariosRouteImport } from './routes/demo_.equipo-profesional_.agendas-horarios'
@@ -489,6 +490,11 @@ const TurnoTokenRoute = TurnoTokenRouteImport.update({
   path: '/turno/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TurnosSlugRoute = TurnosSlugRouteImport.update({
+  id: '/turnos/$slug',
+  path: '/turnos/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerificarCodigoRoute = VerificarCodigoRouteImport.update({
   id: '/verificar/$codigo',
   path: '/verificar/$codigo',
@@ -595,6 +601,7 @@ export interface FileRoutesByFullPath {
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
+  '/turnos/$slug': typeof TurnosSlugRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -680,6 +687,7 @@ export interface FileRoutesByTo {
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
+  '/turnos/$slug': typeof TurnosSlugRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
@@ -767,6 +775,7 @@ export interface FileRoutesById {
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
+  '/turnos/$slug': typeof TurnosSlugRoute
   '/verificar/$codigo': typeof VerificarCodigoRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -855,6 +864,7 @@ export interface FileRouteTypes {
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
+    | '/turnos/$slug'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -940,6 +950,7 @@ export interface FileRouteTypes {
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
+    | '/turnos/$slug'
     | '/verificar/$codigo'
     | '/admin'
     | '/app'
@@ -1026,6 +1037,7 @@ export interface FileRouteTypes {
     | '/laboratorio-enlace/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
+    | '/turnos/$slug'
     | '/verificar/$codigo'
     | '/admin/'
     | '/app/'
@@ -1091,6 +1103,7 @@ export interface RootRouteChildren {
   LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   TurnoTokenRoute: typeof TurnoTokenRoute
+  TurnosSlugRoute: typeof TurnosSlugRoute
   VerificarCodigoRoute: typeof VerificarCodigoRoute
   AppIndexRoute: typeof AppIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -1655,6 +1668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TurnoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/turnos/$slug': {
+      id: '/turnos/$slug'
+      path: '/turnos/$slug'
+      fullPath: '/turnos/$slug'
+      preLoaderRoute: typeof TurnosSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verificar/$codigo': {
       id: '/verificar/$codigo'
       path: '/verificar/$codigo'
@@ -1802,6 +1822,7 @@ const rootRouteChildren: RootRouteChildren = {
   LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   TurnoTokenRoute: TurnoTokenRoute,
+  TurnosSlugRoute: TurnosSlugRoute,
   VerificarCodigoRoute: VerificarCodigoRoute,
   AppIndexRoute: AppIndexRoute,
   BlogIndexRoute: BlogIndexRoute,

@@ -32,6 +32,8 @@ export type Turno = {
   serieTotal?: number;
   /** Turno de una sesión de un tratamiento del paciente (para registrar la sesión al atenderlo). */
   tratamientoId?: number;
+  /** Turno que el paciente sacó solo en la página pública de turnos (con su WhatsApp). */
+  reservaOnline?: { telefono: string; email?: string; fecha: string; avisada?: boolean };
   /** Lo que respondió el paciente con el enlace del recordatorio (confirmó, pidió cambiar o canceló). */
   respuestaPaciente?: { tipo: "confirmo" | "cambiar" | "cancelo"; fecha: string; nota?: string; avisada?: boolean };
   /** Día en que se le pidió su opinión (encuesta después del turno). */
@@ -73,6 +75,25 @@ export type AjustesAgenda = {
   recallMeses?: number;
   /** Pacientes ya avisados para volver (id del paciente → fecha del aviso). */
   recallAvisados?: Record<string, string>;
+  /** Página pública de turnos de la clínica (reserva online) */
+  reservaOnline?: ConfigReservaOnline;
+};
+
+/** Página pública de turnos: la arma cada clínica (qué se puede reservar y con cuánta anticipación). */
+export type ConfigReservaOnline = {
+  activa: boolean;
+  /** Tratamientos que el paciente puede elegir */
+  tratamientos: string[];
+  /** Hasta cuántos días adelante se puede reservar */
+  diasAdelante: number;
+  /** Horas mínimas de anticipación */
+  horasAnticipacion: number;
+  /** Plus y Grupo: el turno queda «Confirmada» sin que nadie lo apruebe */
+  confirmarSolo: boolean;
+  /** Mensaje de bienvenida (opcional) */
+  bienvenida: string;
+  /** Mostrar foto y presentación de los profesionales */
+  mostrarEquipo: boolean;
 };
 export const INTERVALO_DEFECTO = 30;
 export function tiemposAgenda(a?: AjustesAgenda) {

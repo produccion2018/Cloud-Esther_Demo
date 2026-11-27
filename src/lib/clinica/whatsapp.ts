@@ -1,3 +1,4 @@
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 
 /* Ubicación: src/lib/clinica/whatsapp.ts
@@ -20,10 +21,15 @@ function fechaAmigable(iso: string) {
 
 /** Teléfono del paciente (por su nombre completo, como figura en el turno) */
 export function telefonoDePaciente(nombreCompleto: string): string | null {
-  const p = leerPacientes().find(
-    (x) => `${x.nombre} ${x.apellido}`.trim().toLowerCase() === nombreCompleto.trim().toLowerCase(),
-  );
-  return p?.telefono?.trim() || null;
+  const clave = nombreCompleto.trim().toLowerCase();
+  const p = leerPacientes().find((x) => `${x.nombre} ${x.apellido}`.trim().toLowerCase() === clave);
+  if (p?.telefono?.trim()) return p.telefono.trim();
+  // Todavía no es paciente: el WhatsApp que dejó al sacar turno en la página pública
+  const online = storeAgenda
+    .leer()
+    .turnos.filter((t) => t.reservaOnline && t.paciente.trim().toLowerCase() === clave)
+    .at(-1);
+  return online?.reservaOnline?.telefono?.trim() || null;
 }
 
 /** ¿El paciente pidió no recibir recordatorios? (se marca en su ficha o con su enlace) */

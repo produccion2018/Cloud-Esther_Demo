@@ -46,7 +46,22 @@ export type Lead = {
   referidoPor: string;
   motivoPerdida: string;
   actividad: ActividadLead[];
+  /** Paciente creado o encontrado al darle turno */
+  pacienteId?: number;
+  /** Turno que se le dio (cuando se atiende, el lead pasa solo a «Convertido») */
+  turnoId?: number;
 };
+
+/** Horas sin respuesta para avisar que hay que volver a escribirle. */
+export const HORAS_SEGUIMIENTO_LEAD = 48;
+/** Último contacto con el lead (la actividad más reciente o, si no hay, cuando se cargó) */
+export const ultimoContactoLead = (l: Lead) => [l.creado, ...l.actividad.map((a) => a.fecha)].sort().at(-1) ?? l.creado;
+/** ¿Hace más de 48 h que nadie le escribe a este lead (y sigue abierto)? */
+export function leadSinRespuesta(l: Lead, ahora = Date.now()): boolean {
+  if (l.etapa !== "Nuevo" && l.etapa !== "Contactado") return false;
+  const t = Date.parse(ultimoContactoLead(l));
+  return Number.isFinite(t) && ahora - t >= HORAS_SEGUIMIENTO_LEAD * 3_600_000;
+}
 
 export const CANALES_ADS = [
   "Instagram Ads",

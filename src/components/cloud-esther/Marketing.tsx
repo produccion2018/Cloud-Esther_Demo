@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import type { FormEvent, ReactNode } from "react";
 import {
+  Clock,
   CheckCircle2,
   ArrowLeft,
   ArrowRight,
@@ -41,7 +42,9 @@ import {
   CANALES_ADS,
   ETAPAS,
   FUENTES,
+  leadSinRespuesta,
   resultadosCampania,
+  ultimoContactoLead,
   setMarketing,
   storeMarketing,
   type ActividadLead,
@@ -54,7 +57,7 @@ import {
 } from "@/lib/cloud-esther/marketing-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
-import { TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { SUCURSALES, TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
@@ -827,12 +830,28 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
   const [fuente, setFuente] = useState<"" | Fuente>("");
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [perder, setPerder] = useState<Lead | null>(null);
+  const [soloSinRespuesta, setSoloSinRespuesta] = useState(false);
   const texto = normalizarBusqueda(busqueda);
+  const sinRespuesta = leads.filter((l) => leadSinRespuesta(l));
   const lista = leads.filter(
     (l) =>
+      (!soloSinRespuesta || leadSinRespuesta(l)) &&
       (!fuente || l.fuente === fuente) &&
       (!texto || normalizarBusqueda(`${l.nombre} ${l.telefono} ${l.interes}`).includes(texto)),
   );
+  /** Al escribirle por WhatsApp queda registrado (así cuenta como contacto) */
+  const escribio = (l: Lead) =>
+    setMarketing("leads", (prev) =>
+      prev.map((x) =>
+        x.id === l.id
+          ? {
+              ...x,
+              etapa: x.etapa === "Nuevo" ? "Contactado" : x.etapa,
+              actividad: [nuevaActividad("WhatsApp", "Le escribimos por WhatsApp", ctx.usuario), ...x.actividad],
+            }
+          : x,
+      ),
+    );
 
   const mover = (l: Lead, etapa: Etapa) => {
     if (etapa === l.etapa) return;
@@ -883,6 +902,26 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
           Nuevo lead
         </button>
       </Encabezado>
+      {sinRespuesta.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/25 bg-amber-50 px-3.5 py-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-700">
+            <Clock className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-amber-900">
+              {sinRespuesta.length} lead{sinRespuesta.length === 1 ? "" : "s"} sin respuesta hace más de 48 h
+            </p>
+            <p className="text-[11.5px] text-amber-800/80">Volvé a escribirles antes de que se enfríen.</p>
+          </div>
+          <button
+            onClick={() => setSoloSinRespuesta((v) => !v)}
+            aria-pressed={soloSinRespuesta}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${soloSinRespuesta ? "bg-amber-600 text-white" : "bg-white text-amber-800 ring-1 ring-amber-500/30"}`}
+          >
+            {soloSinRespuesta ? "Ver todos" : "Ver solo esos"}
+          </button>
+        </div>
+      )}
       <div className="card-grad flex flex-wrap items-center gap-2 p-2.5">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
@@ -961,6 +1000,11 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
                             Motivo: {l.motivoPerdida}
                           </p>
                         )}
+                        {leadSinRespuesta(l) && (
+                          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                            <Clock className="size-3" /> Sin respuesta {hace(ultimoContactoLead(l))}
+                          </p>
+                        )}
                       </button>
                       <div className="mt-2 flex items-center justify-between border-t border-primary/[0.07] pt-1.5">
                         <button
@@ -975,10 +1019,13 @@ function Leads({ ctx, onNuevo }: { ctx: Ctx; onNuevo: () => void }) {
                           <a
                             href={wa(
                               l.telefono,
-                              `Hola ${l.nombre.split(" ")[0]}, te escribimos de la clínica por tu consulta sobre ${l.interes.toLowerCase()}.`,
+                              leadSinRespuesta(l)
+                                ? `Hola ${l.nombre.split(" ")[0]} 👋 ¿Pudiste ver lo que te mandamos sobre ${l.interes.toLowerCase()}? Si querés, te buscamos un turno esta semana.`
+                                : `Hola ${l.nombre.split(" ")[0]}, te escribimos de la clínica por tu consulta sobre ${l.interes.toLowerCase()}.`,
                             )}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={() => escribio(l)}
                             className="grid size-6 place-items-center rounded-full text-emerald-600 hover:bg-emerald-50"
                             aria-label="WhatsApp"
                           >
@@ -1212,35 +1259,45 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
   const [tipo, setTipo] = useState<ActividadLead["tipo"]>("Nota");
   if (!l) return null;
   const campania = campanias.find((c) => c.id === l.campaniaId);
-  const yaPaciente = pacientes.some(
-    (p) => `${p.nombre} ${p.apellido}`.toLowerCase() === l.nombre.toLowerCase(),
-  );
+  // ¿Ya es paciente? Por el vínculo guardado, el teléfono o el nombre completo
+  const digitos = (t: string) => t.replace(/\D/g, "").slice(-8);
+  const existente =
+    pacientes.find((p) => p.id === l.pacienteId) ??
+    (l.telefono && digitos(l.telefono).length >= 6 ? pacientes.find((p) => p.telefono && digitos(p.telefono) === digitos(l.telefono)) : undefined) ??
+    pacientes.find((p) => normalizarBusqueda(`${p.nombre} ${p.apellido}`) === normalizarBusqueda(l.nombre));
+  const yaPaciente = !!existente;
+
+  /** Busca o crea el paciente del lead y devuelve su id y nombre completo */
+  const asegurarPaciente = (): { id: number; nombre: string } => {
+    if (existente) return { id: existente.id, nombre: `${existente.nombre} ${existente.apellido}`.trim() };
+    const [nombre = "", ...resto] = capitalizarNombre(l.nombre).split(" ");
+    const id = Math.max(0, ...pacientes.map((p) => p.id)) + 1;
+    setPacientes((prev) => [
+      ...prev,
+      {
+        id: Math.max(id, ...prev.map((p) => p.id + 1)),
+        nombre,
+        apellido: resto.join(" "),
+        documento: "",
+        fechaNacimiento: "",
+        genero: "",
+        email: l.email,
+        telefono: l.telefono,
+        sucursal: SUCURSALES[0] ?? "",
+        obraSocial: "No aplica / particular",
+        afiliado: "",
+        direccion: "",
+        nota: `Llegó por ${l.fuente}${campania ? ` (${campania.nombre})` : ""}. Interés: ${l.interes}.`,
+        estado: "Activo",
+        foto: null,
+      },
+    ]);
+    return { id, nombre: `${nombre} ${resto.join(" ")}`.trim() };
+  };
 
   const convertir = () => {
-    if (!yaPaciente) {
-      const [nombre = "", ...resto] = l.nombre.split(" ");
-      setPacientes((prev) => [
-        ...prev,
-        {
-          id: Math.max(0, ...prev.map((p) => p.id)) + 1,
-          nombre,
-          apellido: resto.join(" "),
-          documento: "",
-          fechaNacimiento: "",
-          genero: "",
-          email: l.email,
-          telefono: l.telefono,
-          sucursal: "Clínica Centro",
-          obraSocial: "No aplica / particular",
-          afiliado: "",
-          direccion: "",
-          nota: `Llegó por ${l.fuente}${campania ? ` (${campania.nombre})` : ""}. Interés: ${l.interes}.`,
-          estado: "Activo",
-          foto: null,
-        },
-      ]);
-    }
-    moverLead(l.id, "Convertido", ctx.usuario);
+    const p = asegurarPaciente();
+    moverLead(l.id, "Convertido", ctx.usuario, { pacienteId: p.id });
     ctx.onToast(
       yaPaciente
         ? `${l.nombre} marcado como convertido`
@@ -1269,22 +1326,25 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
           ocupados={turnos}
           onCancel={() => setModo("detalle")}
           onSubmit={(fecha, hora, odontologo) => {
+            // En un solo paso: queda como paciente (o se vincula al que ya existe) y con su turno
+            const p = asegurarPaciente();
+            const turnoId = Date.now();
             setTurnosStore((prev) => [
               ...prev,
               {
-                id: Date.now(),
+                id: turnoId,
                 fecha,
                 hora,
-                paciente: l.nombre,
+                paciente: p.nombre,
                 tratamiento: l.interes,
                 odontologo,
-                sucursal: "Clínica Centro",
+                sucursal: SUCURSALES[0] ?? "",
                 gabinete: "Consultorio 1",
                 estado: "Pendiente",
                 notas: `Lead de ${l.fuente}`,
               },
             ]);
-            moverLead(l.id, "Turno agendado", ctx.usuario);
+            moverLead(l.id, "Turno agendado", ctx.usuario, { pacienteId: p.id, turnoId });
             setMarketing("leads", (prev) =>
               prev.map((x) =>
                 x.id === l.id
@@ -1302,7 +1362,9 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
                   : x,
               ),
             );
-            ctx.onToast(`Turno agendado para ${l.nombre}: ${formatearFecha(fecha)} ${hora}`);
+            ctx.onToast(
+              `${yaPaciente ? "" : "Nuevo paciente y "}turno para ${p.nombre}: ${formatearFecha(fecha)} ${hora}. Cuando se atienda, el lead pasa solo a «Convertido».`,
+            );
             setModo("detalle");
           }}
         />
@@ -1347,18 +1409,31 @@ function DetalleLead({ id, ctx, onClose }: { id: string; ctx: Ctx; onClose: () =
                 target="_blank"
                 rel="noreferrer"
                 className="btn-wa"
+                onClick={() =>
+                  setMarketing("leads", (prev) =>
+                    prev.map((x) =>
+                      x.id === l.id
+                        ? {
+                            ...x,
+                            etapa: x.etapa === "Nuevo" ? "Contactado" : x.etapa,
+                            actividad: [nuevaActividad("WhatsApp", "Le escribimos por WhatsApp", ctx.usuario), ...x.actividad],
+                          }
+                        : x,
+                    ),
+                  )
+                }
               >
                 <IconoWhatsApp /> WhatsApp
               </a>
             )}
             {l.etapa !== "Convertido" && (
-              <button className={BTN_SECUNDARIO} onClick={() => setModo("turno")}>
-                <CalendarPlus className="size-3.5" /> Agendar turno
+              <button className={BTN_PRIMARIO} onClick={() => setModo("turno")}>
+                <CalendarPlus className="size-3.5" /> Darle turno
               </button>
             )}
             {l.etapa !== "Convertido" && (
-              <button className={BTN_PRIMARIO} onClick={convertir}>
-                <UserCheck className="size-3.5" /> Convertir en paciente
+              <button className={BTN_SECUNDARIO} onClick={convertir}>
+                <UserCheck className="size-3.5" /> {yaPaciente ? "Marcar convertido" : "Solo pasarlo a paciente"}
               </button>
             )}
             <button className={BTN_SECUNDARIO} onClick={() => setModo("editar")}>
@@ -1481,8 +1556,8 @@ function TurnoLeadForm({
       className="space-y-3"
     >
       <p className="text-sm text-muted-foreground">
-        Turno de <b className="text-foreground">{lead.interes}</b> para {lead.nombre}. Se agrega a
-        la Agenda.
+        Turno de <b className="text-foreground">{lead.interes}</b> para {lead.nombre}. Queda en la Agenda y, si todavía no es
+        paciente, se crea su ficha.
       </p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Día">

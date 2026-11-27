@@ -5,6 +5,7 @@ import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { setNotificaciones, storeNotificaciones, type NotifManual, generarRutinasDeHoy, subirTareasSinAtenderLocal } from "@/lib/cloud-esther/notificaciones-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { leadSinRespuesta, setMarketing, storeMarketing } from "@/lib/cloud-esther/marketing-store";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
@@ -98,6 +99,42 @@ export function useRecordatoriosBasicos() {
       const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
       const nuevos: NotifManual[] = [];
       const base = { asignado: "Recepción", vence: hoy, horaVence: "", creada: new Date().toISOString(), creadaPor: "Recordatorios" };
+
+      // Marketing (solo si sus datos ya están: nunca se pisa lo del servidor)
+      if (!real || moduloCargado("marketing")) {
+        // Lead con turno que ya se atendió → pasa solo a «Convertido»
+        const atendidos = new Set(turnos.filter((t) => t.estado === "Atendida").map((t) => t.id));
+        const convertir = storeMarketing.leer().leads.filter((l) => l.turnoId && atendidos.has(l.turnoId) && l.etapa === "Turno agendado");
+        if (convertir.length)
+          setMarketing("leads", (prev) =>
+            prev.map((l) =>
+              convertir.some((c) => c.id === l.id)
+                ? {
+                    ...l,
+                    etapa: "Convertido",
+                    actividad: [
+                      { id: `act-${Date.now()}-${l.id}`, fecha: new Date().toISOString(), tipo: "Etapa", texto: "Vino al turno: pasó a Convertido", autor: "Cloud Esther" },
+                      ...l.actividad,
+                    ],
+                  }
+                : l,
+            ),
+          );
+        // Leads que esperan respuesta hace más de 48 h
+        const esperan = storeMarketing.leer().leads.filter((l) => leadSinRespuesta(l));
+        if (esperan.length && !existentes.has(`basico-leads-${hoy}`))
+          nuevos.push({
+            ...base,
+            id: `basico-leads-${hoy}`,
+            titulo: `${esperan.length} lead${esperan.length === 1 ? "" : "s"} sin respuesta hace más de 48 h`,
+            detalle: `${esperan
+              .slice(0, 3)
+              .map((l) => l.nombre)
+              .join(", ")}${esperan.length > 3 ? ` y ${esperan.length - 3} más` : ""}. Volvé a escribirles desde Marketing → Leads.`,
+            categoria: "Pacientes",
+            prioridad: "Normal",
+          });
+      }
 
       // 1) Para volver a llamar
       if (!flujoActivo("paciente_inactivo") && !existentes.has(`basico-recall-${hoy}`)) {

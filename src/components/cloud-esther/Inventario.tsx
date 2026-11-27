@@ -2251,6 +2251,8 @@ function Alertas({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
+      {reponerLista.length > 0 && <PedirAProveedores ctx={ctx} lista={reponerLista} />}
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="card-grad p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
@@ -2382,6 +2384,97 @@ function Alertas({ ctx }: { ctx: Ctx }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+/** Pedido armado por proveedor: con un toque se le manda por WhatsApp y queda la orden «Enviada». */
+function PedirAProveedores({ ctx, lista }: { ctx: Ctx; lista: Insumo[] }) {
+  const { proveedores } = storeInventario.usar();
+  const grupos = new Map<string, Insumo[]>();
+  for (const i of lista) grupos.set(i.proveedorId || "", [...(grupos.get(i.proveedorId || "") ?? []), i]);
+  const conProv = [...grupos.entries()].filter(([id]) => id && proveedores.some((p) => p.id === id));
+  const sinProv = [...grupos.entries()].filter(([id]) => !id || !proveedores.some((p) => p.id === id)).flatMap(([, v]) => v);
+
+  const pedir = (provId: string, items: Insumo[]) => {
+    const ids = reponer(items, ctx.usuario);
+    // La orden queda «Enviada» (ya se le mandó al proveedor)
+    setInventario("ordenes", (prev) =>
+      prev.map((o) => (ids.includes(o.id) && o.estado === "Borrador" && o.proveedorId === provId ? { ...o, estado: "Enviada", fecha: diaISO() } : o)),
+    );
+    ctx.onToast(`Pedido enviado: ${ids.join(", ")} quedó «Enviada». Cuando llegue, recibila en Órdenes y el stock se suma solo.`);
+  };
+
+  return (
+    <div className="card-grad p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Truck className="size-4 text-primary" /> Pedile a cada proveedor
+      </p>
+      <p className="text-[11px] text-muted-foreground">La lista ya está armada con lo que falta para llegar al stock ideal. Revisala y mandala por WhatsApp con un toque.</p>
+      <ul data-movil="1col" className="mt-3 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+        {conProv.map(([provId, items]) => {
+          const p = proveedores.find((x) => x.id === provId)!;
+          const sede = items[0]?.sucursal ?? "";
+          const texto =
+            `Hola${p.contacto ? ` ${p.contacto}` : ""}, te escribo de la clínica para hacer un pedido${ctx.sucursales.length > 1 ? ` para ${sede}` : ""}:\n` +
+            items.map((i) => `• ${cantidadSugerida(i)} ${i.unidad} de ${i.nombre}${i.codigo ? ` (${i.codigo})` : ""}`).join("\n") +
+            `\n¿Me confirmás disponibilidad y cuándo lo pueden entregar? ¡Gracias!`;
+          const costo = items.reduce((a, i) => a + (i.costo || 0) * cantidadSugerida(i), 0);
+          return (
+            <li key={provId} className="rounded-2xl bg-white/90 p-3 ring-1 ring-primary/10">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{p.nombre}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {items.length} {items.length === 1 ? "insumo" : "insumos"}
+                    {p.plazo ? ` · entrega en ${p.plazo} ${p.plazo === 1 ? "día" : "días"}` : ""}
+                    {costo > 0 ? ` · aprox. ${ars(costo)}` : ""}
+                  </p>
+                </div>
+              </div>
+              <ul className="mt-2 space-y-1">
+                {items.map((i) => (
+                  <li key={i.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0 truncate">
+                      {i.nombre}
+                      {nivelStock(i) === "Agotado" && <b className="ml-1 text-rose-600">agotado</b>}
+                    </span>
+                    <span className="shrink-0 font-semibold">
+                      {cantidadSugerida(i)} {i.unidad}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap justify-end gap-1.5">
+                {p.telefono ? (
+                  <a href={wa(p.telefono, texto)} target="_blank" rel="noreferrer" className="btn-wa" onClick={() => pedir(provId, items)}>
+                    <IconoWhatsApp /> Pedir por WhatsApp
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-amber-700">Cargale el WhatsApp en Proveedores para pedirle con un toque.</span>
+                )}
+                <button
+                  type="button"
+                  className={BTN_SECUNDARIO}
+                  onClick={() => {
+                    const ids = reponer(items, ctx.usuario);
+                    ctx.onToast(`Orden ${ids.join(", ")} en borrador`);
+                    ctx.ir("ordenes");
+                  }}
+                >
+                  <ShoppingCart className="size-4" /> Ver la orden
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {sinProv.length > 0 && (
+        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-800 ring-1 ring-amber-200">
+          Sin proveedor asignado: {sinProv.map((i) => i.nombre).join(", ")}. Elegile un proveedor en el insumo para pedirlo con un toque.
+        </p>
+      )}
     </div>
   );
 }

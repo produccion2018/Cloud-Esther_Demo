@@ -6,6 +6,7 @@ import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { setNotificaciones, storeNotificaciones, type NotifManual, generarRutinasDeHoy, subirTareasSinAtenderLocal } from "@/lib/cloud-esther/notificaciones-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { leadSinRespuesta, setMarketing, storeMarketing } from "@/lib/cloud-esther/marketing-store";
+import { diasParaVencer, nivelStock, storeInventario } from "@/lib/cloud-esther/inventario-store";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
@@ -134,6 +135,43 @@ export function useRecordatoriosBasicos() {
             categoria: "Pacientes",
             prioridad: "Normal",
           });
+      }
+
+      // Inventario: lo que hay que reponer y lo que vence (una vez por día, todos los planes con Inventario)
+      const modInv = MODULES.find((m) => m.id === "inventario");
+      if (
+        modInv &&
+        availableIn(modInv, plan) &&
+        (!real || moduloCargado("inventario")) &&
+        !flujoActivo("stock_bajo") &&
+        !existentes.has(`basico-stock-${hoy}`)
+      ) {
+        const ins = storeInventario.leer().insumos;
+        const reponer = ins.filter((i) => nivelStock(i) === "Bajo" || nivelStock(i) === "Agotado");
+        const vencen = ins.filter((i) => {
+          const d = diasParaVencer(i);
+          return d !== null && d <= 30 && i.stock > 0;
+        });
+        if (reponer.length || vencen.length) {
+          const agotados = reponer.filter((i) => nivelStock(i) === "Agotado").length;
+          const partes = [
+            reponer.length ? `${reponer.length} para reponer${agotados ? ` (${agotados} agotado${agotados === 1 ? "" : "s"})` : ""}` : "",
+            vencen.length ? `${vencen.length} por vencer en 30 días` : "",
+          ].filter(Boolean);
+          nuevos.push({
+            ...base,
+            asignado: "Administración",
+            id: `basico-stock-${hoy}`,
+            titulo: `Insumos: ${partes.join(" y ")}`,
+            detalle: `${[...reponer, ...vencen]
+              .slice(0, 3)
+              .map((i) => i.nombre)
+              .filter((n, k, a) => a.indexOf(n) === k)
+              .join(", ")}. Pedíselos al proveedor por WhatsApp desde Inventario → Alertas.`,
+            categoria: "Insumos",
+            prioridad: agotados ? "Alta" : "Normal",
+          });
+        }
       }
 
       // 1) Para volver a llamar

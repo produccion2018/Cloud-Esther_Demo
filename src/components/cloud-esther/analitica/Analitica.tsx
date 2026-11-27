@@ -477,6 +477,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
 
   return (
     <div className="space-y-3">
+      <ComoEsta ctx={ctx} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           label="Producción"
@@ -991,5 +992,87 @@ function ConfigForm({
       </label>
       <Acciones etiqueta="Guardar" onCancel={onCancel} />
     </form>
+  );
+}
+
+/* ───────────── «Cómo está tu clínica» en 30 segundos ───────────── */
+
+function ComoEsta({ ctx }: { ctx: CtxBI }) {
+  const { m, mPrev, rango } = ctx;
+  const faltaron = ctx.hs.filter((h) => h.estado === "Ausente").length;
+  const faltaronPrev = ctx.hsPrev.filter((h) => h.estado === "Ausente").length;
+  const hayAntes = ctx.hsPrev.length > 0 || ctx.presPrev.length > 0;
+  type Item = { t: string; d: number; menos?: boolean; puntos?: boolean; ir: SeccionBI };
+  const items: Item[] = [];
+  if (m.atenciones || mPrev.atenciones)
+    items.push({ t: `Atendiste ${ctx.n(m.atenciones)} ${m.atenciones === 1 ? "turno" : "turnos"} de ${ctx.n(m.pacientes)} ${m.pacientes === 1 ? "paciente" : "pacientes"}`, d: variacion(m.atenciones, mPrev.atenciones), ir: "agenda" });
+  if (m.ocupacion || mPrev.ocupacion)
+    items.push({ t: `La agenda estuvo ocupada al ${Math.round(m.ocupacion)}%`, d: m.ocupacion - mPrev.ocupacion, puntos: true, ir: "agenda" });
+  if (faltaron || faltaronPrev)
+    items.push({ t: faltaron ? `${faltaron === 1 ? "Faltó 1 paciente" : `Faltaron ${faltaron} pacientes`} sin avisar (${Math.round(m.ausentismo)}%)` : "No faltó nadie sin avisar", d: m.ausentismo - mPrev.ausentismo, puntos: true, menos: true, ir: "agenda" });
+  if (m.nuevos || mPrev.nuevos)
+    items.push({ t: m.nuevos ? `Llegaron ${m.nuevos} ${m.nuevos === 1 ? "paciente nuevo" : "pacientes nuevos"}` : "No llegaron pacientes nuevos", d: variacion(m.nuevos, mPrev.nuevos), ir: "marketing" });
+  if (m.produccion || mPrev.produccion)
+    items.push({ t: `Se produjo ${ctx.$c(m.produccion)} en tratamientos`, d: variacion(m.produccion, mPrev.produccion), ir: "finanzas" });
+  if (m.presupuestos || mPrev.presupuestos)
+    items.push({ t: `Aprobaron el ${Math.round(m.conversion)}% de los presupuestos`, d: m.conversion - mPrev.conversion, puntos: true, ir: "tratamientos" });
+  const conCambio = hayAntes ? items.filter((x) => Math.abs(x.d) >= 0.5) : [];
+  const mejor = conCambio.filter((x) => (x.menos ? x.d < 0 : x.d > 0)).length;
+  const peor = conCambio.length - mejor;
+  const dias = rango.dias;
+  const titulo = !items.length
+    ? "Todavía no hay turnos en este período"
+    : !hayAntes || !conCambio.length
+      ? "Así viene tu clínica"
+      : mejor > peor
+        ? `Vas mejor que antes en ${mejor} de ${conCambio.length} cosas`
+        : peor > mejor
+          ? `Ojo: ${peor} de ${conCambio.length} cosas vienen peor que antes`
+          : "Parecido al período anterior";
+  return (
+    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_50px_-28px_rgba(124,58,237,0.9)]">
+      <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+        Cómo está tu clínica · últimos {dias} {dias === 1 ? "día" : "días"}
+      </p>
+      <p className="mt-1.5 text-lg font-semibold leading-snug sm:text-xl">{titulo}</p>
+      {items.length === 0 ? (
+        <p className="mt-2 max-w-xl text-sm text-white/85">
+          Cuando haya turnos en la Agenda, acá vas a ver en una mirada cómo vienen la agenda, las ausencias, los pacientes nuevos y los presupuestos.
+        </p>
+      ) : (
+        <ul data-movil="1col" className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {items.map((x) => {
+            const neutro = !hayAntes || Math.abs(x.d) < 0.5;
+            const bueno = x.menos ? x.d < 0 : x.d > 0;
+            return (
+              <li key={x.t}>
+                <button
+                  type="button"
+                  onClick={() => ctx.ir(x.ir)}
+                  className="flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-3 py-2.5 text-left ring-1 ring-white/20 transition hover:bg-white/20"
+                >
+                  <span
+                    className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${neutro ? "bg-white/20 text-white" : bueno ? "bg-emerald-400 text-emerald-950" : "bg-rose-400 text-rose-950"}`}
+                  >
+                    {neutro ? "=" : x.d > 0 ? "↑" : "↓"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold leading-snug">{x.t}</span>
+                    {!neutro && (
+                      <span className="block text-[11px] text-white/75">
+                        {bueno ? "Mejor" : "Peor"} que el período anterior ({x.d > 0 ? "+" : "−"}
+                        {Math.abs(x.d).toFixed(x.puntos ? 0 : 0)}
+                        {x.puntos ? " pts" : "%"})
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { storeMarketing } from "@/lib/cloud-esther/marketing-store";
 import { storeAnalitica, type EstadoAnalitica } from "@/lib/cloud-esther/analitica-store";
@@ -116,11 +117,20 @@ export function useAnalitica(profesionalesPlan: string[], sucursales: string[]) 
     [],
   );
 
+  const { aranceles } = storePresupuestos.usar();
+  const arancelDe = (t: string) => {
+    const k = t.replace(/\s*\(sesi[oó]n.*\)\s*$/i, "").trim().toLowerCase();
+    const act = aranceles.filter((a) => a.activo && a.precio > 0);
+    return act.find((a) => a.nombre.toLowerCase() === k) ?? act.find((a) => k.length >= 4 && (a.nombre.toLowerCase().includes(k) || k.includes(a.nombre.toLowerCase())));
+  };
   const vivos = useMemo(() => {
     const porNombre = new Map(pacientes.map((p) => [`${p.nombre} ${p.apellido}`.toLowerCase(), p]));
     return turnos.map((t: Turno, i): Hecho => {
       const p = porNombre.get(t.paciente.toLowerCase());
-      const [, cat, precio] = catalogoDe(t.tratamiento);
+      // El precio es SIEMPRE el de la clínica (sus aranceles); sin arancel cargado, no se inventa
+      const ar = arancelDe(t.tratamiento);
+      const cat = ar?.categoria ?? catalogoDe(t.tratamiento)[1];
+      const precio = ar?.precio ?? 0;
       const d = new Date(`${t.fecha}T12:00:00`);
       const estado: Hecho["estado"] =
         t.estado === "Atendida"
@@ -151,7 +161,7 @@ export function useAnalitica(profesionalesPlan: string[], sucursales: string[]) 
         vivo: true,
       };
     });
-  }, [turnos, pacientes]);
+  }, [turnos, pacientes, aranceles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const presReales = useMemo(() => {
     const out: PresupuestoHecho[] = [];

@@ -66,6 +66,7 @@ import {
   type Unidad,
 } from "@/lib/cloud-esther/inventario-store";
 import { TRATAMIENTOS } from "@/lib/cloud-esther/agenda-store";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { normalizarBusqueda } from "@/lib/utils";
@@ -3136,8 +3137,25 @@ function ProveedorForm({
 
 /* ───────────── Consumo y kits ───────────── */
 
+const claveTrat = (t: string) =>
+  t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** Precio que la clínica cobra por el tratamiento (sale de sus aranceles; nunca inventado). */
+function precioDeTratamiento(aranceles: { nombre: string; precio: number; activo: boolean }[], tratamiento: string) {
+  const t = claveTrat(tratamiento);
+  const activos = aranceles.filter((a) => a.activo && a.precio > 0);
+  const a =
+    activos.find((x) => claveTrat(x.nombre) === t) ??
+    activos.find((x) => {
+      const n = claveTrat(x.nombre);
+      return (n.length >= 4 && t.includes(n)) || (t.length >= 4 && n.includes(t));
+    });
+  return a?.precio ?? 0;
+}
+
 function Consumo({ ctx }: { ctx: Ctx }) {
   const { movimientos, kits } = storeInventario.usar();
+  const { aranceles } = storePresupuestos.usar();
   const [dias, setDias] = useState(30);
   const [registrar, setRegistrar] = useState<string | null>(null);
   const [editarKit, setEditarKit] = useState<Kit | "nuevo" | null>(null);
@@ -3163,6 +3181,20 @@ function Consumo({ ctx }: { ctx: Ctx }) {
   const porInsumo = agrupar((m) => porId.get(m.insumoId)?.nombre ?? "").slice(0, 6);
   const porCategoria = agrupar((m) => porId.get(m.insumoId)?.categoria ?? "");
   const porSucursal = agrupar((m) => porId.get(m.insumoId)?.sucursal ?? "");
+  /** Veces que se hizo cada tratamiento en el período y cuánto se gastó en insumos. */
+  const usoKit = (tratamiento: string) => {
+    const pref = claveTrat(tratamiento);
+    const movs = salidas.filter((m) => {
+      const mo = claveTrat(m.motivo);
+      return m.tipo === "Salida" && (mo === pref || mo.startsWith(`${pref} ·`) || mo.startsWith(`${pref} ×`));
+    });
+    const grupos = new Map<string, number>();
+    for (const m of movs) {
+      const k = m.referencia || `${m.motivo}|${m.fecha.slice(0, 16)}`;
+      grupos.set(k, Number(/×(\d+)/.exec(m.motivo)?.[1] ?? 1));
+    }
+    return { veces: [...grupos.values()].reduce((a, b) => a + b, 0), gasto: movs.reduce((a, m) => a + valorDe(m), 0) };
+  };
   const max = (l: [string, number][]) => Math.max(1, ...l.map(([, v]) => v));
 
   const Ranking = ({
@@ -3254,6 +3286,10 @@ function Consumo({ ctx }: { ctx: Ctx }) {
                 a + it.cantidad * (ctx.insumos.find((i) => i.nombre === it.nombre)?.costo ?? 0),
               0,
             );
+            const sinCosto = k.items.filter((it) => !(ctx.insumos.find((i) => i.nombre === it.nombre)?.costo ?? 0));
+            const precio = precioDeTratamiento(aranceles, k.tratamiento);
+            const pct = precio ? Math.min(100, (costo / precio) * 100) : 0;
+            const uso = usoKit(k.tratamiento);
             return (
               <li
                 key={k.tratamiento}
@@ -3275,6 +3311,50 @@ function Consumo({ ctx }: { ctx: Ctx }) {
                     <Pencil className="size-3.5" />
                   </button>
                 </div>
+                <div className="mt-2 rounded-xl bg-gradient-to-br from-violet-50/80 to-sky-50/80 p-2.5 ring-1 ring-primary/10">
+                  {precio ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Cobrás</p>
+                          <p className="text-xs font-bold">{ars(precio)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Insumos</p>
+                          <p className="text-xs font-bold text-rose-600">−{ars(costo)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Te queda</p>
+                          <p className="text-xs font-bold text-emerald-600">{ars(precio - costo)}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <Barra
+                          pct={pct}
+                          clase={pct > 35 ? "bg-rose-500" : pct > 20 ? "bg-amber-500" : "bg-emerald-500"}
+                        />
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Los insumos son el <b>{num(Math.round(pct))}%</b> de lo que cobrás
+                          {pct > 35 ? " · conviene revisar el precio o el kit" : ""}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Para ver cuánto te queda, cargá el precio de «{k.tratamiento}» en Presupuestos → Aranceles.
+                    </p>
+                  )}
+                  {uso.veces > 0 && (
+                    <p className="mt-1.5 border-t border-primary/10 pt-1.5 text-[10px] text-muted-foreground">
+                      Últimos {dias} días: <b>{uso.veces}</b> {uso.veces === 1 ? "vez" : "veces"} · {ars(uso.gasto)} en insumos
+                    </p>
+                  )}
+                </div>
+                {sinCosto.length > 0 && (
+                  <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] text-amber-800 ring-1 ring-amber-200">
+                    Sin costo cargado: {sinCosto.map((it) => it.nombre).join(", ")}
+                  </p>
+                )}
                 <ul className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
                   {k.items.map((it) => (
                     <li key={it.nombre} className="flex justify-between gap-2">
@@ -3420,6 +3500,7 @@ function RegistrarKit({
       onSubmit={(e) => {
         e.preventDefault();
         let ok = 0;
+        const refKit = `kit-${Date.now().toString(36)}`;
         for (const { it, ins } of lineas) {
           if (!ins) continue;
           registrarMovimiento({
@@ -3428,7 +3509,7 @@ function RegistrarKit({
             cantidad: -Math.round(it.cantidad * n * 100) / 100,
             motivo: `${kit.tratamiento}${n > 1 ? ` ×${n}` : ""}${paciente.trim() ? ` · ${paciente.trim().replace(/\b\p{L}/gu, (c) => c.toUpperCase())}` : ""}`,
             usuario: ctx.usuario,
-            referencia: "",
+            referencia: refKit,
           });
           ok++;
         }

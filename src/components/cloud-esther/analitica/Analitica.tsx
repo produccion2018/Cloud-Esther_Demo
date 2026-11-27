@@ -24,6 +24,7 @@ import {
   Users,
   Wallet,
   Mail,
+  Pencil,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -489,6 +490,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
   return (
     <div className="space-y-3">
       <ComoEsta ctx={ctx} />
+      <Metas ctx={ctx} />
       <QueHacer ctx={ctx} navegar={(to) => void navigate({ to })} />
       <ResumenDueno ctx={ctx} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -608,11 +610,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        {ctx.nivel >= 3 ? (
-          <Metas ctx={ctx} />
-        ) : (
-          <EstadoTurnos ctx={ctx} valores={porEstado} estados={estados} />
-        )}
+        <EstadoTurnos ctx={ctx} valores={porEstado} estados={estados} />
         <div className="lg:col-span-2">
           {(
             <TarjetaGrafico
@@ -670,69 +668,148 @@ function EstadoTurnos({
 }
 
 function Metas({ ctx }: { ctx: CtxBI }) {
+  const real = useClinicaReal();
+  const puedeEditar = !real || real.rol === "admin";
+  const metas = ctx.cfg.metas;
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState(metas);
   const actual = ctx.mensual[ctx.mensual.length - 1]!;
   const hoy = new Date();
   const diasMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
   const avance = hoy.getDate() / diasMes;
-  const metas = ctx.cfg.metas;
+  const quedan = diasMes - hoy.getDate() + 1;
+  const mes = nombreMesLargo(ctx.meses[ctx.meses.length - 1]!).split(" ")[0];
   const filas = [
-    { t: "Producción", v: actual.produccion, meta: metas.produccion, f: ctx.$c, proyectar: true },
-    { t: "Pacientes nuevos", v: actual.nuevos, meta: metas.nuevos, f: ctx.n, proyectar: true },
-    { t: "Ocupación", v: actual.ocupacion, meta: metas.ocupacion, f: ctx.p },
-    { t: "Ausentismo (máx.)", v: actual.ausentismo, meta: metas.ausentismo, f: ctx.p, menos: true },
-    { t: "Conversión", v: actual.conversion, meta: metas.conversion, f: ctx.p },
+    { t: "Producción", v: actual.produccion, meta: metas.produccion, f: ctx.$c, proyectar: true, unidad: "" },
+    { t: "Pacientes nuevos", v: actual.nuevos, meta: metas.nuevos, f: ctx.n, proyectar: true, unidad: "pacientes" },
+    { t: "Ocupación de la agenda", v: actual.ocupacion, meta: metas.ocupacion, f: ctx.p },
+    { t: "Faltas (máximo)", v: actual.ausentismo, meta: metas.ausentismo, f: ctx.p, menos: true },
+    { t: "Presupuestos aprobados", v: actual.conversion, meta: metas.conversion, f: ctx.p },
   ].filter((x) => x.meta > 0);
-  if (filas.length === 0)
-    return (
-      <div className="card-grad p-4">
-        <p className="text-sm font-semibold">Metas del mes</p>
-        <p className="mt-2 text-[12px] text-muted-foreground">
-          Todavía no definiste metas. Cargalas en «Configuración» de Analítica y acá vas a ver cómo venís cada mes.
-        </p>
-      </div>
-    );
+  const abrir = () => {
+    setBorrador(metas);
+    setEditando(true);
+  };
+  const guardar = () => {
+    setAnalitica("metas", () => borrador);
+    setEditando(false);
+    ctx.onToast("Metas guardadas");
+  };
+  const campo = (k: keyof typeof metas, label: string, ayuda: string) => (
+    <Field label={label}>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        value={borrador[k] || ""}
+        placeholder={ayuda}
+        onChange={(e) => setBorrador((b) => ({ ...b, [k]: Math.max(0, Number(e.target.value) || 0) }))}
+        className={INPUT}
+        aria-label={label}
+      />
+    </Field>
+  );
   return (
     <div className="card-grad p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold">
-          Metas de {nombreMesLargo(ctx.meses[ctx.meses.length - 1]!).split(" ")[0]}
-        </p>
-        <span className="text-[11px] text-muted-foreground">
-          {Math.round(avance * 100)} % del mes
-        </span>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Target className="size-4 text-primary" /> Metas de {mes}
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+            {filas.length
+              ? `Van ${hoy.getDate()} de ${diasMes} días · ${quedan === 1 ? "queda hoy" : `quedan ${quedan} días`}`
+              : "Poné a dónde querés llegar este mes y mirá cada día cómo venís."}
+          </p>
+        </div>
+        {puedeEditar && !editando && (
+          <button type="button" className={BTN_SECUNDARIO} onClick={abrir}>
+            <Pencil className="size-3.5" /> {filas.length ? "Cambiar metas" : "Poner metas"}
+          </button>
+        )}
       </div>
-      <ul className="space-y-3">
-        {filas.map((x) => {
-          const proy = x.proyectar ? x.v / Math.max(avance, 0.05) : x.v;
-          const ok = x.menos ? x.v <= x.meta : proy >= x.meta;
-          const pctMeta = x.menos
-            ? Math.min(100, (x.meta / Math.max(x.v, 0.1)) * 100)
-            : Math.min(100, (x.v / (x.meta || 1)) * 100);
-          return (
-            <li key={x.t}>
-              <div className="flex items-baseline justify-between text-[12px]">
-                <span className="font-medium">{x.t}</span>
-                <span className="tabular-nums">
-                  <b>{x.f(x.v)}</b> <span className="text-muted-foreground">/ {x.f(x.meta)}</span>
-                </span>
-              </div>
-              <div className="mt-1 h-2 overflow-hidden rounded-full bg-primary/10">
-                <div
-                  className={`h-full rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}
-                  style={{ width: `${Math.max(2, pctMeta)}%` }}
-                />
-              </div>
-              <p className={`mt-0.5 text-[10.5px] ${ok ? "text-emerald-600" : "text-amber-600"}`}>
-                {x.proyectar
-                  ? `Proyección a fin de mes: ${x.f(proy)} · ${ok ? "en camino" : "por debajo de la meta"}`
-                  : ok
-                    ? "Cumpliendo"
-                    : "Fuera de la meta"}
-              </p>
-            </li>
-          );
-        })}
-      </ul>
+
+      {editando && (
+        <div className="mt-3 rounded-2xl bg-white/85 p-3 ring-1 ring-primary/10">
+          <div data-movil="1col" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {campo("produccion", "Producción del mes", "Ej: lo que querés facturar")}
+            {campo("nuevos", "Pacientes nuevos", "Ej: 20")}
+            {campo("ausentismo", "Faltas máximas (%)", "Ej: 10")}
+          </div>
+          <details className="mt-2 text-[12px]">
+            <summary className="cursor-pointer font-semibold text-primary">Más metas</summary>
+            <div data-movil="1col" className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {campo("conversion", "Presupuestos aprobados (%)", "Ej: 50")}
+              {campo("ocupacion", "Ocupación de la agenda (%)", "Ej: 70")}
+            </div>
+          </details>
+          <p className="mt-2 text-[11px] text-muted-foreground">Dejá en blanco la que no quieras seguir.</p>
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => setEditando(false)}>
+              Cancelar
+            </button>
+            <button type="button" className={BTN_PRIMARIO} onClick={guardar}>
+              Guardar metas
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!editando && filas.length > 0 && (
+        <ul data-movil="1col" className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+          {filas.map((x) => {
+            const proy = x.proyectar ? x.v / Math.max(avance, 0.05) : x.v;
+            const cumplida = !x.menos && x.v >= x.meta;
+            const ok = x.menos ? x.v <= x.meta : proy >= x.meta;
+            const pct = x.menos
+              ? Math.min(100, (x.v / Math.max(x.meta, 0.1)) * 100)
+              : Math.min(100, (x.v / (x.meta || 1)) * 100);
+            const falta = Math.max(0, x.meta - x.v);
+            const porDia = falta / Math.max(quedan, 1);
+            const msg = cumplida
+              ? "¡Meta cumplida!"
+              : x.proyectar
+                ? ok
+                  ? `Vas bien: a este ritmo llegás a ${x.f(proy)}`
+                  : `Te faltan ${x.f(falta)} · unos ${x.f(x.unidad ? Math.ceil(porDia) : porDia)} por día`
+                : x.menos
+                  ? ok
+                    ? "Dentro de lo que te propusiste"
+                    : `Está ${Math.round(x.v - x.meta)} puntos arriba del máximo`
+                  : `Te faltan ${Math.round(falta)} puntos`;
+            return (
+              <li key={x.t}>
+                <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                  <span className="truncate font-medium">{x.t}</span>
+                  <span className="shrink-0 tabular-nums">
+                    <b>{x.f(x.v)}</b> <span className="text-muted-foreground">/ {x.f(x.meta)}</span>
+                  </span>
+                </div>
+                <div className="relative mt-1 h-2.5 overflow-hidden rounded-full bg-primary/10">
+                  <div
+                    className={`h-full rounded-full transition-all ${cumplida || ok ? "bg-emerald-500" : x.menos ? "bg-rose-500" : "bg-amber-500"}`}
+                    style={{ width: `${Math.max(2, pct)}%` }}
+                  />
+                  {x.proyectar && !cumplida && (
+                    <span
+                      aria-hidden
+                      title="Dónde deberías estar hoy"
+                      className="absolute top-0 h-full w-0.5 bg-foreground/40"
+                      style={{ left: `${Math.min(99, avance * 100)}%` }}
+                    />
+                  )}
+                </div>
+                <p className={`mt-0.5 text-[11px] ${cumplida || ok ? "text-emerald-600" : x.menos ? "text-rose-600" : "text-amber-600"}`}>
+                  {msg}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!editando && filas.length > 0 && filas.some((x) => x.proyectar) && (
+        <p className="mt-2 text-[10.5px] text-muted-foreground">La rayita marca dónde tendrías que estar hoy para llegar a fin de mes.</p>
+      )}
     </div>
   );
 }

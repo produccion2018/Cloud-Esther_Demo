@@ -10,6 +10,8 @@ import {
   BadgePercent,
   CalendarPlus,
   Check,
+  Lightbulb,
+  Loader2,
   ChevronDown,
   CircleDollarSign,
   Code2,
@@ -49,6 +51,9 @@ import {
   estadoLeadEnAgenda,
   codigoDePaciente,
   nuevoCodigoReferido,
+  type ConfigReferidos,
+  type FormatoRed,
+  type IdeaRed,
   type EstadoLeadAgenda,
   ultimoContactoLead,
   setMarketing,
@@ -67,6 +72,10 @@ import { SUCURSALES, TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/clo
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { API_URL } from "@/lib/clinica/api";
+import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
+import { useConIA } from "@/lib/cloud-esther/niveles";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
+import { visibleParaPacientes } from "@/components/cloud-esther/FichaProfesional";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { Seleccion } from "@/components/ui/seleccion";
@@ -79,7 +88,7 @@ import { Seleccion } from "@/components/ui/seleccion";
    reseñas y el formulario web. Todo separado por empresa. */
 
 type Seccion =
-  "resumen" | "leads" | "campanias" | "promos" | "referidos" | "resenas" | "formulario";
+  "resumen" | "leads" | "campanias" | "promos" | "referidos" | "resenas" | "ideas" | "formulario";
 
 const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
   { id: "resumen", label: "Resumen", icon: TrendingUp },
@@ -88,6 +97,7 @@ const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
   { id: "promos", label: "Promociones", icon: BadgePercent },
   { id: "referidos", label: "Referidos", icon: Gift },
   { id: "resenas", label: "Reseñas", icon: Star },
+  { id: "ideas", label: "Ideas para redes", icon: Lightbulb },
   { id: "formulario", label: "Formulario web", icon: Globe },
 ];
 
@@ -534,6 +544,8 @@ export default function Marketing() {
             <Referidos ctx={ctx} />
           ) : seccion === "resenas" ? (
             <Resenas ctx={ctx} />
+          ) : seccion === "ideas" ? (
+            <IdeasRedes ctx={ctx} />
           ) : (
             <Formulario ctx={ctx} />
           )}
@@ -2753,6 +2765,312 @@ function PremiosReferidos({ ctx }: { ctx: Ctx }) {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+/* ───────────── Ideas para redes (Esther) ───────────── */
+
+type IdeaPropuesta = { formato: FormatoRed; titulo: string; texto: string; imagen: string; motivo: string };
+
+const FORMATO_ESTILO: Record<FormatoRed, string> = {
+  Publicación: "bg-primary/10 text-primary",
+  Historia: "bg-fuchsia-100 text-fuchsia-700",
+  Reel: "bg-amber-100 text-amber-700",
+};
+
+/** "Limpieza dental" → "#LimpiezaDental" (sin tildes ni signos) */
+const hashtag = (t: string) => {
+  const h = t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w[0]!.toUpperCase() + w.slice(1))
+    .join("");
+  return h ? `#${h}` : "";
+};
+
+/** Ideas armadas con los datos de la clínica, sin IA (sirven siempre y no inventan nada). */
+function ideasPorReglas(d: {
+  clinica: string;
+  vos: boolean;
+  intereses: string[];
+  promos: Promocion[];
+  resenas: Resena[];
+  referidos: ConfigReferidos;
+  profesionales: string[];
+  mes: number;
+}): IdeaPropuesta[] {
+  const t = (vos: string, tu: string) => (d.vos ? vos : tu);
+  const out: IdeaPropuesta[] = [];
+  const top = d.intereses[0];
+  if (top)
+    out.push({
+      formato: "Reel",
+      titulo: `Todo sobre ${top.toLowerCase()} en 30 segundos`,
+      texto: `¿${t("Pensás", "Piensas")} en ${top.toLowerCase()}? Te contamos cómo es, cuánto dura y qué cuidados lleva. 🦷✨\n${t("Escribinos y resolvé", "Escríbenos y resuelve")} tus dudas sin compromiso. 💬\n\n${[hashtag(top), "#SaludBucal", d.clinica ? hashtag(d.clinica) : ""].filter(Boolean).join(" ")}`,
+      imagen: "Video corto del profesional explicando, en el consultorio, con texto en pantalla.",
+      motivo: `Es lo que más te preguntan (${top}).`,
+    });
+  const promo = d.promos.find((p) => p.activa);
+  if (promo)
+    out.push({
+      formato: "Publicación",
+      titulo: promo.titulo,
+      texto: `${promo.titulo} 🎉\n${promo.tratamiento ? `En ${promo.tratamiento.toLowerCase()}. ` : ""}${promo.hasta ? `Válido hasta el ${formatearFecha(promo.hasta)}. ` : ""}${promo.codigo ? `${t("Usá", "Usa")} el código ${promo.codigo}.` : ""}\n${t("Reservá", "Reserva")} tu turno por mensaje privado. 📲`,
+      imagen: "Placa con el nombre de la promoción, los colores de la clínica y el código bien grande.",
+      motivo: "Hay una promoción activa.",
+    });
+  const buena = d.resenas.filter((r) => r.estrellas >= 5 && r.texto.trim().length > 20).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+  if (buena)
+    out.push({
+      formato: "Historia",
+      titulo: "Lo que dicen nuestros pacientes",
+      texto: `⭐⭐⭐⭐⭐\n“${buena.texto.trim().slice(0, 180)}${buena.texto.trim().length > 180 ? "…" : ""}”\n¡Gracias por confiar en ${d.clinica || "nosotros"}! 💜`,
+      imagen: "Captura de la reseña sobre fondo con los colores de la clínica (sin el nombre si el paciente no lo autorizó).",
+      motivo: `Una reseña de 5 estrellas en ${buena.fuente}.`,
+    });
+  if (d.referidos.activo && d.referidos.beneficioReferido.trim())
+    out.push({
+      formato: "Historia",
+      titulo: t("Recomendá y ganá", "Recomienda y gana"),
+      texto: `¿${t("Conocés", "Conoces")} a alguien que necesita un dentista de confianza? 🤝\n${t("Pedí", "Pide")} tu link personal en recepción: quien venga con tu recomendación recibe ${d.referidos.beneficioReferido.trim().toLowerCase()}${d.referidos.recompensaReferente.trim() ? ` y ${t("vos recibís", "tú recibes")} ${d.referidos.recompensaReferente.trim().toLowerCase()}` : ""}. 🎁`,
+      imagen: `Dos personas sonriendo, con el texto «${t("Recomendá y ganá", "Recomienda y gana")}».`,
+      motivo: "El programa de referidos está activo.",
+    });
+  if (d.profesionales.length)
+    out.push({
+      formato: "Publicación",
+      titulo: t("Conocé a nuestro equipo", "Conoce a nuestro equipo"),
+      texto: `Detrás de cada sonrisa hay un equipo. 💜\nHoy te presentamos a ${d.profesionales.slice(0, 3).join(", ")}${d.profesionales.length > 3 ? " y más" : ""}.\n¿Ya ${t("nos conocés", "nos conoces")}? ${t("Contanos", "Cuéntanos")} en los comentarios. 👇`,
+      imagen: "Foto del equipo con ambo en la recepción (o un carrusel con una foto de cada uno).",
+      motivo: "Hay profesionales visibles para pacientes.",
+    });
+  const DEL_MES: Record<number, Omit<IdeaPropuesta, "motivo">> = {
+    0: { formato: "Publicación", titulo: "Año nuevo, sonrisa nueva", texto: `${t("Empezá", "Empieza")} el año con un control. 🗓️ Es rápido y te ${t("ahorrás", "ahorras")} problemas más adelante.\n${t("Pedí", "Pide")} tu turno por mensaje privado.`, imagen: "Calendario con un diente sonriente marcando enero." },
+    1: { formato: "Historia", titulo: "Sonrisa para San Valentín", texto: `Este 14 de febrero, la mejor carta de presentación es tu sonrisa. 💘\n${t("Consultanos", "Consúltanos")} por limpieza y blanqueamiento.`, imagen: "Corazón hecho con hilo dental o cepillos." },
+    2: { formato: "Reel", titulo: "Día Mundial de la Salud Bucodental (20 de marzo)", texto: `Hoy es el Día Mundial de la Salud Bucodental. 🌍🦷\n3 hábitos que cambian todo: cepillado 2 veces al día, hilo dental y control cada 6 meses.\n¿Cuál te cuesta más?`, imagen: "Video con los 3 hábitos, uno por toma." },
+    3: { formato: "Publicación", titulo: "Día Mundial de la Salud (7 de abril)", texto: `La salud empieza por la boca. 🦷 Una boca sana ayuda a todo el cuerpo.\n${t("Agendá", "Agenda")} tu control.`, imagen: "Ilustración simple de boca y corazón." },
+    10: { formato: "Publicación", titulo: t("Llegá a las fiestas con tu mejor sonrisa", "Llega a las fiestas con tu mejor sonrisa"), texto: `Se vienen las fiestas 🎄 y las fotos. ${t("Reservá", "Reserva")} ahora tu limpieza o blanqueamiento: los turnos de diciembre vuelan. 📸`, imagen: "Sonrisa con luces de fiesta de fondo." },
+    11: { formato: "Historia", titulo: t("Cuidá tus dientes en las fiestas", "Cuida tus dientes en las fiestas"), texto: `Turrones, frutos secos y hielo: ¡cuidado con los dientes! 🥜🧊\nSi algo se rompe, ${t("escribinos", "escríbenos")}. Y no ${t("te olvides", "olvides")} de los horarios de fin de año.`, imagen: "Mesa de fiestas con un tip escrito encima." },
+  };
+  const delMes = DEL_MES[d.mes] ?? {
+    formato: "Reel" as const,
+    titulo: "Mito o verdad",
+    texto: `¿Mito o verdad? «Si me sangran las encías, mejor no cepillarme». ❌ ¡Mito!\nEl sangrado avisa que hay que cepillar mejor y venir a control. ${t("Consultanos", "Consúltanos")}. 🦷`,
+    imagen: "Video con cartel «MITO» / «VERDAD» y el profesional respondiendo.",
+  };
+  out.push({ ...delMes, motivo: "Idea de la época del año." });
+  return out;
+}
+
+/** Lee las ideas que devuelve Esther (bloques con formato/título/texto/imagen). */
+function leerIdeasEsther(texto: string): IdeaPropuesta[] {
+  return texto
+    .split(/(?:^|\n)\s*IDEA\s*\d*\s*:?/i)
+    .map((b) => {
+      const campo = (k: string) => new RegExp(`${k}\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(?:formato|t[ií]tulo|texto|imagen)\\s*:|$)`, "i").exec(b)?.[1]?.trim() ?? "";
+      const f = campo("formato").toLowerCase();
+      const formato: FormatoRed = f.includes("reel") ? "Reel" : f.includes("histor") ? "Historia" : "Publicación";
+      return { formato, titulo: campo("t[ií]tulo").replace(/^["«]|["»]$/g, ""), texto: campo("texto"), imagen: campo("imagen"), motivo: "La escribió Esther con tus datos." };
+    })
+    .filter((i) => i.titulo && i.texto.length > 20)
+    .slice(0, 3);
+}
+
+function IdeasRedes({ ctx }: { ctx: Ctx }) {
+  const { leads, promos, resenas, referidos, ideasRedes = [] } = storeMarketing.usar();
+  const { miembros } = useEquipo();
+  const { clinica } = useSesion();
+  const pais = usePaisClinica();
+  const conIA = useConIA();
+  const vos = ["AR", "UY", "PY"].includes(pais);
+  const nombre = clinica?.nombre?.trim() ?? "";
+  const intereses = Object.entries(
+    leads.reduce<Record<string, number>>((a, l) => ((a[l.interes] = (a[l.interes] ?? 0) + 1), a), {}),
+  )
+    .filter(([k]) => k.trim())
+    .sort((a, b) => b[1] - a[1])
+    .map(([k]) => k);
+  const profesionales = miembros.filter(visibleParaPacientes).map((m) => `${m.firstName} ${m.lastName}`.trim());
+  const datos = { clinica: nombre, vos, intereses, promos, resenas, referidos, profesionales, mes: new Date().getMonth() };
+  const base = ideasPorReglas(datos);
+  const [deEsther, setDeEsther] = useState<IdeaPropuesta[]>([]);
+  const [pensando, setPensando] = useState(false);
+  const [vista, setVista] = useState<"ideas" | "guardadas">("ideas");
+  const propuestas = [...deEsther, ...base];
+
+  const pedirAEsther = async () => {
+    setPensando(true);
+    try {
+      const contexto = [
+        `Clínica: ${nombre || "(sin nombre cargado)"}. País: ${pais}. Tratar al público de ${vos ? "vos (voseo rioplatense)" : "tú"}.`,
+        `Mes actual: ${new Date().toLocaleDateString("es", { month: "long" })}.`,
+        intereses.length ? `Lo que más consultan: ${intereses.slice(0, 5).join(", ")}.` : "",
+        promos.filter((p) => p.activa).length
+          ? `Promociones activas (tal como las cargó la clínica): ${promos.filter((p) => p.activa).map((p) => `${p.titulo}${p.codigo ? ` (código ${p.codigo})` : ""}`).join("; ")}.`
+          : "Sin promociones activas.",
+        referidos.activo && referidos.beneficioReferido ? `Programa de referidos activo: el recomendado recibe «${referidos.beneficioReferido}».` : "",
+        profesionales.length ? `Profesionales que se pueden mostrar: ${profesionales.slice(0, 5).join(", ")}.` : "",
+        `Ideas que ya tiene (no las repitas): ${[...ideasRedes.map((i) => i.titulo), ...propuestas.map((p) => p.titulo)].slice(0, 15).join("; ")}.`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const r = await preguntarIA({
+        data: {
+          pregunta:
+            "Proponé EXACTAMENTE 3 ideas nuevas de publicaciones para las redes sociales de esta clínica odontológica, distintas entre sí y de las que ya tiene. " +
+            "Para cada una escribí este formato exacto, sin nada más:\nIDEA\nformato: Publicación, Historia o Reel\ntítulo: (corto)\ntexto: (el texto listo para pegar, 2 a 4 líneas, con 2 o 3 emojis y 2 o 3 hashtags)\nimagen: (qué foto o video usar, en una línea)\n" +
+            "Reglas: no pongas precios ni montos ni porcentajes que no estén en el contexto; no uses nombres de pacientes; no prometas resultados médicos; nada de diagnósticos.",
+          contexto,
+        },
+      }).catch(() => null);
+      const nuevas = r?.text ? leerIdeasEsther(r.text) : [];
+      if (nuevas.length) {
+        setDeEsther((prev) => [...nuevas, ...prev].slice(0, 9));
+        ctx.onToast(`Esther te propuso ${nuevas.length} ideas nuevas`);
+      } else ctx.onToast("Esther no pudo escribir ahora. Probá en un rato: mientras, tenés las ideas de abajo.");
+    } finally {
+      setPensando(false);
+    }
+  };
+
+  const guardar = (i: IdeaPropuesta) => {
+    setMarketing("ideasRedes", (prev = []) => [
+      { id: `ir-${Date.now()}`, formato: i.formato, titulo: i.titulo, texto: i.texto, imagen: i.imagen, creado: new Date().toISOString(), fecha: "", publicada: false },
+      ...prev,
+    ]);
+    ctx.onToast("Idea guardada para publicar");
+  };
+  const cambiar = (id: string, c: Partial<IdeaRed>) => setMarketing("ideasRedes", (prev = []) => prev.map((x) => (x.id === id ? { ...x, ...c } : x)));
+  const copiar = (texto: string) => {
+    navigator.clipboard?.writeText(texto).catch(() => {});
+    ctx.onToast("Texto copiado: pegalo en Instagram o Facebook");
+  };
+  const pendientes = ideasRedes.filter((i) => !i.publicada);
+
+  return (
+    <div className="space-y-3">
+      <Encabezado icon={Lightbulb} titulo="Ideas para redes" descripcion="Publicaciones listas para copiar, armadas con lo que pasa en tu clínica: lo que más te consultan, tus promociones, reseñas y equipo.">
+        {conIA && (
+          <button type="button" className={BTN_PRIMARIO} onClick={pedirAEsther} disabled={pensando}>
+            {pensando ? <Loader2 className="size-4 animate-spin" /> : <CaraEsther className="size-4" />}
+            {pensando ? "Esther está escribiendo…" : "Pedirle ideas a Esther"}
+          </button>
+        )}
+      </Encabezado>
+
+      <div className="card-grad flex flex-wrap gap-1 p-2">
+        {(
+          [
+            ["ideas", `Ideas (${propuestas.length})`],
+            ["guardadas", `Para publicar (${pendientes.length})`],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setVista(k)}
+            aria-pressed={vista === k}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${vista === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {vista === "ideas" ? (
+        <ul data-movil="1col" className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {propuestas.map((i, n) => {
+            const yaGuardada = ideasRedes.some((g) => g.titulo === i.titulo && g.texto === i.texto);
+            return (
+              <li key={`${i.titulo}-${n}`} className="card-grad flex flex-col p-4">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Pill clase={FORMATO_ESTILO[i.formato]}>{i.formato}</Pill>
+                  {deEsther.includes(i) && (
+                    <Pill clase="bg-gradient-to-r from-primary to-fuchsia-500 text-white">
+                      <CaraEsther className="mr-1 inline size-3" /> Esther
+                    </Pill>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{i.motivo}</span>
+                </div>
+                <p className="mt-2 text-sm font-semibold">{i.titulo}</p>
+                <p className="mt-2 whitespace-pre-line rounded-xl bg-white/80 p-3 text-xs leading-relaxed ring-1 ring-primary/10">{i.texto}</p>
+                {i.imagen && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    <b className="text-foreground">Imagen:</b> {i.imagen}
+                  </p>
+                )}
+                <div className="min-h-3 flex-1" />
+                <div className="mt-3 flex flex-wrap justify-end gap-1.5 border-t border-primary/10 pt-2.5">
+                  <button type="button" className={BTN_SECUNDARIO} onClick={() => copiar(i.texto)}>
+                    <Copy className="size-3.5" /> Copiar texto
+                  </button>
+                  <button type="button" className={BTN_PRIMARIO} onClick={() => guardar(i)} disabled={yaGuardada}>
+                    {yaGuardada ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
+                    {yaGuardada ? "Guardada" : "Guardar"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : ideasRedes.length === 0 ? (
+        <div className="card-grad p-6 text-center text-xs text-muted-foreground">
+          Todavía no guardaste ideas. Tocá «Guardar» en las que te gusten y acá armás tu calendario de publicaciones.
+        </div>
+      ) : (
+        <ul data-movil="1col" className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {[...ideasRedes]
+            .sort((a, b) => Number(a.publicada) - Number(b.publicada) || (a.fecha || "9999").localeCompare(b.fecha || "9999"))
+            .map((i) => (
+              <li key={i.id} className={`card-grad flex flex-col p-4 ${i.publicada ? "opacity-70" : ""}`}>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Pill clase={FORMATO_ESTILO[i.formato]}>{i.formato}</Pill>
+                  {i.publicada && <Pill clase="bg-emerald-100 text-emerald-700">Publicada</Pill>}
+                </div>
+                <p className="mt-2 text-sm font-semibold">{i.titulo}</p>
+                <textarea
+                  value={i.texto}
+                  onChange={(e) => cambiar(i.id, { texto: e.target.value })}
+                  rows={5}
+                  aria-label="Texto de la publicación"
+                  className="mt-2 w-full resize-y rounded-xl border border-primary/12 bg-white p-3 text-xs leading-relaxed outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+                />
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <Field label="Publicar el día">
+                    <input type="date" value={i.fecha} onChange={(e) => cambiar(i.id, { fecha: e.target.value })} className={INPUT} />
+                  </Field>
+                </div>
+                <div className="min-h-3 flex-1" />
+                <div className="mt-3 flex flex-wrap justify-end gap-1.5 border-t border-primary/10 pt-2.5">
+                  <button type="button" className={BTN_SECUNDARIO} onClick={() => copiar(i.texto)}>
+                    <Copy className="size-3.5" /> Copiar
+                  </button>
+                  <button
+                    type="button"
+                    className={i.publicada ? BTN_SECUNDARIO : BTN_PRIMARIO}
+                    onClick={() => {
+                      cambiar(i.id, { publicada: !i.publicada });
+                      ctx.onToast(i.publicada ? "Vuelve a «para publicar»" : "¡Marcada como publicada!");
+                    }}
+                  >
+                    <CheckCircle2 className="size-3.5" /> {i.publicada ? "Deshacer" : "Ya la publiqué"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${BTN_ICONO} hover:!border-destructive/30 hover:!bg-destructive/10 hover:!text-destructive`}
+                    aria-label="Borrar idea"
+                    onClick={() => setMarketing("ideasRedes", (prev = []) => prev.filter((x) => x.id !== i.id))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+        </ul>
+      )}
     </div>
   );
 }

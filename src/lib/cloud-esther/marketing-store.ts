@@ -147,7 +147,23 @@ export function codigoDePaciente(r: ConfigReferidos, pacienteId: number): string
   return Object.entries(r.codigos ?? {}).find(([, c]) => c.pacienteId === pacienteId)?.[0] ?? null;
 }
 
+export type FormatoRed = "Publicación" | "Historia" | "Reel";
+/** Idea para redes que la clínica guardó (para publicar después) */
+export type IdeaRed = {
+  id: string;
+  formato: FormatoRed;
+  titulo: string;
+  texto: string;
+  imagen: string;
+  creado: string;
+  /** Día en que la piensan publicar (yyyy-mm-dd) o "" */
+  fecha: string;
+  publicada: boolean;
+};
+
 export type EstadoMarketing = {
+  /** Ideas para redes guardadas (Esther las propone, la clínica decide) */
+  ideasRedes?: IdeaRed[];
   leads: Lead[];
   campanias: CampaniaAds[];
   promos: Promocion[];

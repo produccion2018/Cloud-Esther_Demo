@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { reenviarInvitacion, verEquipo, type PersonaEquipo } from "@/lib/clinica/api";
 import { abrirAvisoAusenciaWhatsApp } from "@/lib/clinica/whatsapp";
 import { pedirAbrir } from "@/lib/clinica/chat";
 import {
@@ -971,9 +973,164 @@ const ROLES: { value: TeamRole; label: string }[] = [
   { value: "administrador", label: "Administrador/a" },
 ];
 
-export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }) {
+/* ───────────── Puesta a punto de cada profesional ───────────── */
+type PasoPuesta = { id: string; label: string; ok: boolean };
+function pasosPuesta(m: TeamMember, entro: boolean | null): PasoPuesta[] {
+  const pasos: PasoPuesta[] = [];
+  if (entro !== null) pasos.push({ id: "entro", label: "Entró al sistema", ok: entro });
+  pasos.push(
+    { id: "horario", label: "Horario de atención", ok: (m.schedule ?? []).some((d) => d.active) },
+    { id: "especialidad", label: "Especialidad", ok: (m.specialties ?? []).some(Boolean) },
+    { id: "matricula", label: "Matrícula", ok: !!m.licenseNumber?.trim() },
+    { id: "firma", label: "Firma", ok: !!m.firmaUrl },
+    { id: "sello", label: "Sello", ok: !!m.selloUrl },
+    { id: "ficha", label: "Foto y presentación", ok: !!m.avatarUrl && !!m.bioPublica?.trim() },
+  );
+  return pasos;
+}
+
+function PuestaAPunto({ onEditar, personas }: { onEditar?: ((m: TeamMember) => void) | undefined; personas: PersonaEquipo[] | null }) {
+  const { miembros } = useEquipo();
+  const profesionales = miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
+  if (profesionales.length === 0) return null;
+  // En una clínica real, «entró» = su usuario (mismo correo) ya ingresó alguna vez
+  const entroDe = (m: TeamMember): boolean | null => {
+    if (!personas) return null;
+    const p = personas.find((x) => x.email.toLowerCase() === m.email.toLowerCase());
+    return !!p && p.estado === "activa" && !!p.ultimoIngreso;
+  };
+  const filas = profesionales
+    .map((m) => {
+      const pasos = pasosPuesta(m, entroDe(m));
+      const hechos = pasos.filter((p) => p.ok).length;
+      return { m, pasos, hechos, pct: Math.round((hechos / pasos.length) * 100) };
+    })
+    .sort((a, b) => a.pct - b.pct);
+  const listos = filas.filter((f) => f.pct === 100).length;
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        Puesta a punto de los profesionales{" "}
+        <span className="rounded-full bg-primary/10 px-1.5 text-primary">
+          {listos}/{filas.length} listos
+        </span>
+      </p>
+      {filas.map(({ m, pasos, hechos, pct }) => (
+        <div key={m.id} className="card-grad p-3.5">
+          <div className="flex items-center gap-3">
+            <Avatar m={m} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{nombreDe(m) || m.email}</p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/10">
+                  <span
+                    className={`block h-full rounded-full transition-all ${pct === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-fuchsia-500"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </span>
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                  {hechos}/{pasos.length}
+                </span>
+              </div>
+            </div>
+            {pct < 100 && onEditar && (
+              <button className={BTN_SECUNDARIO} onClick={() => onEditar(m)}>
+                Completar
+              </button>
+            )}
+            {pct === 100 && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                <Check className="size-3.5" /> Listo
+              </span>
+            )}
+          </div>
+          {pct < 100 && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {pasos.map((p) => (
+                <span
+                  key={p.id}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    p.ok ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-800"
+                  }`}
+                >
+                  {p.ok ? <Check className="size-3" /> : <X className="size-3" />}
+                  {p.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      <p className="px-1 text-[11px] text-muted-foreground">
+        La firma y el sello van en sus recetas e historias clínicas; la foto y la presentación, en el portal del paciente.
+      </p>
+    </div>
+  );
+}
+
+/** Quién todavía no entró: invitaciones del sistema (clínica real) */
+function SinEntrar({ personas, slug, onToast }: { personas: PersonaEquipo[]; slug: string; onToast: (m: string) => void }) {
+  const [enviando, setEnviando] = useState<string | null>(null);
+  const faltan = personas.filter((p) => p.estado === "invitada" || (p.estado === "activa" && !p.ultimoIngreso && !p.soyYo));
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        Todavía no entraron <span className="rounded-full bg-primary/10 px-1.5 text-primary">{faltan.length}</span>
+      </p>
+      {faltan.length === 0 ? (
+        <p className="card-grad p-5 text-center text-sm text-muted-foreground">Todo el equipo ya entró al sistema.</p>
+      ) : (
+        faltan.map((p) => (
+          <div key={p.id} className="card-grad flex flex-wrap items-center gap-3 p-3.5">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              {(p.nombre || p.email).slice(0, 2).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{p.nombre || p.email}</p>
+              <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                <Mail className="size-3 shrink-0" />
+                {p.email} · {p.rolNombre}
+              </p>
+            </div>
+            {p.estado === "invitada" && (
+              <button
+                className={BTN_SECUNDARIO}
+                disabled={enviando === p.id}
+                onClick={async () => {
+                  setEnviando(p.id);
+                  try {
+                    await reenviarInvitacion(slug, p.id);
+                    onToast(`Invitación reenviada a ${p.email}`);
+                  } catch (e) {
+                    onToast(e instanceof Error ? e.message : "No se pudo reenviar la invitación");
+                  } finally {
+                    setEnviando(null);
+                  }
+                }}
+              >
+                <RefreshCcw className={`size-3.5 ${enviando === p.id ? "animate-spin" : ""}`} />
+                Reenviar
+              </button>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+export function InvitacionesEquipo({ onToast, onEditar }: { onToast: (m: string) => void; onEditar?: (m: TeamMember) => void }) {
   const { plan } = useCloudEsther();
   const { miembros, setMiembros, actualizarMiembro } = useEquipo();
+  // Clínica real: las invitaciones de verdad (usuarios del sistema) las maneja el Administrador
+  const real = useClinicaReal();
+  const [personas, setPersonas] = useState<PersonaEquipo[] | null>(null);
+  useEffect(() => {
+    if (!real || real.rol !== "admin") return;
+    verEquipo(real.slug)
+      .then((e) => setPersonas(e.personas))
+      .catch(() => setPersonas(null));
+  }, [real?.slug, real?.rol]);
   const pendientes = miembros.filter((m) => m.status === "pendiente");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -1108,6 +1265,8 @@ export function InvitacionesEquipo({ onToast }: { onToast: (m: string) => void }
             </div>
           ))
         )}
+        {real && personas && <SinEntrar personas={personas} slug={real.slug} onToast={onToast} />}
+        <PuestaAPunto onEditar={onEditar} personas={personas} />
       </div>
     </div>
   );

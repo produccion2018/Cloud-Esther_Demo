@@ -724,7 +724,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
         {vista === "ocupacion" && <OcupacionEquipo />}
         {vista === "desempeno" && <DesempenoEquipo />}
         {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
-        {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}
+        {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} onEditar={openEdit} />}
         {vista === "portal" && planEquipo === "grupo" && <PortalEquipoMonitor onToast={showToast} />}
         {vista === "integrantes" && (
           <div className="space-y-3">

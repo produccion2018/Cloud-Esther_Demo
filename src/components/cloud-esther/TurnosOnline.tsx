@@ -8,6 +8,7 @@ import { pedirAClinica } from "@/lib/clinica/api";
 import { codigosParaWeb, configReserva, enlaceReserva, useNivelReserva, visibleEnReserva, type NivelReserva } from "@/lib/cloud-esther/reservas-online";
 import { TurnosOnlineAdicional } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { PLANES_MARCA } from "@/lib/cloud-esther/marca";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/TurnosOnline.tsx
@@ -90,6 +91,28 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
           </a>
         </div>
       </div>
+
+      <PaginaCompleta
+        pasos={[
+          ...(PLANES_MARCA.has(ctx?.plan ?? "")
+            ? [{ ok: !!ajustesClinica.marca?.logo, titulo: "Logo y color de la clínica", donde: "Configuración → Tu marca", ir: "/demo/configuracion" }]
+            : []),
+          {
+            ok: !!(ajustesClinica.datosClinica?.telefono && ajustesClinica.datosClinica?.direccion),
+            titulo: "Teléfono (WhatsApp) y dirección",
+            donde: "Configuración → Datos de la clínica",
+            ir: "/demo/configuracion",
+          },
+          {
+            ok: conHorario.length > 0,
+            titulo: "Profesionales con días y horarios",
+            donde: "Equipo → Agendas y horarios",
+            ir: "/demo/equipo-profesional/agendas-horarios",
+          },
+          ...(reservaPosible ? [{ ok: c.activa, titulo: "Reservas online prendidas", donde: "Acá abajo", ir: "" }] : []),
+        ]}
+        puedeEditar={puedeEditar}
+      />
 
       {nivel === "start" && <TurnosOnlineAdicional onToast={onToast} compacto />}
 
@@ -323,6 +346,55 @@ function ParaTuWeb({ slug, color, onToast, puedeEditar }: { slug: string; color:
           </fieldset>
         </>
       )}
+    </div>
+  );
+}
+
+/** Lo que le falta a la página para verse completa (logo, teléfono, profesionales…). */
+function PaginaCompleta({
+  pasos,
+  puedeEditar,
+}: {
+  pasos: { ok: boolean; titulo: string; donde: string; ir: string }[];
+  puedeEditar: boolean;
+}) {
+  const hechos = pasos.filter((p) => p.ok).length;
+  if (hechos === pasos.length) {
+    return (
+      <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+        <Check className="size-4" /> Tu página está completa: logo, datos y profesionales a la vista.
+      </p>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-primary/12 bg-white p-3.5 dark:bg-card">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold">Dejá tu página completa</p>
+        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+          {hechos} de {pasos.length}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/10">
+        <div className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500" style={{ width: `${(hechos / pasos.length) * 100}%` }} />
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {pasos.map((p) => (
+          <li key={p.titulo} className="flex items-center gap-2.5 rounded-xl bg-primary/[0.035] px-3 py-2">
+            <span className={`grid size-5 shrink-0 place-items-center rounded-full ${p.ok ? "bg-emerald-500 text-white" : "bg-white ring-1 ring-primary/25"}`}>
+              {p.ok && <Check className="size-3" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block text-xs font-semibold ${p.ok ? "text-muted-foreground line-through" : ""}`}>{p.titulo}</span>
+              {!p.ok && <span className="block text-[10px] text-muted-foreground">{p.donde}</span>}
+            </span>
+            {!p.ok && p.ir && puedeEditar && (
+              <a href={p.ir} className="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[10px] font-semibold text-white">
+                Completar
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

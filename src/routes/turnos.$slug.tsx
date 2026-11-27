@@ -303,6 +303,31 @@ function Encabezado({ info }: { info: InfoReserva }) {
 function SinReserva({ info }: { info: InfoReserva }) {
   const t = tx(info.pais);
   const wa = botonWhatsApp(info, `Hola ${info.clinica}, quisiera pedir un turno.`);
+  // Sin teléfono ni reservas: nunca un "no cargó su teléfono"; algo lindo y que invite a volver
+  if (!wa && !info.telefono) {
+    return (
+      <Tarjeta className="mt-4 overflow-hidden text-center">
+        <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-[var(--marca)] to-fuchsia-500 text-white shadow-lg">
+          <CalendarCheck2 className="size-8" />
+        </span>
+        <h2 className="mt-4 text-xl font-bold">{t("Muy pronto vas a poder sacar turno acá", "Muy pronto podrás reservar tu turno aquí")}</h2>
+        <p className="mx-auto mt-1.5 max-w-sm text-sm text-[#6b6385]">
+          {t(
+            "Estamos preparando nuestra agenda online para que reserves en un minuto, sin llamar.",
+            "Estamos preparando nuestra agenda online para que reserves en un minuto, sin llamar.",
+          )}
+        </p>
+        <div className="mx-auto mt-5 grid max-w-md grid-cols-3 gap-2 text-[11px] text-[#6b6385]">
+          {["Elegís el día", "Elegís el horario", "Te confirmamos"].map((x, i) => (
+            <div key={x} className="rounded-2xl bg-[var(--marca)]/[0.06] px-2 py-3">
+              <p className="text-base font-bold text-[var(--marca)]">{i + 1}</p>
+              <p className="mt-0.5 font-medium">{t(x, x.replace("Elegís", "Eliges"))}</p>
+            </div>
+          ))}
+        </div>
+      </Tarjeta>
+    );
+  }
   return (
     <Tarjeta className="mt-4 text-center">
       <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
@@ -322,7 +347,6 @@ function SinReserva({ info }: { info: InfoReserva }) {
           </a>
         )}
       </div>
-      {!wa && !info.telefono && <p className="mt-4 text-xs text-[#8a83a3]">La clínica todavía no cargó su teléfono.</p>}
     </Tarjeta>
   );
 }

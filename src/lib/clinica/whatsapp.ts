@@ -159,6 +159,8 @@ export function abrirAvisoAusenciaWhatsApp(
   t: { id: number; paciente: string; fecha: string; hora: string },
   clinica: string,
   profesional: string,
+  /** Si otro profesional cubre el turno: el turno sigue en pie con él/ella */
+  cubre?: string,
 ): boolean {
   const numero = numeroWhatsApp(telefonoDePaciente(t.paciente));
   if (!numero) return false;
@@ -166,8 +168,11 @@ export function abrirAvisoAusenciaWhatsApp(
   const dia = t.fecha.split("-").reverse().slice(0, 2).join("/");
   const armar = (enlace: string | null) =>
     `https://wa.me/${numero}?text=${encodeURIComponent(
-      `Hola ${nombre} 👋 Te escribimos de ${clinica}. ${profesional} no va a poder atender el ${dia} y tenías turno a las ${t.hora}. ¿Te lo pasamos a otro día?` +
-        (enlace ? ` Avisanos acá y te buscamos otro horario:\n${enlace}` : " Respondé este mensaje y te buscamos otro horario."),
+      (cubre
+        ? `Hola ${nombre} 👋 Te escribimos de ${clinica}. ${profesional} no va a estar el ${dia}: tu turno de las ${t.hora} sigue en pie y te va a atender ${cubre}.` +
+          (enlace ? ` Si preferís confirmarlo o cambiarlo, hacelo acá:\n${enlace}` : " Si preferís cambiarlo, respondé este mensaje.")
+        : `Hola ${nombre} 👋 Te escribimos de ${clinica}. ${profesional} no va a poder atender el ${dia} y tenías turno a las ${t.hora}. ¿Te lo pasamos a otro día?` +
+          (enlace ? ` Avisanos acá y te buscamos otro horario:\n${enlace}` : " Respondé este mensaje y te buscamos otro horario.")),
     )}`;
   const ventana = window.open("", "_blank");
   void import("@/lib/clinica/enlace-estudio")

@@ -40,6 +40,8 @@ export type Turno = {
   encuesta?: { puntaje: number; comentario?: string; fecha: string; avisada?: boolean };
   /** Día en que se le avisó al paciente que su profesional no va a estar (ausencia) */
   avisoAusencia?: string;
+  /** Profesional que no estaba y a quien este turno reemplaza (lo cubre `odontologo`) */
+  reemplazoDe?: string;
 };
 
 export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };

@@ -7,6 +7,7 @@ import { pedirAbrir } from "@/lib/clinica/chat";
 import {
   ArrowRight,
   CalendarOff,
+  UserCheck,
   CalendarX2,
   MessageCircle,
   Check,
@@ -22,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { aMinutos, storeAgenda, tiemposAgenda, turnoSolapa, type Turno } from "@/lib/cloud-esther/agenda-store";
 import {
   useEquipo,
   TIPOS_AUSENCIA,
@@ -523,7 +524,7 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
       )}
       {reprogramar && (
         <Modal titulo="Turnos para reprogramar" onClose={() => setReprogramar(null)}>
-          <TurnosParaReprogramar a={reprogramar} turnos={afectados(reprogramar)} onToast={onToast} />
+          <TurnosParaReprogramar a={reprogramar} ids={afectados(reprogramar).map((t) => t.id)} onToast={onToast} />
         </Modal>
       )}
     </div>
@@ -531,13 +532,62 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
 }
 
 /** Los turnos que caen en una ausencia: avisar al paciente por WhatsApp y pasarlo a otro día. */
-function TurnosParaReprogramar({ a, turnos, onToast }: { a: Ausencia; turnos: Turno[]; onToast: (m: string) => void }) {
-  const { miembros } = useEquipo();
+function TurnosParaReprogramar({ a, ids, onToast }: { a: Ausencia; ids: number[]; onToast: (m: string) => void }) {
+  const { miembros, ausencias } = useEquipo();
+  const { turnos, ajustes } = storeAgenda.usar();
   const { clinica } = useSesion();
   const navigate = useNavigate();
   const m = miembros.find((x) => x.id === a.miembroId);
   const profesional = m ? nombreDe(m) : "Tu profesional";
-  const lista = [...turnos].sort((x, y) => `${x.fecha}${x.hora}`.localeCompare(`${y.fecha}${y.hora}`));
+  // Los turnos de la ausencia (aunque ya los cubra otro profesional, siguen en la lista)
+  const [mios] = useState(() => new Set(ids));
+  const lista = turnos
+    .filter((t) => mios.has(t.id) && t.estado !== "Cancelada")
+    .sort((x, y) => `${x.fecha}${x.hora}`.localeCompare(`${y.fecha}${y.hora}`));
+  const { duracion } = tiemposAgenda(ajustes);
+  const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  /** ¿Puede este profesional tomar este turno? (no está ausente, atiende ese día y está libre a esa hora) */
+  const motivoNoPuede = (r: TeamMember, t: Turno): string | null => {
+    if (ausencias.some((x) => x.miembroId === r.id && x.desde <= t.fecha && x.hasta >= t.fecha)) return "tampoco está ese día";
+    if (r.schedule?.length) {
+      const d = r.schedule.find((x) => x.day === DIAS[new Date(`${t.fecha}T12:00:00`).getDay()]);
+      if (!d?.active) return "no atiende ese día";
+      const h = aMinutos(t.hora);
+      if (h < aMinutos(d.start) || h >= aMinutos(d.end)) return "fuera de su horario";
+    }
+    const c0 = aMinutos(t.hora);
+    const c1 = c0 + (t.duracion ?? duracion);
+    const n = nombreDe(r);
+    if (turnos.some((x) => x.id !== t.id && x.estado !== "Cancelada" && x.fecha === t.fecha && x.odontologo === n && turnoSolapa(x, c0, c1, duracion)))
+      return "ya tiene un turno a esa hora";
+    return null;
+  };
+  // Quiénes pueden cubrir: profesionales activos; primero los de la misma especialidad
+  const misEsp = new Set(m?.specialties ?? []);
+  const candidatos = miembros
+    .filter((x) => x.id !== a.miembroId && x.role === "odontologo" && x.status === "activo")
+    .map((x) => ({ x, misma: (x.specialties ?? []).some((e) => misEsp.has(e)), libres: lista.filter((t) => !motivoNoPuede(x, t)).length }))
+    .sort((p, q) => Number(q.misma) - Number(p.misma) || q.libres - p.libres);
+  const [cubre, setCubre] = useState(candidatos[0]?.x.id ?? "");
+  const reemplazo = candidatos.find((c) => c.x.id === cubre)?.x;
+  const pendientes = lista.filter((t) => !t.reemplazoDe);
+  const pasarTodos = () => {
+    if (!reemplazo) return;
+    const n = nombreDe(reemplazo);
+    const pasan = pendientes.filter((t) => !motivoNoPuede(reemplazo, t)).map((t) => t.id);
+    if (!pasan.length) return onToast(`${n} no puede tomar ninguno de esos turnos`);
+    storeAgenda.poner({
+      ...storeAgenda.leer(),
+      turnos: storeAgenda.leer().turnos.map((x) => {
+        if (!pasan.includes(x.id)) return x;
+        // El aviso de «no va a estar» ya no sirve: hay que avisar que lo atiende otro
+        const { avisoAusencia: _viejo, ...resto } = x;
+        return { ...resto, odontologo: n, reemplazoDe: profesional };
+      }),
+    });
+    const quedan = pendientes.length - pasan.length;
+    onToast(`${pasan.length} turno${pasan.length === 1 ? "" : "s"} pasado${pasan.length === 1 ? "" : "s"} a ${n}${quedan ? `; ${quedan} no se pudo (ver abajo)` : ""}. Avisale a cada paciente.`);
+  };
   const avisados = lista.filter((t) => t.avisoAusencia).length;
   if (lista.length === 0)
     return <p className="py-6 text-center text-sm text-muted-foreground">¡Listo! No quedan turnos en esas fechas.</p>;
@@ -555,9 +605,34 @@ function TurnosParaReprogramar({ a, turnos, onToast }: { a: Ausencia; turnos: Tu
           {avisados}/{lista.length} avisados
         </span>
       </div>
+      {pendientes.length > 0 && (
+        <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold">
+            <UserCheck className="size-4 text-primary" /> ¿Quién cubre?
+          </p>
+          {candidatos.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">No hay otro profesional activo en el equipo para cubrir.</p>
+          ) : (
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Seleccion value={cubre} onChange={(e) => setCubre(e.target.value)} className={INPUT}>
+                {candidatos.map(({ x, misma, libres }) => (
+                  <option key={x.id} value={x.id}>
+                    {nombreDe(x)}
+                    {misma ? " · misma especialidad" : ""} · puede {libres} de {lista.length}
+                  </option>
+                ))}
+              </Seleccion>
+              <button className={`${BTN_PRIMARIO} shrink-0`} onClick={pasarTodos} disabled={!reemplazo}>
+                <UserCheck className="size-3.5" /> Pasarle los turnos
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <ul className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
         {lista.map((t) => {
           const pidio = t.respuestaPaciente?.tipo === "cambiar";
+          const noPuede = reemplazo && !t.reemplazoDe ? motivoNoPuede(reemplazo, t) : null;
           return (
             <li key={t.id} className="rounded-2xl border border-primary/10 bg-white p-3">
               <div className="flex items-start gap-3">
@@ -571,6 +646,16 @@ function TurnosParaReprogramar({ a, turnos, onToast }: { a: Ausencia; turnos: Tu
                     {t.tratamiento}
                     {pidio ? " · pidió cambiarlo" : t.avisoAusencia ? ` · avisado el ${formatearFecha(t.avisoAusencia).slice(0, 5)}` : ""}
                   </p>
+                  {t.reemplazoDe && (
+                    <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-700">
+                      <UserCheck className="size-3" /> Lo cubre {t.odontologo}
+                    </p>
+                  )}
+                  {noPuede && reemplazo && (
+                    <p className="mt-0.5 text-[10.5px] text-amber-700">
+                      {nombreDe(reemplazo)} {noPuede}: pasalo a otro día
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -579,7 +664,7 @@ function TurnosParaReprogramar({ a, turnos, onToast }: { a: Ausencia; turnos: Tu
                     t.avisoAusencia ? "border border-primary/15 bg-white text-muted-foreground" : "bg-[#25D366] text-white hover:brightness-95"
                   }`}
                   onClick={() => {
-                    if (!abrirAvisoAusenciaWhatsApp(t, clinica?.nombre ?? "la clínica", profesional)) {
+                    if (!abrirAvisoAusenciaWhatsApp(t, clinica?.nombre ?? "la clínica", profesional, t.reemplazoDe ? t.odontologo : undefined)) {
                       onToast(`${t.paciente} no tiene teléfono cargado`);
                       return;
                     }

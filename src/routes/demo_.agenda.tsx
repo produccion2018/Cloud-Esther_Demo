@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import {
   CalendarDays,
   CalendarCheck,
+  CalendarX,
   Check,
   Clock,
   X,
@@ -2646,7 +2647,12 @@ function AgendaInner() {
   }, []);
 
   // Odontólogos del equipo de la empresa y pacientes de su listado.
-  const { miembros } = useEquipo();
+  const { miembros, ausencias } = useEquipo();
+  /** Ausencia (vacaciones, licencia…) de un profesional en esa fecha, si tiene */
+  const ausenciaDe = (odontologo: string, fecha: string) => {
+    const m = miembros.find((x) => `${x.firstName} ${x.lastName}`.trim() === odontologo);
+    return m ? ausencias.find((a) => a.miembroId === m.id && a.desde <= fecha && a.hasta >= fecha) : undefined;
+  };
   const { pacientes: listaPacientes } = usePacientes();
   const real = useClinicaReal();
   const { usuario, clinica: clinicaSesion } = useSesion();
@@ -2720,6 +2726,18 @@ function AgendaInner() {
     setFiltros({ sucursal: "", odontologo: "", gabinete: "", tratamiento: "" });
     setVista("dia");
     setFechaVista(t.fecha);
+    // Desde Equipo → «Pasarlo» (ausencia): se abre directo para cambiarle el día o el profesional
+    let editar = false;
+    try {
+      editar = sessionStorage.getItem("cloud-esther:abrir-turno-editar") === "1";
+      sessionStorage.removeItem("cloud-esther:abrir-turno-editar");
+    } catch {
+      editar = false;
+    }
+    if (editar) {
+      setModal({ tipo: "cita", turno: t });
+      return;
+    }
     // Se marca el turno en el día; si no se ve (otra vista o filtro), se abre su detalle
     window.setTimeout(() => {
       const el = document.querySelector<HTMLElement>(`[data-turno-id="${t.id}"]`);
@@ -2776,6 +2794,8 @@ function AgendaInner() {
     if (!delEquipo.length) return opcionesAgenda.odontologos;
     return delEquipo
       .filter((m) => {
+        // De vacaciones o licencia ese día: no atiende
+        if (ausencias.some((a) => a.miembroId === m.id && a.desde <= fecha && a.hasta >= fecha)) return false;
         if (!m.schedule?.length) return true;
         const d = m.schedule.find((x) => x.day === dia);
         if (!d?.active) return false;
@@ -2788,6 +2808,8 @@ function AgendaInner() {
 
   /* Horarios libres del día visto (según filtros de odontólogo/gabinete si hay). */
   const horariosLibres = horariosDelDia(intervalo).filter((hora) => {
+    // Si se está viendo la agenda de alguien que no está ese día, no hay horarios libres
+    if (filtros.odontologo && ausenciaDe(filtros.odontologo, fechaVista)) return false;
     const h0 = aMinutos(hora);
     const bloqueado = bloqueos.some(
       (b) => b.fecha === fechaVista && h0 < aMinutos(b.hasta) && h0 + intervalo > aMinutos(b.desde),
@@ -2900,6 +2922,10 @@ function AgendaInner() {
 
   /* Motivo por el que no se puede dar ese turno (o null si está libre) */
   const conflictoCita = (c: NuevaCita, excluirId?: number): string | null => {
+    // El profesional no está ese día (vacaciones, licencia…: Equipo → Ausencias)
+    const fuera = c.odontologo ? ausenciaDe(c.odontologo, c.fecha) : undefined;
+    if (fuera)
+      return `${c.odontologo} no atiende ese día (${fuera.tipo.toLowerCase()}${fuera.desde === fuera.hasta ? "" : ` del ${formatearFecha(fuera.desde).slice(0, 5)} al ${formatearFecha(fuera.hasta).slice(0, 5)}`})`;
     // Se superpone con otro turno del mismo profesional (según la duración de cada uno)
     const c0 = aMinutos(c.hora);
     const c1 = c0 + (c.duracion ?? duracionHabitual);
@@ -3347,6 +3373,35 @@ function AgendaInner() {
                     {fechaVista === hoy && (
                       <SalaDeEspera turnos={turnosDia} onPasa={(t) => cambiarEstado(t, "Atendida")} />
                     )}
+
+                    {(() => {
+                      // Quién no está este día (Equipo → Ausencias): no se le pueden dar turnos
+                      const fuera = ausencias
+                        .filter((a) => a.desde <= fechaVista && a.hasta >= fechaVista)
+                        .map((a) => ({ a, m: miembros.find((x) => x.id === a.miembroId) }))
+                        .filter((x) => x.m);
+                      if (!fuera.length) return null;
+                      const conTurnos = (n: string) => turnosDia.filter((t) => t.odontologo === n && t.estado !== "Cancelada").length;
+                      return (
+                        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-sky-500/20 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                          <CalendarX className="size-4 shrink-0 text-sky-600" />
+                          <span className="font-semibold">No atienden este día:</span>
+                          {fuera.map(({ a, m }) => {
+                            const n = `${m!.firstName} ${m!.lastName}`.trim();
+                            const k = conTurnos(n);
+                            return (
+                              <span key={a.id} className="rounded-full bg-white px-2 py-0.5 ring-1 ring-sky-500/20">
+                                {n} · {a.tipo.toLowerCase()}
+                                {k ? <b className="ml-1 text-destructive">· {k} turno{k === 1 ? "" : "s"} para pasar</b> : null}
+                              </span>
+                            );
+                          })}
+                          <Link to="/demo/equipo-profesional" hash="ausencias" className="ml-auto font-semibold text-sky-700 hover:underline">
+                            Ver ausencias
+                          </Link>
+                        </div>
+                      );
+                    })()}
 
                     <DiaTimeline
                       fecha={fechaVista}

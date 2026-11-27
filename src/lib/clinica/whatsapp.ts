@@ -152,3 +152,33 @@ export function abrirEncuestaWhatsApp(t: { id: number; paciente: string }, clini
     });
   return true;
 }
+
+/** Avisa al paciente que su profesional no va a estar ese día y le ofrece pasar el turno
+    (con el enlace para pedir el cambio, si se puede crear). Devuelve false si no tiene teléfono. */
+export function abrirAvisoAusenciaWhatsApp(
+  t: { id: number; paciente: string; fecha: string; hora: string },
+  clinica: string,
+  profesional: string,
+): boolean {
+  const numero = numeroWhatsApp(telefonoDePaciente(t.paciente));
+  if (!numero) return false;
+  const nombre = t.paciente.split(" ")[0] ?? t.paciente;
+  const dia = t.fecha.split("-").reverse().slice(0, 2).join("/");
+  const armar = (enlace: string | null) =>
+    `https://wa.me/${numero}?text=${encodeURIComponent(
+      `Hola ${nombre} 👋 Te escribimos de ${clinica}. ${profesional} no va a poder atender el ${dia} y tenías turno a las ${t.hora}. ¿Te lo pasamos a otro día?` +
+        (enlace ? ` Avisanos acá y te buscamos otro horario:\n${enlace}` : " Respondé este mensaje y te buscamos otro horario."),
+    )}`;
+  const ventana = window.open("", "_blank");
+  void import("@/lib/clinica/enlace-estudio")
+    .then(({ crearEnlaceTurno }) => crearEnlaceTurno(t.id))
+    .catch(() => null)
+    .then((enlace) => {
+      const url = armar(enlace);
+      if (ventana && !ventana.closed) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else window.open(url, "_blank", "noopener,noreferrer");
+    });
+  return true;
+}

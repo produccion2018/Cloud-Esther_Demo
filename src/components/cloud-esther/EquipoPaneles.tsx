@@ -1,9 +1,14 @@
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { abrirAvisoAusenciaWhatsApp } from "@/lib/clinica/whatsapp";
+import { pedirAbrir } from "@/lib/clinica/chat";
 import {
+  ArrowRight,
   CalendarOff,
   CalendarX2,
+  MessageCircle,
   Check,
   Clock3,
   Mail,
@@ -350,6 +355,7 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
   const { turnos } = storeAgenda.usar();
   const [abierto, setAbierto] = useState(false);
   const [verPasadas, setVerPasadas] = useState(false);
+  const [reprogramar, setReprogramar] = useState<Ausencia | null>(null);
   const hoy = hoyISO();
 
   const lista = [...ausencias]
@@ -484,10 +490,10 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
                         .join(", ")}
                       {turnosAfectados.length > 3 ? "…" : ""}
                     </p>
-                    <Link to="/demo/agenda" className={BTN_SECUNDARIO}>
+                    <button className={BTN_SECUNDARIO} onClick={() => setReprogramar(a)}>
                       <RefreshCcw className="size-3.5" />
                       Reprogramar
-                    </Link>
+                    </button>
                   </div>
                 )}
               </li>
@@ -501,14 +507,109 @@ export function AusenciasEquipo({ onToast }: { onToast: (m: string) => void }) {
             miembros={miembros.filter((m) => m.status !== "inactivo")}
             onCancel={() => setAbierto(false)}
             onSubmit={(a) => {
-              setAusencias((prev) => [...prev, { ...a, id: `a-${Date.now()}` }]);
+              const nueva = { ...a, id: `a-${Date.now()}` };
+              setAusencias((prev) => [...prev, nueva]);
               setAbierto(false);
               const m = miembros.find((x) => x.id === a.miembroId);
-              onToast(`Ausencia de ${m ? nombreDe(m) : "integrante"} registrada`);
+              const k = afectados(nueva).length;
+              onToast(
+                `Ausencia de ${m ? nombreDe(m) : "integrante"} registrada${k ? `: tiene ${k} turno${k === 1 ? "" : "s"} para reprogramar` : ""}`,
+              );
+              // Si tenía turnos en esas fechas, se abre la lista para avisar y pasarlos
+              if (k) setReprogramar(nueva);
             }}
           />
         </Modal>
       )}
+      {reprogramar && (
+        <Modal titulo="Turnos para reprogramar" onClose={() => setReprogramar(null)}>
+          <TurnosParaReprogramar a={reprogramar} turnos={afectados(reprogramar)} onToast={onToast} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/** Los turnos que caen en una ausencia: avisar al paciente por WhatsApp y pasarlo a otro día. */
+function TurnosParaReprogramar({ a, turnos, onToast }: { a: Ausencia; turnos: Turno[]; onToast: (m: string) => void }) {
+  const { miembros } = useEquipo();
+  const { clinica } = useSesion();
+  const navigate = useNavigate();
+  const m = miembros.find((x) => x.id === a.miembroId);
+  const profesional = m ? nombreDe(m) : "Tu profesional";
+  const lista = [...turnos].sort((x, y) => `${x.fecha}${x.hora}`.localeCompare(`${y.fecha}${y.hora}`));
+  const avisados = lista.filter((t) => t.avisoAusencia).length;
+  if (lista.length === 0)
+    return <p className="py-6 text-center text-sm text-muted-foreground">¡Listo! No quedan turnos en esas fechas.</p>;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {profesional} no está {a.desde === a.hasta ? `el ${formatearFecha(a.desde)}` : `del ${formatearFecha(a.desde)} al ${formatearFecha(a.hasta)}`}.
+        Avisale a cada paciente y pasá el turno a otro día (o a otro profesional).
+      </p>
+      <div className="flex items-center gap-2 px-1">
+        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/10">
+          <span className="block h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.round((avisados / lista.length) * 100)}%` }} />
+        </span>
+        <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+          {avisados}/{lista.length} avisados
+        </span>
+      </div>
+      <ul className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+        {lista.map((t) => {
+          const pidio = t.respuestaPaciente?.tipo === "cambiar";
+          return (
+            <li key={t.id} className="rounded-2xl border border-primary/10 bg-white p-3">
+              <div className="flex items-start gap-3">
+                <span className="grid w-12 shrink-0 place-items-center rounded-xl bg-primary/10 py-1 text-primary">
+                  <span className="text-[10px] font-bold leading-none">{formatearFecha(t.fecha).slice(0, 5)}</span>
+                  <span className="mt-0.5 text-xs font-bold tabular-nums leading-none">{t.hora}</span>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{t.paciente}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {t.tratamiento}
+                    {pidio ? " · pidió cambiarlo" : t.avisoAusencia ? ` · avisado el ${formatearFecha(t.avisoAusencia).slice(0, 5)}` : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    t.avisoAusencia ? "border border-primary/15 bg-white text-muted-foreground" : "bg-[#25D366] text-white hover:brightness-95"
+                  }`}
+                  onClick={() => {
+                    if (!abrirAvisoAusenciaWhatsApp(t, clinica?.nombre ?? "la clínica", profesional)) {
+                      onToast(`${t.paciente} no tiene teléfono cargado`);
+                      return;
+                    }
+                    storeAgenda.poner({
+                      ...storeAgenda.leer(),
+                      turnos: storeAgenda.leer().turnos.map((x) => (x.id === t.id ? { ...x, avisoAusencia: hoyISO() } : x)),
+                    });
+                  }}
+                >
+                  <MessageCircle className="size-3.5" /> {t.avisoAusencia ? "Avisar de nuevo" : "Avisar"}
+                </button>
+                <button
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/[0.05]"
+                  onClick={() => {
+                    pedirAbrir({ tipo: "turno", id: t.id, nombre: t.paciente, detalle: "" });
+                    try {
+                      sessionStorage.setItem("cloud-esther:abrir-turno-editar", "1");
+                    } catch {
+                      /* sin almacenamiento */
+                    }
+                    void navigate({ to: "/demo/agenda" });
+                  }}
+                >
+                  Pasarlo <ArrowRight className="size-3.5" />
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

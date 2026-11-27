@@ -1,6 +1,6 @@
 import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { urlPersistenteImagen } from "@/lib/clinica/subir-imagen"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data"
 import { useTerminologia } from "@/lib/cloud-esther/terminologia"
 import type { ComponentType, ReactNode } from "react"
@@ -416,7 +416,11 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
   const { miembros: members, setMiembros: setMembers, especialidades: especialidadesClinica, ausencias } = useEquipo()
   const term = useTerminologia()
   const { turnos } = storeAgenda.usar()
+  // Desde la Agenda («Ver ausencias») se llega con #ausencias
   const [vista, setVista] = useState<VistaEquipo>("integrantes")
+  useEffect(() => {
+    if (window.location.hash === "#ausencias") setVista("ausencias")
+  }, [])
   // El portal del profesional es exclusivo de Enterprise.
   const { plan: planEquipo } = useCloudEsther()
   const vistas = VISTAS.filter((v) => v.id !== "portal" || planEquipo === "grupo")

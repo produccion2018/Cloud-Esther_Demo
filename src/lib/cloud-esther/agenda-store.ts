@@ -38,6 +38,8 @@ export type Turno = {
   encuestaEnviada?: string;
   /** Lo que respondió en la encuesta después del turno (1 a 5). */
   encuesta?: { puntaje: number; comentario?: string; fecha: string; avisada?: boolean };
+  /** Día en que se le avisó al paciente que su profesional no va a estar (ausencia) */
+  avisoAusencia?: string;
 };
 
 export type Repeticion = { cada: number; unidad: "dias" | "semanas" | "meses"; veces: number };

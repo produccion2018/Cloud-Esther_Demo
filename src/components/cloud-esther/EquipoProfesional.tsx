@@ -26,6 +26,7 @@ import {
   Settings2,
   Download,
   TrendingUp,
+  Gauge,
   CalendarOff,
   UserPlus,
   Smartphone,
@@ -43,13 +44,14 @@ import { dentroDelLimite, MENSAJE_LIMITE } from "@/lib/cloud-esther/planes-confi
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp"
 import { capitalizarNombre } from "@/lib/utils"
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store"
-import { AusenciasEquipo, DesempenoEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
+import { AusenciasEquipo, DesempenoEquipo, OcupacionEquipo, InvitacionesEquipo, PortalEquipoMonitor, ausenteHoy, hoyISO, turnosDe } from "@/components/cloud-esther/EquipoPaneles"
 import { Seleccion } from "@/components/ui/seleccion";
 
-type VistaEquipo = "integrantes" | "desempeno" | "ausencias" | "invitaciones" | "portal"
+type VistaEquipo = "integrantes" | "ocupacion" | "desempeno" | "ausencias" | "invitaciones" | "portal"
 
 const VISTAS: { id: VistaEquipo; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { id: "integrantes", label: "Integrantes", icon: Users },
+  { id: "ocupacion", label: "Ocupación", icon: Gauge },
   { id: "desempeno", label: "Desempeño", icon: TrendingUp },
   { id: "ausencias", label: "Ausencias y licencias", icon: CalendarOff },
   { id: "invitaciones", label: "Invitaciones", icon: UserPlus },
@@ -718,6 +720,7 @@ export function EquipoProfesional({ embebido = false }: { embebido?: boolean } =
       </section>
 
       <div className="mt-5">
+        {vista === "ocupacion" && <OcupacionEquipo />}
         {vista === "desempeno" && <DesempenoEquipo />}
         {vista === "ausencias" && <AusenciasEquipo onToast={showToast} />}
         {vista === "invitaciones" && <InvitacionesEquipo onToast={showToast} />}

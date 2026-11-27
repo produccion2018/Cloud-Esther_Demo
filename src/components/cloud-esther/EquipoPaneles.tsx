@@ -6,6 +6,7 @@ import { abrirAvisoAusenciaWhatsApp } from "@/lib/clinica/whatsapp";
 import { pedirAbrir } from "@/lib/clinica/chat";
 import {
   ArrowRight,
+  CalendarCheck2,
   CalendarOff,
   UserCheck,
   CalendarX2,
@@ -186,6 +187,178 @@ function Modal({
 }
 
 /* ───────────── Desempeño ───────────── */
+
+/* ───────────── Ocupación: horas disponibles vs. ocupadas y huecos libres ───────────── */
+const DIAS_NOMBRE = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const;
+const DIAS_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const lunesDe = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`);
+  const dow = d.getDay();
+  return sumarDias(iso, dow === 0 ? -6 : 1 - dow);
+};
+const aHoraOc = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+export function OcupacionEquipo() {
+  const { miembros, ausencias } = useEquipo();
+  const { turnos, bloqueos, ajustes } = storeAgenda.usar();
+  const navigate = useNavigate();
+  const [semana, setSemana] = useState<0 | 1>(0);
+  const hoy = hoyISO();
+  const ahora = new Date();
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+  const { intervalo, duracion } = tiemposAgenda(ajustes);
+  const lunes = sumarDias(lunesDe(hoy), semana * 7);
+  const dias = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
+
+  const filas = miembros
+    .filter((m) => m.role === "odontologo" && m.status === "activo")
+    .map((m) => {
+      const n = nombreDe(m);
+      const conHorario = (m.schedule ?? []).some((d) => d.active);
+      let disponible = 0;
+      let ocupado = 0;
+      const huecos: { fecha: string; hora: string }[] = [];
+      for (const fecha of dias) {
+        const turnosDia = turnos.filter((t) => t.fecha === fecha && t.odontologo === n && t.estado !== "Cancelada");
+        ocupado += turnosDia.reduce((acc, t) => acc + (t.duracion ?? duracion), 0);
+        if (ausencias.some((a) => a.miembroId === m.id && a.desde <= fecha && a.hasta >= fecha)) continue;
+        const jornada = (m.schedule ?? []).find((d) => d.day === DIAS_NOMBRE[new Date(`${fecha}T12:00:00`).getDay()]);
+        if (!jornada?.active) continue;
+        const ini = aMinutos(jornada.start);
+        const fin = aMinutos(jornada.end);
+        const pausa0 = jornada.breakStart ? aMinutos(jornada.breakStart) : -1;
+        const pausa1 = jornada.breakEnd ? aMinutos(jornada.breakEnd) : -1;
+        disponible += Math.max(0, fin - ini - (pausa0 >= 0 && pausa1 > pausa0 ? pausa1 - pausa0 : 0));
+        // Huecos libres desde ahora: franjas sin turno, sin pausa y sin bloqueo de la clínica
+        for (let h = ini; h + duracion <= fin && huecos.length < 40; h += intervalo) {
+          if (fecha < hoy || (fecha === hoy && h <= ahoraMin)) continue;
+          if (pausa0 >= 0 && h < pausa1 && h + duracion > pausa0) continue;
+          if (bloqueos.some((b) => b.fecha === fecha && h < aMinutos(b.hasta) && h + duracion > aMinutos(b.desde))) continue;
+          if (turnosDia.some((t) => turnoSolapa(t, h, h + duracion, duracion))) continue;
+          huecos.push({ fecha, hora: aHoraOc(h) });
+        }
+      }
+      const pct = disponible ? Math.min(100, Math.round((ocupado / disponible) * 100)) : 0;
+      return { m, n, conHorario, disponible, ocupado, pct, huecos };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  const totDisp = filas.reduce((a, f) => a + f.disponible, 0);
+  const totOcup = filas.reduce((a, f) => a + f.ocupado, 0);
+  const totHuecos = filas.reduce((a, f) => a + f.huecos.length, 0);
+  const horas = (min: number) => `${Math.round((min / 60) * 10) / 10} h`.replace(".", ",");
+  const darTurno = (n: string, h: { fecha: string; hora: string }) => {
+    try {
+      sessionStorage.setItem("cloud-esther:nuevo-turno", JSON.stringify({ ...h, odontologo: n }));
+    } catch {
+      /* sin almacenamiento */
+    }
+    void navigate({ to: "/demo/agenda" });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          Del {formatearFecha(dias[0]!).slice(0, 5)} al {formatearFecha(dias[6]!).slice(0, 5)}: cuánto de su horario ya está ocupado y qué huecos quedan para ofrecer.
+        </p>
+        <div className="flex rounded-full bg-white p-0.5 ring-1 ring-primary/12">
+          {(
+            [
+              [0, "Esta semana"],
+              [1, "La próxima"],
+            ] as const
+          ).map(([v, l]) => (
+            <button
+              key={l}
+              onClick={() => setSemana(v)}
+              aria-pressed={semana === v}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                semana === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+        <Resumen label="Horas de atención" valor={horas(totDisp)} icon={Clock3} tono="text-primary" />
+        <Resumen
+          label="Ocupación"
+          valor={totDisp ? `${Math.min(100, Math.round((totOcup / totDisp) * 100))}%` : "—"}
+          icon={TrendingUp}
+          tono="text-emerald-600"
+        />
+        <Resumen label="Huecos para ofrecer" valor={String(totHuecos)} icon={CalendarCheck2} tono="text-amber-600" />
+      </div>
+      {filas.length === 0 ? (
+        <p className="card-grad p-6 text-center text-sm text-muted-foreground">Cargá a los profesionales en Integrantes para ver su ocupación.</p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {filas.map((f) => (
+            <li key={f.m.id} className="card-grad p-4">
+              <div className="flex items-center gap-3">
+                <Avatar m={f.m} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{f.n}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {f.conHorario
+                      ? `${horas(f.ocupado)} ocupadas de ${horas(f.disponible)}`
+                      : "Sin horario cargado"}
+                  </p>
+                </div>
+                {f.conHorario && (
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${
+                      f.pct >= 90 ? "bg-rose-100 text-rose-700" : f.pct >= 60 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {f.pct}%
+                  </span>
+                )}
+              </div>
+              {f.conHorario ? (
+                <>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-primary/10">
+                    <div
+                      className={`h-full rounded-full transition-all ${f.pct >= 90 ? "bg-rose-500" : f.pct >= 60 ? "bg-emerald-500" : "bg-amber-400"}`}
+                      style={{ width: `${f.pct}%` }}
+                    />
+                  </div>
+                  {f.huecos.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        Próximos huecos ({f.huecos.length}) · tocá uno para dar el turno
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {f.huecos.slice(0, 8).map((h) => (
+                          <button
+                            key={`${h.fecha}-${h.hora}`}
+                            onClick={() => darTurno(f.n, h)}
+                            className="rounded-full border border-primary/15 bg-white px-2.5 py-1 text-[11.5px] font-semibold text-primary transition hover:border-primary/40 hover:bg-primary/[0.05]"
+                          >
+                            {DIAS_CORTO[new Date(`${h.fecha}T12:00:00`).getDay()]} {formatearFecha(h.fecha).slice(0, 2)} · {h.hora}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">Sin huecos libres {semana === 0 ? "lo que queda de la semana" : "esa semana"}.</p>
+                  )}
+                </>
+              ) : (
+                <Link to="/demo/equipo-profesional/agendas-horarios" className="mt-3 inline-flex text-xs font-semibold text-primary hover:underline">
+                  Cargar su horario →
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function DesempenoEquipo() {
   const { miembros } = useEquipo();

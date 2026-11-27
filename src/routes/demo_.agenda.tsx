@@ -2752,6 +2752,22 @@ function AgendaInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnos.length]);
 
+  // Viene de Equipo → Ocupación (un hueco libre): Nuevo turno con día, hora y profesional
+  useEffect(() => {
+    try {
+      const crudo = sessionStorage.getItem("cloud-esther:nuevo-turno");
+      if (!crudo) return;
+      sessionStorage.removeItem("cloud-esther:nuevo-turno");
+      const p = JSON.parse(crudo) as { fecha?: string; hora?: string; odontologo?: string };
+      if (!p.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(p.fecha)) return;
+      setVista("dia");
+      setFechaVista(p.fecha);
+      setModal({ tipo: "cita", prefill: { fecha: p.fecha, ...(p.hora ? { hora: p.hora } : {}), ...(p.odontologo ? { odontologo: p.odontologo } : {}) } });
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, []);
+
   // Viene de Pacientes → "Dar turno": se abre Nuevo turno con ese paciente cargado
   useEffect(() => {
     try {

@@ -113,7 +113,33 @@ export const DOCS_BASE: DocSolicitada[] = [
   },
 ];
 
+/** Cómo le pagan los pacientes a la clínica (los carga la clínica; Cloud Esther no cobra por ella) */
+export type DatosPagoClinica = {
+  titular: string;
+  banco: string;
+  /** CBU / CVU / IBAN / CLABE / número de cuenta, según el país */
+  cuenta: string;
+  alias: string;
+  /** Link de pago propio de la clínica (Mercado Pago, Stripe, etc.) */
+  link: string;
+  instrucciones: string;
+};
+
+/** «Ya pagué» que informó el paciente desde su portal: la clínica lo confirma o lo rechaza. */
+export type PagoInformado = {
+  id: string;
+  pacienteId: number;
+  paciente: string;
+  monto: number;
+  medio: string;
+  referencia: string;
+  fecha: string;
+  estado: "Pendiente" | "Confirmado" | "Rechazado";
+};
+
 export type ConfigPortal = {
+  /** Datos para que el paciente pague (transferencia o link de pago de la clínica) */
+  datosPago?: DatosPagoClinica;
   turnosOnline: boolean;
   pagosOnline: boolean;
   presupuestosOnline: boolean;
@@ -178,6 +204,8 @@ type EstadoPortal = {
   docs: Record<number, DocSolicitada[]>;
   /** Envíos al portal aprobados (modo «con aprobación») */
   publicados?: Record<string, Publicacion>;
+  /** Pagos que informaron los pacientes desde su portal (para confirmar) */
+  pagosInformados?: PagoInformado[];
 };
 
 

@@ -9,8 +9,10 @@ import {
   ClipboardList,
   Pill,
   Clock,
+  Copy,
   Download,
   FileText,
+  Wallet,
   Loader2,
   LogOut,
   MapPin,
@@ -347,7 +349,7 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
   };
 
   const [primero, ...resto] = yo.proximos;
-  const [vista, setVista] = useState<"turnos" | "papeles">("turnos");
+  const [vista, setVista] = useState<"turnos" | "papeles" | "pagos">("turnos");
 
   return (
     <>
@@ -376,11 +378,12 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
       )}
       {error && <p role="alert" className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
-      <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-white/70 bg-white/80 p-1 shadow-sm" role="tablist">
+      <div className="mt-5 grid grid-cols-3 gap-1 rounded-full border border-white/70 bg-white/80 p-1 shadow-sm" role="tablist">
         {(
           [
-            ["turnos", "Mis turnos", CalendarCheck2],
-            ["papeles", "Mis papeles", FileText],
+            ["turnos", "Turnos", CalendarCheck2],
+            ["papeles", "Papeles", FileText],
+            ["pagos", "Pagos", Wallet],
           ] as const
         ).map(([k, l, I]) => (
           <button
@@ -389,7 +392,7 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
             role="tab"
             aria-selected={vista === k}
             onClick={() => setVista(k)}
-            className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition ${vista === k ? "bg-gradient-to-r from-[var(--marca)] to-fuchsia-500 text-white shadow-md" : "text-[#6b6385]"}`}
+            className={`inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition ${vista === k ? "bg-gradient-to-r from-[var(--marca)] to-fuchsia-500 text-white shadow-md" : "text-[#6b6385]"}`}
           >
             <I className="size-4" /> {l}
           </button>
@@ -398,6 +401,8 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
 
       {vista === "papeles" ? (
         <Papeles slug={slug} token={token} yo={yo} />
+      ) : vista === "pagos" ? (
+        <Pagos slug={slug} token={token} yo={yo} />
       ) : (
       <>
       <h2 className="mt-6 px-1 text-sm font-bold uppercase tracking-[0.14em] text-[#8a83a3]">{primero ? "Tu próximo turno" : "Tus turnos"}</h2>
@@ -798,6 +803,215 @@ function Papeles({ slug, token, yo }: { slug: string; token: string; yo: Yo }) {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+/* ───────────── Mis pagos: saldo, movimientos, comprobantes y cómo pagar ───────────── */
+
+type Cuenta = {
+  moneda: string;
+  saldo: number;
+  cargos: number;
+  pagado: number;
+  movimientos: { id: number; fecha: string; tipo: string; concepto: string; medio: string; monto: number }[];
+  informados: { id: string; fecha: string; monto: number; medio: string }[];
+  pagos: { titular: string; banco: string; cuenta: string; alias: string; link: string; instrucciones: string } | null;
+};
+
+function Pagos({ slug, token, yo }: { slug: string; token: string; yo: Yo }) {
+  const t = tx(yo.clinica.pais);
+  const [c, setC] = useState<Cuenta | null>(null);
+  const [error, setError] = useState("");
+  const [informar, setInformar] = useState(false);
+  const [monto, setMonto] = useState("");
+  const [medio, setMedio] = useState<"Transferencia" | "Link de pago" | "Otro">("Transferencia");
+  const [ref, setRef] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [aviso, setAviso] = useState("");
+  const cargar = () =>
+    pedir<Cuenta>(`/public/portal/${slug}/cuenta`, "GET", undefined, token)
+      .then((d) => {
+        setC(d);
+        setMonto(d.saldo > 0 ? String(Math.round(d.saldo)) : "");
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "No pudimos traer tu cuenta."));
+  useEffect(() => {
+    void cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, token]);
+  const plata = (n: number) => {
+    try {
+      return new Intl.NumberFormat(`es-${(yo.clinica.pais || "AR").toUpperCase()}`, { style: "currency", currency: c?.moneda || "USD", maximumFractionDigits: 0 }).format(n);
+    } catch {
+      return `$ ${Math.round(n).toLocaleString("es")}`;
+    }
+  };
+  const copiar = (v: string) => {
+    navigator.clipboard?.writeText(v).catch(() => {});
+    setAviso("Copiado");
+    window.setTimeout(() => setAviso(""), 1500);
+  };
+  const enviar = async () => {
+    const n = Number(monto.replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", "."));
+    if (!n || n <= 0) return setAviso("Escribí cuánto pagaste.");
+    setEnviando(true);
+    try {
+      await pedir(`/public/portal/${slug}/pagos`, "POST", { monto: n, medio, ...(ref.trim() ? { referencia: ref.trim() } : {}) }, token);
+      setInformar(false);
+      setRef("");
+      setAviso(t("¡Gracias! Le avisamos a la clínica: cuando confirme que llegó, se descuenta de tu saldo.", "¡Gracias! Le avisamos a la clínica: cuando confirme que llegó, se descuenta de tu saldo."));
+      await cargar();
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "No se pudo enviar. Probá de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (error) return <p role="alert" className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>;
+  if (!c)
+    return (
+      <div className="mt-5 flex items-center justify-center gap-2 py-10 text-sm text-[#8a83a3]">
+        <Loader2 className="size-4 animate-spin" /> Buscando tu cuenta…
+      </div>
+    );
+  const pendienteInformado = c.informados.reduce((a, x) => a + x.monto, 0);
+  const dp = c.pagos;
+  const hayDatos = !!dp && !!(dp.alias || dp.cuenta || dp.link);
+
+  return (
+    <>
+      {aviso && (
+        <p role="status" className="mt-4 rounded-2xl bg-[var(--marca)]/[0.07] px-4 py-3 text-sm">
+          {aviso}
+        </p>
+      )}
+      <div className={`mt-4 rounded-[28px] p-5 text-white shadow-lg ${c.saldo > 0 ? "bg-gradient-to-br from-[var(--marca)] via-violet-600 to-fuchsia-600" : "bg-gradient-to-br from-emerald-500 to-emerald-600"}`}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/80">Tu saldo</p>
+        <p className="mt-1 text-4xl font-bold tracking-tight">{c.saldo > 0 ? plata(c.saldo) : "Al día"}</p>
+        <p className="mt-1 text-sm text-white/85">{c.saldo > 0 ? "Es lo que te falta pagar a la clínica." : "No tenés deudas con la clínica."}</p>
+        {pendienteInformado > 0 && (
+          <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-xs">Avisaste un pago de {plata(pendienteInformado)}: la clínica lo está revisando.</p>
+        )}
+      </div>
+
+      {c.saldo > 0 && hayDatos && (
+        <Tarjeta className="mt-4">
+          <p className="font-semibold">Cómo pagar</p>
+          {dp!.link && (
+            <a href={dp!.link} target="_blank" rel="noreferrer" className={`${BOTON} mt-3`}>
+              <Wallet className="size-4" /> Pagar online
+            </a>
+          )}
+          {(dp!.alias || dp!.cuenta) && (
+            <div className="mt-3 space-y-2 rounded-2xl bg-[#f7f5ff] p-3 text-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a83a3]">Transferencia</p>
+              {[
+                ["Alias", dp!.alias],
+                ["Cuenta", dp!.cuenta],
+                ["Titular", dp!.titular],
+                ["Banco", dp!.banco],
+              ]
+                .filter(([, v]) => v)
+                .map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block text-[11px] text-[#8a83a3]">{k}</span>
+                      <span className="block break-all font-semibold">{v}</span>
+                    </span>
+                    {(k === "Alias" || k === "Cuenta") && (
+                      <button type="button" onClick={() => copiar(v!)} aria-label={`Copiar ${k}`} className="grid size-9 shrink-0 place-items-center rounded-full border border-[#e6e1f5] bg-white text-[var(--marca)]">
+                        <Copy className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+          {dp!.instrucciones && <p className="mt-3 text-sm text-[#6b6385]">{dp!.instrucciones}</p>}
+          {informar ? (
+            <div className="mt-4 space-y-2 rounded-2xl bg-[#f7f5ff] p-3">
+              <p className="text-sm font-semibold">¿Cuánto pagaste?</p>
+              <input value={monto} onChange={(e) => setMonto(e.target.value)} inputMode="decimal" className={INPUT} />
+              <div className="flex flex-wrap gap-1.5">
+                {(["Transferencia", "Link de pago", "Otro"] as const).map((m) => (
+                  <button key={m} type="button" aria-pressed={medio === m} onClick={() => setMedio(m)} className={`h-9 rounded-full border px-3 text-xs font-semibold ${medio === m ? "border-[var(--marca)] bg-[var(--marca)] text-white" : "border-[#e6e1f5] bg-white"}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <input value={ref} onChange={(e) => setRef(e.target.value)} maxLength={120} placeholder="Número de operación (opcional)" className={INPUT} />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setInformar(false)} className="h-11 flex-1 rounded-full border border-[#e6e1f5] bg-white text-sm font-semibold">Volver</button>
+                <button type="button" disabled={enviando} onClick={() => void enviar()} className="h-11 flex-1 rounded-full bg-emerald-500 text-sm font-semibold text-white">
+                  {enviando ? "Enviando…" : "Avisar a la clínica"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setInformar(true)} className="mt-4 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-emerald-300 bg-white text-sm font-semibold text-emerald-700">
+              <Check className="size-4" /> Ya pagué
+            </button>
+          )}
+        </Tarjeta>
+      )}
+      {c.saldo > 0 && !hayDatos && (
+        <p className="mt-4 rounded-2xl bg-white/80 px-4 py-3 text-sm text-[#6b6385]">{t("Para pagar, consultá a la clínica cómo hacerlo.", "Para pagar, consulta a la clínica cómo hacerlo.")}</p>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-3xl border border-white/70 bg-white/85 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a83a3]">Prestaciones</p>
+          <p className="mt-1 text-lg font-bold">{plata(c.cargos)}</p>
+        </div>
+        <div className="rounded-3xl border border-white/70 bg-white/85 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a83a3]">Pagado</p>
+          <p className="mt-1 text-lg font-bold text-emerald-600">{plata(c.pagado)}</p>
+        </div>
+      </div>
+
+      {c.movimientos.length > 0 && (
+        <>
+          <h2 className="mt-6 px-1 text-sm font-bold uppercase tracking-[0.14em] text-[#8a83a3]">Movimientos</h2>
+          <div className="mt-3 divide-y divide-[#ece8f7] overflow-hidden rounded-3xl border border-white/70 bg-white/85">
+            {c.movimientos.map((m) => {
+              const esCargo = m.tipo === "Cargo";
+              return (
+                <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${esCargo ? "bg-[var(--marca)]/10 text-[var(--marca)]" : "bg-emerald-100 text-emerald-600"}`}>
+                    {esCargo ? <FileText className="size-4" /> : <Check className="size-4" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{m.concepto}</span>
+                    <span className="block truncate text-xs text-[#8a83a3]">
+                      {fechaCorta(m.fecha)} · {esCargo ? "Prestación" : `${m.tipo}${m.medio ? ` · ${m.medio}` : ""}`}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={`text-sm font-bold ${esCargo ? "" : "text-emerald-600"}`}>{esCargo ? "" : "− "}{plata(m.monto)}</span>
+                    {!esCargo && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          abrirPapel(
+                            "Comprobante de pago",
+                            `<p class="meta">${fechaCorta(m.fecha)}</p><table><tr><th>Concepto</th><th>Medio</th><th class="n">Importe</th></tr><tr><td>${esc(m.concepto)}</td><td>${esc(m.medio || "—")}</td><td class="n">${esc(plata(m.monto))}</td></tr></table>`,
+                            yo,
+                          ) || setAviso(t("Tu navegador bloqueó la ventana. Permití las ventanas emergentes.", "Tu navegador bloqueó la ventana. Permite las ventanas emergentes."))
+                        }
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--marca)]"
+                      >
+                        <Download className="size-3" /> Comprobante
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </>
   );
 }

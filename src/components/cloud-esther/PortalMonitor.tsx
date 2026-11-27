@@ -40,10 +40,13 @@ import {
   setPortal,
   storePortal,
   type ConfigPortal,
+  type DatosPagoClinica,
   type EstadoAcceso,
   type TipoEventoPortal,
 } from "@/lib/cloud-esther/portal-store";
 import { normalizarBusqueda } from "@/lib/utils";
+import { useRegistrosPacientes } from "@/components/cloud-esther/PacienteSecciones";
+import { usePaisClinica } from "@/lib/cloud-esther/coberturas";
 import { useTablasApilables } from "@/lib/tablas-movil";
 import { Seleccion } from "@/components/ui/seleccion";
 
@@ -398,6 +401,7 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
 
   return (
     <div className="space-y-3">
+      <PagosParaConfirmar onToast={onToast} />
       <div className="card-grad flex flex-wrap items-center gap-2 p-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">Link del portal para tus pacientes</p>
@@ -908,6 +912,7 @@ function ConfiguracionPortal({ onToast }: { onToast: (m: string) => void }) {
         onToast={onToast}
       />
       <ConfiguracionBasicaPortal onToast={onToast} />
+      <DatosDePago onToast={onToast} />
     </div>
   );
 }
@@ -931,7 +936,7 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
     {
       k: "pagosOnline",
       l: "Pagos online",
-      d: "Puede pagar su saldo con tarjeta o transferencia.",
+      d: "Ve su saldo y te paga por transferencia o con tu link de pago. Vos confirmás que llegó.",
       icon: CreditCard,
     },
     {
@@ -1080,10 +1085,121 @@ function ConfiguracionBasicaPortal({ onToast }: { onToast: (m: string) => void }
           />
         </label>
         <p className="rounded-xl bg-primary/[0.05] px-3 py-2 text-xs text-muted-foreground">
-          Los pacientes entran en <b className="text-foreground">/portal</b> con su DNI o correo y
-          el código que les llega al invitarlos.
+          Los pacientes entran desde el celular con su DNI, correo o teléfono y un código (sin contraseña). El link
+          está en <b className="text-foreground">Accesos</b>, con el botón para mandárselo por WhatsApp.
         </p>
       </div>
+    </div>
+  );
+}
+
+/* ───────────── Pagos que informaron los pacientes ───────────── */
+
+function usePlata() {
+  const pais = usePaisClinica();
+  return (n: number) => {
+    try {
+      return new Intl.NumberFormat(`es-${pais}`, { style: "currency", currency: MONEDA_PAIS[pais] ?? "USD", maximumFractionDigits: 0 }).format(n);
+    } catch {
+      return `$ ${Math.round(n).toLocaleString("es")}`;
+    }
+  };
+}
+const MONEDA_PAIS: Record<string, string> = { AR: "ARS", UY: "UYU", CL: "CLP", CO: "COP", PE: "PEN", EC: "USD", VE: "VES", MX: "MXN", ES: "EUR", BO: "BOB", PY: "PYG", US: "USD" };
+
+/** «Ya pagué» de los pacientes: la clínica revisa que haya llegado y lo confirma (va a su cuenta). */
+function PagosParaConfirmar({ onToast }: { onToast: (m: string) => void }) {
+  const { pagosInformados = [] } = storePortal.usar();
+  const { cambiar } = useRegistrosPacientes();
+  const plata = usePlata();
+  const pendientes = pagosInformados.filter((p) => p.estado === "Pendiente");
+  if (pendientes.length === 0) return null;
+  const resolver = (id: string, estado: "Confirmado" | "Rechazado") => {
+    const p = pagosInformados.find((x) => x.id === id);
+    if (!p) return;
+    if (estado === "Confirmado")
+      cambiar(p.pacienteId, "cuenta", (prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          fecha: new Date().toISOString().slice(0, 10),
+          tipo: "Pago",
+          concepto: "Pago informado desde el portal",
+          medio: p.medio,
+          monto: p.monto,
+          notas: p.referencia ? `Ref. ${p.referencia}` : "",
+        },
+      ]);
+    setPortal("pagosInformados", (prev = []) => prev.map((x) => (x.id === id ? { ...x, estado } : x)));
+    onToast(estado === "Confirmado" ? `Pago de ${p.paciente} confirmado: ya figura en su cuenta` : "Pago marcado como no recibido");
+  };
+  return (
+    <div className="card-grad border-amber-200 p-4 ring-1 ring-amber-200">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <CreditCard className="size-4 text-amber-600" /> Pagos para confirmar ({pendientes.length})
+      </p>
+      <p className="text-[11px] text-muted-foreground">Los pacientes avisaron que pagaron. Revisá que haya llegado y confirmalo: recién ahí se descuenta de su saldo.</p>
+      <ul className="mt-3 space-y-2">
+        {pendientes.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white/90 p-3 ring-1 ring-primary/10">
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">{p.paciente} · {plata(p.monto)}</span>
+              <span className="block text-[11px] text-muted-foreground">
+                {p.medio}{p.referencia ? ` · ref. ${p.referencia}` : ""} · {new Date(p.fecha).toLocaleDateString("es")}
+              </span>
+            </span>
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => resolver(p.id, "Rechazado")}>
+              No llegó
+            </button>
+            <button type="button" className={BTN_PRIMARIO} onClick={() => resolver(p.id, "Confirmado")}>
+              <Check className="size-3.5" /> Confirmar
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Cómo le pagan los pacientes a la clínica: sus datos de transferencia o su propio link de pago. */
+function DatosDePago({ onToast }: { onToast: (m: string) => void }) {
+  const { config } = storePortal.usar();
+  const d: DatosPagoClinica = { titular: "", banco: "", cuenta: "", alias: "", link: "", instrucciones: "", ...(config.datosPago ?? {}) };
+  const set = (c: Partial<DatosPagoClinica>) => setPortal("config", (prev) => ({ ...prev, datosPago: { ...d, ...c } }));
+  const campo = (k: keyof DatosPagoClinica, l: string, ph: string) => (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{l}</span>
+      <input
+        value={d[k]}
+        onChange={(e) => set({ [k]: e.target.value })}
+        placeholder={ph}
+        maxLength={k === "instrucciones" ? 500 : 160}
+        className="h-9 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none focus:border-primary/45"
+      />
+    </label>
+  );
+  if (!config.pagosOnline) return null;
+  const linkMal = !!d.link && !/^https:\/\//.test(d.link.trim());
+  return (
+    <div className="card-grad space-y-3 p-4">
+      <div>
+        <p className="text-sm font-semibold">Cómo te pagan tus pacientes</p>
+        <p className="text-[11px] text-muted-foreground">
+          Lo ven en su portal junto con su saldo. La plata va directo a tu cuenta: Cloud Esther no cobra por vos. Cuando un paciente avisa que pagó, te llega un aviso para confirmarlo.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {campo("titular", "Titular", "Nombre o razón social")}
+        {campo("banco", "Banco o billetera", "Ej. Banco Nación, Mercado Pago")}
+        {campo("cuenta", "Número de cuenta", "CBU, CVU, IBAN, CLABE…")}
+        {campo("alias", "Alias", "Ej. clinica.sonrisa")}
+      </div>
+      {campo("link", "Tu link de pago (opcional)", "https://… (Mercado Pago, Stripe u otro)")}
+      {linkMal && <p className="text-[11px] text-rose-600">El link tiene que empezar con https://</p>}
+      {campo("instrucciones", "Indicaciones (opcional)", "Ej. Mandanos el comprobante por WhatsApp")}
+      <button type="button" className={BTN_SECUNDARIO} onClick={() => onToast("Datos de pago guardados")}>
+        <Check className="size-3.5" /> Listo
+      </button>
     </div>
   );
 }

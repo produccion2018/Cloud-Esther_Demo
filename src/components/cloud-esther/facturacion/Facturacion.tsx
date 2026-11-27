@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   BadgeCheck,
+  Banknote,
   Ban,
   BarChart3,
   Building2,
@@ -71,7 +72,7 @@ import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
-import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
+import { SUCURSALES, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
@@ -112,6 +113,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
 }
 
 type Seccion =
+  | "hoy"
   | "resumen"
   | "comprobantes"
   | "facturar"
@@ -316,7 +318,7 @@ export function Facturacion() {
   const est = storeFacturacion.usar();
   const registros = useTodosLosRegistros();
   const [montado, setMontado] = useState(false);
-  const [seccion, setSeccion] = useState<Seccion>("resumen");
+  const [seccion, setSeccion] = useState<Seccion>("hoy");
   const [abierto, setAbierto] = useState<string | null>(null);
   const [nuevo, setNuevo] = useState<BaseComprobante | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -359,6 +361,7 @@ export function Facturacion() {
     badge?: number;
     min?: number;
   }[] = [
+    { id: "hoy", label: "Cobrar hoy", icon: Banknote },
     { id: "resumen", label: "Resumen", icon: BarChart3 },
     { id: "comprobantes", label: "Comprobantes", icon: FileText },
     { id: "facturar", label: "Por facturar", icon: Receipt, badge: pendientes.length },
@@ -536,6 +539,8 @@ export function Facturacion() {
         <div className="mt-5">
           {!montado ? (
             <div className="card-grad h-[480px] animate-pulse" />
+          ) : seccion === "hoy" ? (
+            <CobroDelDia ctx={ctx} />
           ) : seccion === "resumen" ? (
             <Resumen ctx={ctx} />
           ) : seccion === "comprobantes" ? (
@@ -3051,6 +3056,230 @@ function DatosFiscales({ ctx }: { ctx: Ctx }) {
         <Copy className="size-3.5" /> La autorización es simulada para practicar. TODO backend:
         integración con el web service de cada ente fiscal.
       </p>
+    </div>
+  );
+}
+
+/* ───────────── Cobrar hoy (cobro rápido desde el celular) ───────────── */
+
+type MovCuenta = { tipo: string; monto: number; fecha: string; turnoId?: number };
+/** Lo que debe el paciente en su cuenta corriente (cargos − pagos − notas de crédito) */
+const saldoCuenta = (cuenta: MovCuenta[] | undefined) =>
+  (cuenta ?? []).reduce((a, m) => a + (m.tipo === "Cargo" ? m.monto : -m.monto), 0);
+
+/** Pacientes con turno hoy: lo que deben, lo que se les hizo y un cobro en 2 toques. */
+function CobroDelDia({ ctx }: { ctx: Ctx }) {
+  const { turnos } = storeAgenda.usar();
+  const registros = useTodosLosRegistros();
+  const { cambiar } = useRegistrosPacientes();
+  const { pacientes } = usePacientes();
+  const { aranceles } = storePresupuestos.usar();
+  const { sesiones } = storeFacturacion.usar();
+  const hoy = diaISO();
+  const [abierto, setAbierto] = useState<number | null>(null);
+  const porNombre = new Map(pacientes.map((p) => [normalizarBusqueda(`${p.nombre} ${p.apellido}`), p]));
+  const precioDe = (tratamiento: string) => {
+    const t = normalizarBusqueda(tratamiento.replace(/\s*\(sesión.*\)$/i, ""));
+    const a = aranceles.filter((x) => x.activo && x.precio > 0);
+    return (a.find((x) => normalizarBusqueda(x.nombre) === t) ?? a.find((x) => t.length >= 4 && normalizarBusqueda(x.nombre).includes(t)))?.precio ?? 0;
+  };
+  const filas = turnos
+    .filter((t) => t.fecha === hoy && t.estado !== "Cancelada" && t.estado !== "Ausente")
+    .sort((a, b) => a.hora.localeCompare(b.hora))
+    .map((t) => {
+      const pac = porNombre.get(normalizarBusqueda(t.paciente));
+      const cuenta = pac ? (registros[pac.id]?.cuenta ?? []) : [];
+      const delTurno = cuenta.filter((m) => m.turnoId === t.id);
+      const cargado = delTurno.some((m) => m.tipo === "Cargo");
+      const cobradoHoy = delTurno.filter((m) => m.tipo === "Pago").reduce((a, m) => a + m.monto, 0);
+      return { t, pac, debe: Math.max(0, saldoCuenta(cuenta)), cargado, cobradoHoy, precio: precioDe(t.tratamiento) };
+    });
+  // Si un paciente tiene 2 turnos hoy, la deuda se muestra una sola vez
+  const vistos = new Set<number>();
+  for (const f of filas) {
+    if (!f.pac) continue;
+    if (vistos.has(f.pac.id)) f.debe = 0;
+    vistos.add(f.pac.id);
+  }
+  const cobrado = Object.values(registros)
+    .flatMap((r) => r.cuenta)
+    .filter((m) => m.tipo === "Pago" && m.fecha === hoy)
+    .reduce((a, m) => a + m.monto, 0);
+  const falta = filas.reduce((a, f) => a + f.debe + (!f.cargado && f.t.estado === "Atendida" ? f.precio : 0), 0);
+  const cajaAbierta = sesiones.some((s) => !s.cerrada);
+
+  return (
+    <div className="space-y-3">
+      <Encabezado
+        icon={Banknote}
+        titulo="Cobrar hoy"
+        descripcion="Los pacientes con turno hoy: lo que deben y lo que se les hizo. Cobrás en dos toques y queda en su cuenta y en la caja."
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <Mini label="Cobrado hoy" valor={ctx.$(cobrado)} icon={CheckCircle2} tono="text-emerald-600" />
+        <Mini label="Falta cobrar" valor={ctx.$(falta)} icon={AlarmClock} tono={falta ? "text-rose-600" : "text-foreground"} />
+      </div>
+      {ctx.nivel >= 2 && !cajaAbierta && (
+        <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 ring-1 ring-amber-200">
+          <span>La caja de hoy está cerrada: los cobros quedan en la cuenta del paciente, pero no en la caja.</span>
+          <button type="button" className="font-semibold underline-offset-2 hover:underline" onClick={() => ctx.ir("caja")}>
+            Abrir caja
+          </button>
+        </p>
+      )}
+      {filas.length === 0 ? (
+        <Vacio icon={Banknote} texto="Hoy no hay turnos en la agenda." />
+      ) : (
+        <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+          {filas.map((f) => {
+            const sugerido = f.debe + (!f.cargado ? f.precio : 0);
+            const listo = f.cargado && f.debe === 0;
+            return (
+              <li key={f.t.id} className={`card-grad p-3 ${listo ? "opacity-80" : ""}`}>
+                <div className="flex items-center gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-sm font-bold text-primary">{f.t.hora}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{f.t.paciente}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {f.t.tratamiento}
+                      {f.t.odontologo ? ` · ${f.t.odontologo}` : ""}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <Pill clase={f.t.estado === "Atendida" ? "bg-emerald-100 text-emerald-700" : f.t.estado === "Confirmada" ? "bg-sky-100 text-sky-700" : "bg-muted text-muted-foreground"}>
+                        {f.t.estado === "Atendida" ? "Atendido" : f.t.llegada ? "En sala" : f.t.estado}
+                      </Pill>
+                      {f.debe > 0 && <Pill clase="bg-rose-50 text-rose-700">Debe {ctx.$(f.debe)}</Pill>}
+                      {f.cobradoHoy > 0 && <Pill clase="bg-emerald-50 text-emerald-700">Cobrado {ctx.$(f.cobradoHoy)}</Pill>}
+                    </div>
+                  </div>
+                  {listo ? (
+                    <CheckCircle2 className="size-6 shrink-0 text-emerald-500" />
+                  ) : f.pac ? (
+                    <button type="button" className={BTN_PRIMARIO} onClick={() => setAbierto(abierto === f.t.id ? null : f.t.id)}>
+                      <Banknote className="size-4" />
+                      {sugerido > 0 ? ctx.$(sugerido) : "Cobrar"}
+                    </button>
+                  ) : (
+                    <span className="max-w-24 shrink-0 text-right text-[10px] text-muted-foreground">Sin ficha de paciente</span>
+                  )}
+                </div>
+                {abierto === f.t.id && f.pac && (
+                  <CobroRapido
+                    ctx={ctx}
+                    turno={f.t}
+                    pac={f.pac}
+                    debe={f.debe}
+                    cargar={f.cargado ? 0 : f.precio}
+                    yaCargado={f.cargado}
+                    onListo={(m) => {
+                      setAbierto(null);
+                      ctx.onToast(m);
+                    }}
+                    cambiar={cambiar}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function CobroRapido({
+  ctx,
+  turno,
+  pac,
+  debe,
+  cargar,
+  yaCargado,
+  onListo,
+  cambiar,
+}: {
+  ctx: Ctx;
+  turno: Turno;
+  pac: Paciente;
+  debe: number;
+  cargar: number;
+  yaCargado: boolean;
+  onListo: (m: string) => void;
+  cambiar: ReturnType<typeof useRegistrosPacientes>["cambiar"];
+}) {
+  // Lo que se hizo hoy (si todavía no está cargado) + lo que ya debía
+  const [concepto, setConcepto] = useState(turno.tratamiento);
+  const [precio, setPrecio] = useState(cargar ? String(cargar) : "");
+  const [incluir, setIncluir] = useState(true);
+  const [medio, setMedio] = useState<MedioPago>("Efectivo");
+  const cargo = incluir && !yaCargado ? Math.max(0, Number(precio.replace(",", ".")) || 0) : 0;
+  const total = debe + cargo;
+  const [monto, setMonto] = useState<string | null>(null);
+  const aCobrar = monto === null ? total : Math.max(0, Number(monto.replace(",", ".")) || 0);
+  const cobrar = () => {
+    if (aCobrar <= 0 && cargo <= 0) return;
+    const ahora = Date.now();
+    const hoy = diaISO();
+    cambiar(pac.id, "cuenta", (prev) => [
+      ...prev,
+      ...(cargo > 0 ? [{ id: ahora, fecha: hoy, tipo: "Cargo" as const, concepto: concepto.trim() || turno.tratamiento, medio: "", monto: cargo, notas: `Turno ${turno.hora}${turno.odontologo ? ` · ${turno.odontologo}` : ""}`, turnoId: turno.id }] : []),
+      ...(aCobrar > 0 ? [{ id: ahora + 1, fecha: hoy, tipo: "Pago" as const, concepto: `Cobro del ${fecha(hoy)}`, medio, monto: aCobrar, notas: "", turnoId: turno.id }] : []),
+    ]);
+    const abiertas = storeFacturacion.leer().sesiones.filter((s) => !s.cerrada);
+    const caja = abiertas.find((s) => s.sucursal === turno.sucursal) ?? (abiertas.length === 1 ? abiertas[0] : undefined);
+    if (caja && aCobrar > 0 && medio !== "Obra social")
+      setFacturacion("movimientos", (prev) => [
+        ...prev,
+        { id: `m-${ahora}`, sesionId: caja.id, fecha: new Date().toISOString(), tipo: "Ingreso", concepto: `${concepto.trim() || turno.tratamiento} · ${pac.nombre} ${pac.apellido}`, medio, monto: aCobrar, comprobanteId: "" },
+      ]);
+    onListo(
+      aCobrar > 0
+        ? `Cobrado ${ctx.$(aCobrar)} a ${pac.nombre}${caja ? " · sumado a la caja" : ""}`
+        : `Cargado ${ctx.$(cargo)} en la cuenta de ${pac.nombre}`,
+    );
+  };
+  return (
+    <div className="mt-3 space-y-2.5 rounded-2xl bg-white/90 p-3 ring-1 ring-primary/15">
+      {!yaCargado && (
+        <label className="flex items-start gap-2.5">
+          <input type="checkbox" checked={incluir} onChange={(e) => setIncluir(e.target.checked)} className="mt-2.5 size-4 shrink-0 accent-[var(--color-primary)]" />
+          <span className="grid flex-1 grid-cols-[1fr_7rem] gap-1.5">
+            <input value={concepto} onChange={(e) => setConcepto(e.target.value)} aria-label="Qué se hizo" className={INPUT} />
+            <input inputMode="decimal" value={precio} onChange={(e) => { setPrecio(e.target.value); setMonto(null); }} placeholder="Precio" aria-label="Precio" className={INPUT} />
+            {!cargar && <span className="col-span-2 text-[10px] text-muted-foreground">Sin precio cargado: escribilo acá, o cargalo en Presupuestos → Aranceles para que salga solo.</span>}
+          </span>
+        </label>
+      )}
+      {debe > 0 && (
+        <p className="flex justify-between rounded-xl bg-rose-50 px-3 py-1.5 text-xs text-rose-800">
+          <span>Ya debía</span>
+          <b>{ctx.$(debe)}</b>
+        </p>
+      )}
+      <div className="flex items-end gap-2">
+        <label className="block flex-1">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Cobra ahora</span>
+          <input inputMode="decimal" value={monto ?? String(total)} onChange={(e) => setMonto(e.target.value)} className={`${INPUT} text-lg font-bold`} />
+        </label>
+        {monto !== null && Number(monto) !== total && total > 0 && (
+          <button type="button" className={CHIP(false)} onClick={() => setMonto(null)}>
+            Todo {ctx.$(total)}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {MEDIOS_PAGO.filter((m) => m !== "Obra social").map((m) => (
+          <button key={m} type="button" className={CHIP(medio === m)} onClick={() => setMedio(m)}>
+            {m}
+          </button>
+        ))}
+      </div>
+      {aCobrar < total && aCobrar >= 0 && cargo > 0 && (
+        <p className="text-[11px] text-muted-foreground">Queda debiendo {ctx.$(total - aCobrar)} en su cuenta.</p>
+      )}
+      <button type="button" className={`${BTN_PRIMARIO} w-full justify-center`} disabled={aCobrar <= 0 && cargo <= 0} onClick={cobrar}>
+        <CheckCircle2 className="size-4" />
+        {aCobrar > 0 ? `Cobrar ${ctx.$(aCobrar)} · ${medio}` : "Solo cargar en la cuenta"}
+      </button>
     </div>
   );
 }

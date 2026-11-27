@@ -609,6 +609,8 @@ export type Movimiento = {
   notas: string;
   /** Pago o cargo de un presupuesto (para ver cuánto falta cobrar de cada uno) */
   presupuestoId?: number;
+  /** Cargo o cobro de un turno de la agenda (cobro rápido del día) */
+  turnoId?: number;
 };
 
 type ProfesionalPaciente = {

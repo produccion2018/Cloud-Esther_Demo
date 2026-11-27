@@ -38,6 +38,7 @@ import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { deudaDe, paisFiscal, storeFacturacion } from "@/lib/cloud-esther/facturacion-store";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { generarGastosFijosDelMes, storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
+import { cargarComprasComoDeuda, sugerenciasDeCompras } from "@/components/cloud-esther/finanzas/libro";
 
 /** Turnos atendidos (últimos `dias` días) que todavía no tienen evolución ni nota clínica ese día */
 export function turnosSinEvolucion(
@@ -724,4 +725,24 @@ export function useRespuestasPresupuestos() {
         prev.map((x) => (x.id === p.id && x.respuestaPaciente ? { ...x, respuestaPaciente: { ...x.respuestaPaciente, avisada: true } } : x)),
       );
   }, [regs, puede, notifs, real]);
+}
+
+/* Lo que llega de Inventario (lo recibido de cada orden) y los trabajos de laboratorio entregados
+   con costo se cargan SOLOS como deuda en Finanzas → Cuentas a pagar (Pro o más), sin cargarlos
+   dos veces. La clínica lo puede apagar en Cuentas a pagar. */
+export function useComprasAFinanzas() {
+  const real = useClinicaReal();
+  const { plan } = useCloudEsther();
+  const puede = !real || ["admin", "secretaria"].includes(real.rol);
+  const inv = storeInventario.usar();
+  const fin = storeFinanzas.usar();
+  const regs = useTodosLosRegistros();
+  useEffect(() => {
+    const modFin = MODULES.find((m) => m.id === "finanzas");
+    if (!puede || !modFin || !availableIn(modFin, plan) || planLevel(plan) < 2) return;
+    if (fin.comprasAuto === false) return;
+    if (!cargados(!!real, ["finanzas", "inventario", "registros"])) return;
+    const sugs = sugerenciasDeCompras(storeFinanzas.leer(), storeInventario.leer(), leerRegistros());
+    if (sugs.length) cargarComprasComoDeuda(sugs);
+  }, [inv, fin, regs, plan, puede, real]);
 }

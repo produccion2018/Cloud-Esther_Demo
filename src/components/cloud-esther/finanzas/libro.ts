@@ -226,39 +226,7 @@ export function useLibro() {
   ];
 
   // Compras de Inventario recibidas y trabajos de laboratorio entregados sin cargar como deuda.
-  const sugerencias: Sugerencia[] = [
-    ...inv.ordenes
-      .filter((o) => o.estado === "Recibida" && !fin.ordenesRegistradas.includes(o.id))
-      .map((o) => ({
-        ref: `oc:${o.id}`,
-        proveedor: inv.proveedores.find((p) => p.id === o.proveedorId)?.nombre ?? "Proveedor",
-        concepto: `Orden de compra ${o.id}${o.nota ? ` · ${o.nota}` : ""}`,
-        categoria: "Insumos" as const,
-        sucursal: o.sucursal,
-        fecha: o.fecha,
-        monto: totalOrden(o),
-        origen: "Orden de compra" as const,
-      })),
-    ...Object.entries(registros).flatMap(([pid, r]) =>
-      r.laboratorio
-        .filter(
-          (t) =>
-            t.costo > 0 &&
-            (t.estado === "Entregado" || t.estado === "Listo para retirar") &&
-            !fin.laboratorioRegistrado.includes(`${pid}:${t.id}`),
-        )
-        .map((t) => ({
-          ref: `lab:${pid}:${t.id}`,
-          proveedor: t.proveedor || "Laboratorio",
-          concepto: `${t.tipo}${t.pieza ? ` pieza ${t.pieza}` : ""}`,
-          categoria: "Laboratorio" as const,
-          sucursal: SUCURSAL_GENERAL,
-          fecha: t.fechaEntregaEstimada || t.fechaEnvio,
-          monto: t.costo,
-          origen: "Laboratorio" as const,
-        })),
-    ),
-  ];
+  const sugerencias = sugerenciasDeCompras(fin, inv, registros);
 
   const saldoCuenta = (id: string) => {
     const c = fin.cuentas.find((x) => x.id === id);
@@ -300,3 +268,102 @@ export function porCategoria(asientos: Asiento[], tipo: TipoMov) {
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 export type { EstadoFinanzas };
+
+/** Lo que se compró (lo recibido de cada orden de Inventario y los trabajos de laboratorio
+    entregados con costo) y todavía no está cargado como deuda en Cuentas a pagar. */
+export function sugerenciasDeCompras(
+  fin: EstadoFinanzas,
+  inv: ReturnType<typeof storeInventario.leer>,
+  registros: Record<number, { laboratorio: { id: number; costo: number; estado: string; proveedor: string; tipo: string; pieza: string; fechaEntregaEstimada: string; fechaEnvio: string }[] }>,
+): Sugerencia[] {
+  const prov = (id: string) => inv.proveedores.find((p) => p.id === id)?.nombre ?? "Proveedor";
+  const dm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+  return [
+    ...inv.ordenes.flatMap((o) =>
+      o.recepciones?.length
+        ? o.recepciones
+            .filter((r) => r.monto > 0 && !fin.ordenesRegistradas.includes(`${o.id}:${r.id}`))
+            .map((r) => ({
+              ref: `oc:${o.id}:${r.id}`,
+              proveedor: prov(o.proveedorId),
+              concepto: `Orden de compra ${o.id} · lo recibido el ${dm(r.fecha)}`,
+              categoria: "Insumos" as const,
+              sucursal: o.sucursal,
+              fecha: r.fecha,
+              monto: r.monto,
+              origen: "Orden de compra" as const,
+            }))
+        : o.estado === "Recibida" && !fin.ordenesRegistradas.includes(o.id)
+          ? [
+              {
+                ref: `oc:${o.id}`,
+                proveedor: prov(o.proveedorId),
+                concepto: `Orden de compra ${o.id}${o.nota ? ` · ${o.nota}` : ""}`,
+                categoria: "Insumos" as const,
+                sucursal: o.sucursal,
+                fecha: o.fecha,
+                monto: totalOrden(o),
+                origen: "Orden de compra" as const,
+              },
+            ]
+          : [],
+    ),
+    ...Object.entries(registros).flatMap(([pid, r]) =>
+      (r?.laboratorio ?? [])
+        .filter(
+          (t) =>
+            t.costo > 0 &&
+            (t.estado === "Entregado" || t.estado === "Listo para retirar") &&
+            !fin.laboratorioRegistrado.includes(`${pid}:${t.id}`),
+        )
+        .map((t) => ({
+          ref: `lab:${pid}:${t.id}`,
+          proveedor: t.proveedor || "Laboratorio",
+          concepto: `${t.tipo}${t.pieza ? ` pieza ${t.pieza}` : ""}`,
+          categoria: "Laboratorio" as const,
+          sucursal: SUCURSAL_GENERAL,
+          fecha: t.fechaEntregaEstimada || t.fechaEnvio,
+          monto: t.costo,
+          origen: "Laboratorio" as const,
+        })),
+    ),
+  ];
+}
+
+/** Carga como deuda (Cuentas a pagar) las compras que llegaron, a pagar a los días que eligió
+    la clínica. Devuelve cuántas cargó. */
+export function cargarComprasComoDeuda(sugs: Sugerencia[]): number {
+  if (!sugs.length) return 0;
+  const fin = storeFinanzas.leer();
+  const plazo = Math.max(0, Math.round(fin.plazoCompras ?? 30));
+  const hoy = diaISO();
+  const ahora = Date.now();
+  const nuevas = sugs.map((s, i) => {
+    const d = new Date(`${s.fecha || hoy}T12:00:00`);
+    d.setDate(d.getDate() + plazo);
+    const vence = d.toISOString().slice(0, 10);
+    return {
+      id: `cp-${ahora}-${i}`,
+      proveedor: s.proveedor,
+      numero: "",
+      concepto: s.concepto,
+      categoria: s.categoria,
+      sucursal: s.sucursal,
+      emision: s.fecha || hoy,
+      vence: vence < hoy ? hoy : vence,
+      monto: s.monto,
+      estado: "Pendiente" as const,
+      pagada: "",
+      movId: "",
+      origen: s.origen,
+      ref: s.ref,
+    };
+  });
+  storeFinanzas.poner({
+    ...fin,
+    cuentasPagar: [...fin.cuentasPagar, ...nuevas],
+    ordenesRegistradas: [...fin.ordenesRegistradas, ...sugs.filter((s) => s.origen === "Orden de compra").map((s) => s.ref.replace("oc:", ""))],
+    laboratorioRegistrado: [...fin.laboratorioRegistrado, ...sugs.filter((s) => s.origen === "Laboratorio").map((s) => s.ref.replace("lab:", ""))],
+  });
+  return nuevas.length;
+}

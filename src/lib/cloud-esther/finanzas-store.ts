@@ -139,6 +139,10 @@ export type EstadoFinanzas = {
   avisoPagosDias?: number;
   /** Los gastos fijos del mes (alquiler, servicios…) se cargan solos el día 1 (por defecto, sí) */
   fijosAuto?: boolean;
+  /** Lo que llega de Inventario y del laboratorio se carga solo como deuda (por defecto, sí) */
+  comprasAuto?: boolean;
+  /** A cuántos días se pagan las compras (por defecto 30) */
+  plazoCompras?: number;
 };
 
 /* ───────────── Fechas ───────────── */

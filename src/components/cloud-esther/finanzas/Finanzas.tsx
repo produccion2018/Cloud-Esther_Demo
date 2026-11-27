@@ -63,6 +63,7 @@ import {
   delMes,
   porCategoria,
   sumar,
+  cargarComprasComoDeuda,
   useLibro,
   type Asiento,
   type Libro,
@@ -1066,30 +1067,7 @@ function CuentasPagar({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
   );
 
   const cargarSugerencia = (s: Sugerencia) => {
-    const d = new Date(s.fecha || hoy);
-    d.setDate(d.getDate() + 30);
-    setFinanzas("cuentasPagar", (p) => [
-      ...p,
-      {
-        id: `cp-${Date.now()}`,
-        proveedor: s.proveedor,
-        numero: "",
-        concepto: s.concepto,
-        categoria: s.categoria,
-        sucursal: s.sucursal,
-        emision: s.fecha || hoy,
-        vence: d.toISOString().slice(0, 10),
-        monto: s.monto,
-        estado: "Pendiente",
-        pagada: "",
-        movId: "",
-        origen: s.origen,
-        ref: s.ref,
-      },
-    ]);
-    if (s.origen === "Orden de compra")
-      setFinanzas("ordenesRegistradas", (p) => [...p, s.ref.replace("oc:", "")]);
-    else setFinanzas("laboratorioRegistrado", (p) => [...p, s.ref.replace("lab:", "")]);
+    cargarComprasComoDeuda([s]);
     ctx.onToast(`Deuda con ${s.proveedor} cargada`);
   };
 
@@ -2475,7 +2453,7 @@ function GastoRapido({
 
 /** Cuándo avisar de cada pago y si los gastos fijos se cargan solos cada mes. */
 function AvisoPagos({ ctx }: { ctx: CtxFin }) {
-  const { avisoPagosDias = 3, fijosAuto = true, gastosFijos } = storeFinanzas.usar();
+  const { avisoPagosDias = 3, fijosAuto = true, gastosFijos, comprasAuto = true, plazoCompras = 30 } = storeFinanzas.usar();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-sky-50 to-violet-50 px-3.5 py-2.5 ring-1 ring-primary/10">
       <p className="flex min-w-0 items-center gap-2 text-xs text-slate-700">
@@ -2513,6 +2491,30 @@ function AvisoPagos({ ctx }: { ctx: CtxFin }) {
             />
             Gastos fijos solos cada mes
           </label>
+        )}
+      </div>
+      <div className="flex w-full flex-wrap items-center gap-2 border-t border-primary/10 pt-2 text-xs">
+        <label className="flex cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            checked={comprasAuto}
+            onChange={(e) => {
+              setFinanzas("comprasAuto", () => e.target.checked);
+              ctx.onToast(e.target.checked ? "Lo que llega de Inventario y del laboratorio se carga solo como deuda" : "Las compras se cargan a mano");
+            }}
+            className="size-4 accent-[var(--color-primary)]"
+          />
+          Compras de Inventario y laboratorio entran solas
+        </label>
+        {comprasAuto && (
+          <span className="flex items-center gap-1">
+            <span className="text-muted-foreground">a pagar a</span>
+            {[0, 15, 30, 60].map((d) => (
+              <button key={d} type="button" className={CHIP(plazoCompras === d)} onClick={() => setFinanzas("plazoCompras", () => d)}>
+                {d === 0 ? "contado" : `${d} días`}
+              </button>
+            ))}
+          </span>
         )}
       </div>
     </div>

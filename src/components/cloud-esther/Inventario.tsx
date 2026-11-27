@@ -2865,6 +2865,8 @@ function RecibirOrden({
             ),
           );
         }
+        const valorRecibido = Math.round(rec.reduce((a, r) => a + Math.max(0, Number(r.recibido) || 0) * r.precio, 0) * 100) / 100;
+        const recepcion = valorRecibido > 0 ? [{ id: `r${Date.now().toString(36)}`, fecha: diaISO(), monto: valorRecibido }] : [];
         const incompleta = rec.some((r) => Number(r.recibido) < r.cantidad);
         const pendientes = rec
           .map((r) => ({ insumoId: r.insumoId, cantidad: Math.round((r.cantidad - Math.max(0, Number(r.recibido) || 0)) * 100) / 100, precio: r.precio }))
@@ -2878,11 +2880,13 @@ function RecibirOrden({
                     ...x,
                     estado: "En tránsito",
                     items: pendientes,
+                    recepciones: [...(x.recepciones ?? []), ...recepcion],
                     nota: `${x.nota ? `${x.nota} · ` : ""}Llegó una parte el ${fecha(diaISO())}; falta el resto`,
                   }
                 : {
                     ...x,
                     estado: "Recibida",
+                    recepciones: [...(x.recepciones ?? []), ...recepcion],
                     nota: incompleta ? `${x.nota ? `${x.nota} · ` : ""}Recibida incompleta` : x.nota,
                   }
               : x,

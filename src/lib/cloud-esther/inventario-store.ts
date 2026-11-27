@@ -102,6 +102,9 @@ export type OrdenCompra = {
   estado: EstadoOrden;
   items: ItemOrden[];
   nota: string;
+  /** Cada vez que llega mercadería (toda o una parte): lo que vale lo recibido. Finanzas lo
+      toma como deuda con el proveedor (así una entrega parcial se paga por lo que llegó). */
+  recepciones?: { id: string; fecha: string; monto: number }[];
 };
 
 export type Kit = { tratamiento: string; items: { nombre: string; cantidad: number }[] };

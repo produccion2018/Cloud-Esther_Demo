@@ -343,6 +343,8 @@ export type TratamientoPaciente = {
   aceptado?: string;
   /** Día en que se le mandaron las indicaciones / cuidados después del tratamiento. */
   indicacionesEl?: string;
+  /** Texto de las indicaciones que se le mandaron (el paciente las vuelve a leer en su portal). */
+  indicacionesTexto?: string;
 };
 
 export const ETAPAS_PLAN = ["Urgencia", "Saneamiento", "Rehabilitación", "Estética", "Mantenimiento"];
@@ -4424,7 +4426,7 @@ function TratamientosSec({ datos, cambiar, onToast, onSeccion, contexto }: Props
     const nombre = (contexto?.paciente ?? "").trim().split(" ")[0] ?? "";
     const lleno = texto.replaceAll("{{paciente}}", nombre).replaceAll("{{clinica}}", contexto?.clinica ?? "la clínica").replace(/\{\{\w+\}\}/g, "");
     window.open(`https://wa.me/${numero ?? ""}?text=${encodeURIComponent(lleno)}`, "_blank", "noopener,noreferrer");
-    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, indicacionesEl: hoyISO() } : x)));
+    cambiar("tratamientos", (prev) => prev.map((x) => (x.id === t.id ? { ...x, indicacionesEl: hoyISO(), indicacionesTexto: lleno.slice(0, 4000) } : x)));
     setComunicacion("plantillas", (prev) => prev.map((x) => (x.id === plantillaId ? { ...x, usos: x.usos + 1 } : x)));
     agregarAuditoria(`Envió las indicaciones de ${t.nombre}`);
     if (!numero) onToast("El paciente no tiene teléfono cargado: elegí el contacto en WhatsApp");

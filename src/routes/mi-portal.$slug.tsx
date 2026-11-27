@@ -6,11 +6,16 @@ import {
   CalendarPlus,
   CalendarX2,
   Check,
+  ClipboardList,
+  Pill,
   Clock,
+  Download,
+  FileText,
   Loader2,
   LogOut,
   MapPin,
   Phone,
+  ScanLine,
   ShieldCheck,
   Stethoscope,
   UserRound,
@@ -342,6 +347,7 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
   };
 
   const [primero, ...resto] = yo.proximos;
+  const [vista, setVista] = useState<"turnos" | "papeles">("turnos");
 
   return (
     <>
@@ -370,6 +376,30 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
       )}
       {error && <p role="alert" className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
+      <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-white/70 bg-white/80 p-1 shadow-sm" role="tablist">
+        {(
+          [
+            ["turnos", "Mis turnos", CalendarCheck2],
+            ["papeles", "Mis papeles", FileText],
+          ] as const
+        ).map(([k, l, I]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={vista === k}
+            onClick={() => setVista(k)}
+            className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition ${vista === k ? "bg-gradient-to-r from-[var(--marca)] to-fuchsia-500 text-white shadow-md" : "text-[#6b6385]"}`}
+          >
+            <I className="size-4" /> {l}
+          </button>
+        ))}
+      </div>
+
+      {vista === "papeles" ? (
+        <Papeles slug={slug} token={token} yo={yo} />
+      ) : (
+      <>
       <h2 className="mt-6 px-1 text-sm font-bold uppercase tracking-[0.14em] text-[#8a83a3]">{primero ? "Tu próximo turno" : "Tus turnos"}</h2>
       {!primero ? (
         <Tarjeta className="mt-3 text-center">
@@ -476,6 +506,9 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
         </>
       )}
 
+      </>
+      )}
+
       {(wa || yo.clinica.telefono) && (
         <Tarjeta className="mt-6">
           <p className="font-semibold">¿Necesitás algo?</p>
@@ -494,6 +527,277 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
           </div>
         </Tarjeta>
       )}
+    </>
+  );
+}
+
+/* ───────────── Mis papeles: recetas, estudios, presupuestos e indicaciones ───────────── */
+
+type Papeles = {
+  moneda: string;
+  condiciones: string;
+  recetas: { id: number; numero: string; fecha: string; profesional: string; matricula: string; medicamentos: { nombre: string; presentacion: string; posologia: string; cantidad: number }[]; indicaciones: string; vencimiento: string; verificacion: string; firmaUrl: string; selloUrl: string }[];
+  estudios: { id: number; tipo: string; fecha: string; zona: string; informe: string; url: string; archivo: string }[];
+  presupuestos: { id: number; numero: string; fecha: string; estado: string; validez: string; profesional: string; notas: string; lineas: { descripcion: string; pieza: string; cantidad: number; precio: number }[]; subtotal: number; descuento: number; final: number; cuotas: number; cuota: number; plan: string }[];
+  indicaciones: { id: number; tratamiento: string; fecha: string; texto: string }[];
+};
+
+const esc = (t: string) => t.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const fechaCorta = (f: string) => (f ? f.split("-").reverse().join("/") : "");
+
+/** Abre el papel listo para guardar como PDF o imprimir (con los datos de la clínica). */
+function abrirPapel(titulo: string, cuerpo: string, yo: Yo) {
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  const c = yo.clinica;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title>
+<style>body{font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#1c1530;margin:0;padding:28px;max-width:760px}
+.cab{display:flex;align-items:center;gap:14px;border-bottom:3px solid ${c.color};padding-bottom:14px;margin-bottom:18px}
+.cab img{width:54px;height:54px;object-fit:contain}.cab b{font-size:18px;display:block}.cab span{color:#6b6385;font-size:12px}
+h1{font-size:20px;margin:0 0 4px}.meta{color:#6b6385;font-size:13px;margin:0 0 14px}
+table{width:100%;border-collapse:collapse;margin:10px 0}th,td{text-align:left;padding:8px;border-bottom:1px solid #ece8f7;font-size:13px}
+th{background:#f7f5ff}.n{text-align:right}.tot td{font-weight:700;border-top:2px solid #1c1530}
+.firma{margin-top:30px;display:flex;gap:16px;align-items:end}.firma img{max-height:70px}
+.pie{margin-top:26px;color:#8a83a3;font-size:11px}.btn{margin-top:18px;padding:10px 18px;border:0;border-radius:999px;background:${c.color};color:#fff;font-weight:600}
+@media print{.btn{display:none}body{padding:0}}</style></head><body>
+<div class="cab">${c.logo ? `<img src="${esc(c.logo)}" alt="">` : ""}<div><b>${esc(c.nombre)}</b><span>${esc([c.direccion, c.telefono].filter(Boolean).join(" · "))}</span></div></div>
+<h1>${esc(titulo)}</h1><p class="meta">Paciente: <b>${esc(`${yo.paciente.nombre} ${yo.paciente.apellido}`)}</b></p>
+${cuerpo}<p class="pie">Documento descargado desde el portal del paciente.</p><button class="btn" onclick="print()">Guardar PDF / Imprimir</button></body></html>`);
+  w.document.close();
+  return true;
+}
+
+function Papeles({ slug, token, yo }: { slug: string; token: string; yo: Yo }) {
+  const t = tx(yo.clinica.pais);
+  const [p, setP] = useState<Papeles | null>(null);
+  const [error, setError] = useState("");
+  const [responder, setResponder] = useState<{ id: number; tipo: "aprobar" | "rechazar" } | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [aviso, setAviso] = useState("");
+  const cargar = () =>
+    pedir<Papeles>(`/public/portal/${slug}/papeles`, "GET", undefined, token)
+      .then(setP)
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "No pudimos traer tus papeles."));
+  useEffect(() => {
+    void cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, token]);
+  const plata = (n: number) => {
+    try {
+      return new Intl.NumberFormat(`es-${(yo.clinica.pais || "AR").toUpperCase()}`, { style: "currency", currency: p?.moneda || "USD", maximumFractionDigits: 0 }).format(n);
+    } catch {
+      return `$ ${Math.round(n).toLocaleString("es")}`;
+    }
+  };
+  const avisarBloqueo = () => setAviso(t("Tu navegador bloqueó la ventana. Permití las ventanas emergentes para descargar.", "Tu navegador bloqueó la ventana. Permite las ventanas emergentes para descargar."));
+
+  const enviarRespuesta = async () => {
+    if (!responder) return;
+    setEnviando(true);
+    try {
+      await pedir(`/public/portal/${slug}/presupuestos/${responder.id}`, "POST", { respuesta: responder.tipo, ...(motivo.trim() ? { motivo: motivo.trim() } : {}) }, token);
+      setAviso(responder.tipo === "aprobar" ? "¡Gracias! Aprobaste el presupuesto. La clínica te contactará para empezar." : "Listo, le avisamos a la clínica.");
+      setResponder(null);
+      setMotivo("");
+      await cargar();
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "No se pudo guardar. Probá de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (error) return <p role="alert" className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>;
+  if (!p)
+    return (
+      <div className="mt-5 flex items-center justify-center gap-2 py-10 text-sm text-[#8a83a3]">
+        <Loader2 className="size-4 animate-spin" /> Buscando tus papeles…
+      </div>
+    );
+  const vacio = !p.recetas.length && !p.estudios.length && !p.presupuestos.length && !p.indicaciones.length;
+
+  const Titulo = ({ icono: I, texto }: { icono: typeof FileText; texto: string }) => (
+    <h2 className="mt-6 flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-[0.14em] text-[#8a83a3]">
+      <I className="size-4 text-[var(--marca)]" /> {texto}
+    </h2>
+  );
+
+  return (
+    <>
+      {aviso && (
+        <p role="status" className="mt-4 rounded-2xl bg-[var(--marca)]/[0.07] px-4 py-3 text-sm">
+          {aviso}
+        </p>
+      )}
+      {vacio && (
+        <Tarjeta className="mt-4 text-center">
+          <FileText className="mx-auto size-10 text-[var(--marca)]" />
+          <p className="mt-2 font-semibold">Todavía no tenés papeles</p>
+          <p className="text-sm text-[#6b6385]">Cuando la clínica te mande una receta, un estudio o un presupuesto, lo vas a ver acá.</p>
+        </Tarjeta>
+      )}
+
+      {p.presupuestos.length > 0 && <Titulo icono={ClipboardList} texto="Presupuestos" />}
+      <div className="mt-3 space-y-3">
+        {p.presupuestos.map((x) => {
+          const vencido = x.estado === "Enviado" && !!x.validez && x.validez < new Date().toISOString().slice(0, 10);
+          const abierto = responder?.id === x.id;
+          return (
+            <Tarjeta key={x.id} className={x.estado === "Enviado" && !vencido ? "ring-2 ring-[var(--marca)]/20" : ""}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold">Presupuesto {x.numero}</p>
+                  <p className="text-xs text-[#8a83a3]">{fechaCorta(x.fecha)}{x.profesional ? ` · ${x.profesional}` : ""}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${x.estado === "Aprobado" ? "bg-emerald-100 text-emerald-700" : x.estado === "Rechazado" ? "bg-slate-100 text-slate-600" : vencido ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800"}`}>
+                  {vencido ? "Vencido" : x.estado === "Enviado" ? "Para responder" : x.estado}
+                </span>
+              </div>
+              <ul className="mt-3 divide-y divide-[#ece8f7] rounded-2xl bg-[#f7f5ff] px-3">
+                {x.lineas.map((l, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="min-w-0">{l.descripcion}{l.pieza ? <span className="text-[#8a83a3]"> · pieza {l.pieza}</span> : null}{l.cantidad > 1 ? <span className="text-[#8a83a3]"> × {l.cantidad}</span> : null}</span>
+                    <span className="shrink-0 font-semibold">{plata(l.precio * l.cantidad)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 space-y-0.5 text-sm">
+                {x.descuento > 0 && <p className="flex justify-between text-emerald-700"><span>Descuento</span><span>− {plata(x.descuento)}</span></p>}
+                <p className="flex justify-between text-base font-bold"><span>Total</span><span>{plata(x.final)}</span></p>
+                {x.cuotas > 1 && <p className="text-right text-xs text-[#6b6385]">{x.plan}: {x.cuotas} cuotas de {plata(x.cuota)}</p>}
+                {x.validez && x.estado === "Enviado" && <p className="text-xs text-[#8a83a3]">Válido hasta el {fechaCorta(x.validez)}</p>}
+              </div>
+              {abierto ? (
+                <div className="mt-4 space-y-2 rounded-2xl bg-[#f7f5ff] p-3">
+                  <p className="text-sm font-semibold">{responder!.tipo === "aprobar" ? `¿${t("Aprobás", "Apruebas")} el presupuesto por ${plata(x.final)}?` : "¿No lo querés hacer por ahora?"}</p>
+                  {responder!.tipo === "rechazar" && (
+                    <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={300} placeholder={t("Contanos por qué (opcional)", "Cuéntanos por qué (opcional)")} className="w-full resize-none rounded-xl border border-[#e6e1f5] bg-white p-3 text-sm outline-none focus:border-[var(--marca)]" />
+                  )}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setResponder(null)} className="h-11 flex-1 rounded-full border border-[#e6e1f5] bg-white text-sm font-semibold">Volver</button>
+                    <button type="button" disabled={enviando} onClick={() => void enviarRespuesta()} className={`h-11 flex-1 rounded-full text-sm font-semibold text-white ${responder!.tipo === "aprobar" ? "bg-emerald-500" : "bg-slate-500"}`}>
+                      {enviando ? "Enviando…" : responder!.tipo === "aprobar" ? "Sí, lo apruebo" : "Avisar a la clínica"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {x.estado === "Enviado" && !vencido && (
+                    <>
+                      <button type="button" onClick={() => setResponder({ id: x.id, tipo: "aprobar" })} className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-emerald-500 text-sm font-semibold text-white shadow-md shadow-emerald-500/30">
+                        <Check className="size-4" /> Aprobar
+                      </button>
+                      <button type="button" onClick={() => setResponder({ id: x.id, tipo: "rechazar" })} className="inline-flex h-11 items-center justify-center rounded-full border border-[#e6e1f5] bg-white text-sm font-semibold">
+                        Ahora no
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filas = x.lineas.map((l) => `<tr><td>${esc(l.descripcion)}</td><td>${esc(l.pieza)}</td><td class="n">${l.cantidad}</td><td class="n">${esc(plata(l.precio * l.cantidad))}</td></tr>`).join("");
+                      const ok = abrirPapel(
+                        `Presupuesto ${x.numero}`,
+                        `<p class="meta">${fechaCorta(x.fecha)}${x.validez ? ` · Válido hasta el ${fechaCorta(x.validez)}` : ""}</p><table><tr><th>Prestación</th><th>Pieza</th><th class="n">Cant.</th><th class="n">Importe</th></tr>${filas}${x.descuento > 0 ? `<tr><td colspan="3">Descuento</td><td class="n">− ${esc(plata(x.descuento))}</td></tr>` : ""}<tr class="tot"><td colspan="3">Total</td><td class="n">${esc(plata(x.final))}</td></tr></table>${x.cuotas > 1 ? `<p>${esc(x.plan)}: ${x.cuotas} cuotas de ${esc(plata(x.cuota))}</p>` : ""}${x.notas ? `<p>${esc(x.notas)}</p>` : ""}${p.condiciones ? `<p class="meta">${esc(p.condiciones)}</p>` : ""}`,
+                        yo,
+                      );
+                      if (!ok) avisarBloqueo();
+                    }}
+                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-[var(--marca)]/30 bg-white text-sm font-semibold text-[var(--marca)]"
+                  >
+                    <Download className="size-4" /> Descargar
+                  </button>
+                </div>
+              )}
+            </Tarjeta>
+          );
+        })}
+      </div>
+
+      {p.recetas.length > 0 && <Titulo icono={Pill} texto="Recetas" />}
+      <div className="mt-3 space-y-3">
+        {p.recetas.map((r) => (
+          <Tarjeta key={r.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold">Receta {r.numero}</p>
+                <p className="text-xs text-[#8a83a3]">{fechaCorta(r.fecha)} · {r.profesional}</p>
+              </div>
+              {r.vencimiento && <span className="shrink-0 text-[11px] text-[#8a83a3]">Vale hasta {fechaCorta(r.vencimiento)}</span>}
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {r.medicamentos.map((m, i) => (
+                <li key={i} className="rounded-xl bg-[#f7f5ff] px-3 py-2 text-sm">
+                  <b>{m.nombre}</b> {m.presentacion} <span className="text-[#6b6385]">· {m.posologia}</span>
+                </li>
+              ))}
+            </ul>
+            {r.indicaciones && <p className="mt-2 text-sm text-[#6b6385]">{r.indicaciones}</p>}
+            <button
+              type="button"
+              onClick={() => {
+                const filas = r.medicamentos.map((m) => `<tr><td>${esc(`${m.nombre} ${m.presentacion}`)}</td><td>${esc(m.posologia)}</td><td class="n">${m.cantidad}</td></tr>`).join("");
+                const verif = r.verificacion ? `<p class="meta">${t("Verificá", "Verifica")} esta receta en ${esc(`${window.location.origin}/verificar/${r.verificacion}`)}</p>` : "";
+                const firma = r.firmaUrl || r.selloUrl ? `<div class="firma">${r.firmaUrl ? `<img src="${esc(r.firmaUrl)}" alt="">` : ""}${r.selloUrl ? `<img src="${esc(r.selloUrl)}" alt="">` : ""}</div>` : "";
+                const ok = abrirPapel(
+                  `Receta ${r.numero}`,
+                  `<p class="meta">${fechaCorta(r.fecha)} · ${esc(r.profesional)}${r.matricula ? ` (${esc(r.matricula)})` : ""}${r.vencimiento ? ` · Válida hasta el ${fechaCorta(r.vencimiento)}` : ""}</p><table><tr><th>Medicamento</th><th>Indicación</th><th class="n">Cant.</th></tr>${filas}</table>${r.indicaciones ? `<p>${esc(r.indicaciones)}</p>` : ""}${firma}${verif}`,
+                  yo,
+                );
+                if (!ok) avisarBloqueo();
+              }}
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--marca)]/30 bg-white text-sm font-semibold text-[var(--marca)]"
+            >
+              <Download className="size-4" /> Descargar receta
+            </button>
+          </Tarjeta>
+        ))}
+      </div>
+
+      {p.indicaciones.length > 0 && <Titulo icono={ClipboardList} texto="Tus indicaciones" />}
+      <div className="mt-3 space-y-3">
+        {p.indicaciones.map((x) => (
+          <Tarjeta key={x.id}>
+            <p className="font-bold">{x.tratamiento}</p>
+            <p className="text-xs text-[#8a83a3]">{fechaCorta(x.fecha)}</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{x.texto}</p>
+            <button
+              type="button"
+              onClick={() => {
+                const ok = abrirPapel(`Indicaciones: ${x.tratamiento}`, `<p class="meta">${fechaCorta(x.fecha)}</p><p style="white-space:pre-line">${esc(x.texto)}</p>`, yo);
+                if (!ok) avisarBloqueo();
+              }}
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--marca)]/30 bg-white text-sm font-semibold text-[var(--marca)]"
+            >
+              <Download className="size-4" /> Descargar
+            </button>
+          </Tarjeta>
+        ))}
+      </div>
+
+      {p.estudios.length > 0 && <Titulo icono={ScanLine} texto="Estudios" />}
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {p.estudios.map((e) => (
+          <div key={e.id} className="overflow-hidden rounded-3xl border border-white/70 bg-white/85 shadow-[0_20px_45px_-38px_rgba(30,16,70,0.6)]">
+            <div className="grid h-24 place-items-center bg-gradient-to-br from-slate-800 via-slate-700 to-[var(--marca)] text-white/80">
+              <ScanLine className="size-8" />
+            </div>
+            <div className="p-4">
+              <p className="font-semibold">{e.tipo}</p>
+              <p className="text-xs text-[#8a83a3]">{fechaCorta(e.fecha)}{e.zona ? ` · ${e.zona}` : ""}</p>
+              {e.informe && <p className="mt-1.5 text-sm text-[#6b6385]">{e.informe}</p>}
+              {e.url ? (
+                <a href={e.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--marca)]/30 bg-white text-sm font-semibold text-[var(--marca)]">
+                  <Download className="size-4" /> Ver o descargar
+                </a>
+              ) : (
+                <p className="mt-3 text-xs text-[#8a83a3]">{t("Pedile", "Pídele")} el archivo a la clínica.</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 }

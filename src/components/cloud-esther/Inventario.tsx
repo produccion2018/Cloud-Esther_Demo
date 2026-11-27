@@ -2642,6 +2642,19 @@ function Ordenes({ ctx, onEditar }: { ctx: Ctx; onEditar: (o: OrdenCompra) => vo
                       Recibir
                     </button>
                   )}
+                  {p?.telefono && atrasada && (
+                    <a
+                      href={wa(
+                        p.telefono,
+                        `Hola${p.contacto ? ` ${p.contacto}` : ""}, ¿cómo va la orden ${o.id}? La esperábamos el ${fecha(o.esperada)} y todavía no llegó. ¿Nos confirmás para cuándo? ¡Gracias!`,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-wa"
+                    >
+                      <IconoWhatsApp /> Reclamar
+                    </a>
+                  )}
                   {p && o.estado !== "Cancelada" && (
                     <a
                       href={wa(p.telefono, textoPedido(o))}
@@ -2709,6 +2722,9 @@ function RecibirOrden({
   const [rec, setRec] = useState(
     o.items.map((it) => ({ ...it, recibido: String(it.cantidad), lote: "", venc: "" })),
   );
+  // Si llega una parte: lo que falta queda pendiente en la misma orden (o se cierra incompleta)
+  const [restoDespues, setRestoDespues] = useState(true);
+  const falta = rec.filter((r) => Math.max(0, Number(r.recibido) || 0) < r.cantidad);
   return (
     <form
       onSubmit={(e) => {
@@ -2740,18 +2756,33 @@ function RecibirOrden({
           );
         }
         const incompleta = rec.some((r) => Number(r.recibido) < r.cantidad);
+        const pendientes = rec
+          .map((r) => ({ insumoId: r.insumoId, cantidad: Math.round((r.cantidad - Math.max(0, Number(r.recibido) || 0)) * 100) / 100, precio: r.precio }))
+          .filter((r) => r.cantidad > 0);
+        const queda = incompleta && restoDespues && pendientes.length > 0;
         setInventario("ordenes", (p) =>
           p.map((x) =>
             x.id === o.id
-              ? {
-                  ...x,
-                  estado: "Recibida",
-                  nota: incompleta ? `${x.nota ? `${x.nota} · ` : ""}Recibida incompleta` : x.nota,
-                }
+              ? queda
+                ? {
+                    ...x,
+                    estado: "En tránsito",
+                    items: pendientes,
+                    nota: `${x.nota ? `${x.nota} · ` : ""}Llegó una parte el ${fecha(diaISO())}; falta el resto`,
+                  }
+                : {
+                    ...x,
+                    estado: "Recibida",
+                    nota: incompleta ? `${x.nota ? `${x.nota} · ` : ""}Recibida incompleta` : x.nota,
+                  }
               : x,
           ),
         );
-        onListo(`${o.id} recibida: ${total} unidades ingresaron a ${o.sucursal}`);
+        onListo(
+          queda
+            ? `${o.id}: ingresaron ${total} unidades. Lo que falta sigue pendiente en la misma orden.`
+            : `${o.id} recibida: ${total} unidades ingresaron a ${o.sucursal}`,
+        );
       }}
       className="space-y-3"
     >
@@ -2768,8 +2799,22 @@ function RecibirOrden({
             >
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <p className="truncate text-sm font-medium">{i?.nombre}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                   Pedido: {r.cantidad} {i?.unidad}
+                  <button
+                    type="button"
+                    onClick={() => setRec((p) => p.map((x, k) => (k === n ? { ...x, recibido: String(x.cantidad) } : x)))}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${Number(r.recibido) === r.cantidad ? "bg-emerald-100 text-emerald-700" : "bg-white text-muted-foreground ring-1 ring-primary/15"}`}
+                  >
+                    Llegó todo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRec((p) => p.map((x, k) => (k === n ? { ...x, recibido: "0" } : x)))}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${Number(r.recibido) === 0 ? "bg-rose-100 text-rose-700" : "bg-white text-muted-foreground ring-1 ring-primary/15"}`}
+                  >
+                    No llegó
+                  </button>
                 </p>
               </div>
               <input
@@ -2803,6 +2848,14 @@ function RecibirOrden({
           );
         })}
       </ul>
+      {falta.length > 0 && (
+        <label className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-900 ring-1 ring-amber-200">
+          <input type="checkbox" checked={restoDespues} onChange={(e) => setRestoDespues(e.target.checked)} className="mt-0.5 size-4 accent-[var(--color-primary)]" />
+          <span>
+            <b>Lo que falta llega después.</b> La orden sigue abierta con {falta.map((r) => insumos.find((x) => x.id === r.insumoId)?.nombre).filter(Boolean).join(", ")}. Si lo destildás, se cierra como «Recibida incompleta».
+          </span>
+        </label>
+      )}
       <Acciones etiqueta="Confirmar recepción" onCancel={onCancel} icon={PackageCheck} />
     </form>
   );
@@ -3310,6 +3363,14 @@ function DescuentoAutomatico({ ctx }: { ctx: Ctx }) {
           className="size-5 shrink-0 accent-[var(--color-primary)]"
         />
       </label>
+      {activo && (
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-gradient-to-r from-sky-50 to-violet-50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-700 ring-1 ring-sky-100">
+          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-sky-500 text-[10px] font-bold text-white">i</span>
+          <span>
+            <b>Para el Dueño/a o quien maneja el inventario:</b> el descuento se hace en el momento si alguno de ustedes tiene Cloud Esther abierto. Si no, se hace solo apenas uno entra: no se pierde ningún turno.
+          </span>
+        </p>
+      )}
       {grupos.length > 0 && (
         <>
           <p className="mt-4 text-xs font-semibold">Últimos descuentos automáticos</p>

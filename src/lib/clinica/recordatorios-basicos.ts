@@ -152,6 +152,22 @@ export function useRecordatoriosBasicos() {
           const d = diasParaVencer(i);
           return d !== null && d <= 30 && i.stock > 0;
         });
+        const atrasadas = storeInventario
+          .leer()
+          .ordenes.filter((o) => (o.estado === "Enviada" || o.estado === "En tránsito") && o.esperada < hoy);
+        if (atrasadas.length && !existentes.has(`basico-ordenes-${hoy}`))
+          nuevos.push({
+            ...base,
+            asignado: "Administración",
+            id: `basico-ordenes-${hoy}`,
+            titulo: `${atrasadas.length} pedido${atrasadas.length === 1 ? "" : "s"} a proveedores sin llegar`,
+            detalle: `${atrasadas
+              .slice(0, 3)
+              .map((o) => o.id)
+              .join(", ")}${atrasadas.length > 3 ? ` y ${atrasadas.length - 3} más` : ""} ya pasaron la fecha de entrega. Reclamalos por WhatsApp desde Inventario → Órdenes.`,
+            categoria: "Insumos",
+            prioridad: "Normal",
+          });
         if (reponer.length || vencen.length) {
           const agotados = reponer.filter((i) => nivelStock(i) === "Agotado").length;
           const partes = [

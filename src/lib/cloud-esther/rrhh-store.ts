@@ -406,14 +406,15 @@ export function nombreDe(m: Pick<TeamMember, "firstName" | "lastName">) {
   return `${m.firstName} ${m.lastName}`.trim();
 }
 
+/* El sueldo NUNCA viene puesto: lo carga cada clínica (en 0 hasta que lo defina). */
 const PUESTO_POR_ROL: Record<
   TeamRole,
   { puesto: string; departamento: Departamento; basico: number }
 > = {
-  odontologo: { puesto: "Odontólogo/a", departamento: "Clínico", basico: 1_450_000 },
-  asistente: { puesto: "Asistente dental", departamento: "Clínico", basico: 850_000 },
-  secretaria: { puesto: "Recepcionista", departamento: "Recepción", basico: 900_000 },
-  administrador: { puesto: "Administración", departamento: "Administración", basico: 1_250_000 },
+  odontologo: { puesto: "Odontólogo/a", departamento: "Clínico", basico: 0 },
+  asistente: { puesto: "Asistente dental", departamento: "Clínico", basico: 0 },
+  secretaria: { puesto: "Recepcionista", departamento: "Recepción", basico: 0 },
+  administrador: { puesto: "Administración", departamento: "Administración", basico: 0 },
 };
 
 /** Completa campos nuevos en legajos guardados antes (país, contrato y esquema de pago). */

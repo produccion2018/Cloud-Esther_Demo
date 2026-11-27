@@ -92,7 +92,35 @@ export const storeAnalitica = crearStorePorEmpresa<EstadoAnalitica>(
       },
     ],
   }),
-  { persistir: "analitica" },
+  {
+    persistir: "analitica",
+    // Cada clínica arranca en blanco: sin metas, sedes ni reportes de ejemplo (las metas las pone ella)
+    vacio: () => ({
+      incluirHistorico: false,
+      capacidad: {},
+      duracionMin: 30,
+      metas: { produccion: 0, nuevos: 0, ocupacion: 0, ausentismo: 0, conversion: 0 },
+      reportes: [],
+      envios: [],
+    }),
+    // Datos guardados con los valores de ejemplo de antes: se limpian (no son de la clínica)
+    normalizar: (e) => {
+      if (!e || typeof e !== "object") return e;
+      let x = e;
+      const m = x.metas;
+      if (m && m.produccion === 36_000_000 && m.nuevos === 100 && m.ocupacion === 70 && m.ausentismo === 10 && m.conversion === 50)
+        x = { ...x, metas: { produccion: 0, nuevos: 0, ocupacion: 0, ausentismo: 0, conversion: 0 } };
+      const EJEMPLO = ["Clínica Centro", "Clínica Norte", "Clínica Sur", "Clínica Belgrano"];
+      if (x.capacidad && EJEMPLO.some((k) => k in x.capacidad)) {
+        const c = { ...x.capacidad };
+        for (const k of EJEMPLO) delete c[k];
+        x = { ...x, capacidad: c };
+      }
+      if (Array.isArray(x.reportes) && x.reportes.some((r) => r.id === "r1" || r.id === "r2"))
+        x = { ...x, reportes: x.reportes.filter((r) => r.id !== "r1" && r.id !== "r2"), envios: (x.envios ?? []).filter((v) => v.id !== "e1") };
+      return x;
+    },
+  },
 );
 
 export function setAnalitica<K extends keyof EstadoAnalitica>(

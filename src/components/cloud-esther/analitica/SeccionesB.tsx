@@ -132,7 +132,7 @@ export function Tratamientos({ ctx }: { ctx: CtxBI }) {
           label="Conversión"
           valor={ctx.p(ctx.m.conversion)}
           icon={TrendingUp}
-          sub={`meta ${ctx.p(ctx.cfg.metas.conversion)}`}
+          sub={ctx.cfg.metas.conversion > 0 ? `meta ${ctx.p(ctx.cfg.metas.conversion)}` : "sin meta"}
         />
         <Mini
           label="Esperando respuesta"

@@ -9,27 +9,10 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
    respondió el Agente IA o las automatizaciones, y desde acá alguien del equipo puede contestar
    (sale desde el número de la clínica). Se actualiza cada 20 segundos. */
 
-/** Demo: conversaciones de ejemplo (en la clínica real son las de verdad) */
-function ejemplos(): MensajeWhatsapp[] {
-  const m = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
-  const x = (id: string, telefono: string, nombre: string, direccion: "entrante" | "saliente", texto: string, por: string, min: number): MensajeWhatsapp => ({
-    id, telefono, nombre, direccion, texto, por, estado: "ok", fecha: m(min),
-  });
-  return [
-    x("d6", "5491155550001", "Lucía Fernández", "saliente", "¡Perfecto, Lucía! Le pasé tu pedido a recepción para el jueves por la tarde: te confirman el horario en breve.", "Agente IA", 3),
-    x("d5", "5491155550001", "Lucía Fernández", "entrante", "Hola! Quería un turno para limpieza, el jueves a la tarde si puede ser", "Lucía Fernández", 4),
-    x("d4", "5491155550002", "Martín Gómez", "saliente", "Entiendo, Martín. Ya le avisamos a Recepción para que te contacten lo antes posible.", "Agente IA", 40),
-    x("d3", "5491155550002", "Martín Gómez", "entrante", "Tengo mucho dolor en una muela desde anoche", "Martín Gómez", 41),
-    x("d8", "5491155550004", "Carlos Díaz", "saliente", "¡Hola Carlos! Sí, trabajamos con OSDE. ¿Querés que te pasemos horarios para una consulta?", "Agente IA", 15),
-    x("d7", "5491155550004", "Carlos Díaz", "entrante", "🎤 Hola, buen día, quería saber si atienden por OSDE y si tienen turno esta semana", "Carlos Díaz", 16),
-    x("d2", "5491155550003", "Sofía Ruiz", "entrante", "SÍ, confirmo", "Sofía Ruiz", 90),
-    x("d1", "5491155550003", "Sofía Ruiz", "saliente", "Hola Sofía, te recordamos tu turno de mañana a las 10:30 con la Dra. Becerra. Respondé SÍ para confirmar.", "Automatización: Recordatorio 24 h", 120),
-  ];
-}
-
 export function ConversacionesWhatsapp({ onToast }: { onToast: (m: string) => void }) {
   const real = useClinicaReal();
-  const [mensajes, setMensajes] = useState<MensajeWhatsapp[] | null>(() => (real ? null : ejemplos()));
+  // El demo arranca vacío, igual que una clínica real (sin conversaciones de ejemplo)
+  const [mensajes, setMensajes] = useState<MensajeWhatsapp[] | null>(() => (real ? null : []));
   const [elegido, setElegido] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);

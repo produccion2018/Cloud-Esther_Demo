@@ -557,7 +557,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
             filas: meses.map((mes, i) => [
               nombreMesLargo(mes),
               ctx.$(mensual[i]!.produccion),
-              ctx.$(ctx.cfg.metas.produccion),
+              ctx.cfg.metas.produccion > 0 ? ctx.$(ctx.cfg.metas.produccion) : "—",
             ]),
           }}
         >
@@ -566,7 +566,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
             formato={ctx.$c}
             series={[
               { nombre: "Producción", valores: s("produccion") },
-              ...(ctx.nivel >= 3 && ctx.f.sucursal === "Todas" && ctx.f.profesional === "Todos"
+              ...(ctx.nivel >= 3 && ctx.cfg.metas.produccion > 0 && ctx.f.sucursal === "Todas" && ctx.f.profesional === "Todos"
                 ? [
                     {
                       nombre: "Meta mensual",
@@ -669,7 +669,16 @@ function Metas({ ctx }: { ctx: CtxBI }) {
     { t: "Ocupación", v: actual.ocupacion, meta: metas.ocupacion, f: ctx.p },
     { t: "Ausentismo (máx.)", v: actual.ausentismo, meta: metas.ausentismo, f: ctx.p, menos: true },
     { t: "Conversión", v: actual.conversion, meta: metas.conversion, f: ctx.p },
-  ];
+  ].filter((x) => x.meta > 0);
+  if (filas.length === 0)
+    return (
+      <div className="card-grad p-4">
+        <p className="text-sm font-semibold">Metas del mes</p>
+        <p className="mt-2 text-[12px] text-muted-foreground">
+          Todavía no definiste metas. Cargalas en «Configuración» de Analítica y acá vas a ver cómo venís cada mes.
+        </p>
+      </div>
+    );
   return (
     <div className="card-grad p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -740,7 +749,7 @@ function Insights({ ctx, navegar }: { ctx: CtxBI; navegar: (to: string) => void 
     return { d, v: (a / Math.max(1, a + at)) * 100 };
   });
   const peor = porDia.reduce((a, b) => (b.v > a.v ? b : a), porDia[0]!);
-  if (peor.v > ctx.cfg.metas.ausentismo)
+  if (peor.v > 0 && peor.v > ctx.cfg.metas.ausentismo)
     out.push({
       t: `Los ${DIAS_PLURAL[peor.d]} el ausentismo llega al ${peor.v.toFixed(1).replace(".", ",")} %`,
       d: "Sumá un recordatorio por WhatsApp 24 h antes con pedido de confirmación para ese día.",
@@ -789,7 +798,7 @@ function Insights({ ctx, navegar }: { ctx: CtxBI; navegar: (to: string) => void 
       accion: { l: "Ver captación", ir: "marketing" },
     });
   // Ocupación
-  if (m.ocupacion < ctx.cfg.metas.ocupacion)
+  if (ctx.cfg.metas.ocupacion > 0 && m.ocupacion < ctx.cfg.metas.ocupacion)
     out.push({
       t: `Ocupación ${ctx.p(m.ocupacion)}: hay agenda libre`,
       d: `La meta es ${ctx.p(ctx.cfg.metas.ocupacion)}. Ofrecé los huecos a la lista de espera o a pacientes con tratamientos pendientes.`,

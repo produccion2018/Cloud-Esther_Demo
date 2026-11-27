@@ -1757,31 +1757,6 @@ function Bancos({
     ctx.onToast(`${origen}: ${nuevas.length} líneas`);
   };
 
-  const ejemplo = () => {
-    const base = libro.asientos
-      .filter((a) => a.cuentaId === cuentaSel && a.fecha >= diaISO(-30))
-      .slice(0, 14);
-    const lineasEj = base
-      .filter((_, i) => i !== 3) // uno que el banco todavía no acreditó
-      .map((a, i) => {
-        const d = new Date(a.fecha);
-        if (i % 3 === 1) d.setDate(d.getDate() + 1);
-        return {
-          fecha: d.toISOString().slice(0, 10),
-          descripcion:
-            a.tipo === "Ingreso"
-              ? `CRED ${a.concepto.toUpperCase().slice(0, 32)}`
-              : `DEB ${a.concepto.toUpperCase().slice(0, 32)}`,
-          monto: a.tipo === "Ingreso" ? a.monto : -a.monto,
-        };
-      });
-    lineasEj.push(
-      { fecha: diaISO(-6), descripcion: "PERCEPCION IIBB CABA", monto: -8_940 },
-      { fecha: diaISO(-2), descripcion: "COMISION TRANSFERENCIA", monto: -1_250 },
-    );
-    cargarLineas(lineasEj, "Extracto de ejemplo cargado");
-  };
-
   const importar = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = "";
@@ -1904,9 +1879,6 @@ function Bancos({
             <button type="button" className={BTN_SECUNDARIO} onClick={plantilla}>
               <FileSpreadsheet className="size-4" /> Plantilla
             </button>
-            <button type="button" className={BTN_SECUNDARIO} onClick={ejemplo}>
-              Extracto de ejemplo
-            </button>
             <button type="button" className={BTN_PRIMARIO} onClick={() => archivo.current?.click()}>
               <Upload className="size-4" /> Importar extracto
             </button>
@@ -2016,7 +1988,7 @@ function Bancos({
         ) : (
           <Vacio
             icon={Upload}
-            texto="Importá el extracto del banco (Excel o CSV) o probá con el extracto de ejemplo."
+            texto="Importá el extracto del banco (Excel o CSV). Si no sabés el formato, descargá la plantilla."
           />
         )}
       </div>

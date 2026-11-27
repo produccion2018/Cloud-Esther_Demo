@@ -267,19 +267,22 @@ const CONFIG: ConfigComunicacion = {
 
 /* Estado inicial: sin mensajes, campañas ni envíos, y con los canales sin conectar.
    Es el mismo para el demo y para una clínica real (el demo se ve igual que producción). */
+/* Usos de ejemplo que traían las plantillas de fábrica (se ponen en 0: cada clínica cuenta los suyos). */
+const USOS_EJEMPLO: Record<number, number> = { 1: 1284, 2: 968, 3: 214, 4: 233, 5: 187, 6: 152, 7: 410, 8: 96, 9: 520, 10: 342 };
+
 function estadoInicial(): EstadoComunicacion {
   return {
     conversaciones: [],
-    plantillas: PLANTILLAS,
+    plantillas: PLANTILLAS.map((p) => ({ ...p, usos: 0 })),
     campanas: [],
     envios: [],
     recordatorios: {},
     config: {
       ...CONFIG,
       canales: {
-        WhatsApp: { ...CONFIG.canales.WhatsApp, conectado: false, remitente: "", enviadosMes: 0 },
-        SMS: { ...CONFIG.canales.SMS, conectado: false, remitente: "", enviadosMes: 0 },
-        Email: { ...CONFIG.canales.Email, conectado: false, remitente: "", enviadosMes: 0 },
+        WhatsApp: { ...CONFIG.canales.WhatsApp, conectado: false, remitente: "", enviadosMes: 0, costoUnitario: 0 },
+        SMS: { ...CONFIG.canales.SMS, conectado: false, remitente: "", enviadosMes: 0, costoUnitario: 0 },
+        Email: { ...CONFIG.canales.Email, conectado: false, remitente: "", enviadosMes: 0, costoUnitario: 0 },
       },
       recordatorios: { ...CONFIG.recordatorios, activo: false },
     },
@@ -289,6 +292,37 @@ function estadoInicial(): EstadoComunicacion {
 export const storeComunicacion = crearStorePorEmpresa<EstadoComunicacion>(estadoInicial, {
   persistir: "comunicacion",
   vacio: estadoInicial,
+  // Datos guardados antes con los números de ejemplo (usos de plantillas y costos): se limpian
+  normalizar: (e) => {
+    if (!e || !Array.isArray(e.plantillas)) return e;
+    let cambio = false;
+    const plantillas = e.plantillas.map((p) => {
+      if (USOS_EJEMPLO[p.id] !== undefined && p.usos === USOS_EJEMPLO[p.id]) {
+        cambio = true;
+        return { ...p, usos: 0 };
+      }
+      return p;
+    });
+    const can = e.config?.canales;
+    const costos = can && [["WhatsApp", 45], ["SMS", 30]].some(([k, v]) => (can as Record<string, { costoUnitario: number }>)[k as string]?.costoUnitario === v);
+    if (!cambio && !costos) return e;
+    return {
+      ...e,
+      plantillas,
+      ...(costos && can
+        ? {
+            config: {
+              ...e.config,
+              canales: {
+                ...can,
+                WhatsApp: { ...can.WhatsApp, costoUnitario: can.WhatsApp.costoUnitario === 45 ? 0 : can.WhatsApp.costoUnitario },
+                SMS: { ...can.SMS, costoUnitario: can.SMS.costoUnitario === 30 ? 0 : can.SMS.costoUnitario },
+              },
+            },
+          }
+        : {}),
+    };
+  },
 });
 
 type Actualizar<T> = T | ((prev: T) => T);

@@ -397,14 +397,14 @@ export function Agenda({ ctx }: { ctx: CtxBI }) {
           label="Ocupación"
           valor={ctx.p(ctx.m.ocupacion)}
           icon={Gauge}
-          sub={`meta ${ctx.p(ctx.cfg.metas.ocupacion)}`}
+          sub={ctx.cfg.metas.ocupacion > 0 ? `meta ${ctx.p(ctx.cfg.metas.ocupacion)}` : "sin meta"}
         />
         <Mini
           label="Ausentismo"
           valor={ctx.p(ctx.m.ausentismo)}
           icon={UserMinus}
-          tono={ctx.m.ausentismo > ctx.cfg.metas.ausentismo ? "text-rose-600" : "text-emerald-600"}
-          sub={`máximo ${ctx.p(ctx.cfg.metas.ausentismo)}`}
+          tono={ctx.cfg.metas.ausentismo > 0 && ctx.m.ausentismo > ctx.cfg.metas.ausentismo ? "text-rose-600" : "text-emerald-600"}
+          sub={ctx.cfg.metas.ausentismo > 0 ? `máximo ${ctx.p(ctx.cfg.metas.ausentismo)}` : "sin meta"}
         />
         <Mini
           label="Cancelaciones"

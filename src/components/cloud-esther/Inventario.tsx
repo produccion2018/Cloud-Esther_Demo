@@ -30,7 +30,7 @@ import {
   Send,
   ShoppingCart,
   SlidersHorizontal,
-  Star,
+  Circle,
   Trash2,
   TrendingDown,
   Truck,
@@ -2764,7 +2764,7 @@ function Proveedores({ ctx }: { ctx: Ctx }) {
                   <p className="truncate text-[11px] text-muted-foreground">{p.contacto}</p>
                   <span className="mt-0.5 inline-flex">
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <Star
+                      <Circle
                         key={n}
                         className={`size-3 ${n <= p.calificacion ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
                       />
@@ -2954,10 +2954,10 @@ function ProveedorForm({
             <button
               key={n}
               type="button"
-              aria-label={`${n} estrellas`}
+              aria-label={`${n} de 5`}
               onClick={() => set({ calificacion: n })}
             >
-              <Star
+              <Circle
                 className={`size-6 ${n <= f.calificacion ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
               />
             </button>

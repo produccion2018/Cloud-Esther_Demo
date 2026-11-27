@@ -30,7 +30,8 @@ import {
   Plus,
   Search,
   Send,
-  Star,
+  ThumbsUp,
+  Circle,
   Target,
   Trash2,
   TrendingUp,
@@ -96,7 +97,7 @@ const SECCIONES: { id: Seccion; label: string; icon: LucideIcon }[] = [
   { id: "campanias", label: "Campañas", icon: Megaphone },
   { id: "promos", label: "Promociones", icon: BadgePercent },
   { id: "referidos", label: "Referidos", icon: Gift },
-  { id: "resenas", label: "Reseñas", icon: Star },
+  { id: "resenas", label: "Reseñas", icon: ThumbsUp },
   { id: "ideas", label: "Ideas para redes", icon: Lightbulb },
   { id: "formulario", label: "Formulario web", icon: Globe },
 ];
@@ -465,10 +466,10 @@ export default function Marketing() {
                   },
                   {
                     l: "Reputación",
-                    v: promedio ? `${promedio.toFixed(1)} ★` : "—",
+                    v: promedio ? `${promedio.toFixed(1)} / 5` : "—",
                     t: `${resenas.length} reseñas`,
                     d: `${resenas.filter((r) => !r.respuesta).length} sin responder`,
-                    i: Star,
+                    i: ThumbsUp,
                   },
                 ].map((c, idx) => {
                   const tonos = [
@@ -2827,9 +2828,9 @@ function ideasPorReglas(d: {
     out.push({
       formato: "Historia",
       titulo: "Lo que dicen nuestros pacientes",
-      texto: `⭐⭐⭐⭐⭐\n“${buena.texto.trim().slice(0, 180)}${buena.texto.trim().length > 180 ? "…" : ""}”\n¡Gracias por confiar en ${d.clinica || "nosotros"}! 💜`,
+      texto: `Calificación 5 de 5 💜\n“${buena.texto.trim().slice(0, 180)}${buena.texto.trim().length > 180 ? "…" : ""}”\n¡Gracias por confiar en ${d.clinica || "nosotros"}! 💜`,
       imagen: "Captura de la reseña sobre fondo con los colores de la clínica (sin el nombre si el paciente no lo autorizó).",
-      motivo: `Una reseña de 5 estrellas en ${buena.fuente}.`,
+      motivo: `Una reseña de 5 de 5 en ${buena.fuente}.`,
     });
   if (d.referidos.activo && d.referidos.beneficioReferido.trim())
     out.push({
@@ -2922,7 +2923,7 @@ function IdeasRedes({ ctx }: { ctx: Ctx }) {
           pregunta:
             "Proponé EXACTAMENTE 3 ideas nuevas de publicaciones para las redes sociales de esta clínica odontológica, distintas entre sí y de las que ya tiene. " +
             "Para cada una escribí este formato exacto, sin nada más:\nIDEA\nformato: Publicación, Historia o Reel\ntítulo: (corto)\ntexto: (el texto listo para pegar, 2 a 4 líneas, con 2 o 3 emojis y 2 o 3 hashtags)\nimagen: (qué foto o video usar, en una línea)\n" +
-            "Reglas: no uses el emoji ✨ ni estrellas; no pongas precios ni montos ni porcentajes que no estén en el contexto; no uses nombres de pacientes; no prometas resultados médicos; nada de diagnósticos.",
+            "Reglas: no uses emojis de estrellas ni brillos; no pongas precios ni montos ni porcentajes que no estén en el contexto; no uses nombres de pacientes; no prometas resultados médicos; nada de diagnósticos.",
           contexto,
         },
       }).catch(() => null);
@@ -3081,7 +3082,7 @@ function Estrellas({ n, tam = "size-3.5" }: { n: number; tam?: string }) {
   return (
     <span className="inline-flex">
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star
+        <Circle
           key={i}
           className={`${tam} ${i <= n ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
         />
@@ -3129,7 +3130,7 @@ function Resenas({ ctx }: { ctx: Ctx }) {
   return (
     <div className="space-y-3">
       <Encabezado
-        icon={Star}
+        icon={ThumbsUp}
         titulo="Reseñas y reputación"
         descripcion="Lo que dicen tus pacientes en Google, Doctoralia y Facebook."
       />
@@ -3148,7 +3149,7 @@ function Resenas({ ctx }: { ctx: Ctx }) {
               return (
                 <div key={n} className="flex items-center gap-2 text-xs">
                   <span className="w-3">{n}</span>
-                  <Star className="size-3 fill-amber-400 text-amber-400" />
+                  <Circle className="size-2.5 fill-amber-400 text-amber-400" />
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/10">
                     <div
                       className="h-full rounded-full bg-amber-400"
@@ -3214,7 +3215,7 @@ function Resenas({ ctx }: { ctx: Ctx }) {
               [
                 ["", "Todas"],
                 ["sin", `Sin responder (${resenas.filter((r) => !r.respuesta).length})`],
-                ["bajas", "3 estrellas o menos"],
+                ["bajas", "3 de 5 o menos"],
               ] as const
             ).map(([id, l]) => (
               <button

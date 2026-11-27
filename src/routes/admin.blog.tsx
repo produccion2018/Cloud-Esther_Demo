@@ -19,7 +19,7 @@ import {
   RotateCcw,
   Search,
   Send,
-  Star,
+  Pin,
   Trash2,
   Upload,
   X,
@@ -234,7 +234,7 @@ function BlogPanel() {
                       {a.status === "published" ? <Pildora tono="ok">Publicado</Pildora> : <Pildora>Borrador</Pildora>}
                       {a.featured && (
                         <Pildora tono="primario">
-                          <Star className="mr-1 h-3 w-3 fill-current" /> Destacado
+                          <Pin className="mr-1 h-3 w-3" /> Destacado
                         </Pildora>
                       )}
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{a.category}</span>
@@ -264,7 +264,7 @@ function BlogPanel() {
                       aria-label={a.featured ? "Quitar destacado" : "Destacar"}
                       onClick={() => void cambioRapido(a, { featured: !a.featured }, a.featured ? "Ya no está destacado" : "Artículo destacado")}
                     >
-                      <Star className={cn("h-3.5 w-3.5", a.featured && "fill-primary text-primary")} />
+                      <Pin className={cn("h-3.5 w-3.5", a.featured && "text-primary")} />
                     </Button>
                     <Button
                       size="sm"

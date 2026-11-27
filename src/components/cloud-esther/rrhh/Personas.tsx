@@ -17,7 +17,7 @@ import {
   Plus,
   RotateCcw,
   Search,
-  Star,
+  ClipboardCheck,
   Upload,
   UserMinus,
   UserPlus,
@@ -938,7 +938,7 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
                 .map((e) => ({
                   f: e.fecha,
                   t: `Evaluación ${e.ciclo}: ${(Object.values(e.puntajes).reduce((a, b) => a + b, 0) / 5).toFixed(1)}/5`,
-                  i: Star,
+                  i: ClipboardCheck,
                 })),
               ...(l.baja ? [{ f: l.baja.fecha, t: `Baja: ${l.baja.motivo}`, i: UserMinus }] : []),
             ]
@@ -987,7 +987,7 @@ export function FichaPersona({ id, ctx, onClose }: { id: string; ctx: Ctx; onClo
             </div>
             <div className="rounded-2xl bg-white/80 p-3 ring-1 ring-primary/10">
               <p className="flex items-center gap-1.5 text-xs font-semibold">
-                <Star className="size-3.5 text-primary" /> Evaluaciones
+                <ClipboardCheck className="size-3.5 text-primary" /> Evaluaciones
               </p>
               <ul className="mt-2 space-y-1.5">
                 {evals.length === 0 && (

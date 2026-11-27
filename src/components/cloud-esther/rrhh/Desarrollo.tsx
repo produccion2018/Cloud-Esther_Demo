@@ -7,7 +7,8 @@ import {
   GraduationCap,
   Pencil,
   Plus,
-  Star,
+  ClipboardCheck,
+  Circle,
   Target,
   Trash2,
   UserPlus,
@@ -67,7 +68,7 @@ export function sugerirDevolucion(nombre: string, p: Record<Competencia, number>
     "Atención al paciente": [
       "trato cálido y claro con los pacientes",
       "dedicar más tiempo a explicar cada tratamiento",
-      "Lograr que el 90% de las encuestas de satisfacción sean de 5 estrellas.",
+      "Lograr que el 90% de las encuestas de satisfacción sean de 5 puntos sobre 5.",
     ],
     "Calidad técnica": [
       "muy buena calidad en los tratamientos",
@@ -302,7 +303,7 @@ export function Desarrollo({ ctx }: { ctx: Ctx }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Mini label="Evaluaciones cerradas" valor={String(cerradas.length)} icon={Star} />
+            <Mini label="Evaluaciones cerradas" valor={String(cerradas.length)} icon={ClipboardCheck} />
             <Mini
               label="Promedio del equipo"
               valor={
@@ -691,7 +692,7 @@ function EvaluacionForm({
                   aria-label={`${c}: ${n}`}
                   onClick={() => setP((x) => ({ ...x, [c]: n }))}
                 >
-                  <Star
+                  <Circle
                     className={`size-5 ${n <= p[c] ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
                   />
                 </button>

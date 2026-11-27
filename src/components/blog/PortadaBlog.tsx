@@ -5,7 +5,6 @@ import {
   Newspaper,
   ScanLine,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
   type LucideIcon,
 } from "lucide-react";
@@ -26,7 +25,7 @@ const ESTILOS: Record<string, Estilo> = {
   "Inteligencia artificial": { icon: BrainCircuit, desde: "#2e1065", hasta: "#c026d3", brillo: "#f5d0fe" },
   "Seguridad y datos": { icon: ShieldCheck, desde: "#0f172a", hasta: "#4338ca", brillo: "#a5b4fc" },
   "Marketing dental": { icon: Megaphone, desde: "#4a044e", hasta: "#db2777", brillo: "#fbcfe8" },
-  Novedades: { icon: Sparkles, desde: "#312e81", hasta: "#9333ea", brillo: "#e9d5ff" },
+  Novedades: { icon: Megaphone, desde: "#312e81", hasta: "#9333ea", brillo: "#e9d5ff" },
 };
 const POR_DEFECTO: Estilo = { icon: Newspaper, desde: "#2e1065", hasta: "#7c3aed", brillo: "#ddd6fe" };
 

@@ -10,7 +10,7 @@ import {
   Plus,
   Save,
   Send,
-  Star,
+  ThumbsUp,
   Target,
   Trash2,
   TrendingUp,
@@ -318,8 +318,8 @@ export function Marketing({ ctx }: { ctx: CtxBI }) {
         />
         <Mini
           label="Reseñas"
-          valor={`${prom.toFixed(1).replace(".", ",")} ★`}
-          icon={Star}
+          valor={`${prom.toFixed(1).replace(".", ",")} / 5`}
+          icon={ThumbsUp}
           tono="text-amber-600"
           sub={`${res.length} reseñas`}
         />

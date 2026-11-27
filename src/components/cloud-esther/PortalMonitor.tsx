@@ -1124,7 +1124,7 @@ function PagosParaConfirmar({ onToast }: { onToast: (m: string) => void }) {
           id: Date.now(),
           fecha: new Date().toISOString().slice(0, 10),
           tipo: "Pago",
-          concepto: "Pago informado desde el portal",
+          concepto: p.via === "enlace" ? "Pago informado por el paciente" : "Pago informado desde el portal",
           medio: p.medio,
           monto: p.monto,
           notas: p.referencia ? `Ref. ${p.referencia}` : "",
@@ -1146,6 +1146,12 @@ function PagosParaConfirmar({ onToast }: { onToast: (m: string) => void }) {
               <span className="block text-sm font-semibold">{p.paciente} · {plata(p.monto)}</span>
               <span className="block text-[11px] text-muted-foreground">
                 {p.medio}{p.referencia ? ` · ref. ${p.referencia}` : ""} · {new Date(p.fecha).toLocaleDateString("es")}
+                {p.comprobante && (
+                  <>
+                    {" · "}
+                    <a href={p.comprobante} target="_blank" rel="noreferrer" className="font-semibold text-primary">Ver comprobante</a>
+                  </>
+                )}
               </span>
             </span>
             <button type="button" className={BTN_SECUNDARIO} onClick={() => resolver(p.id, "Rechazado")}>

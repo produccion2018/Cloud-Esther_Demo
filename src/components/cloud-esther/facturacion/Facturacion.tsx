@@ -102,6 +102,8 @@ import {
   useSuscripcion,
 } from "@/components/cloud-esther/facturacion/MiPlan";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { abrirWhatsAppConEnlacePago } from "@/lib/clinica/enlace-estudio";
+import { setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
@@ -3127,6 +3129,7 @@ function CobroDelDia({ ctx }: { ctx: Ctx }) {
           </button>
         </p>
       )}
+      <PagosAvisados ctx={ctx} />
       {filas.length === 0 ? (
         <Vacio icon={Banknote} texto="Hoy no hay turnos en la agenda." />
       ) : (
@@ -3152,6 +3155,21 @@ function CobroDelDia({ ctx }: { ctx: Ctx }) {
                       {f.cobradoHoy > 0 && <Pill clase="bg-emerald-50 text-emerald-700">Cobrado {ctx.$(f.cobradoHoy)}</Pill>}
                     </div>
                   </div>
+                  {f.pac?.telefono && f.debe > 0 && (
+                    <button
+                      type="button"
+                      aria-label="Mandar link de pago por WhatsApp"
+                      title="Mandar link de pago: ve cuánto debe y avisa «ya pagué» con el comprobante"
+                      className="btn-wa-icono shrink-0"
+                      onClick={() =>
+                        abrirWhatsAppConEnlacePago(telefonoInternacional(f.pac!.telefono), f.pac!.id, (enlace) =>
+                          `Hola ${f.pac!.nombre} 👋 Te queda un saldo de ${ctx.$(f.debe)} en la clínica.${enlace ? ` Acá ves los datos para pagar y nos avisás cuando lo hagas (con la foto del comprobante):\n${enlace}` : " Cualquier duda, escribinos por acá."}`,
+                        )
+                      }
+                    >
+                      <IconoWhatsApp />
+                    </button>
+                  )}
                   {listo ? (
                     <CheckCircle2 className="size-6 shrink-0 text-emerald-500" />
                   ) : f.pac ? (
@@ -3280,6 +3298,84 @@ function CobroRapido({
         <CheckCircle2 className="size-4" />
         {aCobrar > 0 ? `Cobrar ${ctx.$(aCobrar)} · ${medio}` : "Solo cargar en la cuenta"}
       </button>
+    </div>
+  );
+}
+
+/** «Ya pagué» que avisaron los pacientes (enlace de pago o portal): la clínica revisa que haya
+    llegado y lo confirma. Recién ahí se descuenta de su saldo (y entra en la caja si está abierta). */
+function PagosAvisados({ ctx }: { ctx: Ctx }) {
+  const { pagosInformados = [] } = storePortal.usar();
+  const { cambiar } = useRegistrosPacientes();
+  const pendientes = pagosInformados.filter((p) => p.estado === "Pendiente");
+  if (!pendientes.length) return null;
+  const resolver = (id: string, estado: "Confirmado" | "Rechazado") => {
+    const p = pagosInformados.find((x) => x.id === id);
+    if (!p) return;
+    if (estado === "Confirmado") {
+      const medio = (MEDIOS_PAGO as readonly string[]).includes(p.medio) ? (p.medio as MedioPago) : "Transferencia";
+      cambiar(p.pacienteId, "cuenta", (prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          fecha: diaISO(),
+          tipo: "Pago",
+          concepto: "Pago avisado por el paciente",
+          medio: p.medio,
+          monto: p.monto,
+          notas: [p.referencia && `Ref. ${p.referencia}`, p.comprobante && "con comprobante"].filter(Boolean).join(" · "),
+        },
+      ]);
+      const abiertas = storeFacturacion.leer().sesiones.filter((s) => !s.cerrada);
+      if (abiertas.length === 1)
+        setFacturacion("movimientos", (prev) => [
+          ...prev,
+          { id: `m-${Date.now()}`, sesionId: abiertas[0]!.id, fecha: new Date().toISOString(), tipo: "Ingreso", concepto: `Pago avisado · ${p.paciente}`, medio, monto: p.monto, comprobanteId: "" },
+        ]);
+    }
+    setPortal("pagosInformados", (prev = []) => prev.map((x) => (x.id === id ? { ...x, estado } : x)));
+    ctx.onToast(estado === "Confirmado" ? `Pago de ${p.paciente} confirmado: ya figura en su cuenta` : "Marcado como no recibido");
+  };
+  return (
+    <div className="card-grad p-4 ring-1 ring-amber-200">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <BadgeCheck className="size-4 text-amber-600" /> Pagos para confirmar ({pendientes.length})
+      </p>
+      <p className="text-[11px] text-muted-foreground">Los pacientes avisaron que pagaron. Revisá que haya llegado y confirmalo: recién ahí se descuenta de su saldo.</p>
+      <ul className="mt-3 space-y-2">
+        {pendientes.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white/90 p-3 ring-1 ring-primary/10">
+            {p.comprobante && (
+              <a href={p.comprobante} target="_blank" rel="noreferrer" className="shrink-0" aria-label="Ver comprobante">
+                <img src={p.comprobante.replace("/upload/", "/upload/w_120,h_120,c_fill/")} alt="" className="size-12 rounded-lg object-cover ring-1 ring-black/10" />
+              </a>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">
+                {p.paciente} · {ctx.$(p.monto)}
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                {p.medio}
+                {p.referencia ? ` · ref. ${p.referencia}` : ""} · {new Date(p.fecha).toLocaleDateString("es")}
+                {p.comprobante && (
+                  <>
+                    {" · "}
+                    <a href={p.comprobante} target="_blank" rel="noreferrer" className="font-semibold text-primary">
+                      Ver comprobante
+                    </a>
+                  </>
+                )}
+              </span>
+            </span>
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => resolver(p.id, "Rechazado")}>
+              No llegó
+            </button>
+            <button type="button" className={BTN_PRIMARIO} onClick={() => resolver(p.id, "Confirmado")}>
+              <CheckCircle2 className="size-4" /> Confirmar
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

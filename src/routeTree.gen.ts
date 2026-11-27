@@ -87,6 +87,7 @@ import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamiento
 import { Route as EncuestaTokenRouteImport } from './routes/encuesta.$token'
 import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as MiPortalSlugRouteImport } from './routes/mi-portal.$slug'
+import { Route as PagoTokenRouteImport } from './routes/pago.$token'
 import { Route as PresupuestoTokenRouteImport } from './routes/presupuesto.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as TurnoTokenRouteImport } from './routes/turno.$token'
@@ -487,6 +488,11 @@ const MiPortalSlugRoute = MiPortalSlugRouteImport.update({
   path: '/mi-portal/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagoTokenRoute = PagoTokenRouteImport.update({
+  id: '/pago/$token',
+  path: '/pago/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PresupuestoTokenRoute = PresupuestoTokenRouteImport.update({
   id: '/presupuesto/$token',
   path: '/presupuesto/$token',
@@ -612,6 +618,7 @@ export interface FileRoutesByFullPath {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/pago/$token': typeof PagoTokenRoute
   '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -700,6 +707,7 @@ export interface FileRoutesByTo {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/pago/$token': typeof PagoTokenRoute
   '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -790,6 +798,7 @@ export interface FileRoutesById {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/pago/$token': typeof PagoTokenRoute
   '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
@@ -881,6 +890,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/pago/$token'
     | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -969,6 +979,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/pago/$token'
     | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -1058,6 +1069,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/pago/$token'
     | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
@@ -1126,6 +1138,7 @@ export interface RootRouteChildren {
   EncuestaTokenRoute: typeof EncuestaTokenRoute
   LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   MiPortalSlugRoute: typeof MiPortalSlugRoute
+  PagoTokenRoute: typeof PagoTokenRoute
   PresupuestoTokenRoute: typeof PresupuestoTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   TurnoTokenRoute: typeof TurnoTokenRoute
@@ -1687,6 +1700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MiPortalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pago/$token': {
+      id: '/pago/$token'
+      path: '/pago/$token'
+      fullPath: '/pago/$token'
+      preLoaderRoute: typeof PagoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/presupuesto/$token': {
       id: '/presupuesto/$token'
       path: '/presupuesto/$token'
@@ -1861,6 +1881,7 @@ const rootRouteChildren: RootRouteChildren = {
   EncuestaTokenRoute: EncuestaTokenRoute,
   LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   MiPortalSlugRoute: MiPortalSlugRoute,
+  PagoTokenRoute: PagoTokenRoute,
   PresupuestoTokenRoute: PresupuestoTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   TurnoTokenRoute: TurnoTokenRoute,

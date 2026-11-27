@@ -135,6 +135,10 @@ export type PagoInformado = {
   referencia: string;
   fecha: string;
   estado: "Pendiente" | "Confirmado" | "Rechazado";
+  /** Foto del comprobante (Cloudinary) */
+  comprobante?: string;
+  /** Desde dónde avisó: su portal o el enlace de pago */
+  via?: string;
 };
 
 export type ConfigPortal = {

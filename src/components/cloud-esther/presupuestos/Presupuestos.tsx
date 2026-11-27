@@ -1,5 +1,5 @@
 import { telefonoInternacional } from "@/lib/clinica/whatsapp";
-import { crearEnlacePresupuesto } from "@/lib/clinica/enlace-estudio";
+import { abrirWhatsAppConEnlacePago, crearEnlacePresupuesto } from "@/lib/clinica/enlace-estudio";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNavigate } from "@tanstack/react-router";
@@ -3353,10 +3353,20 @@ function PagosPresupuesto({ ctx, f }: { ctx: Ctx; f: Fila }) {
         {falta > 0 && !abierto && (
           <div className="flex flex-wrap gap-1.5">
             {f.pac?.telefono && (
-              <a href={wa(f.pac.telefono, textoPedido)} target="_blank" rel="noreferrer" className={BTN_SECUNDARIO}>
+              <button
+                type="button"
+                className={BTN_SECUNDARIO}
+                onClick={() =>
+                  abrirWhatsAppConEnlacePago(telefonoInternacional(f.pac!.telefono), f.pid, (enlace) =>
+                    enlace
+                      ? `${textoPedido.replace("\n\nCuando lo hagas, mandanos el comprobante por acá. ¡Gracias!", "")}\n\nCuando lo hagas, avisanos acá (con la foto del comprobante):\n${enlace}`
+                      : textoPedido,
+                  )
+                }
+              >
                 <MessageCircle className="size-4" />
                 {faltaSena > 0 ? "Pedir la seña" : "Pedir el saldo"}
-              </a>
+              </button>
             )}
             <button
               type="button"

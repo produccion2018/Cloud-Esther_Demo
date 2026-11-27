@@ -1,7 +1,7 @@
 import { pedirAClinica } from "./api";
 import { SLUG_DEMO } from "./demo-admin";
 import { clinicaReal } from "./modo-clinica";
-import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, crearEnlaceBajaDemo, crearEnlacePresupuestoDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, crearEnlaceBajaDemo, crearEnlacePresupuestoDemo, crearEnlacePagoDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/enlace-estudio.ts
@@ -94,4 +94,33 @@ export async function crearEnlacePresupuesto(pacienteId: number, presupuestoId: 
   } catch {
     return null;
   }
+}
+
+/* Enlace para que el PACIENTE vea cuánto debe y cómo pagar, y avise «ya pagué» con la foto del
+   comprobante (queda para que la clínica lo confirme). Sin portal: todos los planes. */
+export async function crearEnlacePago(pacienteId: number): Promise<string | null> {
+  const slug = clinicaReal()?.slug;
+  try {
+    let token: string;
+    if (slug && slug !== SLUG_DEMO) {
+      token = (await pedirAClinica<{ token: string }>(slug, "POST", "/pagos/enlaces", { pacienteId })).token;
+    } else if (demoConDatosEnServidor()) {
+      token = (await crearEnlacePagoDemo({ pacienteId, clave: claveDemoServidor("registros", tenantActual()) })).token;
+    } else return null;
+    return `${window.location.origin}/pago/${token}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Abre WhatsApp YA (si no, el celular lo bloquea) y completa el mensaje con el enlace de pago. */
+export function abrirWhatsAppConEnlacePago(numero: string, pacienteId: number, armar: (enlace: string | null) => string) {
+  const ventana = window.open("", "_blank");
+  void crearEnlacePago(pacienteId).then((enlace) => {
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(armar(enlace))}`;
+    if (ventana && !ventana.closed) {
+      ventana.opener = null;
+      ventana.location.href = url;
+    } else window.open(url, "_blank", "noopener,noreferrer");
+  });
 }

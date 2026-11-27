@@ -433,3 +433,12 @@ export async function crearEnlacePresupuestoDemo(datos: { clave: string; pacient
   if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
   return (await r.json()) as { token: string };
 }
+
+/** Enlace para que el paciente vea su saldo y avise «ya pagué» con el comprobante (demo). */
+export async function crearEnlacePagoDemo(datos: { clave: string; pacienteId: number }): Promise<{ token: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/pagos/enlaces", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string };
+}

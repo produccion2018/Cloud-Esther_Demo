@@ -185,3 +185,48 @@ export function resultadosCampania(c: CampaniaAds, leads: Lead[]) {
     roi: c.gastado ? Math.round(((ingresos - c.gastado) / c.gastado) * 100) : 0,
   };
 }
+export type DatosFuente = {
+  f: Fuente;
+  leads: number;
+  pacientes: number;
+  perdidos: number;
+  /** % de leads que terminaron siendo pacientes */
+  conversion: number;
+  /** Suma del valor estimado que cargó la clínica en los leads convertidos */
+  valor: number;
+  /** Días promedio desde que llegó hasta que fue paciente (null si todavía no hay) */
+  dias: number | null;
+};
+
+/** Cuándo pasó a «Convertido» (la última actividad de etapa que lo dice) */
+function fechaConversion(l: Lead): string | null {
+  const a = l.actividad.find((x) => x.tipo === "Etapa" && x.texto.includes("Convertido"));
+  return a?.fecha ?? null;
+}
+
+/** ¿De dónde vienen los pacientes? Leads, pacientes y conversión por canal, en el período elegido. */
+export function analisisPorFuente(leads: Lead[], desdeDias: number | null, ahora = Date.now()): DatosFuente[] {
+  const corte = desdeDias == null ? 0 : ahora - desdeDias * 86_400_000;
+  const delPeriodo = leads.filter((l) => new Date(l.creado).getTime() >= corte);
+  return FUENTES.map((f) => {
+    const suyos = delPeriodo.filter((l) => l.fuente === f);
+    const conv = suyos.filter((l) => l.etapa === "Convertido");
+    const tiempos = conv
+      .map((l) => {
+        const fc = fechaConversion(l);
+        return fc ? (new Date(fc).getTime() - new Date(l.creado).getTime()) / 86_400_000 : null;
+      })
+      .filter((d): d is number => d != null && d >= 0);
+    return {
+      f,
+      leads: suyos.length,
+      pacientes: conv.length,
+      perdidos: suyos.filter((l) => l.etapa === "Perdido").length,
+      conversion: suyos.length ? Math.round((conv.length / suyos.length) * 100) : 0,
+      valor: conv.reduce((a, l) => a + (l.valor || 0), 0),
+      dias: tiempos.length ? Math.round(tiempos.reduce((a, b) => a + b, 0) / tiempos.length) : null,
+    };
+  })
+    .filter((x) => x.leads > 0)
+    .sort((a, b) => b.pacientes - a.pacientes || b.leads - a.leads);
+}

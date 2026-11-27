@@ -44,6 +44,7 @@ import {
   FUENTES,
   leadSinRespuesta,
   resultadosCampania,
+  analisisPorFuente,
   ultimoContactoLead,
   setMarketing,
   storeMarketing,
@@ -616,14 +617,6 @@ function Resumen({ ctx }: { ctx: Ctx }) {
     },
     { l: "Pacientes", n: leads.filter((l) => l.etapa === "Convertido").length },
   ];
-  const porFuente = FUENTES.map((f) => ({
-    f,
-    n: leads.filter((l) => l.fuente === f).length,
-    c: leads.filter((l) => l.fuente === f && l.etapa === "Convertido").length,
-  }))
-    .filter((x) => x.n > 0)
-    .sort((a, b) => b.n - a.n);
-  const maxFuente = Math.max(1, ...porFuente.map((x) => x.n));
   const hoy = hoyISO();
   const seguimientos = leads.filter(
     (l) =>
@@ -664,28 +657,9 @@ function Resumen({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="card-grad p-4">
-            <p className="text-sm font-semibold">De dónde llegan</p>
-            <ul className="mt-3 space-y-2.5">
-              {porFuente.map((x) => (
-                <li key={x.f}>
-                  <p className="flex justify-between text-xs">
-                    <span className="font-medium">{x.f}</span>
-                    <span className="text-muted-foreground">
-                      {x.n} leads · <b className="text-emerald-600">{x.c} pacientes</b>
-                    </span>
-                  </p>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-primary/[0.07]">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${FUENTE_COLOR[x.f]}`}
-                      style={{ width: `${(x.n / maxFuente) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <DeDondeVienen />
+
+        <div className="grid grid-cols-1 gap-4">
           <div className="card-grad p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Campañas activas</p>
@@ -812,12 +786,134 @@ function Resumen({ ctx }: { ctx: Ctx }) {
             <CaraEsther className="size-4" /> Sugerencia
           </p>
           <p className="mt-1 text-xs text-white/85">
-            {porFuente[0]
-              ? `${porFuente[0].f} es tu mejor fuente de leads. Considerá subir el presupuesto de las campañas en ese canal y responder en menos de 1 hora: la conversión sube hasta 3 veces.`
-              : "Cargá tus primeros leads para ver recomendaciones."}
+            {sugerenciaFuentes(analisisPorFuente(leads, null))}
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+const PERIODOS_FUENTE = [
+  { k: 30, l: "30 días" },
+  { k: 90, l: "90 días" },
+  { k: null, l: "Todo" },
+] as const;
+
+/** Texto de Esther según lo que muestran los números (sin inventar nada). */
+function sugerenciaFuentes(datos: ReturnType<typeof analisisPorFuente>): string {
+  if (!datos.length) return "Cargá tus primeros leads para ver de dónde vienen tus pacientes.";
+  const conMuestra = datos.filter((x) => x.leads >= 3);
+  const mejor = [...(conMuestra.length ? conMuestra : datos)].sort((a, b) => b.conversion - a.conversion)[0]!;
+  const masLeads = [...datos].sort((a, b) => b.leads - a.leads)[0]!;
+  const flojo = conMuestra.find((x) => x.pacientes === 0 && x.leads >= 5);
+  if (flojo)
+    return `${flojo.f} te trajo ${flojo.leads} leads y ninguno vino todavía. Revisá cómo se les responde por ese canal antes de invertir más ahí.`;
+  if (mejor.f !== masLeads.f && mejor.conversion > masLeads.conversion)
+    return `${masLeads.f} trae más consultas, pero ${mejor.f} convierte mejor (${mejor.conversion}% contra ${masLeads.conversion}%). Vale la pena empujar ${mejor.f}.`;
+  return `${mejor.f} es tu mejor canal: ${mejor.pacientes} de ${mejor.leads} leads terminaron siendo pacientes. Responder rápido sube todavía más la conversión.`;
+}
+
+function DeDondeVienen() {
+  const { leads } = storeMarketing.usar();
+  const [periodo, setPeriodo] = useState<number | null>(90);
+  const datos = analisisPorFuente(leads, periodo);
+  const totLeads = datos.reduce((a, x) => a + x.leads, 0);
+  const totPac = datos.reduce((a, x) => a + x.pacientes, 0);
+  const maxLeads = Math.max(1, ...datos.map((x) => x.leads));
+  const conMuestra = datos.filter((x) => x.leads >= 3);
+  const mejorConv = [...(conMuestra.length ? conMuestra : datos)].sort((a, b) => b.conversion - a.conversion)[0];
+  const masPac = datos[0];
+  const masRapido = [...datos].filter((x) => x.dias != null).sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))[0];
+
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">¿De dónde vienen tus pacientes?</p>
+          <p className="text-xs text-muted-foreground">
+            Por cada canal: cuántas consultas llegan y cuántas terminan sentadas en el sillón.
+          </p>
+        </div>
+        <div className="flex rounded-full bg-primary/[0.06] p-0.5" role="group" aria-label="Período">
+          {PERIODOS_FUENTE.map((p) => (
+            <button
+              key={p.l}
+              type="button"
+              onClick={() => setPeriodo(p.k)}
+              aria-pressed={periodo === p.k}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${periodo === p.k ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-primary"}`}
+            >
+              {p.l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {datos.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-white/70 p-3 text-xs text-muted-foreground ring-1 ring-primary/10">
+          No hay leads en este período. Cuando cargues o lleguen consultas, acá vas a ver qué canal te trae pacientes de verdad.
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { t: "Consultas", v: String(totLeads), d: "en el período" },
+              { t: "Pacientes", v: String(totPac), d: totLeads ? `${Math.round((totPac / totLeads) * 100)}% de conversión` : "—" },
+              { t: "Trae más pacientes", v: masPac && masPac.pacientes > 0 ? masPac.f : "—", d: masPac && masPac.pacientes > 0 ? `${masPac.pacientes} pacientes` : "todavía ninguno" },
+              { t: "Convierte mejor", v: mejorConv && mejorConv.pacientes > 0 ? mejorConv.f : "—", d: mejorConv && mejorConv.pacientes > 0 ? `${mejorConv.conversion}% de sus leads` : "todavía sin datos" },
+            ].map((k) => (
+              <div key={k.t} className="min-w-0 rounded-xl bg-white/80 p-2.5 ring-1 ring-primary/10">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{k.t}</p>
+                <p className="truncate text-base font-bold text-foreground">{k.v}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{k.d}</p>
+              </div>
+            ))}
+          </div>
+
+          <ul className="mt-4 space-y-3">
+            {datos.map((x) => (
+              <li key={x.f} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+                    <span className={`size-2 shrink-0 rounded-full bg-gradient-to-br ${FUENTE_COLOR[x.f]}`} />
+                    <span className="truncate">{x.f}</span>
+                  </span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {x.leads} {x.leads === 1 ? "lead" : "leads"} ·{" "}
+                    <b className="text-emerald-600">
+                      {x.pacientes} {x.pacientes === 1 ? "paciente" : "pacientes"}
+                    </b>
+                  </span>
+                </div>
+                <div className="relative mt-1 h-2.5 overflow-hidden rounded-full bg-primary/[0.07]">
+                  <div
+                    className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r opacity-35 ${FUENTE_COLOR[x.f]}`}
+                    style={{ width: `${(x.leads / maxLeads) * 100}%` }}
+                  />
+                  <div
+                    className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${FUENTE_COLOR[x.f]}`}
+                    style={{ width: `${(x.pacientes / maxLeads) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                  <span>
+                    Conversión <b className={x.conversion >= 30 ? "text-emerald-600" : x.conversion > 0 ? "text-foreground" : "text-muted-foreground"}>{x.conversion}%</b>
+                  </span>
+                  {x.dias != null && <span>Tarda ~{x.dias === 0 ? "menos de 1 día" : `${x.dias} ${x.dias === 1 ? "día" : "días"}`}</span>}
+                  {x.valor > 0 && <span>{ars(x.valor)} estimados</span>}
+                  {x.perdidos > 0 && <span>{x.perdidos} {x.perdidos === 1 ? "perdido" : "perdidos"}</span>}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="h-1.5 w-4 rounded-full bg-primary/30" /> Consultas</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-4 rounded-full bg-primary" /> Pacientes</span>
+            {masRapido && masRapido.dias != null && <span className="truncate">Más rápido: {masRapido.f}</span>}
+          </p>
+        </>
+      )}
     </div>
   );
 }

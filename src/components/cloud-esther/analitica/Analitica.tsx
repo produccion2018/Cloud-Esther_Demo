@@ -47,6 +47,12 @@ import {
   type Filtros,
   type Periodo,
 } from "@/components/cloud-esther/analitica/datos";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { storeInventario } from "@/lib/cloud-esther/inventario-store";
+import { deudaDe } from "@/lib/cloud-esther/facturacion-store";
+import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { formatos, type CtxBI, type SeccionBI } from "@/components/cloud-esther/analitica/ctx";
 import {
   Barras,
@@ -478,6 +484,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
   return (
     <div className="space-y-3">
       <ComoEsta ctx={ctx} />
+      <QueHacer ctx={ctx} navegar={(to) => void navigate({ to })} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           label="Producción"
@@ -601,9 +608,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
           <EstadoTurnos ctx={ctx} valores={porEstado} estados={estados} />
         )}
         <div className="lg:col-span-2">
-          {ctx.nivel >= 3 ? (
-            <Insights ctx={ctx} navegar={(to) => void navigate({ to })} />
-          ) : (
+          {(
             <TarjetaGrafico
               titulo="Estado de los turnos del período"
               tabla={{
@@ -733,108 +738,129 @@ type Insight = {
   accion?: { l: string; to?: string; ir?: SeccionBI };
 };
 
-function Insights({ ctx, navegar }: { ctx: CtxBI; navegar: (to: string) => void }) {
+/** Qué conviene hacer ahora: cada número importante con su acción y el lugar para hacerla. */
+function QueHacer({ ctx, navegar }: { ctx: CtxBI; navegar: (to: string) => void }) {
+  const { pacientes } = usePacientes();
+  const { turnos, ajustes, recordatorios = [] } = storeAgenda.usar();
+  const registros = useTodosLosRegistros();
+  const { insumos } = storeInventario.usar();
   const out: Insight[] = [];
-  const { m, mPrev } = ctx;
-  const dProd = variacion(m.produccion, mPrev.produccion);
-  out.push({
-    t: `La producción ${dProd >= 0 ? "creció" : "bajó"} ${Math.abs(dProd).toFixed(1).replace(".", ",")} %`,
-    d: `${ctx.$(m.produccion)} contra ${ctx.$(mPrev.produccion)} del período anterior. Ticket promedio ${ctx.$(m.ticket)}.`,
-    tono: dProd >= 0 ? "bien" : "mal",
-  });
-  // Día con más ausentismo
+  const hoy = new Date();
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const manana = iso(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1));
+  // 1) Turnos de mañana sin confirmar
+  const sinConfirmar = turnos.filter((t) => t.fecha === manana && t.estado === "Pendiente").length;
+  if (sinConfirmar)
+    out.push({
+      t: `${sinConfirmar} ${sinConfirmar === 1 ? "turno de mañana está" : "turnos de mañana están"} sin confirmar`,
+      d: "Mandales el recordatorio con el link para confirmar: así se reducen las ausencias.",
+      tono: "mal",
+      accion: { l: "Ir a la Agenda", to: "/demo/agenda" },
+    });
+  // 2) Día con más ausencias → recordatorios
   const porDia = [1, 2, 3, 4, 5, 6].map((d) => {
     const x = ctx.hs.filter((h) => h.dow === d);
     const a = x.filter((h) => h.estado === "Ausente").length;
     const at = x.filter((h) => h.estado === "Atendida").length;
-    return { d, v: (a / Math.max(1, a + at)) * 100 };
+    return { d, a, v: (a / Math.max(1, a + at)) * 100 };
   });
   const peor = porDia.reduce((a, b) => (b.v > a.v ? b : a), porDia[0]!);
-  if (peor.v > 0 && peor.v > ctx.cfg.metas.ausentismo)
+  if (peor.a >= 2 && peor.v >= 10)
     out.push({
-      t: `Los ${DIAS_PLURAL[peor.d]} el ausentismo llega al ${peor.v.toFixed(1).replace(".", ",")} %`,
-      d: "Sumá un recordatorio por WhatsApp 24 h antes con pedido de confirmación para ese día.",
+      t: `Los ${DIAS_PLURAL[peor.d]} falta el ${Math.round(peor.v)}% de los pacientes`,
+      d: recordatorios.some((r) => r.activo)
+        ? "Probá mandar el recordatorio con más anticipación o pedir confirmación ese día."
+        : "Activá los recordatorios de turno por WhatsApp: es lo que más baja las ausencias.",
       tono: "mal",
-      accion: { l: "Ver agenda", ir: "agenda" },
+      accion: { l: "Configurar recordatorios", to: "/demo/comunicaciones" },
     });
-  // Profesional destacado
-  const porProf = [
-    ...agrupar(
-      ctx.hs.filter((h) => h.estado === "Atendida"),
-      (h) => h.profesional,
-    ).entries(),
-  ].map(([p, xs]) => ({
-    p,
-    v: xs.reduce((a, h) => a + h.monto, 0),
-  }));
-  const top = porProf.sort((a, b) => b.v - a.v)[0];
-  if (top && ctx.f.profesional === "Todos")
+  // 3) Pacientes para volver a llamar
+  const llamar = pacientesParaLlamar(pacientes, turnos, ajustes).filter((x) => !x.avisado).length;
+  if (llamar)
     out.push({
-      t: `${top.p} lidera la producción`,
-      d: `${ctx.$(top.v)} en el período (${Math.round((top.v / (m.produccion || 1)) * 100)} % del total).`,
+      t: `${llamar} ${llamar === 1 ? "paciente no viene" : "pacientes no vienen"} hace ${Math.round(ajustes?.recallMeses ?? 6)} meses o más`,
+      d: "Invitalos a un control con un toque: muchos vuelven solo con un mensaje.",
+      tono: "mal",
+      accion: { l: "Recordales", to: "/demo/pacientes" },
+    });
+  // 4) Presupuestos esperando respuesta y aprobados sin turnos
+  const todos = Object.values(registros).flatMap((r) => r?.presupuestos ?? []);
+  const esperan = todos.filter((p) => p.estado === "Enviado");
+  if (esperan.length)
+    out.push({
+      t: `${esperan.length} ${esperan.length === 1 ? "presupuesto espera" : "presupuestos esperan"} respuesta`,
+      d: `${ctx.$(ctx.pres.filter((p) => p.estado === "Enviado").reduce((a, p) => a + p.monto, 0))} sin cerrar. Un recordatorio con el link para aprobar suele destrabarlos.`,
+      tono: "mal",
+      accion: { l: "Ir a Seguimiento", to: "/demo/presupuestos" },
+    });
+  const conSerie = new Set(turnos.filter((t) => t.serie?.startsWith("pres-") && t.estado !== "Cancelada").map((t) => t.serie));
+  const sinTurnos = todos.filter((p) => p.estado === "Aprobado" && !p.turnosAgendados && !conSerie.has(`pres-${p.id}`)).length;
+  if (sinTurnos)
+    out.push({
+      t: `${sinTurnos} ${sinTurnos === 1 ? "tratamiento aprobado no tiene" : "tratamientos aprobados no tienen"} turnos`,
+      d: "Agendalos de un toque desde el presupuesto: Cloud Esther propone los horarios.",
+      tono: "mal",
+      accion: { l: "Agendar", to: "/demo/presupuestos" },
+    });
+  // 5) Pacientes que deben
+  const deben = Object.values(registros).map((r) => deudaDe(r?.cuenta).saldo).filter((v) => v > 0);
+  if (deben.length)
+    out.push({
+      t: `${deben.length} ${deben.length === 1 ? "paciente debe" : "pacientes deben"} ${ctx.$(deben.reduce((a, b) => a + b, 0))}`,
+      d: "Mandales un recordatorio amable con el link para pagar.",
+      tono: "mal",
+      accion: { l: "Ver quiénes", to: "/demo/facturacion" },
+    });
+  // 6) Agenda con lugar
+  if (ctx.cfg.metas.ocupacion > 0 && ctx.m.ocupacion < ctx.cfg.metas.ocupacion && ctx.m.atenciones > 0)
+    out.push({
+      t: `La agenda tiene lugar (${Math.round(ctx.m.ocupacion)}% de ${Math.round(ctx.cfg.metas.ocupacion)}%)`,
+      d: "Compartí tu página de turnos online o ofrecé los huecos a la lista de espera.",
       tono: "info",
-      accion: { l: "Ver profesionales", ir: "profesionales" },
+      accion: { l: "Turnos online", to: "/demo/agenda" },
     });
-  // Presupuestos pendientes
-  const env = ctx.pres.filter((p) => p.estado === "Enviado");
-  if (env.length)
+  // 7) Insumos por reponer
+  const reponer = insumos.filter((i) => i.stock <= i.minimo).length;
+  if (reponer)
     out.push({
-      t: `${env.length} presupuestos esperan respuesta`,
-      d: `${ctx.$(env.reduce((a, p) => a + p.monto, 0))} sin cerrar. Un llamado de seguimiento suele duplicar la aprobación.`,
-      tono: "mal",
-      accion: { l: "Ir a Presupuestos", to: "/demo/presupuestos" },
-    });
-  // Canal
-  const canales = [
-    ...agrupar(
-      ctx.hs.filter((h) => h.nuevo && h.estado === "Atendida"),
-      (h) => h.canal,
-    ).entries(),
-  ].sort((a, b) => b[1].length - a[1].length);
-  if (canales[0])
-    out.push({
-      t: `${canales[0][0]} trae la mayor cantidad de pacientes nuevos`,
-      d: `${canales[0][1].length} de ${m.nuevos} en el período.${canales[1] ? ` Le sigue ${canales[1][0]} con ${canales[1][1].length}.` : ""}`,
+      t: `${reponer} ${reponer === 1 ? "insumo está" : "insumos están"} por agotarse`,
+      d: "Pedíselos al proveedor por WhatsApp desde Inventario → Alertas.",
       tono: "info",
-      accion: { l: "Ver captación", ir: "marketing" },
-    });
-  // Ocupación
-  if (ctx.cfg.metas.ocupacion > 0 && m.ocupacion < ctx.cfg.metas.ocupacion)
-    out.push({
-      t: `Ocupación ${ctx.p(m.ocupacion)}: hay agenda libre`,
-      d: `La meta es ${ctx.p(ctx.cfg.metas.ocupacion)}. Ofrecé los huecos a la lista de espera o a pacientes con tratamientos pendientes.`,
-      tono: "mal",
-      accion: { l: "Ir a Agenda", to: "/demo/agenda" },
+      accion: { l: "Ir a Inventario", to: "/demo/inventario" },
     });
   const TONO = {
     bien: "bg-emerald-50 text-emerald-800 ring-emerald-100",
-    mal: "bg-amber-50 text-amber-800 ring-amber-100",
+    mal: "bg-amber-50 text-amber-900 ring-amber-100",
     info: "bg-primary/[0.05] text-foreground ring-primary/10",
   };
   return (
-    <div className="card-grad h-full p-4">
-      <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        <Lightbulb className="size-4 text-primary" /> Lo que muestran los datos
+    <div className="card-grad p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Lightbulb className="size-4 text-primary" /> Qué conviene hacer ahora
       </p>
-      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        {out.map((x) => (
-          <li key={x.t} className={`rounded-xl px-3 py-2.5 ring-1 ${TONO[x.tono]}`}>
-            <b className="block text-[13px]">{x.t}</b>
-            <span className="mt-0.5 block text-[11.5px] opacity-80">{x.d}</span>
-            {x.accion && (
-              <button
-                type="button"
-                className="mt-1.5 text-[11.5px] font-semibold text-primary hover:underline"
-                onClick={() =>
-                  x.accion?.to ? navegar(x.accion.to) : x.accion?.ir && ctx.ir(x.accion.ir)
-                }
-              >
-                {x.accion.l} →
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      {out.length === 0 ? (
+        <p className="mt-2 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12.5px] font-medium text-emerald-800 ring-1 ring-emerald-100">
+          ✓ Todo en orden: no hay nada pendiente que convenga atender ahora.
+        </p>
+      ) : (
+        <ul data-movil="1col" className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+          {out.map((x) => (
+            <li key={x.t} className={`flex flex-col rounded-xl px-3 py-2.5 ring-1 ${TONO[x.tono]}`}>
+              <b className="block text-[13px]">{x.t}</b>
+              <span className="mt-0.5 block text-[11.5px] opacity-80">{x.d}</span>
+              {x.accion && (
+                <button
+                  type="button"
+                  className="mt-2 self-start rounded-full bg-white px-3 py-1 text-[11.5px] font-semibold text-primary shadow-sm ring-1 ring-primary/15 hover:bg-primary/5"
+                  onClick={() => (x.accion?.to ? navegar(x.accion.to) : x.accion?.ir && ctx.ir(x.accion.ir))}
+                >
+                  {x.accion.l} →
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -124,6 +124,8 @@ export type EstadoInventario = {
   pedidos: PedidoEquipo[];
   /** Descontar el kit solo cuando el turno se marca «Atendida» en la Agenda (desde ese día en adelante) */
   kitsAuto?: { activo: boolean; desde: string };
+  /** Último conteo físico de cada sucursal (fecha ISO) */
+  conteos?: Record<string, string>;
 };
 
 /* ───────────── Utilidades ───────────── */

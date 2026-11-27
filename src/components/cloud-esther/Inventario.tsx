@@ -1146,9 +1146,44 @@ function ConteoFisico({
   onCancel: () => void;
   onListo: (m: string) => void;
 }) {
+  const { conteos } = storeInventario.usar();
   const [suc, setSuc] = useState(ctx.sucursales[0] ?? "");
-  const [contado, setContado] = useState<Record<string, string>>({});
+  const claveBorrador = `cloud-esther:conteo-borrador:${suc}`;
+  const leerBorrador = (s: string): Record<string, string> => {
+    try {
+      return JSON.parse(localStorage.getItem(`cloud-esther:conteo-borrador:${s}`) ?? "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  };
+  const [contado, setContadoRaw] = useState<Record<string, string>>(() => leerBorrador(ctx.sucursales[0] ?? ""));
+  const setContado = (fn: (p: Record<string, string>) => Record<string, string>) =>
+    setContadoRaw((p) => {
+      const n = fn(p);
+      try {
+        localStorage.setItem(claveBorrador, JSON.stringify(n));
+      } catch {
+        /* sin almacenamiento: el conteo sigue en pantalla */
+      }
+      return n;
+    });
+  const borrarBorrador = () => {
+    try {
+      localStorage.removeItem(claveBorrador);
+    } catch {
+      /* nada */
+    }
+  };
+  const [buscar, setBuscar] = useState("");
+  const [soloFaltan, setSoloFaltan] = useState(false);
   const items = ctx.insumos.filter((i) => i.sucursal === suc);
+  const hechos = items.filter((i) => contado[i.id] !== undefined && contado[i.id] !== "").length;
+  const q = normalizarBusqueda(buscar);
+  const visibles = items.filter(
+    (i) =>
+      (!q || normalizarBusqueda(`${i.nombre} ${i.codigo} ${i.ubicacion}`).includes(q)) &&
+      (!soloFaltan || contado[i.id] === undefined || contado[i.id] === ""),
+  );
   const difs = items
     .map((i) => ({ i, c: contado[i.id] }))
     .filter(
@@ -1156,11 +1191,12 @@ function ConteoFisico({
         x.c !== undefined && x.c !== "" && Number(x.c) !== x.i.stock,
     );
   const valorDif = difs.reduce((a, { i, c }) => a + (Number(c) - i.stock) * i.costo, 0);
+  const ultimo = conteos?.[suc];
+  const cambiar = (id: string, v: string) => setContado((p) => ({ ...p, [id]: v }));
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!difs.length) return onListo("Conteo sin diferencias: el stock coincide");
         for (const { i, c } of difs)
           registrarMovimiento({
             insumoId: i.id,
@@ -1170,66 +1206,139 @@ function ConteoFisico({
             usuario: ctx.usuario,
             referencia: "",
           });
-        onListo(`Conteo aplicado: ${difs.length} ajustes en ${suc}`);
+        if (hechos) setInventario("conteos", (p) => ({ ...(p ?? {}), [suc]: new Date().toISOString() }));
+        borrarBorrador();
+        onListo(
+          difs.length
+            ? `Conteo aplicado: ${difs.length} ajuste${difs.length === 1 ? "" : "s"} en ${suc}`
+            : "Conteo sin diferencias: el stock coincide",
+        );
       }}
       className="space-y-3"
     >
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-60">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,15rem)_1fr] sm:items-end">
+        {ctx.sucursales.length > 1 ? (
           <Field label="Sucursal">
             <Sel
               value={suc}
               onChange={(v) => {
                 setSuc(v);
-                setContado({});
+                setContadoRaw(leerBorrador(v));
               }}
               opciones={ctx.sucursales}
             />
           </Field>
-        </div>
+        ) : (
+          <span />
+        )}
         <p className="text-xs text-muted-foreground">
-          Cargá lo que contaste en el depósito. Solo se ajustan los que difieren.
+          Contá en el depósito y cargá lo que hay. Si coincide, tocá <b>✓</b>. Podés dejarlo a medias: queda guardado en
+          este equipo hasta que lo apliques.
+          {ultimo && <> Último conteo: <b>{fecha(ultimo.slice(0, 10))}</b>.</>}
         </p>
       </div>
-      <ul className="max-h-[48vh] space-y-1.5 overflow-y-auto pr-1">
-        {items.map((i) => {
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
+          <input
+            value={buscar}
+            onChange={(e) => setBuscar(e.target.value)}
+            placeholder="Buscar insumo"
+            aria-label="Buscar en el conteo"
+            className={`${INPUT} pl-9`}
+          />
+        </div>
+        <button type="button" className={CHIP(soloFaltan)} onClick={() => setSoloFaltan((v) => !v)}>
+          Faltan contar
+        </button>
+      </div>
+      <div>
+        <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+          <span>
+            Contaste <b className="text-foreground">{hechos}</b> de {items.length}
+          </span>
+          {hechos > 0 && (
+            <button type="button" className="font-semibold text-primary" onClick={() => setContado(() => ({}))}>
+              Empezar de nuevo
+            </button>
+          )}
+        </div>
+        <Barra pct={items.length ? (hechos / items.length) * 100 : 0} clase="bg-gradient-to-r from-primary to-fuchsia-500" />
+      </div>
+      <ul className="max-h-[46vh] space-y-1.5 overflow-y-auto pr-1">
+        {visibles.length === 0 && (
+          <li className="py-6 text-center text-xs text-muted-foreground">
+            {items.length ? "Nada por acá: ya contaste todo lo de este filtro." : "Esta sucursal todavía no tiene insumos."}
+          </li>
+        )}
+        {visibles.map((i) => {
           const c = contado[i.id];
-          const d = c !== undefined && c !== "" ? Number(c) - i.stock : 0;
+          const cargado = c !== undefined && c !== "";
+          const d = cargado ? Number(c) - i.stock : 0;
+          const valor = cargado ? Number(c) : i.stock;
           return (
             <li
               key={i.id}
-              className="flex items-center gap-3 rounded-xl bg-primary/[0.035] px-3 py-2 ring-1 ring-primary/10"
+              className={`rounded-xl px-3 py-2 ring-1 ${cargado ? (d === 0 ? "bg-emerald-50/70 ring-emerald-200" : "bg-amber-50/70 ring-amber-200") : "bg-primary/[0.035] ring-primary/10"}`}
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{i.nombre}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  Sistema: {num(i.stock)} {i.unidad} · {i.ubicacion}
-                </p>
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{i.nombre}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    Sistema: {num(i.stock)} {i.unidad}
+                    {i.ubicacion ? ` · ${i.ubicacion}` : ""}
+                  </p>
+                </div>
+                {d !== 0 && (
+                  <Pill clase={d > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}>
+                    {d > 0 ? "+" : ""}
+                    {num(d)}
+                  </Pill>
+                )}
               </div>
-              {d !== 0 && (
-                <Pill
-                  clase={d > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}
+              <div className="mt-2 flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  aria-label={`Coincide ${i.nombre}`}
+                  onClick={() => cambiar(i.id, String(i.stock))}
+                  className={`grid size-9 place-items-center rounded-full text-sm font-bold ring-1 ${cargado && d === 0 ? "bg-emerald-500 text-white ring-emerald-500" : "bg-white text-emerald-600 ring-emerald-200"}`}
                 >
-                  {d > 0 ? "+" : ""}
-                  {num(d)}
-                </Pill>
-              )}
-              <input
-                type="number"
-                min={0}
-                aria-label={`Contado ${i.nombre}`}
-                value={c ?? ""}
-                placeholder={String(i.stock)}
-                onChange={(e) => setContado((p) => ({ ...p, [i.id]: e.target.value }))}
-                className={`${INPUT} w-24 text-right`}
-              />
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Uno menos ${i.nombre}`}
+                  onClick={() => cambiar(i.id, String(Math.max(0, valor - 1)))}
+                  className={BTN_ICONO}
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  aria-label={`Contado ${i.nombre}`}
+                  value={c ?? ""}
+                  placeholder={String(i.stock)}
+                  onChange={(e) => cambiar(i.id, e.target.value)}
+                  className={`${INPUT} w-20 text-center`}
+                />
+                <button
+                  type="button"
+                  aria-label={`Uno más ${i.nombre}`}
+                  onClick={() => cambiar(i.id, String(valor + 1))}
+                  className={BTN_ICONO}
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              </div>
             </li>
           );
         })}
       </ul>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/[0.05] px-3 py-2 text-xs">
         <span>
-          <b>{difs.length}</b> diferencias
+          <b>{difs.length}</b> {difs.length === 1 ? "diferencia" : "diferencias"}
         </span>
         <span>
           Impacto:{" "}
@@ -3698,9 +3807,21 @@ function Sedes({ ctx }: { ctx: Ctx }) {
       consumo,
     };
   });
-  const codigos = [...new Set(ctx.insumos.map((i) => i.codigo))].filter(
-    (c) => ctx.insumos.filter((i) => i.codigo === c).length > 1,
-  );
+  /** Mismo insumo en varias sedes: por código, o por nombre si no tiene código. */
+  const claveIns = (i: Insumo) => (i.codigo.trim() ? `c:${i.codigo.trim()}` : `n:${normalizarBusqueda(i.nombre)}`);
+  const grupos = new Map<string, Insumo[]>();
+  for (const i of ctx.insumos) grupos.set(claveIns(i), [...(grupos.get(claveIns(i)) ?? []), i]);
+  const codigos = [...grupos.keys()].filter((c) => (grupos.get(c)?.length ?? 0) > 1);
+  /** Sugerencia: la sede que sobra le pasa a la que está baja lo justo para llegar al ideal, sin quedarse corta. */
+  const sugerencia = (ins: Insumo[]) => {
+    const bajo = ins.find((i) => ["Bajo", "Agotado"].includes(nivelStock(i)));
+    const sobra = [...ins].sort((a, b) => b.stock - b.minimo - (a.stock - a.minimo))[0];
+    if (!bajo || !sobra || sobra.id === bajo.id) return null;
+    const cant = Math.floor(Math.min(sobra.stock - sobra.minimo, Math.max(bajo.ideal, bajo.minimo) - bajo.stock));
+    return cant > 0 ? { bajo, sobra, cant } : null;
+  };
+  const sugeridas = codigos.map((c) => sugerencia(grupos.get(c) ?? [])).filter((x) => x !== null);
+  const [confirmar, setConfirmar] = useState(false);
   const maxValor = Math.max(1, ...filas.map((f) => f.valor));
   return (
     <div className="space-y-3">
@@ -3732,6 +3853,58 @@ function Sedes({ ctx }: { ctx: Ctx }) {
           </li>
         ))}
       </ul>
+      {sugeridas.length > 0 && (
+        <div className="card-grad flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-sky-500 to-violet-500 text-white">
+              <ArrowLeftRight className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">
+                {sugeridas.length === 1 ? "Hay 1 insumo" : `Hay ${sugeridas.length} insumos`} que una sede necesita y otra tiene de más
+              </p>
+              <p className="text-xs text-muted-foreground">Antes de comprar, pasalo entre sedes. Cada sede se queda con su mínimo.</p>
+            </div>
+          </div>
+          <button type="button" className={BTN_PRIMARIO} onClick={() => setConfirmar(true)}>
+            <ArrowLeftRight className="size-4" />
+            Equilibrar sedes
+          </button>
+        </div>
+      )}
+      {confirmar && (
+        <Modal titulo="Equilibrar sedes" onClose={() => setConfirmar(false)}>
+          <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
+            {sugeridas.map(({ bajo, sobra, cant }) => (
+              <li key={bajo.id} className="rounded-xl bg-primary/[0.04] px-3 py-2 text-xs ring-1 ring-primary/10">
+                <p className="font-semibold">{bajo.nombre}</p>
+                <p className="text-muted-foreground">
+                  {num(cant)} {bajo.unidad} de <b className="text-foreground">{sobra.sucursal}</b> a{" "}
+                  <b className="text-foreground">{bajo.sucursal}</b>
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => setConfirmar(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={BTN_PRIMARIO}
+              onClick={() => {
+                for (const { bajo, sobra, cant } of sugeridas)
+                  transferir(sobra.id, bajo.sucursal, cant, ctx.usuario, "Equilibrio entre sedes");
+                setConfirmar(false);
+                ctx.onToast(`Listo: ${sugeridas.length} ${sugeridas.length === 1 ? "insumo pasado" : "insumos pasados"} entre sedes`);
+              }}
+            >
+              <Check className="size-4" />
+              Pasar todo
+            </button>
+          </div>
+        </Modal>
+      )}
       <div className="card-grad overflow-x-auto p-4">
         <p className="text-sm font-semibold">Mismo insumo en todas las sedes</p>
         <table className="mt-3 w-full min-w-[640px] text-xs">
@@ -3748,10 +3921,8 @@ function Sedes({ ctx }: { ctx: Ctx }) {
           </thead>
           <tbody>
             {codigos.map((c) => {
-              const ins = ctx.insumos.filter((i) => i.codigo === c);
-              const bajo = ins.find((i) => ["Bajo", "Agotado"].includes(nivelStock(i)));
-              const sobra = [...ins].sort((a, b) => b.stock - b.minimo - (a.stock - a.minimo))[0];
-              const puede = bajo && sobra && sobra.id !== bajo.id && sobra.stock - sobra.minimo > 0;
+              const ins = grupos.get(c) ?? [];
+              const sug = sugerencia(ins);
               return (
                 <tr key={c} className="border-t border-primary/10">
                   <td className="py-2 font-medium">{ins[0]?.nombre}</td>
@@ -3768,20 +3939,20 @@ function Sedes({ ctx }: { ctx: Ctx }) {
                     );
                   })}
                   <td className="py-2 text-right">
-                    {puede ? (
+                    {sug ? (
                       <button
                         type="button"
                         className="font-semibold text-primary underline-offset-2 hover:underline"
                         onClick={() =>
                           ctx.movimiento({
-                            insumoId: sobra.id,
+                            insumoId: sug.sobra.id,
                             tipo: "Transferencia",
-                            destino: bajo.sucursal,
+                            destino: sug.bajo.sucursal,
                           })
                         }
                       >
-                        Pasar de {sobra.sucursal.replace("Clínica ", "")} a{" "}
-                        {bajo.sucursal.replace("Clínica ", "")}
+                        Pasar {num(sug.cant)} de {sug.sobra.sucursal.replace("Clínica ", "")} a{" "}
+                        {sug.bajo.sucursal.replace("Clínica ", "")}
                       </button>
                     ) : (
                       <span className="text-muted-foreground">Equilibrado</span>

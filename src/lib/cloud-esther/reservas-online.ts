@@ -173,3 +173,69 @@ export function codigosParaWeb(slug: string, color: string) {
     `<script>addEventListener("message",function(e){if(e.data&&e.data.cloudEstherAlto){document.getElementById("cloud-esther-turnos").style.height=e.data.cloudEstherAlto+"px"}})</script>`;
   return { link, boton, turnero };
 }
+
+/* ── Del presupuesto aprobado a la agenda ──
+   Propone un turno por sesión con el profesional del presupuesto: el primer hueco libre a
+   partir de la fecha deseada, respetando su horario, descansos, ausencias, feriados, bloqueos
+   y los turnos ya dados (incluidos los que se van proponiendo). Separadas cada «cadaDias». */
+export type SesionPropuesta = { fecha: string; hora: string; odontologo: string; duracion: number };
+export function proponerSesiones(o: {
+  agenda: EstadoAgenda;
+  miembros: TeamMember[];
+  ausencias: Ausencia[];
+  profesional: string;
+  duraciones: number[];
+  cadaDias: number;
+  desde: string;
+  franja?: "manana" | "tarde" | "";
+  ahora?: Date;
+}): (SesionPropuesta | null)[] {
+  const intervalo = Math.min(240, Math.max(5, Math.round(o.agenda.ajustes?.intervaloMin ?? 30)));
+  const ahora = o.ahora ?? new Date();
+  const hoy = isoLocal(ahora);
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes() + 60;
+  const feriados = new Set((o.agenda.feriados ?? []).map((f) => f.fecha));
+  const odontologos = o.miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo");
+  const clave = (s: string) => s.trim().toLowerCase();
+  const prof =
+    odontologos.find((m) => clave(`${m.firstName} ${m.lastName}`) === clave(o.profesional)) ??
+    (odontologos.length === 1 ? odontologos[0] : undefined);
+  const ocupados = o.agenda.turnos
+    .filter((t) => t.estado !== "Cancelada")
+    .map((t) => ({ fecha: t.fecha, od: clave(t.odontologo), a: aMin(t.hora), b: aMin(t.hora) + (t.duracion ?? intervalo) }));
+  const out: (SesionPropuesta | null)[] = [];
+  let base = o.desde < hoy ? hoy : o.desde;
+  for (const duracion of o.duraciones) {
+    let hallado: SesionPropuesta | null = null;
+    const [y = 2000, mm = 1, dd = 1] = base.split("-").map(Number);
+    for (let i = 0; i < 60 && !hallado && prof; i++) {
+      const d = new Date(y, mm - 1, dd + i, 12);
+      const fecha = isoLocal(d);
+      if (feriados.has(fecha)) continue;
+      const h = prof.schedule.find((x) => x.day === DIAS[d.getDay()] && x.active);
+      if (!h?.start || !h.end) continue;
+      if (o.ausencias.some((a) => a.miembroId === prof.id && a.desde <= fecha && fecha <= (a.hasta || a.desde))) continue;
+      const nombre = `${prof.firstName} ${prof.lastName}`.trim();
+      const bloq = o.agenda.bloqueos.filter((b) => b.fecha === fecha).map((b) => [aMin(b.desde), aMin(b.hasta)] as const);
+      const dIni = h.breakStart ? aMin(h.breakStart) : -1;
+      const dFin = h.breakEnd ? aMin(h.breakEnd) : -1;
+      for (let m = aMin(h.start); m + duracion <= aMin(h.end); m += intervalo) {
+        if (fecha === hoy && m < ahoraMin) continue;
+        if (o.franja === "manana" && m >= 13 * 60) continue;
+        if (o.franja === "tarde" && m < 13 * 60) continue;
+        const e = m + duracion;
+        if (dIni >= 0 && dFin > dIni && m < dFin && e > dIni) continue;
+        if (bloq.some(([a, b]) => m < b && e > a)) continue;
+        if (ocupados.some((t) => t.fecha === fecha && t.od === clave(nombre) && m < t.b && e > t.a)) continue;
+        hallado = { fecha, hora: aHora(m), odontologo: nombre, duracion };
+        ocupados.push({ fecha, od: clave(nombre), a: m, b: e });
+        break;
+      }
+    }
+    out.push(hallado);
+    const sig = hallado?.fecha ?? base;
+    const [a = 2000, b = 1, c = 1] = sig.split("-").map(Number);
+    base = isoLocal(new Date(a, b - 1, c + Math.max(1, o.cadaDias), 12));
+  }
+  return out;
+}

@@ -612,7 +612,7 @@ export function useRespuestasPresupuestos() {
           id: `pres-resp-${pid}-${p.id}`,
           titulo: aprobo ? `${nombre} aprobó y firmó el presupuesto ${p.numero}` : `${nombre} rechazó el presupuesto ${p.numero}`,
           detalle: aprobo
-            ? "Lo aprobó desde el enlace. El cargo ya está en su cuenta: coordiná la seña y los turnos."
+            ? "Lo aprobó desde el enlace y el cargo ya está en su cuenta. Abrilo en Presupuestos para agendar sus turnos de un toque."
             : `Lo rechazó desde el enlace${p.respuestaPaciente!.motivo ? `: «${p.respuestaPaciente!.motivo}»` : ""}. Podés llamarlo para ofrecerle otra opción.`,
           categoria: "Administración" as const,
           prioridad: aprobo ? ("Alta" as const) : ("Normal" as const),

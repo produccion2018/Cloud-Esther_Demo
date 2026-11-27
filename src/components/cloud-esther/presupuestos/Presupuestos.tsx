@@ -11,6 +11,7 @@ import {
   BadgePercent,
   Calculator,
   CalendarClock,
+  CalendarPlus,
   Check,
   CircleDollarSign,
   ClipboardList,
@@ -49,6 +50,8 @@ import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { setTurnosStore, storeAgenda, SUCURSALES, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { proponerSesiones } from "@/lib/cloud-esther/reservas-online";
 import {
   CATEGORIAS_ARANCEL,
   MOTIVOS_RECHAZO,
@@ -850,6 +853,11 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
     (f) => !vencido(f.p) && dias(f.p.enviado ?? f.p.fecha) < config.recordatorioDias,
   );
   const borradores = filas.filter((f) => f.p.estado === "Borrador");
+  const { turnos } = storeAgenda.usar();
+  const conTurnos = new Set(turnos.filter((t) => t.serie?.startsWith("pres-") && t.estado !== "Cancelada").map((t) => t.serie));
+  const sinTurnos = filas
+    .filter((f) => f.p.estado === "Aprobado" && !f.p.turnosAgendados && !conTurnos.has(`pres-${f.p.id}`) && (f.p.respondido ?? f.p.fecha) >= hoyISO(-60))
+    .sort((a, b) => (b.p.respondido ?? b.p.fecha).localeCompare(a.p.respondido ?? a.p.fecha));
   const Bloque = ({
     titulo,
     icon: Icon,
@@ -923,6 +931,20 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
         descripcion={`Los presupuestos sin respuesta después de ${config.recordatorioDias} días conviene recordarlos. Los vencidos se renuevan o se cierran.`}
       />
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {sinTurnos.length > 0 && (
+          <Bloque
+            titulo="Aprobados sin turnos"
+            icon={CalendarPlus}
+            tono="text-emerald-600"
+            lista={sinTurnos}
+            accion={(f) => (
+              <button type="button" className={BTN_PRIMARIO} onClick={() => ctx.abrir(f.pid, f.p.id)}>
+                <CalendarPlus className="size-4" />
+                Agendar
+              </button>
+            )}
+          />
+        )}
         <Bloque
           titulo="Para recordar hoy"
           icon={AlarmClock}
@@ -1171,6 +1193,7 @@ function Detalle({
         </div>
       </div>
       {p.notas && <p className="mt-2 text-xs italic text-muted-foreground">“{p.notas}”</p>}
+      {p.estado === "Aprobado" && <AgendarTratamiento ctx={ctx} f={f} />}
       {p.firmaPaciente?.imagen && (
         <div className="mt-3 flex items-center gap-3 rounded-xl bg-emerald-50/70 px-3 py-2 ring-1 ring-emerald-200">
           <img src={p.firmaPaciente.imagen} alt="Firma del paciente" className="h-12 w-28 shrink-0 rounded-lg bg-white object-contain ring-1 ring-emerald-100" />
@@ -2955,6 +2978,217 @@ function Reportes({ filas }: { filas: Fila[] }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ───────────── Del presupuesto aprobado a la agenda ───────────── */
+
+const diaCorto = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const t = d.toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
+/** Un turno por sesión con el profesional del presupuesto, en los primeros huecos libres.
+    Se puede cambiar el día y la hora de cada uno antes de agendar. */
+function AgendarTratamiento({ ctx, f }: { ctx: Ctx; f: Fila }) {
+  const { aranceles } = storePresupuestos.usar();
+  const agenda = storeAgenda.usar();
+  const { miembros, ausencias } = useEquipo();
+  const { cambiar } = useRegistrosPacientes();
+  const p = f.p;
+  const serie = `pres-${p.id}`;
+  const yaDados = agenda.turnos.filter((t) => t.serie === serie && t.estado !== "Cancelada").sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
+  const intervalo = Math.round(agenda.ajustes?.intervaloMin ?? 30);
+  const sesionesBase = p.lineas.flatMap((l) => {
+    const a = aranceles.find((x) => x.id === l.arancelId) ?? aranceles.find((x) => x.nombre === l.descripcion);
+    const n = Math.max(1, Math.min(12, a?.sesiones ?? 1));
+    return Array.from({ length: n }, (_, i) => ({
+      tratamiento: n > 1 ? `${l.descripcion} (sesión ${i + 1} de ${n})` : l.descripcion,
+      duracion: a?.duracion || intervalo,
+    }));
+  }).slice(0, 12);
+  const [abierto, setAbierto] = useState(false);
+  const [quitadas, setQuitadas] = useState<Set<number>>(new Set());
+  const [cada, setCada] = useState("7");
+  const [franja, setFranja] = useState<"" | "manana" | "tarde">("");
+  const [cambios, setCambios] = useState<Record<number, { fecha?: string; hora?: string }>>({});
+  const manana = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+  const [desde, setDesde] = useState(manana);
+  const sesiones = sesionesBase.filter((_, i) => !quitadas.has(i));
+  const propuesta = proponerSesiones({
+    agenda,
+    miembros,
+    ausencias,
+    profesional: p.profesional ?? "",
+    duraciones: sesiones.map((x) => x.duracion),
+    cadaDias: Math.max(1, Math.min(90, Number(cada) || 7)),
+    desde,
+    franja,
+  });
+  const filas = sesiones.map((x, i) => {
+    const base = propuesta[i];
+    const c = cambios[i] ?? {};
+    return { ...x, fecha: c.fecha ?? base?.fecha ?? "", hora: c.hora ?? base?.hora ?? "", odontologo: base?.odontologo ?? p.profesional ?? "" };
+  });
+  const sinHueco = filas.some((x) => !x.fecha || !x.hora);
+  const nombre = nombrePac(f.pac);
+
+  const agendar = () => {
+    if (sinHueco || !filas.length) return;
+    const ahora = Date.now();
+    const nuevos: Turno[] = filas.map((x, i) => ({
+      id: ahora + i,
+      fecha: x.fecha,
+      hora: x.hora,
+      paciente: nombre,
+      tratamiento: x.tratamiento,
+      odontologo: x.odontologo,
+      sucursal: SUCURSALES[0] ?? "",
+      gabinete: "",
+      estado: "Pendiente",
+      notas: `Presupuesto ${p.numero}`,
+      duracion: x.duracion,
+      serie,
+      serieN: yaDados.length + i + 1,
+      serieTotal: yaDados.length + filas.length,
+    }));
+    setTurnosStore((prev) => [...prev, ...nuevos]);
+    cambiar(f.pid, "presupuestos", (prev) =>
+      prev.map((x) =>
+        x.id === p.id
+          ? {
+              ...x,
+              turnosAgendados: hoyISO(),
+              seguimientos: [
+                ...(x.seguimientos ?? []),
+                { fecha: new Date().toISOString(), texto: `Se agendaron ${nuevos.length} turnos del tratamiento`, autor: ctx.usuario },
+              ],
+            }
+          : x,
+      ),
+    );
+    setAbierto(false);
+    setCambios({});
+    ctx.onToast(`Listo: ${nuevos.length} ${nuevos.length === 1 ? "turno agendado" : "turnos agendados"} para ${nombre}`);
+  };
+
+  const textoTurnos = `Hola ${f.pac?.nombre ?? ""} 👋 Ya te reservamos los turnos de tu tratamiento:\n${yaDados
+    .map((t) => `• ${diaCorto(t.fecha)} a las ${t.hora} hs${t.odontologo ? ` con ${t.odontologo}` : ""}`)
+    .join("\n")}\nSi alguno no te queda cómodo, avisanos por acá y lo cambiamos.`;
+
+  return (
+    <div className="mt-3 rounded-2xl bg-gradient-to-br from-sky-50 to-violet-50 p-3 ring-1 ring-primary/15">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white">
+            <CalendarPlus className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{yaDados.length ? "Turnos del tratamiento" : "Agendá el tratamiento"}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {yaDados.length
+                ? `${yaDados.length} ${yaDados.length === 1 ? "turno dado" : "turnos dados"} en la agenda`
+                : `Te proponemos ${sesionesBase.length} ${sesionesBase.length === 1 ? "turno" : "turnos"} en los primeros huecos libres${p.profesional ? ` de ${p.profesional}` : ""}.`}
+            </p>
+          </div>
+        </div>
+        {!abierto && (
+          <button type="button" className={yaDados.length ? BTN_SECUNDARIO : BTN_PRIMARIO} onClick={() => setAbierto(true)}>
+            <CalendarPlus className="size-4" />
+            {yaDados.length ? "Agendar más" : "Ver turnos propuestos"}
+          </button>
+        )}
+      </div>
+
+      {yaDados.length > 0 && !abierto && (
+        <>
+          <ul className="mt-2.5 space-y-1">
+            {yaDados.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-1.5 text-xs ring-1 ring-primary/10">
+                <span className="min-w-0 truncate">
+                  <b>{diaCorto(t.fecha)} · {t.hora}</b> · {t.tratamiento}
+                </span>
+                <Pill clase={t.estado === "Atendida" ? "bg-emerald-100 text-emerald-700" : t.estado === "Confirmada" ? "bg-sky-100 text-sky-700" : "bg-muted text-muted-foreground"}>{t.estado}</Pill>
+              </li>
+            ))}
+          </ul>
+          {f.pac?.telefono && (
+            <a href={wa(f.pac.telefono, textoTurnos)} target="_blank" rel="noreferrer" className="btn-wa mt-2.5 inline-flex">
+              <MessageCircle className="size-4" /> Mandarle los turnos por WhatsApp
+            </a>
+          )}
+        </>
+      )}
+
+      {abierto && (
+        <div className="mt-3 space-y-2.5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Desde</span>
+              <input type="date" value={desde} min={hoyISO()} onChange={(e) => { setDesde(e.target.value); setCambios({}); }} className={INPUT} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Cada cuántos días</span>
+              <input type="number" min={1} max={90} value={cada} onChange={(e) => { setCada(e.target.value); setCambios({}); }} className={INPUT} />
+            </label>
+            <div className="col-span-2 sm:col-span-1">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Prefiere</span>
+              <div className="flex gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+                {([["", "Cualquiera"], ["manana", "Mañana"], ["tarde", "Tarde"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" className={`${CHIP(franja === v)} flex-1`} onClick={() => { setFranja(v); setCambios({}); }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <ul className="space-y-1.5">
+            {filas.map((x, i) => {
+              const idx = sesionesBase.indexOf(sesiones[i]!);
+              return (
+                <li key={idx} className={`rounded-xl bg-white/90 px-3 py-2 ring-1 ${!x.fecha ? "ring-amber-300" : "ring-primary/10"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate text-xs font-semibold">
+                      {i + 1}. {x.tratamiento}
+                    </p>
+                    <button type="button" aria-label="Quitar este turno" className="text-muted-foreground hover:text-rose-600" onClick={() => { setQuitadas((q) => new Set(q).add(idx)); setCambios({}); }}>
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                  {x.fecha ? (
+                    <div className="mt-1.5 grid grid-cols-[1fr_6.5rem] gap-1.5">
+                      <input type="date" value={x.fecha} min={hoyISO()} aria-label="Día" onChange={(e) => setCambios((c) => ({ ...c, [i]: { ...c[i], fecha: e.target.value } }))} className={INPUT} />
+                      <input type="time" value={x.hora} step={intervalo * 60} aria-label="Hora" onChange={(e) => setCambios((c) => ({ ...c, [i]: { ...c[i], hora: e.target.value } }))} className={INPUT} />
+                      <p className="col-span-2 text-[10px] text-muted-foreground">{diaCorto(x.fecha)} · {x.odontologo} · {x.duracion} min</p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-amber-800">
+                      No hay hueco en los próximos 60 días{p.profesional ? ` para ${p.profesional}` : ""}. Revisá sus horarios en Equipo o elegí otra fecha de inicio.
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {!filas.length && <p className="text-xs text-muted-foreground">Quitaste todos los turnos.</p>}
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => { setAbierto(false); setCambios({}); setQuitadas(new Set()); }}>
+              Cancelar
+            </button>
+            <button type="button" className={BTN_PRIMARIO} disabled={sinHueco || !filas.length} onClick={agendar}>
+              <Check className="size-4" />
+              Agendar {filas.length} {filas.length === 1 ? "turno" : "turnos"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

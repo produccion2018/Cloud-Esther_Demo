@@ -46,6 +46,9 @@ import {
   resultadosCampania,
   analisisPorFuente,
   campaniaEnAgenda,
+  estadoLeadEnAgenda,
+  codigoDePaciente,
+  nuevoCodigoReferido,
   type EstadoLeadAgenda,
   ultimoContactoLead,
   setMarketing,
@@ -62,6 +65,8 @@ import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { SUCURSALES, TRATAMIENTOS, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { API_URL } from "@/lib/clinica/api";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { Seleccion } from "@/components/ui/seleccion";
@@ -2473,10 +2478,6 @@ function Referidos({ ctx }: { ctx: Ctx }) {
       return acc;
     }, {}),
   ).sort((a, b) => b[1].convertidos - a[1].convertidos || b[1].total - a[1].total);
-  const [paciente, setPaciente] = useState(
-    pacientes[0] ? `${pacientes[0].nombre} ${pacientes[0].apellido}` : "",
-  );
-  const link = `${typeof window !== "undefined" ? window.location.origin : ""}/formulario?ref=${encodeURIComponent(normalizarBusqueda(paciente).replace(/\s+/g, "-"))}`;
   const set = (c: Partial<typeof referidos>) => setMarketing("referidos", (p) => ({ ...p, ...c }));
 
   return (
@@ -2531,26 +2532,7 @@ function Referidos({ ctx }: { ctx: Ctx }) {
               className={INPUT}
             />
           </Field>
-          <div className="rounded-xl border border-primary/15 bg-gradient-to-br from-primary/[0.07] to-transparent p-3">
-            <p className="text-xs font-semibold">Link personal de referido</p>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-              <Sel
-                value={paciente}
-                onChange={setPaciente}
-                opciones={pacientes.map((p) => `${p.nombre} ${p.apellido}`)}
-              />
-              <button
-                className={BTN_PRIMARIO}
-                onClick={() => {
-                  navigator.clipboard?.writeText(link).catch(() => {});
-                  ctx.onToast("Link de referido copiado");
-                }}
-              >
-                <Copy className="size-3.5" /> Copiar link
-              </button>
-            </div>
-            <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{link}</p>
-          </div>
+          <LinkReferido ctx={ctx} />
         </div>
         <div className="card-grad p-4">
           <p className="text-sm font-semibold">Ranking de embajadores</p>
@@ -2611,6 +2593,166 @@ function Referidos({ ctx }: { ctx: Ctx }) {
           )}
         </div>
       </div>
+      <PremiosReferidos ctx={ctx} />
+    </div>
+  );
+}
+
+/** Link personal de cada paciente: se crea una vez, se copia o se le manda por WhatsApp. */
+function LinkReferido({ ctx }: { ctx: Ctx }) {
+  const { referidos } = storeMarketing.usar();
+  const { pacientes } = usePacientes();
+  const { clinica } = useSesion();
+  const real = useClinicaReal();
+  const activos = pacientes.filter((p) => p.estado !== "Archivado");
+  const [pid, setPid] = useState<number | null>(null);
+  const elegido = activos.find((p) => p.id === pid) ?? activos[0];
+  const codigo = elegido ? codigoDePaciente(referidos, elegido.id) : null;
+  const origen = typeof window !== "undefined" ? window.location.origin : "";
+  const link = codigo ? `${origen}/formulario?${real ? `c=${real.slug}&` : ""}ref=${codigo}` : "";
+  const sinBeneficios = !referidos.recompensaReferente.trim() || !referidos.beneficioReferido.trim();
+  const nombreClinica = clinica?.nombre ?? "la clínica";
+  const mensaje = elegido
+    ? `¡Hola ${elegido.nombre}! Gracias por confiar en ${nombreClinica}. Si querés recomendarnos, este es tu link personal: ${link}` +
+      (referidos.beneficioReferido.trim() ? `\nQuien venga con tu link recibe: ${referidos.beneficioReferido.trim()}.` : "") +
+      (referidos.recompensaReferente.trim() ? `\nY vos recibís: ${referidos.recompensaReferente.trim()}, cuando tu recomendado venga a su turno.` : "")
+    : "";
+  const crear = () => {
+    if (!elegido) return;
+    const c = nuevoCodigoReferido(elegido.nombre);
+    setMarketing("referidos", (r) => ({
+      ...r,
+      codigos: { ...(r.codigos ?? {}), [c]: { pacienteId: elegido.id, nombre: `${elegido.nombre} ${elegido.apellido}`.trim(), creado: new Date().toISOString() } },
+    }));
+    ctx.onToast(`Link creado para ${elegido.nombre}`);
+  };
+  const cantidad = Object.keys(referidos.codigos ?? {}).length;
+
+  return (
+    <div className="rounded-xl border border-primary/15 bg-gradient-to-br from-primary/[0.07] to-transparent p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold">Link personal de cada paciente</p>
+        {cantidad > 0 && <span className="text-[11px] text-muted-foreground">{cantidad} {cantidad === 1 ? "link creado" : "links creados"}</span>}
+      </div>
+      {activos.length === 0 ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">Cuando cargues pacientes, acá vas a poder crearle a cada uno su link para recomendar la clínica.</p>
+      ) : (
+        <>
+          <div className="mt-2">
+            <Sel
+              value={String(elegido?.id ?? "")}
+              onChange={(v) => setPid(Number(v))}
+              opciones={activos.map((p) => ({ value: String(p.id), label: `${p.nombre} ${p.apellido}`.trim() }))}
+              etiqueta="Paciente"
+            />
+          </div>
+          {!referidos.activo && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800 ring-1 ring-amber-200">
+              El programa está pausado: los links no muestran el beneficio hasta que lo actives arriba.
+            </p>
+          )}
+          {sinBeneficios && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800 ring-1 ring-amber-200">
+              Primero completá los dos beneficios: los define tu clínica y aparecen en el mensaje.
+            </p>
+          )}
+          {codigo ? (
+            <>
+              <p className="mt-2 truncate rounded-lg bg-white/80 px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground ring-1 ring-primary/10">{link}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {elegido?.telefono && (
+                  <a href={wa(elegido.telefono, mensaje)} target="_blank" rel="noreferrer" className="btn-wa">
+                    <IconoWhatsApp /> Mandárselo
+                  </a>
+                )}
+                <button
+                  type="button"
+                  className={BTN_SECUNDARIO}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(link).catch(() => {});
+                    ctx.onToast("Link copiado");
+                  }}
+                >
+                  <Copy className="size-3.5" /> Copiar link
+                </button>
+              </div>
+            </>
+          ) : (
+            <button type="button" className={`${BTN_PRIMARIO} mt-2`} onClick={crear} disabled={!elegido}>
+              <Gift className="size-3.5" /> Crear su link
+            </button>
+          )}
+          <p className="mt-2 text-[10.5px] text-muted-foreground">
+            Quien entra con el link deja sus datos y llega acá como lead «Referido», ya con el nombre de quien lo recomendó.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Premios para entregar: quien recomendó a alguien que ya vino a su turno. */
+function PremiosReferidos({ ctx }: { ctx: Ctx }) {
+  const { leads, referidos } = storeMarketing.usar();
+  const { turnos } = storeAgenda.usar();
+  const entregados = referidos.premiosEntregados ?? {};
+  const ganados = leads
+    .filter((l) => l.fuente === "Referido" && l.referidoPor)
+    .map((l) => ({ l, vino: l.etapa === "Convertido" || estadoLeadEnAgenda(l, turnos).estado === "vino" }))
+    .filter((x) => x.vino);
+  const pendientes = ganados.filter((x) => !entregados[x.l.id]);
+  const hechos = ganados.filter((x) => entregados[x.l.id]);
+  if (ganados.length === 0) return null;
+  const marcar = (id: string, si: boolean) =>
+    setMarketing("referidos", (r) => {
+      const p = { ...(r.premiosEntregados ?? {}) };
+      if (si) p[id] = new Date().toISOString();
+      else delete p[id];
+      return { ...r, premiosEntregados: p };
+    });
+
+  return (
+    <div className="card-grad p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Gift className="size-4 text-primary" /> Premios para entregar
+        {pendientes.length > 0 && <Pill clase="bg-fuchsia-100 text-fuchsia-700">{pendientes.length}</Pill>}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Pacientes que recomendaron a alguien que ya vino a la clínica.
+        {referidos.recompensaReferente.trim() ? ` Premio: ${referidos.recompensaReferente.trim()}.` : ""}
+      </p>
+      <ul data-movil="1col" className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+        {[...pendientes, ...hechos].map(({ l }) => {
+          const dado = entregados[l.id];
+          return (
+            <li key={l.id} className={`flex items-center gap-2.5 rounded-xl p-2.5 ring-1 ${dado ? "bg-white/60 ring-primary/10" : "bg-white ring-fuchsia-200"}`}>
+              <span className="min-w-0 flex-1">
+                <span className="block break-words text-xs font-semibold">{l.referidoPor}</span>
+                <span className="block break-words text-[11px] text-muted-foreground">
+                  Recomendó a {l.nombre}
+                  {dado ? ` · entregado ${formatearFecha(dado.slice(0, 10))}` : ""}
+                </span>
+              </span>
+              {dado ? (
+                <button type="button" className="text-[11px] font-semibold text-muted-foreground hover:underline" onClick={() => marcar(l.id, false)}>
+                  Deshacer
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={BTN_PRIMARIO}
+                  onClick={() => {
+                    marcar(l.id, true);
+                    ctx.onToast(`Premio entregado a ${l.referidoPor}`);
+                  }}
+                >
+                  <CheckCircle2 className="size-3.5" /> Entregado
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -2938,27 +3080,76 @@ function Formulario({ ctx }: { ctx: Ctx }) {
 
 /** Formulario público de captación: lo usan la vista previa y la página /formulario.
     Con `referido` el lead entra como "Referido" y suma al ranking de embajadores. */
+export type FormularioRemoto = {
+  slug: string;
+  ref: string;
+  clinica: string;
+  titulo: string;
+  subtitulo: string;
+  boton: string;
+  tratamientos: string[];
+  referido: string | null;
+  beneficio: string | null;
+};
+
 export function FormularioCaptacion({
   referido = "",
+  beneficio = "",
+  remoto,
   onEnviado,
   onError,
 }: {
   referido?: string;
+  beneficio?: string;
+  /** Página pública de una clínica real: textos del servidor y la consulta se manda al servidor */
+  remoto?: FormularioRemoto;
   onEnviado: (nombre: string) => void;
   onError: (m: string) => void;
 }) {
-  const { formulario } = storeMarketing.usar();
+  const { formulario: local } = storeMarketing.usar();
+  const formulario = remoto ?? local;
   const { clinica } = useSesion();
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [web, setWeb] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const [interes, setInteres] = useState(formulario.tratamientos[0] ?? "Primera consulta");
+  const corto = (n: string) => {
+    const [a, b] = n.trim().split(/\s+/);
+    return b ? `${a} ${b[0]!.toUpperCase()}.` : (a ?? "");
+  };
+  const quien = remoto ? (remoto.referido ?? "") : referido ? corto(referido) : "";
+  const regalo = remoto ? (remoto.beneficio ?? "") : beneficio;
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (!nombre.trim() || telefono.replace(/\D/g, "").length < 8)
           return onError("Completá nombre y un teléfono válido");
         const n = capitalizarNombre(nombre.trim());
+        if (remoto) {
+          if (enviando) return;
+          setEnviando(true);
+          try {
+            const r = await fetch(`${API_URL}/public/consulta/${remoto.slug}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ nombre: n, telefono: telefono.trim(), interes, ...(remoto.ref ? { ref: remoto.ref } : {}), ...(web ? { web } : {}) }),
+            });
+            if (!r.ok) {
+              const t = (await r.text().catch(() => "")).trim();
+              return onError(t && t.length < 200 ? t : "No pudimos enviar tus datos. Probá de nuevo.");
+            }
+            setNombre("");
+            setTelefono("");
+            onEnviado(n);
+          } catch {
+            onError("No pudimos conectarnos. Revisá tu internet y probá de nuevo.");
+          } finally {
+            setEnviando(false);
+          }
+          return;
+        }
         setMarketing("leads", (prev) => [
           {
             id: `l-${Date.now()}`,
@@ -2989,18 +3180,30 @@ export function FormularioCaptacion({
         setTelefono("");
         onEnviado(n);
       }}
-      className="mx-auto w-full max-w-sm space-y-3 rounded-3xl bg-white p-6 shadow-[0_24px_50px_-30px_rgba(76,29,149,0.6)]"
+      className="relative mx-auto w-full max-w-sm space-y-3 rounded-3xl bg-white p-6 shadow-[0_24px_50px_-30px_rgba(76,29,149,0.6)]"
     >
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
-        {clinica?.nombre ?? "Clínica Dental Esther"}
+        {remoto?.clinica ?? clinica?.nombre ?? "Clínica Dental Esther"}
       </p>
       <h3 className="font-display text-xl font-bold">{formulario.titulo}</h3>
       <p className="text-sm text-muted-foreground">{formulario.subtitulo}</p>
-      {referido && (
-        <p className="rounded-xl bg-primary/[0.06] px-3 py-2 text-xs font-medium text-primary">
-          Te recomendó {referido}
-        </p>
+      {quien && (
+        <div className="rounded-xl bg-gradient-to-br from-primary/[0.08] to-fuchsia-500/[0.06] px-3 py-2 ring-1 ring-primary/10">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+            <Gift className="size-3.5" /> Te recomendó {quien}
+          </p>
+          {regalo && <p className="mt-0.5 text-[11px] text-foreground/80">Tenés de regalo: {regalo}</p>}
+        </div>
       )}
+      <input
+        value={web}
+        onChange={(e) => setWeb(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        name="web"
+        className="absolute left-[-9999px] h-0 w-0 opacity-0"
+      />
       <input
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
@@ -3019,8 +3222,8 @@ export function FormularioCaptacion({
         opciones={formulario.tratamientos}
         etiqueta="Tratamiento"
       />
-      <button type="submit" className={`${BTN_PRIMARIO} w-full`}>
-        {formulario.boton}
+      <button type="submit" className={`${BTN_PRIMARIO} w-full`} disabled={enviando}>
+        {enviando ? "Enviando…" : formulario.boton}
       </button>
       <p className="text-center text-[10px] text-muted-foreground">
         Tus datos solo se usan para contactarte.
@@ -3029,21 +3232,51 @@ export function FormularioCaptacion({
   );
 }
 
-/** Página pública /formulario (la que se embebe en el sitio o se comparte como link de referido). */
+/** Página pública /formulario (la que se embebe en el sitio o se comparte como link de referido).
+    Con ?c=<clínica> habla con el servidor (clínica real); sin eso, es la vista del demo en este navegador. */
 export function FormularioPublico() {
   const { pacientes } = usePacientes();
+  const { referidos } = storeMarketing.usar();
   const [montado, setMontado] = useState(false);
   const [enviado, setEnviado] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [ref, setRef] = useState("");
+  const [slugClinica, setSlugClinica] = useState("");
+  const [remoto, setRemoto] = useState<FormularioRemoto | null>(null);
+  const [noDisponible, setNoDisponible] = useState("");
   useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const r = (q.get("ref") ?? "").trim();
+    const c = (q.get("c") ?? "").trim().toLowerCase();
+    setRef(r);
+    setSlugClinica(c);
+    if (c) {
+      if (!API_URL || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c)) {
+        setNoDisponible("Este formulario no está disponible. Escribile directamente a la clínica.");
+        setMontado(true);
+        return;
+      }
+      const codigo = /^[A-Za-z0-9]{4,16}$/.test(r) ? r : "";
+      fetch(`${API_URL}/public/consulta/${c}${codigo ? `?ref=${codigo}` : ""}`)
+        .then(async (x) => {
+          if (!x.ok) throw new Error();
+          const d = (await x.json()) as Omit<FormularioRemoto, "slug" | "ref">;
+          setRemoto({ ...d, slug: c, ref: d.referido ? codigo : "" });
+        })
+        .catch(() => setNoDisponible("Este formulario no está disponible. Escribile directamente a la clínica."))
+        .finally(() => setMontado(true));
+      return;
+    }
     setMontado(true);
-    setRef(new URLSearchParams(window.location.search).get("ref") ?? "");
   }, []);
   const slug = (t: string) => normalizarBusqueda(t).replace(/\s+/g, "-");
-  const referido = ref
-    ? (pacientes.map((p) => `${p.nombre} ${p.apellido}`).find((n) => slug(n) === slug(ref)) ?? "")
-    : "";
+  const porCodigo = ref && referidos.activo ? referidos.codigos?.[ref.toUpperCase()]?.nombre : undefined;
+  const referido = porCodigo
+    ? porCodigo
+    : ref
+      ? (pacientes.map((p) => `${p.nombre} ${p.apellido}`).find((n) => slug(n) === slug(ref)) ?? "")
+      : "";
+  const beneficio = referido && referidos.activo ? referidos.beneficioReferido.trim() : "";
   return (
     <div className="grid min-h-screen place-items-center bg-gradient-to-br from-violet-100 via-[#faf9ff] to-fuchsia-100/70 p-4">
       {!montado ? (
@@ -3069,7 +3302,15 @@ export function FormularioPublico() {
         </div>
       ) : (
         <div className="w-full max-w-sm space-y-2">
-          <FormularioCaptacion referido={referido} onEnviado={setEnviado} onError={setError} />
+          {noDisponible ? (
+            <div className="rounded-3xl bg-white p-8 text-center text-sm text-muted-foreground shadow-[0_24px_50px_-30px_rgba(76,29,149,0.6)]">
+              {noDisponible}
+            </div>
+          ) : slugClinica && remoto ? (
+            <FormularioCaptacion remoto={remoto} onEnviado={setEnviado} onError={setError} />
+          ) : (
+            <FormularioCaptacion referido={referido} beneficio={beneficio} onEnviado={setEnviado} onError={setError} />
+          )}
           {error && (
             <p role="alert" className="text-center text-xs font-medium text-rose-600">
               {error}

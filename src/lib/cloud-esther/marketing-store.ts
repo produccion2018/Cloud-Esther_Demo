@@ -115,11 +115,37 @@ export type Resena = {
 
 export type SolicitudResena = { paciente: string; fecha: string; estado: "Enviada" | "Respondida" };
 
+export type CodigoReferido = { pacienteId: number; nombre: string; creado: string };
+
 export type ConfigReferidos = {
   activo: boolean;
   recompensaReferente: string;
   beneficioReferido: string;
+  /** Link personal de cada paciente: código al azar → quién es (no se puede adivinar) */
+  codigos?: Record<string, CodigoReferido>;
+  /** Premios ya entregados a quien recomendó: id del lead que vino → fecha */
+  premiosEntregados?: Record<string, string>;
 };
+
+const LETRAS_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** Código del link de referido: 4 letras del nombre + 4 al azar (ej. MARI7K2Q) */
+export function nuevoCodigoReferido(nombre: string): string {
+  const base = nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 4)
+    .padEnd(2, "X");
+  const azar = new Uint32Array(4);
+  crypto.getRandomValues(azar);
+  return base + Array.from(azar, (n) => LETRAS_CODIGO[n % LETRAS_CODIGO.length]).join("");
+}
+
+/** El código del paciente (si la clínica ya le creó su link) */
+export function codigoDePaciente(r: ConfigReferidos, pacienteId: number): string | null {
+  return Object.entries(r.codigos ?? {}).find(([, c]) => c.pacienteId === pacienteId)?.[0] ?? null;
+}
 
 export type EstadoMarketing = {
   leads: Lead[];

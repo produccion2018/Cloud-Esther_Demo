@@ -45,6 +45,8 @@ import {
   leadSinRespuesta,
   resultadosCampania,
   analisisPorFuente,
+  campaniaEnAgenda,
+  type EstadoLeadAgenda,
   ultimoContactoLead,
   setMarketing,
   storeMarketing,
@@ -1708,6 +1710,8 @@ function TurnoLeadForm({
 
 function Campanias({ ctx }: { ctx: Ctx }) {
   const { campanias, leads } = storeMarketing.usar();
+  const { turnos } = storeAgenda.usar();
+  const vinieronTotal = campanias.reduce((a, c) => a + campaniaEnAgenda(c, leads, turnos).vinieron, 0);
   const [editar, setEditar] = useState<CampaniaAds | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [filtro, setFiltro] = useState<"" | CampaniaAds["estado"]>("");
@@ -1741,7 +1745,7 @@ function Campanias({ ctx }: { ctx: Ctx }) {
         <Mini label="Inversión total" valor={ars(tot.gasto)} icon={CircleDollarSign} />
         <Mini label="Clics" valor={tot.clics.toLocaleString("es-AR")} icon={MousePointerClick} />
         <Mini label="Leads" valor={String(tot.leads)} icon={Users} tono="text-primary" />
-        <Mini label="Pacientes" valor={String(tot.conv)} icon={UserCheck} tono="text-emerald-600" />
+        <Mini label="Vinieron a la clínica" valor={String(vinieronTotal)} icon={UserCheck} tono="text-emerald-600" />
         <Mini
           label="Retorno"
           valor={`${tot.gasto ? Math.round(((tot.ingresos - tot.gasto) / tot.gasto) * 100) : 0}%`}
@@ -1825,6 +1829,7 @@ function Campanias({ ctx }: { ctx: Ctx }) {
                   </div>
                 ))}
               </div>
+              <CampaniaAgenda c={c} ctx={ctx} />
               <div className="min-h-3 flex-1" />
               <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-primary/10 pt-2.5">
                 {(c.estado === "Activa" || c.estado === "Pausada") && (
@@ -1932,6 +1937,103 @@ function Campanias({ ctx }: { ctx: Ctx }) {
             }}
           />
         </Modal>
+      )}
+    </div>
+  );
+}
+
+const ESTADO_AGENDA: Record<EstadoLeadAgenda, { t: string; chip: string }> = {
+  vino: { t: "Vino", chip: "bg-emerald-100 text-emerald-700" },
+  proximo: { t: "Tiene turno", chip: "bg-primary/10 text-primary" },
+  falto: { t: "Faltó", chip: "bg-rose-100 text-rose-700" },
+  cancelo: { t: "Canceló", chip: "bg-amber-100 text-amber-700" },
+  "sin-turno": { t: "Sin turno", chip: "bg-muted text-muted-foreground" },
+};
+
+/** Lo que pasó de verdad en la Agenda con la gente que trajo la campaña. */
+function CampaniaAgenda({ c, ctx }: { c: CampaniaAds; ctx: Ctx }) {
+  const { leads } = storeMarketing.usar();
+  const { turnos } = storeAgenda.usar();
+  const [ver, setVer] = useState(false);
+  const a = campaniaEnAgenda(c, leads, turnos);
+  const pasos = [
+    { t: "Consultas", n: a.leads, cls: "from-primary/40 to-fuchsia-400/40" },
+    { t: "Pidieron turno", n: a.conTurno, cls: "from-primary to-violet-500" },
+    { t: "Vinieron", n: a.vinieron, cls: "from-emerald-400 to-emerald-600" },
+  ];
+  const max = Math.max(1, a.leads);
+
+  return (
+    <div className="mt-3 rounded-2xl bg-white/70 p-3 ring-1 ring-primary/10">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold">Resultado real en la Agenda</p>
+        {a.costoPorPaciente != null && (
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            {ars(a.costoPorPaciente)} por paciente que vino
+          </span>
+        )}
+      </div>
+      {a.leads === 0 ? (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Todavía no hay leads de esta campaña. Al cargar un lead, elegí esta campaña en «Campaña de origen» y acá vas a ver si sacaron turno y si vinieron.
+        </p>
+      ) : (
+        <>
+          <ul className="mt-2 space-y-1.5">
+            {pasos.map((p) => (
+              <li key={p.t} className="flex items-center gap-2">
+                <span className="w-24 shrink-0 text-[11px] text-muted-foreground">{p.t}</span>
+                <div className="h-5 flex-1 overflow-hidden rounded-lg bg-primary/[0.06]">
+                  <div
+                    className={`flex h-full items-center rounded-lg bg-gradient-to-r px-2 text-[10px] font-bold text-white ${p.cls}`}
+                    style={{ width: `${Math.max((p.n / max) * 100, p.n ? 12 : 0)}%` }}
+                  >
+                    {p.n > 0 ? p.n : ""}
+                  </div>
+                </div>
+                <span className="w-9 shrink-0 text-right text-[11px] font-semibold">
+                  {Math.round((p.n / max) * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+            {a.proximos > 0 && <span><b className="text-primary">{a.proximos}</b> con turno por venir</span>}
+            {a.faltaron > 0 && <span><b className="text-rose-600">{a.faltaron}</b> {a.faltaron === 1 ? "faltó" : "faltaron"}</span>}
+            {a.cancelaron > 0 && <span><b className="text-amber-600">{a.cancelaron}</b> {a.cancelaron === 1 ? "canceló" : "cancelaron"}</span>}
+            {a.leads - a.conTurno > 0 && <span><b className="text-foreground">{a.leads - a.conTurno}</b> sin turno todavía</span>}
+          </p>
+          <button
+            type="button"
+            onClick={() => setVer((v) => !v)}
+            aria-expanded={ver}
+            className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+          >
+            {ver ? "Ocultar personas" : `Ver las ${a.leads} personas`}
+            <ChevronDown className={`size-3.5 transition ${ver ? "rotate-180" : ""}`} />
+          </button>
+          {ver && (
+            <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
+              {a.detalle.map((d) => (
+                <li key={d.lead.id}>
+                  <button
+                    type="button"
+                    onClick={() => ctx.abrirLead(d.lead.id)}
+                    className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-1.5 text-left ring-1 ring-primary/10 hover:ring-primary/30"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">{d.lead.nombre}</span>
+                    {d.turno && (
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        {formatearFecha(d.turno.fecha)}
+                      </span>
+                    )}
+                    <Pill clase={ESTADO_AGENDA[d.estado].chip}>{ESTADO_AGENDA[d.estado].t}</Pill>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

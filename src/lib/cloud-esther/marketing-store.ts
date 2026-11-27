@@ -1,4 +1,5 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import type { Turno } from "@/lib/cloud-esther/agenda-store";
 
 /* Ubicación: src/lib/cloud-esther/marketing-store.ts
 
@@ -229,4 +230,51 @@ export function analisisPorFuente(leads: Lead[], desdeDias: number | null, ahora
   })
     .filter((x) => x.leads > 0)
     .sort((a, b) => b.pacientes - a.pacientes || b.leads - a.leads);
+}
+
+export type EstadoLeadAgenda = "vino" | "falto" | "proximo" | "cancelo" | "sin-turno";
+
+const nombreClave = (n: string) =>
+  n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** Turnos de la Agenda que corresponden a este lead: el que se le dio y los que tuvo después con su nombre. */
+export function turnosDelLead(l: Lead, turnos: Turno[]): Turno[] {
+  const desde = l.creado.slice(0, 10);
+  const clave = nombreClave(l.nombre);
+  return turnos.filter(
+    (t) => (l.turnoId != null && t.id === l.turnoId) || (t.fecha >= desde && nombreClave(t.paciente) === clave),
+  );
+}
+
+/** Qué pasó en la Agenda con este lead (vino, faltó, tiene turno, canceló o nunca pidió turno). */
+export function estadoLeadEnAgenda(l: Lead, turnos: Turno[]): { estado: EstadoLeadAgenda; turno?: Turno } {
+  const suyos = turnosDelLead(l, turnos).sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+  const vino = suyos.find((t) => t.estado === "Atendida");
+  if (vino) return { estado: "vino", turno: vino };
+  const proximo = suyos.find((t) => t.estado === "Pendiente" || t.estado === "Confirmada");
+  if (proximo) return { estado: "proximo", turno: proximo };
+  const falto = [...suyos].reverse().find((t) => t.estado === "Ausente");
+  if (falto) return { estado: "falto", turno: falto };
+  const cancelo = [...suyos].reverse().find((t) => t.estado === "Cancelada");
+  if (cancelo) return { estado: "cancelo", turno: cancelo };
+  return { estado: "sin-turno" };
+}
+
+/** Resultado real de una campaña medido con la Agenda: cuántos pidieron turno, vinieron o faltaron. */
+export function campaniaEnAgenda(c: CampaniaAds, leads: Lead[], turnos: Turno[]) {
+  const suyos = leads.filter((l) => l.campaniaId === c.id);
+  const detalle = suyos.map((l) => ({ lead: l, ...estadoLeadEnAgenda(l, turnos) }));
+  const cuenta = (e: EstadoLeadAgenda) => detalle.filter((d) => d.estado === e).length;
+  const vinieron = cuenta("vino");
+  return {
+    leads: suyos.length,
+    conTurno: suyos.length - cuenta("sin-turno"),
+    vinieron,
+    faltaron: cuenta("falto"),
+    proximos: cuenta("proximo"),
+    cancelaron: cuenta("cancelo"),
+    /** Lo que costó cada paciente que efectivamente vino (null si todavía no vino nadie) */
+    costoPorPaciente: vinieron && c.gastado ? Math.round(c.gastado / vinieron) : null,
+    detalle,
+  };
 }

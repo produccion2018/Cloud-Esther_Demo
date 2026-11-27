@@ -72,6 +72,7 @@ import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { MODULES, availableIn, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { SUCURSALES, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
@@ -107,6 +108,8 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { abrirWhatsAppConEnlacePago } from "@/lib/clinica/enlace-estudio";
 import { setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
 import { setNotificaciones } from "@/lib/cloud-esther/notificaciones-store";
+import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { pdfBlobDeHtml, descargarBlob } from "@/lib/descargas";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
@@ -3212,6 +3215,8 @@ function CobroDelDia({ ctx }: { ctx: Ctx }) {
   const { sesiones } = storeFacturacion.usar();
   const hoy = diaISO();
   const [abierto, setAbierto] = useState<number | null>(null);
+  const [recibo, setRecibo] = useState<Recibo | null>(null);
+  const nuevoRecibo = useNuevoRecibo();
   const porNombre = new Map(pacientes.map((p) => [normalizarBusqueda(`${p.nombre} ${p.apellido}`), p]));
   const precioDe = (tratamiento: string) => {
     const t = normalizarBusqueda(tratamiento.replace(/\s*\(sesión.*\)$/i, ""));
@@ -3262,7 +3267,8 @@ function CobroDelDia({ ctx }: { ctx: Ctx }) {
           </button>
         </p>
       )}
-      <PagosAvisados ctx={ctx} />
+      <PagosAvisados ctx={ctx} onRecibo={setRecibo} />
+      {recibo && <ReciboModal recibo={recibo} plata={ctx.$} onClose={() => setRecibo(null)} />}
       {filas.length === 0 ? (
         <Vacio icon={Banknote} texto="Hoy no hay turnos en la agenda." />
       ) : (
@@ -3322,9 +3328,20 @@ function CobroDelDia({ ctx }: { ctx: Ctx }) {
                     debe={f.debe}
                     cargar={f.cargado ? 0 : f.precio}
                     yaCargado={f.cargado}
-                    onListo={(m) => {
+                    onListo={(m, cobro) => {
                       setAbierto(null);
                       ctx.onToast(m);
+                      if (cobro && f.pac)
+                        setRecibo(
+                          nuevoRecibo({
+                            paciente: `${f.pac.nombre} ${f.pac.apellido}`,
+                            telefono: f.pac.telefono,
+                            monto: cobro.monto,
+                            medio: cobro.medio,
+                            concepto: cobro.concepto,
+                            saldo: Math.max(0, f.debe + cobro.cargo - cobro.monto),
+                          }),
+                        );
                     }}
                     cambiar={cambiar}
                   />
@@ -3354,7 +3371,7 @@ function CobroRapido({
   debe: number;
   cargar: number;
   yaCargado: boolean;
-  onListo: (m: string) => void;
+  onListo: (m: string, cobro?: { monto: number; medio: string; concepto: string; cargo: number }) => void;
   cambiar: ReturnType<typeof useRegistrosPacientes>["cambiar"];
 }) {
   // Lo que se hizo hoy (si todavía no está cargado) + lo que ya debía
@@ -3386,6 +3403,7 @@ function CobroRapido({
       aCobrar > 0
         ? `Cobrado ${ctx.$(aCobrar)} a ${pac.nombre}${caja ? " · sumado a la caja" : ""}`
         : `Cargado ${ctx.$(cargo)} en la cuenta de ${pac.nombre}`,
+      aCobrar > 0 ? { monto: aCobrar, medio, concepto: concepto.trim() || turno.tratamiento, cargo } : undefined,
     );
   };
   return (
@@ -3437,9 +3455,12 @@ function CobroRapido({
 
 /** «Ya pagué» que avisaron los pacientes (enlace de pago o portal): la clínica revisa que haya
     llegado y lo confirma. Recién ahí se descuenta de su saldo (y entra en la caja si está abierta). */
-function PagosAvisados({ ctx }: { ctx: Ctx }) {
+function PagosAvisados({ ctx, onRecibo }: { ctx: Ctx; onRecibo?: (r: Recibo) => void }) {
   const { pagosInformados = [] } = storePortal.usar();
   const { cambiar } = useRegistrosPacientes();
+  const registros = useTodosLosRegistros();
+  const { pacientes } = usePacientes();
+  const nuevoRecibo = useNuevoRecibo();
   const pendientes = pagosInformados.filter((p) => p.estado === "Pendiente");
   if (!pendientes.length) return null;
   const resolver = (id: string, estado: "Confirmado" | "Rechazado") => {
@@ -3468,6 +3489,19 @@ function PagosAvisados({ ctx }: { ctx: Ctx }) {
     }
     setPortal("pagosInformados", (prev = []) => prev.map((x) => (x.id === id ? { ...x, estado } : x)));
     ctx.onToast(estado === "Confirmado" ? `Pago de ${p.paciente} confirmado: ya figura en su cuenta` : "Marcado como no recibido");
+    if (estado === "Confirmado" && onRecibo) {
+      const pac = pacientes.find((x) => x.id === p.pacienteId);
+      onRecibo(
+        nuevoRecibo({
+          paciente: p.paciente,
+          telefono: pac?.telefono ?? "",
+          monto: p.monto,
+          medio: p.medio,
+          concepto: "Pago a cuenta",
+          saldo: Math.max(0, deudaDe(registros[p.pacienteId]?.cuenta).saldo - p.monto),
+        }),
+      );
+    }
   };
   return (
     <div className="card-grad p-4 ring-1 ring-amber-200">
@@ -3629,5 +3663,170 @@ function PacientesQueDeben({ ctx }: { ctx: Ctx }) {
       )}
       {lista.length > 0 && visibles.length === 0 && <p className="mt-3 text-xs text-muted-foreground">Nadie en este filtro.</p>}
     </div>
+  );
+}
+
+/* ───────────── Recibo de pago (lindo, con el logo de la clínica) ───────────── */
+
+export type Recibo = {
+  numero: string;
+  fecha: string;
+  paciente: string;
+  telefono: string;
+  monto: number;
+  medio: string;
+  concepto: string;
+  saldo: number;
+  clinica: { nombre: string; direccion: string; telefono: string; logo: string; color: string; fiscal: string };
+};
+
+/** Arma el recibo con el número que sigue (se numeran solos por clínica). */
+export function useNuevoRecibo() {
+  const { clinic } = useCloudEsther();
+  const settings = useClinicSettings(clinic);
+  const { clinica: delaSesion } = useSesion();
+  const real = useClinicaReal();
+  return (d: Omit<Recibo, "numero" | "fecha" | "clinica">): Recibo => {
+    const n = (storeFacturacion.leer().ultimoRecibo ?? 0) + 1;
+    setFacturacion("ultimoRecibo", () => n);
+    const dc = settings.datosClinica;
+    return {
+      ...d,
+      numero: `R-${String(n).padStart(6, "0")}`,
+      fecha: new Date().toISOString(),
+      clinica: {
+        nombre: dc.nombre || real?.sesion.clinica.nombre || delaSesion?.nombre || "Tu clínica",
+        direccion: dc.direccion,
+        telefono: dc.telefono,
+        logo: settings.marca?.logo ?? "",
+        color: /^#[0-9a-fA-F]{6}$/.test(settings.marca?.color ?? "") ? settings.marca!.color : "#7c3aed",
+        fiscal: dc.identificacionFiscal,
+      },
+    };
+  };
+}
+
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+
+function htmlRecibo(r: Recibo, plata: (n: number) => string) {
+  const c = r.clinica;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo ${r.numero}</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1f1a33;margin:0;padding:28px}
+.card{border:1px solid #ece7f8;border-radius:22px;overflow:hidden}.top{height:8px;background:linear-gradient(90deg,${c.color},#d946ef,#fcd34d)}
+.in{padding:24px}.hd{display:flex;align-items:center;gap:14px}.logo{width:56px;height:56px;border-radius:14px;object-fit:contain;border:1px solid #eee}
+.ini{width:56px;height:56px;border-radius:14px;background:${c.color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px}
+h1{margin:0;font-size:20px}.sub{color:#6b6385;font-size:12px;margin-top:2px}.tag{display:inline-block;margin-top:18px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:${c.color}}
+.monto{font-size:34px;font-weight:800;margin:4px 0 2px;color:#1f1a33}.fila{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1edfb;font-size:13px}
+.fila span:first-child{color:#6b6385}.pie{margin-top:18px;font-size:11px;color:#8a83a3;text-align:center}.ok{color:#059669;font-weight:700}</style></head>
+<body><div class="card"><div class="top"></div><div class="in">
+<div class="hd">${c.logo ? `<img class="logo" src="${c.logo}">` : `<div class="ini">${esc(c.nombre.slice(0, 1).toUpperCase())}</div>`}
+<div><h1>${esc(c.nombre)}</h1><div class="sub">${[c.direccion, c.telefono, c.fiscal].filter(Boolean).map(esc).join(" · ")}</div></div></div>
+<div class="tag">Recibo de pago · ${r.numero}</div>
+<div class="monto">${plata(r.monto)}</div>
+<div class="sub">Recibimos de <b>${esc(r.paciente)}</b> el ${new Date(r.fecha).toLocaleDateString("es")} a las ${new Date(r.fecha).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}.</div>
+<div style="margin-top:14px">
+<div class="fila"><span>Concepto</span><span>${esc(r.concepto)}</span></div>
+<div class="fila"><span>Medio de pago</span><span>${esc(r.medio)}</span></div>
+<div class="fila"><span>Saldo pendiente</span><span>${r.saldo > 0 ? plata(r.saldo) : '<span class="ok">Al día ✓</span>'}</span></div>
+</div>
+<div class="pie">¡Gracias por tu pago! · Comprobante de pago, no válido como factura.</div>
+</div></div></body></html>`;
+}
+
+function textoRecibo(r: Recibo, plata: (n: number) => string) {
+  return [
+    `Hola ${r.paciente.split(" ")[0]} 👋 ¡Gracias por tu pago!`,
+    "",
+    `🧾 Recibo ${r.numero} · ${r.clinica.nombre}`,
+    `Monto: ${plata(r.monto)}`,
+    `Concepto: ${r.concepto}`,
+    `Medio: ${r.medio}`,
+    `Fecha: ${new Date(r.fecha).toLocaleDateString("es")}`,
+    r.saldo > 0 ? `Saldo pendiente: ${plata(r.saldo)}` : "Quedaste al día ✓",
+  ].join("\n");
+}
+
+/** Después de cobrar: el recibo listo para mandar por WhatsApp (con el PDF en el celular) o descargar. */
+export function ReciboModal({ recibo: r, plata, onClose }: { recibo: Recibo; plata: (n: number) => string; onClose: () => void }) {
+  const [trabajando, setTrabajando] = useState(false);
+  const archivo = `recibo-${r.numero}.pdf`;
+  // El PDF se prepara apenas se abre: así «Mandar» lo comparte en el mismo toque (el celular lo exige)
+  const [blob, setBlob] = useState<Blob | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    void pdfBlobDeHtml(htmlRecibo(r, plata), "a5").then((b) => vivo && setBlob(b));
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se arma una vez por recibo
+  }, [r]);
+  const porWhatsApp = () => {
+    const numero = r.telefono ? telefonoInternacional(r.telefono) : "";
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(textoRecibo(r, plata))}`, "_blank", "noopener,noreferrer");
+  };
+  const compartir = () => {
+    const file = blob ? new File([blob], archivo, { type: "application/pdf" }) : null;
+    const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+    if (file && nav.canShare?.({ files: [file] })) {
+      navigator.share({ files: [file], text: textoRecibo(r, plata) }).catch((e: unknown) => {
+        if (!(e instanceof DOMException && e.name === "AbortError")) porWhatsApp();
+      });
+    } else porWhatsApp();
+  };
+  const descargar = async () => {
+    setTrabajando(true);
+    try {
+      const b = blob ?? (await pdfBlobDeHtml(htmlRecibo(r, plata), "a5"));
+      if (b) descargarBlob(archivo, b);
+    } finally {
+      setTrabajando(false);
+    }
+  };
+  return (
+    <M titulo="Recibo listo" onClose={onClose}>
+      <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-black/5">
+        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${r.clinica.color}, #d946ef, #fcd34d)` }} />
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            {r.clinica.logo ? (
+              <img src={r.clinica.logo} alt="" className="size-11 rounded-xl object-contain ring-1 ring-black/5" />
+            ) : (
+              <span className="grid size-11 place-items-center rounded-xl text-lg font-bold text-white" style={{ background: r.clinica.color }}>
+                {r.clinica.nombre.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">{r.clinica.nombre}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: r.clinica.color }}>
+                Recibo {r.numero}
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 text-3xl font-extrabold tabular-nums">{plata(r.monto)}</p>
+          <p className="text-xs text-muted-foreground">
+            De <b className="text-foreground">{r.paciente}</b> · {r.medio}
+          </p>
+          <div className="mt-3 space-y-1 text-xs">
+            <p className="flex justify-between border-b border-primary/10 pb-1">
+              <span className="text-muted-foreground">Concepto</span>
+              <span className="truncate pl-3">{r.concepto}</span>
+            </p>
+            <p className="flex justify-between">
+              <span className="text-muted-foreground">Saldo pendiente</span>
+              <span className={r.saldo > 0 ? "" : "font-semibold text-emerald-600"}>{r.saldo > 0 ? plata(r.saldo) : "Al día ✓"}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        <button type="button" className={BTN_SECUNDARIO} disabled={trabajando} onClick={() => void descargar()}>
+          <Download className="size-4" /> PDF
+        </button>
+        <button type="button" className="btn-wa" onClick={compartir}>
+          <IconoWhatsApp /> Mandar recibo
+        </button>
+      </div>
+      <p className="mt-2 text-right text-[10px] text-muted-foreground">Desde el celular se manda el PDF; en la compu, el recibo en el mensaje.</p>
+    </M>
   );
 }

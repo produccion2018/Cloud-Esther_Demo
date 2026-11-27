@@ -54,6 +54,7 @@ import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { MEDIOS_PAGO, setFacturacion, storeFacturacion, type MedioPago } from "@/lib/cloud-esther/facturacion-store";
 import { storePortal } from "@/lib/cloud-esther/portal-store";
+import { ReciboModal, useNuevoRecibo, type Recibo } from "@/components/cloud-esther/facturacion/Facturacion";
 import { setTurnosStore, storeAgenda, SUCURSALES, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { proponerSesiones } from "@/lib/cloud-esther/reservas-online";
 import {
@@ -3295,6 +3296,8 @@ function PagosPresupuesto({ ctx, f }: { ctx: Ctx; f: Fila }) {
   const [medio, setMedio] = useState<MedioPago>("Efectivo");
   const [nota, setNota] = useState("");
   const [error, setError] = useState("");
+  const [recibo, setRecibo] = useState<Recibo | null>(null);
+  const nuevoRecibo = useNuevoRecibo();
   const dp = cfgPortal.datosPago;
   const datos = dp
     ? [dp.alias && `Alias: ${dp.alias}`, dp.cuenta && `Cuenta: ${dp.cuenta}`, dp.titular && `Titular: ${dp.titular}`, dp.banco && `Banco: ${dp.banco}`, dp.link && `Pagá online: ${dp.link}`, dp.instrucciones]
@@ -3333,10 +3336,21 @@ function PagosPresupuesto({ ctx, f }: { ctx: Ctx; f: Fila }) {
     setNota("");
     setError("");
     ctx.onToast(`Pago de ${ars(n)} registrado${caja ? " y sumado a la caja" : ""}`);
+    setRecibo(
+      nuevoRecibo({
+        paciente: nombrePac(f.pac),
+        telefono: f.pac?.telefono ?? "",
+        monto: n,
+        medio,
+        concepto: `Presupuesto ${p.numero}${pagado === 0 && sena > 0 && n <= sena ? " (seña)" : ""}`,
+        saldo: Math.max(0, falta - n),
+      }),
+    );
   };
 
   return (
     <div className="mt-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 p-3 ring-1 ring-emerald-200/70">
+      {recibo && <ReciboModal recibo={recibo} plata={ars} onClose={() => setRecibo(null)} />}
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold">Seña y pagos</p>

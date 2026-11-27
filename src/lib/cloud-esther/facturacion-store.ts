@@ -256,6 +256,8 @@ export type EstadoFacturacion = {
   historico?: { mes: string; facturado: number; cobrado: number }[];
   /** Suscripción de la clínica a Cloud Esther (lo que la clínica le paga a Cloud Esther). */
   suscripcion?: Suscripcion;
+  /** Último número de recibo de pago emitido (los recibos se numeran solos) */
+  ultimoRecibo?: number;
   /** Último recordatorio de saldo enviado a cada paciente (pacienteId → fecha ISO) */
   recordatoriosDeuda?: Record<string, string>;
 };

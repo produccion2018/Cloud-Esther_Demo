@@ -7,12 +7,13 @@ import { fechaLarga, minutosLectura, type ArticuloBlog } from "@/lib/blog/blog";
 /* Ubicación: src/components/blog/TarjetaArticulo.tsx
    Tarjeta de un artículo para las grillas del blog (lista y «seguí leyendo»). */
 
+/** claro = sobre una foto o un fondo oscuro: vidrio OSCURO con texto blanco (se lee sobre cualquier foto, también clara). */
 export function CategoriaChip({ categoria, claro = false }: { categoria: string; claro?: boolean }) {
   return (
     <span
       className={
         claro
-          ? "inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur"
+          ? "inline-flex items-center rounded-full border border-white/20 bg-[#140c2b]/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)] backdrop-blur-md"
           : "inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700"
       }
     >

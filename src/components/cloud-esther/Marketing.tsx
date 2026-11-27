@@ -2809,7 +2809,7 @@ function ideasPorReglas(d: {
     out.push({
       formato: "Reel",
       titulo: `Todo sobre ${top.toLowerCase()} en 30 segundos`,
-      texto: `¿${t("Pensás", "Piensas")} en ${top.toLowerCase()}? Te contamos cómo es, cuánto dura y qué cuidados lleva. 🦷✨\n${t("Escribinos y resolvé", "Escríbenos y resuelve")} tus dudas sin compromiso. 💬\n\n${[hashtag(top), "#SaludBucal", d.clinica ? hashtag(d.clinica) : ""].filter(Boolean).join(" ")}`,
+      texto: `¿${t("Pensás", "Piensas")} en ${top.toLowerCase()}? Te contamos cómo es, cuánto dura y qué cuidados lleva. 🦷😁\n${t("Escribinos y resolvé", "Escríbenos y resuelve")} tus dudas sin compromiso. 💬\n\n${[hashtag(top), "#SaludBucal", d.clinica ? hashtag(d.clinica) : ""].filter(Boolean).join(" ")}`,
       imagen: "Video corto del profesional explicando, en el consultorio, con texto en pantalla.",
       motivo: `Es lo que más te preguntan (${top}).`,
     });
@@ -2922,7 +2922,7 @@ function IdeasRedes({ ctx }: { ctx: Ctx }) {
           pregunta:
             "Proponé EXACTAMENTE 3 ideas nuevas de publicaciones para las redes sociales de esta clínica odontológica, distintas entre sí y de las que ya tiene. " +
             "Para cada una escribí este formato exacto, sin nada más:\nIDEA\nformato: Publicación, Historia o Reel\ntítulo: (corto)\ntexto: (el texto listo para pegar, 2 a 4 líneas, con 2 o 3 emojis y 2 o 3 hashtags)\nimagen: (qué foto o video usar, en una línea)\n" +
-            "Reglas: no pongas precios ni montos ni porcentajes que no estén en el contexto; no uses nombres de pacientes; no prometas resultados médicos; nada de diagnósticos.",
+            "Reglas: no uses el emoji ✨ ni estrellas; no pongas precios ni montos ni porcentajes que no estén en el contexto; no uses nombres de pacientes; no prometas resultados médicos; nada de diagnósticos.",
           contexto,
         },
       }).catch(() => null);

@@ -27,8 +27,9 @@ export function useNivelReserva(plan: PlanId | undefined): { nivel: NivelReserva
   return base === "start" && extra ? { nivel: "pro", porAdicional: true } : { nivel: base, porAdicional: false };
 }
 
+/* Encendida por defecto: la clínica no tiene que hacer nada para empezar a recibir turnos. */
 export const RESERVA_POR_DEFECTO: ConfigReservaOnline = {
-  activa: false,
+  activa: true,
   tratamientos: ["Primera consulta", "Control", "Limpieza dental"],
   diasAdelante: 30,
   horasAnticipacion: 2,

@@ -10,7 +10,6 @@ import {
   MapPin,
   Phone,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
   UserRound,
 } from "lucide-react";
@@ -544,7 +543,7 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
                 className={`group flex items-center gap-3 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg ${tratamiento === t ? "border-[var(--marca)] bg-[var(--marca)]/[0.06]" : "border-[#ece8f7] bg-white"}`}
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--marca)]/10 text-[var(--marca)]">
-                  <Sparkles className="size-5" />
+                  <Stethoscope className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1 font-semibold">{t}</span>
                 <ArrowRight className="size-4 text-[#b5aecb] transition group-hover:translate-x-0.5 group-hover:text-[var(--marca)]" />

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Check, Copy, ExternalLink, Globe, Lock, Plus, Sparkles } from "lucide-react";
+import { CalendarCheck2, Check, Copy, ExternalLink, Globe, Lock, Plus } from "lucide-react";
 import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { setAjustesAgendaStore, storeAgenda, TRATAMIENTOS, type ConfigReservaOnline } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { pedirAClinica } from "@/lib/clinica/api";
 import { codigosParaWeb, configReserva, enlaceReserva, useNivelReserva, visibleEnReserva, type NivelReserva } from "@/lib/cloud-esther/reservas-online";
 import { TurnosOnlineAdicional } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
@@ -91,6 +92,8 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
       </div>
 
       {nivel === "start" && <TurnosOnlineAdicional onToast={onToast} compacto />}
+
+      <ParaTuWeb slug={slug} color={ajustesClinica.marca?.color || "#7c3aed"} onToast={onToast} puedeEditar={puedeEditar} />
 
       {!puedeEditar && (
         <p className="rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">Solo el dueño o la dirección cambian estos ajustes. Podés copiar y compartir el link.</p>
@@ -240,10 +243,8 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
         </div>
       </fieldset>
 
-      <ParaTuWeb slug={slug} color={ajustesClinica.marca?.color || "#7c3aed"} onToast={onToast} />
-
       <p className="flex items-start gap-2 rounded-xl bg-primary/[0.05] px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
+        <CalendarCheck2 className="mt-0.5 size-3.5 shrink-0 text-primary" />
         Los horarios salen de tu agenda real: el horario de cada profesional, sus ausencias, los turnos ya dados, los bloqueos y los feriados. Nunca se da un horario ocupado.
       </p>
     </div>
@@ -252,68 +253,75 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
 
 
 
-/** ¿La clínica ya tiene su página web? Se conecta sin rehacer nada: un botón o el turnero adentro. */
-function ParaTuWeb({ slug, color, onToast }: { slug: string; color: string; onToast: (m: string) => void }) {
-  const [vista, setVista] = useState<"boton" | "turnero" | "redes">("boton");
-  const { link, boton, turnero } = codigosParaWeb(slug, color);
-  const codigo = vista === "boton" ? boton : vista === "turnero" ? turnero : link;
-  const copiar = () => {
-    navigator.clipboard?.writeText(codigo).catch(() => {});
-    onToast(vista === "redes" ? "Link copiado" : "Código copiado: pegalo en tu web");
+/** ¿La clínica ya tiene su página web? Lo conecta el equipo de Cloud Esther: la clínica solo deja la dirección. */
+function ParaTuWeb({ slug, color, onToast, puedeEditar }: { slug: string; color: string; onToast: (m: string) => void; puedeEditar: boolean }) {
+  const { ajustes } = storeAgenda.usar();
+  const pedido = ajustes?.reservaOnline?.pedidoWeb;
+  const real = useClinicaReal();
+  const [web, setWeb] = useState("");
+  const [contacto, setContacto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const pedir = async () => {
+    const dir = web.trim();
+    if (!/\.[a-z]{2,}/i.test(dir)) return onToast("Escribí la dirección de tu página (ej. www.miclinica.com)");
+    setEnviando(true);
+    try {
+      if (real) {
+        const { link, boton, turnero } = codigosParaWeb(slug, color);
+        await pedirAClinica(real.slug, "POST", "/soporte", {
+          tipo: "Solicitud administrativa",
+          asunto: "Conectar los turnos online a la página web de la clínica",
+          mensaje:
+            `Página web de la clínica: ${dir}\n` +
+            (contacto.trim() ? `Quién maneja la web: ${contacto.trim()}\n` : "") +
+            `\nLink de turnos: ${link}\n\nBotón para pegar:\n${boton}\n\nTurnero dentro de la web:\n${turnero}`,
+        });
+      }
+      setAjustesAgendaStore((prev) => ({
+        ...(prev ?? {}),
+        reservaOnline: { ...configReserva(prev?.reservaOnline), pedidoWeb: { web: dir, fecha: new Date().toISOString() } },
+      }));
+      onToast("¡Listo! Nuestro equipo lo conecta y te avisa");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "No se pudo enviar. Probá de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
   };
-  const paraElQueHaceLaWeb =
-    `Hola, quiero agregar los turnos online de la clínica a nuestra página web.\n` +
-    (vista === "turnero"
-      ? `Pegá este código en un bloque «HTML» o «Insertar código» (sirve en WordPress, Wix, Tiendanube, Squarespace o cualquier web):\n\n${turnero}`
-      : `Pegá este botón donde diga «Pedir turno» (bloque «HTML» o «Insertar código»):\n\n${boton}\n\nO, si preferís, poné este link en el botón que ya tenemos: ${link}`);
   return (
     <div className="rounded-2xl border border-primary/12 bg-white p-4 dark:bg-card">
-      <p className="text-sm font-semibold">¿Tu clínica ya tiene página web?</p>
-      <p className="text-[11px] text-muted-foreground">No hace falta cambiarla ni pagar nada más: se conecta con un botón o con el turnero adentro de tu web.</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {(
-          [
-            ["boton", "Botón «Sacar turno»"],
-            ["turnero", "Turnero dentro de mi web"],
-            ["redes", "Instagram y Google"],
-          ] as const
-        ).map(([k, l]) => (
-          <button key={k} type="button" aria-pressed={vista === k} onClick={() => setVista(k)} className={chip(vista === k)}>
-            {l}
-          </button>
-        ))}
-      </div>
-      <p className="mt-3 text-[12px] leading-relaxed text-foreground/85">
-        {vista === "boton"
-          ? "Lo más fácil: un botón en tu web que abre tu página de turnos. También podés poner el link en el botón «Pedir turno» que ya tenés."
-          : vista === "turnero"
-            ? "Los pacientes sacan turno sin salir de tu web: el turnero aparece adentro, con los colores de tu clínica y se acomoda solo al alto."
-            : "Pegá el link en la bio de Instagram, en el botón «Reservar» de tu perfil de Google y en la respuesta automática de WhatsApp Business."}
-      </p>
-      {vista === "boton" && (
-        <div className="mt-3 rounded-xl bg-primary/[0.04] p-3 text-center">
-          <span
-            className="inline-block rounded-full px-6 py-3 text-sm font-semibold text-white"
-            style={{ background: color, boxShadow: `0 10px 24px -12px ${color}` }}
-          >
-            Sacar turno online
+      <p className="text-sm font-semibold">¿Ya tenés página web?</p>
+      {pedido ? (
+        <p className="mt-1.5 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12px] text-emerald-800 ring-1 ring-emerald-200">
+          <Check className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Pedido enviado para <b>{pedido.web}</b>. Nuestro equipo pone el botón de turnos en tu web y te avisa cuando esté listo. No tenés que hacer nada.
           </span>
-          <p className="mt-1.5 text-[10px] text-muted-foreground">Así se ve en tu web</p>
-        </div>
-      )}
-      <pre className="mt-3 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-[#1c1530] p-3 font-mono text-[10.5px] leading-relaxed text-violet-100">{codigo}</pre>
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        <button type="button" onClick={copiar} className="btn-ce !h-8 !text-xs">
-          <Copy className="size-3.5" /> {vista === "redes" ? "Copiar link" : "Copiar código"}
-        </button>
-        {vista !== "redes" && (
-          <a href={`https://wa.me/?text=${encodeURIComponent(paraElQueHaceLaWeb)}`} target="_blank" rel="noreferrer" className="btn-ce-outline !h-8 !text-xs">
-            <IconoWhatsApp /> Mandárselo a quien hace mi web
-          </a>
-        )}
-      </div>
-      {vista !== "redes" && (
-        <p className="mt-2 text-[10.5px] text-muted-foreground">Sirve en WordPress, Wix, Tiendanube, Squarespace, Webflow o una web hecha a medida: se pega en un bloque «HTML» o «Insertar código».</p>
+        </p>
+      ) : (
+        <>
+          <p className="text-[12px] text-muted-foreground">Nosotros lo conectamos por vos: dejanos la dirección y ponemos el botón de turnos en tu web. No tenés que hacer nada técnico.</p>
+          <fieldset disabled={!puedeEditar || enviando} className="mt-3 min-w-0 space-y-2">
+            <input
+              value={web}
+              onChange={(e) => setWeb(e.target.value)}
+              placeholder="Dirección de tu web (ej. www.miclinica.com)"
+              inputMode="url"
+              maxLength={160}
+              className="h-10 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10 dark:bg-card"
+            />
+            <input
+              value={contacto}
+              onChange={(e) => setContacto(e.target.value)}
+              placeholder="¿Quién te hace la web? WhatsApp o correo (opcional)"
+              maxLength={160}
+              className="h-10 w-full rounded-xl border border-primary/12 bg-white px-3 text-sm outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10 dark:bg-card"
+            />
+            <button type="button" onClick={() => void pedir()} className="btn-ce w-full justify-center">
+              {enviando ? "Enviando…" : "Que lo conecten por mí"}
+            </button>
+          </fieldset>
+        </>
       )}
     </div>
   );

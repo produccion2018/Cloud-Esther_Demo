@@ -94,6 +94,8 @@ export type ConfigReservaOnline = {
   bienvenida: string;
   /** Mostrar foto y presentación de los profesionales */
   mostrarEquipo: boolean;
+  /** La clínica pidió que Cloud Esther conecte los turnos a su página web */
+  pedidoWeb?: { web: string; fecha: string };
 };
 export const INTERVALO_DEFECTO = 30;
 export function tiemposAgenda(a?: AjustesAgenda) {

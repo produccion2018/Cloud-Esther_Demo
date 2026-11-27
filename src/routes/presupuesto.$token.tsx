@@ -69,6 +69,9 @@ type Info = Opcion & {
   plan: string;
   firmado: boolean;
   opciones: Opcion[];
+  senaPct?: number;
+  pagado?: number;
+  datosPago?: { titular: string; banco: string; cuenta: string; alias: string; link: string; instrucciones: string };
 };
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise<T> {
@@ -283,6 +286,7 @@ function PresupuestoPaciente() {
                   <p className="mx-auto mt-1 max-w-xs text-sm text-[#6b6385]">
                     {t("Gracias. La clínica ya lo sabe y te escribe para coordinar los turnos.", "Gracias. La clínica ya lo sabe y te escribirá para coordinar los turnos.")}
                   </p>
+                  <ComoPagar info={info} ver={ver} plata={plata} t={t} />
                 </div>
               ) : ver.estado === "Rechazado" ? (
                 <div className="py-2 text-center">
@@ -548,6 +552,75 @@ function Rechazar({
           {enviando ? "Enviando…" : "Enviar"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Después de aprobar: la seña (si la clínica la pide), lo que falta y cómo pagar. */
+function ComoPagar({ info, ver, plata, t }: { info: Info; ver: Info; plata: (n: number) => string; t: (a: string, b: string) => string }) {
+  const [copiado, setCopiado] = useState("");
+  const pagado = info.pagado ?? 0;
+  const falta = Math.max(0, ver.final - pagado);
+  const sena = Math.round((ver.final * (info.senaPct ?? 0)) / 100);
+  const faltaSena = Math.max(0, sena - pagado);
+  const dp = info.datosPago;
+  const hayDatos = !!(dp && (dp.alias || dp.cuenta || dp.link || dp.instrucciones));
+  if (falta === 0)
+    return pagado > 0 ? (
+      <p className="mx-auto mt-4 w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Pagado completo ✓</p>
+    ) : null;
+  if (!faltaSena && !hayDatos && !pagado) return null;
+  const copiar = (v: string) => {
+    void navigator.clipboard?.writeText(v).catch(() => {});
+    setCopiado(v);
+    window.setTimeout(() => setCopiado(""), 1800);
+  };
+  const wa = info.telefono
+    ? `https://wa.me/${telefonoInternacional(info.telefono, info.pais)}?text=${encodeURIComponent(`Hola, te mando el comprobante del pago del presupuesto ${ver.numero}.`)}`
+    : "";
+  return (
+    <div className="mt-5 rounded-3xl bg-[#f6f3fd] p-4 text-left">
+      <p className="text-sm font-bold">
+        {faltaSena > 0
+          ? `${t("Para reservar tus turnos, la seña es de", "Para reservar tus turnos, la seña es de")} ${plata(faltaSena)}`
+          : `${t("Te queda un saldo de", "Te queda un saldo de")} ${plata(falta)}`}
+      </p>
+      {pagado > 0 && <p className="mt-0.5 text-xs text-[#6b6385]">Ya {t("pagaste", "pagaste")} {plata(pagado)} de {plata(ver.final)}.</p>}
+      {hayDatos && dp && (
+        <div className="mt-3 space-y-1.5">
+          {[
+            ["Alias", dp.alias],
+            ["Cuenta", dp.cuenta],
+            ["Titular", dp.titular],
+            ["Banco", dp.banco],
+          ]
+            .filter(([, v]) => v)
+            .map(([l, v]) => (
+              <div key={l} className="flex items-center justify-between gap-2 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-black/5">
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a83a3]">{l}</span>
+                  <span className="block truncate text-sm font-semibold">{v}</span>
+                </span>
+                {(l === "Alias" || l === "Cuenta") && (
+                  <button type="button" onClick={() => copiar(v!)} className="shrink-0 rounded-full bg-[var(--marca)]/10 px-3 py-1 text-xs font-semibold text-[var(--marca)]">
+                    {copiado === v ? "¡Copiado!" : "Copiar"}
+                  </button>
+                )}
+              </div>
+            ))}
+          {dp.instrucciones && <p className="px-1 text-xs text-[#6b6385]">{dp.instrucciones}</p>}
+          {dp.link && (
+            <a href={dp.link} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-full bg-[var(--marca)] text-sm font-semibold text-white">
+              {t("Pagar online", "Pagar en línea")}
+            </a>
+          )}
+        </div>
+      )}
+      {wa && (
+        <a href={wa} target="_blank" rel="noreferrer" className="mt-2.5 flex items-center justify-center gap-2 text-[13px] font-semibold text-emerald-700">
+          <IconoWhatsApp /> {t("Mandar el comprobante", "Enviar el comprobante")}
+        </a>
+      )}
     </div>
   );
 }

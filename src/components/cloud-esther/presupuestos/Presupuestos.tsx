@@ -52,6 +52,8 @@ import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
+import { MEDIOS_PAGO, setFacturacion, storeFacturacion, type MedioPago } from "@/lib/cloud-esther/facturacion-store";
+import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { setTurnosStore, storeAgenda, SUCURSALES, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { proponerSesiones } from "@/lib/cloud-esther/reservas-online";
 import {
@@ -134,6 +136,11 @@ export function totalesPresupuesto(
   const plan = planes.find((x) => x.id === p.planId);
   return { subtotal, descuento, total, plan, ...conPlan(total, plan) };
 }
+/** Lo que el paciente ya pagó de este presupuesto (pagos de su cuenta marcados con el presupuesto) */
+function pagadoDe(cuenta: { tipo: string; monto: number; presupuestoId?: number }[] | undefined, id: number) {
+  return (cuenta ?? []).filter((m) => m.tipo === "Pago" && m.presupuestoId === id).reduce((a, m) => a + m.monto, 0);
+}
+
 /** «Opción A · Económica» (vacío si el presupuesto no tiene opciones) */
 const etiquetaOpcion = (p: PresupuestoPaciente) =>
   p.grupoOpciones && p.opcion ? `Opción ${p.opcion}${p.opcionNombre ? ` · ${p.opcionNombre}` : ""}` : "";
@@ -503,6 +510,7 @@ function useAcciones(ctx: Ctx) {
           fecha: hoyISO(),
           tipo: "Cargo",
           concepto: `Presupuesto ${f.p.numero} aprobado`,
+          presupuestoId: f.p.id,
           medio: tot.plan ? tot.plan.nombre : "A definir",
           monto: tot.final,
           notas: tot.plan && tot.cuotas > 1 ? `${tot.cuotas} cuotas de ${ars(tot.cuota)}` : "",
@@ -870,6 +878,13 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
   const sinTurnos = filas
     .filter((f) => f.p.estado === "Aprobado" && !f.p.turnosAgendados && !conTurnos.has(`pres-${f.p.id}`) && (f.p.respondido ?? f.p.fecha) >= hoyISO(-60))
     .sort((a, b) => (b.p.respondido ?? b.p.fecha).localeCompare(a.p.respondido ?? a.p.fecha));
+  const registrosTodos = useTodosLosRegistros();
+  const conSaldo = filas
+    .filter((f) => f.p.estado === "Aprobado")
+    .map((f) => ({ f, falta: totalesPresupuesto(f.p, planes).final - pagadoDe(registrosTodos[f.pid]?.cuenta, f.p.id) }))
+    .filter((x) => x.falta > 0 && (x.f.p.respondido ?? x.f.p.fecha) >= hoyISO(-180))
+    .sort((a, b) => b.falta - a.falta)
+    .map((x) => x.f);
   const Bloque = ({
     titulo,
     icon: Icon,
@@ -982,6 +997,20 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
               <button type="button" className={BTN_PRIMARIO} onClick={() => ctx.abrir(f.pid, f.p.id)}>
                 <CalendarPlus className="size-4" />
                 Agendar
+              </button>
+            )}
+          />
+        )}
+        {conSaldo.length > 0 && (
+          <Bloque
+            titulo="Aprobados con saldo por cobrar"
+            icon={CircleDollarSign}
+            tono="text-emerald-600"
+            lista={conSaldo}
+            accion={(f) => (
+              <button type="button" className={BTN_SECUNDARIO} onClick={() => ctx.abrir(f.pid, f.p.id)}>
+                <CircleDollarSign className="size-4" />
+                Cobrar
               </button>
             )}
           />
@@ -1234,6 +1263,7 @@ function Detalle({
         </div>
       </div>
       {p.notas && <p className="mt-2 text-xs italic text-muted-foreground">“{p.notas}”</p>}
+      {p.estado === "Aprobado" && <PagosPresupuesto ctx={ctx} f={f} />}
       {p.estado === "Aprobado" && <AgendarTratamiento ctx={ctx} f={f} />}
       {p.firmaPaciente?.imagen && (
         <div className="mt-3 flex items-center gap-3 rounded-xl bg-emerald-50/70 px-3 py-2 ring-1 ring-emerald-200">
@@ -2383,6 +2413,7 @@ function ReglasForm({
     descuentoMaxPct: number;
     recordatorioDias: number;
     condiciones: string;
+    senaPct?: number;
   };
   onCancel: () => void;
   onListo: (m: string) => void;
@@ -2427,6 +2458,16 @@ function ReglasForm({
           />
         </Field>
       </div>
+      <Field label="Seña al aprobar (% del total · 0 = sin seña)">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={c.senaPct ?? 0}
+          onChange={(e) => setC((p) => ({ ...p, senaPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))}
+          className={INPUT}
+        />
+      </Field>
       <Field label="Condiciones que salen en el PDF">
         <textarea
           rows={3}
@@ -3226,6 +3267,180 @@ function AgendarTratamiento({ ctx, f }: { ctx: Ctx; f: Fila }) {
             <button type="button" className={BTN_PRIMARIO} disabled={sinHueco || !filas.length} onClick={agendar}>
               <Check className="size-4" />
               Agendar {filas.length} {filas.length === 1 ? "turno" : "turnos"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────────── Seña y saldo del presupuesto (conectado con Pagos) ───────────── */
+
+function PagosPresupuesto({ ctx, f }: { ctx: Ctx; f: Fila }) {
+  const registros = useTodosLosRegistros();
+  const { planes, config } = storePresupuestos.usar();
+  const { config: cfgPortal } = storePortal.usar();
+  const { cambiar } = useRegistrosPacientes();
+  const p = f.p;
+  const tot = totalesPresupuesto(p, planes);
+  const pagos = (registros[f.pid]?.cuenta ?? []).filter((m) => m.tipo === "Pago" && m.presupuestoId === p.id);
+  const pagado = pagadoDe(registros[f.pid]?.cuenta, p.id);
+  const falta = Math.max(0, tot.final - pagado);
+  const senaPct = Math.max(0, Math.min(100, config.senaPct ?? 0));
+  const sena = Math.round((tot.final * senaPct) / 100);
+  const faltaSena = Math.max(0, sena - pagado);
+  const [abierto, setAbierto] = useState(false);
+  const [monto, setMonto] = useState("");
+  const [medio, setMedio] = useState<MedioPago>("Efectivo");
+  const [nota, setNota] = useState("");
+  const [error, setError] = useState("");
+  const dp = cfgPortal.datosPago;
+  const datos = dp
+    ? [dp.alias && `Alias: ${dp.alias}`, dp.cuenta && `Cuenta: ${dp.cuenta}`, dp.titular && `Titular: ${dp.titular}`, dp.banco && `Banco: ${dp.banco}`, dp.link && `Pagá online: ${dp.link}`, dp.instrucciones]
+        .filter(Boolean)
+        .join("\n")
+    : "";
+  const pedir = faltaSena > 0 ? faltaSena : falta;
+  const textoPedido = `Hola ${f.pac?.nombre ?? ""} 👋 ${faltaSena > 0 ? `Para reservar los turnos de tu tratamiento, la seña es de ${ars(faltaSena)}` : `Te queda un saldo de ${ars(falta)} del presupuesto ${p.numero}`}.${datos ? `\n\n${datos}` : ""}\n\nCuando lo hagas, mandanos el comprobante por acá. ¡Gracias!`;
+
+  const registrar = () => {
+    const n = Math.round(Number(monto.replace(",", ".")) * 100) / 100;
+    if (!n || n <= 0) return setError("Escribí el monto que pagó.");
+    const fecha = hoyISO();
+    cambiar(f.pid, "cuenta", (prev) => [
+      ...prev,
+      { id: Date.now(), fecha, tipo: "Pago", concepto: `Pago presupuesto ${p.numero}${pagado + n >= tot.final ? " (saldado)" : pagado === 0 && sena > 0 ? " (seña)" : ""}`, medio, monto: n, notas: nota.trim(), presupuestoId: p.id },
+    ]);
+    // Si la caja de la sede está abierta, el cobro entra también en la caja del día
+    const { sesiones } = storeFacturacion.leer();
+    const abiertas = sesiones.filter((s) => !s.cerrada);
+    const caja = abiertas.find((s) => s.sucursal === f.pac?.sucursal) ?? (abiertas.length === 1 ? abiertas[0] : undefined);
+    if (caja && medio !== "Obra social")
+      setFacturacion("movimientos", (prev) => [
+        ...prev,
+        { id: `m-${Date.now()}`, sesionId: caja.id, fecha: new Date().toISOString(), tipo: "Ingreso", concepto: `Presupuesto ${p.numero} · ${nombrePac(f.pac)}`, medio, monto: n, comprobanteId: "" },
+      ]);
+    cambiar(f.pid, "presupuestos", (prev) =>
+      prev.map((x) =>
+        x.id === p.id
+          ? { ...x, seguimientos: [...(x.seguimientos ?? []), { fecha: new Date().toISOString(), texto: `Pago de ${ars(n)} (${medio})`, autor: ctx.usuario }] }
+          : x,
+      ),
+    );
+    setAbierto(false);
+    setMonto("");
+    setNota("");
+    setError("");
+    ctx.onToast(`Pago de ${ars(n)} registrado${caja ? " y sumado a la caja" : ""}`);
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 p-3 ring-1 ring-emerald-200/70">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Seña y pagos</p>
+          <p className="text-[11px] text-muted-foreground">
+            {falta === 0
+              ? "Está todo pagado."
+              : faltaSena > 0
+                ? `Falta la seña de ${ars(faltaSena)} (${senaPct}%) para reservar los turnos.`
+                : senaPct > 0
+                  ? `Seña pagada. Falta ${ars(falta)} del tratamiento.`
+                  : `Falta cobrar ${ars(falta)}.`}
+          </p>
+        </div>
+        {falta > 0 && !abierto && (
+          <div className="flex flex-wrap gap-1.5">
+            {f.pac?.telefono && (
+              <a href={wa(f.pac.telefono, textoPedido)} target="_blank" rel="noreferrer" className={BTN_SECUNDARIO}>
+                <MessageCircle className="size-4" />
+                {faltaSena > 0 ? "Pedir la seña" : "Pedir el saldo"}
+              </a>
+            )}
+            <button
+              type="button"
+              className={BTN_PRIMARIO}
+              onClick={() => {
+                setMonto(String(pedir));
+                setAbierto(true);
+              }}
+            >
+              <Plus className="size-4" />
+              Registrar pago
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
+        {[
+          ["Total", ars(tot.final), "text-foreground"],
+          ["Pagado", ars(pagado), "text-emerald-600"],
+          ["Falta", ars(falta), falta ? "text-rose-600" : "text-emerald-600"],
+        ].map(([l, v, c]) => (
+          <div key={l} className="rounded-xl bg-white/80 px-2 py-1.5 ring-1 ring-black/5">
+            <p className="text-[10px] text-muted-foreground">{l}</p>
+            <p className={`text-sm font-bold tabular-nums ${c}`}>{v}</p>
+          </div>
+        ))}
+      </div>
+      <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-black/5">
+        <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${tot.final ? Math.min(100, (pagado / tot.final) * 100) : 0}%` }} />
+        {senaPct > 0 && senaPct < 100 && <span className="absolute inset-y-0 w-0.5 bg-amber-500" style={{ left: `${senaPct}%` }} title={`Seña ${senaPct}%`} />}
+      </div>
+      {pagos.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+          {pagos.map((m) => (
+            <li key={m.id} className="flex justify-between gap-2">
+              <span className="truncate">
+                {fecha(m.fecha)} · {m.medio}
+                {m.notas ? ` · ${m.notas}` : ""}
+              </span>
+              <b className="shrink-0 text-foreground">{ars(m.monto)}</b>
+            </li>
+          ))}
+        </ul>
+      )}
+      {abierto && (
+        <div className="mt-3 space-y-2 rounded-xl bg-white/90 p-2.5 ring-1 ring-primary/10">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Monto</span>
+              <input inputMode="decimal" value={monto} onChange={(e) => setMonto(e.target.value)} className={INPUT} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Medio</span>
+              <select value={medio} onChange={(e) => setMedio(e.target.value as MedioPago)} className={INPUT}>
+                {MEDIOS_PAGO.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {sena > 0 && faltaSena > 0 && (
+              <button type="button" className={CHIP(Number(monto) === faltaSena)} onClick={() => setMonto(String(faltaSena))}>
+                Seña {ars(faltaSena)}
+              </button>
+            )}
+            <button type="button" className={CHIP(Number(monto) === falta)} onClick={() => setMonto(String(falta))}>
+              Todo {ars(falta)}
+            </button>
+            {tot.cuotas > 1 && (
+              <button type="button" className={CHIP(Number(monto) === Math.min(falta, tot.cuota))} onClick={() => setMonto(String(Math.min(falta, tot.cuota)))}>
+                1 cuota {ars(Math.min(falta, tot.cuota))}
+              </button>
+            )}
+          </div>
+          <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} placeholder="Nota (opcional): n.º de operación, quién pagó…" className={INPUT} />
+          {error && <p className="text-xs text-rose-600">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => setAbierto(false)}>
+              Cancelar
+            </button>
+            <button type="button" className={BTN_PRIMARIO} onClick={registrar}>
+              <Check className="size-4" />
+              Registrar
             </button>
           </div>
         </div>

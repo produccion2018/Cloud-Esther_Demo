@@ -607,6 +607,8 @@ export type Movimiento = {
   medio: string;
   monto: number;
   notas: string;
+  /** Pago o cargo de un presupuesto (para ver cuánto falta cobrar de cada uno) */
+  presupuestoId?: number;
 };
 
 type ProfesionalPaciente = {

@@ -53,6 +53,8 @@ export type ConfigPresupuestos = {
   descuentoMaxPct: number;
   recordatorioDias: number;
   condiciones: string;
+  /** Seña que se pide al aprobar (% del total). 0 o vacío = sin seña. La define cada clínica. */
+  senaPct?: number;
 };
 
 export const MOTIVOS_RECHAZO = [

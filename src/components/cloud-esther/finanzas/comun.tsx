@@ -115,6 +115,7 @@ export const ORIGEN_ESTILO: Record<Asiento["origen"], string> = {
   Facturación: "bg-violet-100 text-violet-700",
   "Obras sociales": "bg-teal-100 text-teal-700",
   "Caja diaria": "bg-orange-100 text-orange-700",
+  Cobros: "bg-emerald-100 text-emerald-700",
   Nómina: "bg-indigo-100 text-indigo-700",
 };
 

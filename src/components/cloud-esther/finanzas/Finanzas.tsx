@@ -30,7 +30,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
-import { paisFiscal } from "@/lib/cloud-esther/facturacion-store";
+import { deudaDe, paisFiscal } from "@/lib/cloud-esther/facturacion-store";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
 import {
@@ -463,6 +464,7 @@ function Resumen({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
 
   return (
     <div className="space-y-3">
+      <ElMes ctx={ctx} libro={libro} />
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
         <Tarjeta titulo="Ingresos y egresos (6 meses)">
           <BarrasDobles serie={serie} $={ctx.$} />
@@ -2205,5 +2207,92 @@ function TransferenciaForm({
       {error && <p className="text-[12px] font-medium text-rose-600">{error}</p>}
       <Acciones etiqueta="Transferir" onCancel={onCancel} icon={ArrowLeftRight} />
     </form>
+  );
+}
+
+/* ───────────── El mes en una pantalla (para el Dueño/a) ───────────── */
+
+function ElMes({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
+  const registros = useTodosLosRegistros();
+  const asientos = deSucursal(libro.operativos, ctx.sucursal);
+  const hoy = diaISO();
+  const dia = Number(hoy.slice(8, 10));
+  const mes = mesISO(0);
+  const ant = mesISO(1);
+  const delAnt = asientos.filter((a) => a.fecha.startsWith(ant) && Number(a.fecha.slice(8, 10)) <= dia);
+  const delMesAct = delMes(asientos, mes);
+  const entro = sumar(delMesAct, "Ingreso");
+  const salio = sumar(delMesAct, "Egreso");
+  const quedo = entro - salio;
+  const quedoAnt = sumar(delAnt, "Ingreso") - sumar(delAnt, "Egreso");
+  const comp =
+    delAnt.length === 0 || quedoAnt === 0
+      ? null
+      : Math.round(((quedo - quedoAnt) / Math.abs(quedoAnt)) * 100);
+  const nombreAnt = nombreMes(ant, true).split(" ")[0]!.toLowerCase();
+  const gastos = porCategoria(delMesAct, "Egreso").slice(0, 3);
+  const finMes = `${mes}-31`;
+  const porPagar = deSucursal(libro.fin.cuentasPagar, ctx.sucursal)
+    .filter((c) => c.estado === "Pendiente" && c.vence <= finMes)
+    .reduce((a, c) => a + c.monto, 0);
+  const teDeben =
+    Object.values(registros).reduce((a, r) => a + deudaDe(r?.cuenta).saldo, 0) +
+    libro.cobrosEsperados.filter((c) => c.origen === "Facturas por cobrar").reduce((a, c) => a + c.monto, 0);
+  const vacio = delMesAct.length === 0;
+  const frase = vacio
+    ? "Todavía no hay movimientos este mes. A medida que cobres y cargues gastos, acá vas a ver cómo te va."
+    : quedo >= 0
+      ? `Este mes te ${quedo === 0 ? "quedó" : "quedaron"} ${ctx.$(quedo)}${comp === null ? "" : comp === 0 ? `, igual que ${nombreAnt} a esta altura` : `, ${Math.abs(comp)}% ${comp > 0 ? "más" : "menos"} que ${nombreAnt} a esta altura`}.`
+      : `Este mes salió ${ctx.$(-quedo)} más de lo que entró${comp !== null ? ` (en ${nombreAnt} a esta altura ibas ${quedoAnt >= 0 ? "en positivo" : "también en negativo"})` : ""}.`;
+  return (
+    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_50px_-28px_rgba(124,58,237,0.9)]">
+      <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">{nombreMes(mes, true)} · hasta hoy</p>
+      <p className="mt-2 max-w-2xl text-lg font-semibold leading-snug sm:text-xl">{frase}</p>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {(
+          [
+            ["Entró", entro, "text-white"],
+            ["Salió", salio, "text-white"],
+            ["Te quedó", quedo, quedo >= 0 ? "text-emerald-200" : "text-rose-200"],
+          ] as const
+        ).map(([l, v, c]) => (
+          <div key={l} className="rounded-2xl bg-white/12 px-3 py-2.5 ring-1 ring-white/20">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/70">{l}</p>
+            <p className={`mt-0.5 truncate text-base font-extrabold tabular-nums sm:text-xl ${c}`}>{ctx.$(v)}</p>
+          </div>
+        ))}
+      </div>
+      {!vacio && (
+        <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+          {gastos.length > 0 && (
+            <div className="rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15">
+              <p className="font-semibold text-white/80">En qué se fue la plata</p>
+              <ul className="mt-1 space-y-0.5">
+                {gastos.map(([cat, v]) => (
+                  <li key={cat} className="flex justify-between gap-2">
+                    <span className="truncate">{cat}</span>
+                    <b className="tabular-nums">{ctx.$(v)}</b>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15">
+            <p className="font-semibold text-white/80">Lo que viene</p>
+            <ul className="mt-1 space-y-0.5">
+              <li className="flex justify-between gap-2">
+                <span>Por pagar este mes</span>
+                <b className="tabular-nums">{ctx.$(porPagar)}</b>
+              </li>
+              <li className="flex justify-between gap-2">
+                <span>Te deben (pacientes y facturas)</span>
+                <b className="tabular-nums">{ctx.$(teDeben)}</b>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

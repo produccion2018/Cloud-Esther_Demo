@@ -1,6 +1,7 @@
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import {
   estadoComprobante,
+  numeroComprobante,
   saldo,
   storeFacturacion,
   totalesComprobante,
@@ -37,6 +38,7 @@ export type OrigenAsiento =
   | "Facturación"
   | "Obras sociales"
   | "Caja diaria"
+  | "Cobros"
   | "Nómina";
 
 export type Asiento = {
@@ -99,6 +101,28 @@ export function useLibro() {
         origen: "Facturación",
         editable: false,
         comprobante: p.referencia,
+      });
+    }
+  }
+  // Cobros a pacientes que no pasaron por un comprobante (Cobrar hoy, señas de presupuestos,
+  // «ya pagué» confirmados): están en la cuenta corriente. Los cobros de un comprobante ya
+  // entraron arriba, así que se saltean (nada se cuenta dos veces).
+  const deComprobante = new Set(fac.comprobantes.map((c) => `Cobro ${c.tipo} ${numeroComprobante(c)}`));
+  for (const [pid, r] of Object.entries(registros)) {
+    for (const m of r?.cuenta ?? []) {
+      if (m.tipo !== "Pago" || m.medio === "Obra social" || deComprobante.has(m.concepto)) continue;
+      asientos.push({
+        id: `cc:${pid}:${m.id}`,
+        fecha: m.fecha.slice(0, 10),
+        tipo: "Ingreso",
+        categoria: "Prestaciones",
+        concepto: m.concepto,
+        monto: m.monto,
+        cuentaId: cuentaDeMedio(m.medio as MedioPago),
+        sucursal: SUCURSAL_GENERAL,
+        origen: "Cobros",
+        editable: false,
+        comprobante: m.notas,
       });
     }
   }

@@ -394,6 +394,16 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [hecho, setHecho] = useState<(ResultadoReserva & { fecha: string; hora: string }) | null>(null);
+  // ?motivo=Control (desde «Te toca control» del portal): arranca con ese motivo elegido
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("motivo");
+    const t = m && info.tratamientos.find((x) => x.toLowerCase() === m.toLowerCase());
+    if (t) {
+      setTratamiento(t);
+      setPaso(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const cargarLibres = (pid: string | null) => {
     setLibres(null);

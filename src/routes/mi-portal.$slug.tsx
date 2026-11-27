@@ -44,6 +44,8 @@ type Yo = {
   horasMinimasCancelar: number;
   proximos: TurnoP[];
   anteriores: TurnoP[];
+  /** «Te toca control»: según los meses que eligió la clínica desde su última visita */
+  control?: { estado: "toca" | "pronto"; vence: string; ultima: string; meses: number } | null;
 };
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown, token?: string): Promise<T> {
@@ -405,6 +407,26 @@ function Panel({ slug, yo, token, onSalir, onActualizar }: { slug: string; yo: Y
         <Pagos slug={slug} token={token} yo={yo} />
       ) : (
       <>
+      {yo.control && (
+        <div className="relative mt-5 overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--marca)] via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_50px_-28px_rgba(76,29,149,0.9)]">
+          <div className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-white/10 blur-xl" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-white/25">
+            <CalendarClock className="size-3" /> {yo.control.estado === "toca" ? "Te toca control" : "Se acerca tu control"}
+          </span>
+          <p className="mt-3 text-xl font-bold leading-snug">
+            {yo.control.estado === "toca"
+              ? t(`Pasaron ${yo.control.meses} meses desde tu última visita`, `Han pasado ${yo.control.meses} meses desde tu última visita`)
+              : `Tu control es a partir del ${fechaLarga(yo.control.vence).toLowerCase()}`}
+          </p>
+          <p className="mt-1 text-sm text-white/85">
+            {t("Un control a tiempo evita problemas más grandes. Sacá tu turno en un minuto.", "Un control a tiempo evita problemas más grandes. Saca tu turno en un minuto.")}
+          </p>
+          <a href={`/turnos/${slug}?motivo=Control`} className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[var(--marca)] shadow-md">
+            <CalendarPlus className="size-4" /> {t("Sacar mi turno de control", "Sacar mi turno de control")}
+          </a>
+          <p className="mt-2 text-[11px] text-white/70">Tu última visita: {fechaCorta(yo.control.ultima)}</p>
+        </div>
+      )}
       <h2 className="mt-6 px-1 text-sm font-bold uppercase tracking-[0.14em] text-[#8a83a3]">{primero ? "Tu próximo turno" : "Tus turnos"}</h2>
       {!primero ? (
         <Tarjeta className="mt-3 text-center">

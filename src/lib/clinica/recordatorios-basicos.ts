@@ -6,7 +6,7 @@ import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { setNotificaciones, storeNotificaciones, type NotifManual, generarRutinasDeHoy, subirTareasSinAtenderLocal } from "@/lib/cloud-esther/notificaciones-store";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
 import { leadSinRespuesta, setMarketing, storeMarketing } from "@/lib/cloud-esther/marketing-store";
-import { diasParaVencer, nivelStock, storeInventario } from "@/lib/cloud-esther/inventario-store";
+import { descontarKitsDeTurnos, diasParaVencer, nivelStock, storeInventario } from "@/lib/cloud-esther/inventario-store";
 import { pacientesParaLlamar } from "@/components/cloud-esther/pacientes/VolverALlamar";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
@@ -553,4 +553,20 @@ export function useRespuestasTurnos() {
       prev.map((t) => (ids.has(t.id) && t.respuestaPaciente ? { ...t, respuestaPaciente: { ...t.respuestaPaciente, avisada: true } } : t)),
     );
   }, [turnos, puede, notifs, real]);
+}
+
+/** Inventario: cuando un turno se marca «Atendida», se descuenta solo el kit de su tratamiento.
+    Lo hace quien puede tocar el inventario (Dueño o asistente) con la app abierta; una vez por turno. */
+export function useDescuentoKits() {
+  const { plan } = useCloudEsther();
+  const real = useClinicaReal();
+  const turnos = storeAgenda.usar().turnos;
+  const { kits } = storeInventario.usar();
+  const puede = !real || ["admin", "asistente"].includes(real.rol);
+  useEffect(() => {
+    const mod = MODULES.find((m) => m.id === "inventario");
+    if (!puede || !mod || !availableIn(mod, plan) || !kits.length) return;
+    if (!cargados(!!real, ["inventario", "agenda"])) return;
+    descontarKitsDeTurnos(turnos, hoyISO());
+  }, [turnos, kits, puede, plan, real]);
 }

@@ -3186,7 +3186,7 @@ function Consumo({ ctx }: { ctx: Ctx }) {
           <div>
             <p className="text-sm font-semibold">Kits por tratamiento</p>
             <p className="text-xs text-muted-foreground">
-              Registrá los tratamientos realizados y el stock se descuenta solo.
+              Cuando un turno se marca «Atendida» en la Agenda, se descuenta solo el kit de su tratamiento.
             </p>
           </div>
           <button type="button" className={BTN_SECUNDARIO} onClick={() => setEditarKit("nuevo")}>
@@ -3243,6 +3243,7 @@ function Consumo({ ctx }: { ctx: Ctx }) {
           })}
         </ul>
       </div>
+      <DescuentoAutomatico ctx={ctx} />
       {registrar && (
         <Modal titulo={`Registrar ${registrar}`} onClose={() => setRegistrar(null)}>
           <RegistrarKit
@@ -3271,6 +3272,64 @@ function Consumo({ ctx }: { ctx: Ctx }) {
             }}
           />
         </Modal>
+      )}
+    </div>
+  );
+}
+
+/** El kit se descuenta solo al atender el turno: interruptor y los últimos descuentos. */
+function DescuentoAutomatico({ ctx }: { ctx: Ctx }) {
+  const { kitsAuto, movimientos, insumos, kits } = storeInventario.usar();
+  const activo = kitsAuto?.activo ?? true;
+  const ultimos = movimientos.filter((m) => m.referencia.startsWith("turno-")).slice(0, 40);
+  const porTurno = new Map<string, Movimiento[]>();
+  for (const m of ultimos) porTurno.set(m.referencia, [...(porTurno.get(m.referencia) ?? []), m]);
+  const grupos = [...porTurno.values()].slice(0, 6);
+  if (!kits.length) return null;
+  return (
+    <div className="card-grad p-4">
+      <label className="flex items-center gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+          <Check className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Descontar solo al atender el turno</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {activo
+              ? `Activo${kitsAuto?.desde ? ` desde el ${fecha(kitsAuto.desde)}` : ""}: el tratamiento del turno tiene que llamarse igual que el kit.`
+              : "Pausado: los kits se descuentan solo con «Registrar realizado»."}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={activo}
+          onChange={(e) => {
+            setInventario("kitsAuto", () => ({ activo: e.target.checked, desde: e.target.checked ? diaISO() : (kitsAuto?.desde ?? diaISO()) }));
+            ctx.onToast(e.target.checked ? "Los kits se descuentan solos desde hoy" : "Descuento automático pausado");
+          }}
+          className="size-5 shrink-0 accent-[var(--color-primary)]"
+        />
+      </label>
+      {grupos.length > 0 && (
+        <>
+          <p className="mt-4 text-xs font-semibold">Últimos descuentos automáticos</p>
+          <ul className="mt-2 space-y-1.5">
+            {grupos.map((g) => (
+              <li key={g[0]!.referencia} className="rounded-xl bg-white/80 px-3 py-2 text-[11px] ring-1 ring-primary/10">
+                <p className="font-semibold text-foreground">{g[0]!.motivo.replace(" (turno atendido)", "")}</p>
+                <p className="text-muted-foreground">
+                  {fechaHora(g[0]!.fecha)} ·{" "}
+                  {g
+                    .map((m) => {
+                      const i = insumos.find((x) => x.id === m.insumoId);
+                      return `${num(Math.abs(m.cantidad))} ${i?.unidad ?? ""} ${i?.nombre ?? ""}`.trim();
+                    })
+                    .join(", ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

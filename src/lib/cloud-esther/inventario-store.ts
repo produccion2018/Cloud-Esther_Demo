@@ -1,6 +1,7 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { SUCURSALES } from "@/lib/cloud-esther/agenda-store";
 import type { PlanId } from "@/lib/cloud-esther/data";
+import type { Turno } from "@/lib/cloud-esther/agenda-store";
 
 /* Ubicación: src/lib/cloud-esther/inventario-store.ts
 
@@ -121,6 +122,8 @@ export type EstadoInventario = {
   ordenes: OrdenCompra[];
   kits: Kit[];
   pedidos: PedidoEquipo[];
+  /** Descontar el kit solo cuando el turno se marca «Atendida» en la Agenda (desde ese día en adelante) */
+  kitsAuto?: { activo: boolean; desde: string };
 };
 
 /* ───────────── Utilidades ───────────── */
@@ -216,4 +219,55 @@ export function registrarPedidoEquipo(autor: string, sucursal: string, detalle: 
 export function siguienteNumeroOrden(ordenes: OrdenCompra[]) {
   const max = ordenes.reduce((a, o) => Math.max(a, Number(o.id.replace(/\D/g, "")) || 0), 0);
   return `OC-${String(max + 1).padStart(4, "0")}`;
+}
+const claveNombre = (t: string) =>
+  t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** Kit que corresponde al tratamiento del turno (mismo nombre, o el turno lo incluye). */
+export function kitDeTratamiento(kits: Kit[], tratamiento: string): Kit | undefined {
+  const t = claveNombre(tratamiento);
+  if (!t) return undefined;
+  return kits.find((k) => claveNombre(k.tratamiento) === t) ?? kits.find((k) => {
+    const n = claveNombre(k.tratamiento);
+    return n.length >= 4 && t.includes(n);
+  });
+}
+
+/** Al atender un turno, se descuenta solo su kit (una vez por turno, desde el día en que se activó).
+    Devuelve cuántos turnos se descontaron. */
+export function descontarKitsDeTurnos(turnos: Turno[], hoy: string): number {
+  const estado = storeInventario.leer();
+  if (!estado.kits.length) return 0;
+  // La primera vez se activa desde hoy (nunca se descuenta lo atendido antes)
+  const cfg = estado.kitsAuto ?? { activo: true, desde: hoy };
+  if (!estado.kitsAuto) storeInventario.poner({ ...estado, kitsAuto: cfg });
+  if (!cfg.activo) return 0;
+  const desde = cfg.desde;
+  const hechos = new Set(estado.movimientos.map((m) => m.referencia).filter((r) => r.startsWith("turno-")));
+  let n = 0;
+  for (const t of turnos) {
+    if (t.estado !== "Atendida" || t.fecha < desde || hechos.has(`turno-${t.id}`)) continue;
+    const kit = kitDeTratamiento(estado.kits, t.tratamiento);
+    if (!kit) continue;
+    const actual = storeInventario.leer();
+    const sedes = [...new Set(actual.insumos.map((i) => i.sucursal))];
+    let algo = false;
+    for (const it of kit.items) {
+      const ins =
+        actual.insumos.find((i) => i.nombre === it.nombre && i.sucursal === t.sucursal) ??
+        (sedes.length === 1 ? actual.insumos.find((i) => i.nombre === it.nombre) : undefined);
+      if (!ins || it.cantidad <= 0) continue;
+      registrarMovimiento({
+        insumoId: ins.id,
+        tipo: "Salida",
+        cantidad: -Math.round(it.cantidad * 100) / 100,
+        motivo: `${kit.tratamiento} · ${t.paciente} (turno atendido)`,
+        usuario: "Agenda (automático)",
+        referencia: `turno-${t.id}`,
+      });
+      algo = true;
+    }
+    if (algo) n++;
+  }
+  return n;
 }

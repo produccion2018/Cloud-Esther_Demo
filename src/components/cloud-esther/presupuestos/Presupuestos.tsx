@@ -50,6 +50,8 @@ import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
+import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
+import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { setTurnosStore, storeAgenda, SUCURSALES, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { proponerSesiones } from "@/lib/cloud-esther/reservas-online";
 import {
@@ -518,6 +520,13 @@ function useAcciones(ctx: Ctx) {
       }));
       auditar(f.pid, `Marcó rechazado el presupuesto ${f.p.numero} (${motivo})`);
     },
+    recordado(f: Fila) {
+      actualizar(f.pid, f.p.id, (p) => ({
+        ...p,
+        ultimoRecordatorio: hoyISO(),
+        seguimientos: [...(p.seguimientos ?? []), seguimiento("Recordatorio enviado por WhatsApp (con el link para aprobar)")],
+      }));
+    },
     nota(f: Fila, texto: string) {
       actualizar(f.pid, f.p.id, (p) => ({
         ...p,
@@ -841,17 +850,20 @@ function Lista({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
 
 function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
   const { planes, config } = storePresupuestos.usar();
+  const { plan } = useCloudEsther();
+  const navigate = useNavigate();
   const acc = useAcciones(ctx);
   const enviados = filas
     .filter((f) => f.p.estado === "Enviado")
     .sort((a, b) => (a.p.enviado ?? a.p.fecha).localeCompare(b.p.enviado ?? b.p.fecha));
   const vencidos = enviados.filter((f) => vencido(f.p));
-  const recordar = enviados.filter(
-    (f) => !vencido(f.p) && dias(f.p.enviado ?? f.p.fecha) >= config.recordatorioDias,
-  );
-  const recientes = enviados.filter(
-    (f) => !vencido(f.p) && dias(f.p.enviado ?? f.p.fecha) < config.recordatorioDias,
-  );
+  // Se recuerda cada «recordatorioDias» desde el envío o desde el último recordatorio
+  const ultimo = (f: Fila) => (f.p.ultimoRecordatorio ?? f.p.enviado ?? f.p.fecha).slice(0, 10);
+  const recordar = enviados.filter((f) => !vencido(f.p) && dias(ultimo(f)) >= config.recordatorioDias);
+  const recientes = enviados.filter((f) => !vencido(f.p) && dias(ultimo(f)) < config.recordatorioDias);
+  const modAuto = MODULES.find((m) => m.id === "automatizaciones");
+  const conAuto = !!modAuto && availableIn(modAuto, plan);
+  const autoActivo = conAuto && storeN8n.usar().flujos.some((fl) => fl.activo && fl.evento === "presupuesto_sin_respuesta");
   const borradores = filas.filter((f) => f.p.estado === "Borrador");
   const { turnos } = storeAgenda.usar();
   const conTurnos = new Set(turnos.filter((t) => t.serie?.startsWith("pres-") && t.estado !== "Cancelada").map((t) => t.serie));
@@ -915,7 +927,7 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
         className={BTN_PRIMARIO}
         onClick={() => {
           abrirWhatsAppConEnlace(f.pac!.telefono, f.pid, f.p.id, texto);
-          acc.nota(f, "Recordatorio enviado por WhatsApp");
+          acc.recordado(f);
           ctx.onToast(`Recordatorio registrado para ${nombrePac(f.pac)}`);
         }}
       >
@@ -930,6 +942,35 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
         titulo="Seguimiento"
         descripcion={`Los presupuestos sin respuesta después de ${config.recordatorioDias} días conviene recordarlos. Los vencidos se renuevan o se cierran.`}
       />
+      <div
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3.5 ring-1 ${autoActivo ? "bg-emerald-50/80 ring-emerald-200" : "bg-gradient-to-r from-sky-50 to-violet-50 ring-primary/10"}`}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={`grid size-9 shrink-0 place-items-center rounded-xl text-white ${autoActivo ? "bg-emerald-500" : "bg-gradient-to-br from-sky-500 to-violet-500"}`}>
+            {autoActivo ? <Check className="size-4" /> : <AlarmClock className="size-4" />}
+          </span>
+          <p className="min-w-0 text-xs leading-relaxed text-slate-700">
+            {autoActivo ? (
+              <>
+                <b>Seguimiento automático activo.</b> A los días sin respuesta, Cloud Esther le escribe solo al paciente por WhatsApp con el link para aprobarlo, y lo anota acá.
+              </>
+            ) : conAuto ? (
+              <>
+                <b>¿Querés que se haga solo?</b> Activá «Seguimiento de presupuestos» en Automatizaciones y los recordatorios salen solos, con el link para aprobar.
+              </>
+            ) : (
+              <>
+                <b>Te avisamos cada día</b> en Notificaciones qué presupuestos recordar y cuáles vencen. Con «Recordar» le llega al paciente el link para aprobarlo desde el celular.
+              </>
+            )}
+          </p>
+        </div>
+        {conAuto && !autoActivo && (
+          <button type="button" className={BTN_PRIMARIO} onClick={() => void navigate({ to: "/demo/automatizaciones" })}>
+            Activar
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {sinTurnos.length > 0 && (
           <Bloque

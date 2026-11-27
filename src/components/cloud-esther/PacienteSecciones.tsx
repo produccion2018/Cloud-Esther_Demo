@@ -579,6 +579,8 @@ export type PresupuestoPaciente = {
   grupoOpciones?: string;
   opcion?: string;
   opcionNombre?: string;
+  /** Último día en que se le recordó al paciente (para no insistir todos los días) */
+  ultimoRecordatorio?: string;
   /** Día en que se agendaron los turnos del tratamiento aprobado */
   turnosAgendados?: string;
   /** Firma del paciente al aprobar con el enlace (imagen PNG chica) */

@@ -34,6 +34,7 @@ import {
 import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 
 /** Turnos atendidos (últimos `dias` días) que todavía no tienen evolución ni nota clínica ese día */
 export function turnosSinEvolucion(
@@ -339,6 +340,41 @@ export function useRecordatoriosBasicos() {
             detalle: `${parados.slice(0, 3).join(", ")}${parados.length > 3 ? ` y ${parados.length - 3} más` : ""}. Hace ${DIAS_TRATAMIENTO_INCONCLUSO} días o más que no vienen y no tienen turno: invitalos a retomar desde la ficha → Tratamientos → «Invitar a retomar».`,
             categoria: "Pacientes",
             prioridad: "Normal",
+          });
+      }
+
+      // 5a) Presupuestos sin respuesta para recordar hoy y los que vencen en 2 días.
+      //     Con el flujo automático activo (Plus o más), el recordatorio lo manda Esther sola.
+      if (conRegistros && !existentes.has(`basico-presup-${hoy}`)) {
+        const cada = Math.max(1, Math.round(storePresupuestos.leer().config?.recordatorioDias ?? 3));
+        const recordar: string[] = [];
+        const vencen: string[] = [];
+        const pacs = leerPacientes();
+        for (const [pid, reg] of Object.entries(leerRegistros())) {
+          const p = pacs.find((x) => x.id === Number(pid));
+          if (!p) continue;
+          for (const pr of reg?.presupuestos ?? []) {
+            if (pr.estado !== "Enviado") continue;
+            const validez = pr.validez ?? "";
+            if (validez && validez < hoy) continue;
+            if (validez && validez <= hoyISO(2)) vencen.push(`${p.nombre} ${p.apellido}`);
+            const ultimo = (pr.ultimoRecordatorio ?? pr.enviado ?? pr.fecha).slice(0, 10);
+            if (!flujoActivo("presupuesto_sin_respuesta") && ultimo <= hoyISO(-cada)) recordar.push(`${p.nombre} ${p.apellido}`);
+          }
+        }
+        const unicos = (l: string[]) => [...new Set(l)];
+        const r = unicos(recordar);
+        const v = unicos(vencen);
+        if (r.length || v.length)
+          nuevos.push({
+            ...base,
+            id: `basico-presup-${hoy}`,
+            titulo: r.length
+              ? `${r.length} presupuesto${r.length === 1 ? "" : "s"} para recordar hoy`
+              : `${v.length} presupuesto${v.length === 1 ? "" : "s"} vence${v.length === 1 ? "" : "n"} en 2 días`,
+            detalle: `${r.length ? `Sin respuesta: ${r.slice(0, 3).join(", ")}${r.length > 3 ? ` y ${r.length - 3} más` : ""}. ` : ""}${v.length ? `Por vencer: ${v.slice(0, 3).join(", ")}${v.length > 3 ? ` y ${v.length - 3} más` : ""}. ` : ""}Recordales con un toque desde Presupuestos → Seguimiento: les llega el link para aprobarlo desde el celular.`,
+            categoria: "Administración",
+            prioridad: v.length ? "Alta" : "Normal",
           });
       }
 

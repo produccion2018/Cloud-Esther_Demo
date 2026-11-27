@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
+import { telefonoInternacional } from "@/lib/clinica/whatsapp";
 import { ControlPortalPaciente } from "@/components/cloud-esther/portales/ControlPortalPaciente";
 import type { ReactNode } from "react";
 import {
@@ -365,6 +367,14 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
     .sort((x, y) => (y.a?.ultimoIngreso ?? "").localeCompare(x.a?.ultimoIngreso ?? ""));
 
   const sinAcceso = pacientes.filter((p) => p.estado === "Activo" && !accesos[p.id]);
+  // Link del portal para el celular del paciente (entra con su DNI, correo o teléfono + su código)
+  const real = useClinicaReal();
+  const { clinica } = useSesion();
+  const linkPortal = `${typeof window !== "undefined" ? window.location.origin : ""}${real ? `/mi-portal/${real.slug}` : "/portal"}`;
+  const waPortal = (p: { nombre: string; telefono: string }, codigo: string) =>
+    `https://wa.me/${telefonoInternacional(p.telefono)}?text=${encodeURIComponent(
+      `Hola ${p.nombre}, este es tu portal de ${clinica?.nombre ?? "la clínica"} para ver y manejar tus turnos: ${linkPortal}\nEntrás con tu DNI y este código: ${codigo}`,
+    )}`;
 
   const invitar = (ids: number[]) => {
     setPortal("accesos", (prev) => {
@@ -388,6 +398,23 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
 
   return (
     <div className="space-y-3">
+      <div className="card-grad flex flex-wrap items-center gap-2 p-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold">Link del portal para tus pacientes</p>
+          <p className="truncate font-mono text-[11px] text-muted-foreground">{linkPortal}</p>
+          <p className="text-[11px] text-muted-foreground">Entran desde el celular con su DNI, correo o teléfono y su código. Sin contraseñas.</p>
+        </div>
+        <button
+          type="button"
+          className={BTN_SECUNDARIO}
+          onClick={() => {
+            navigator.clipboard?.writeText(linkPortal).catch(() => {});
+            onToast("Link del portal copiado");
+          }}
+        >
+          Copiar link
+        </button>
+      </div>
       <div className="card-grad flex flex-wrap items-center gap-2 p-2.5">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-primary/60" />
@@ -415,7 +442,7 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
             className={BTN_PRIMARIO}
             onClick={() => {
               invitar(sinAcceso.map((p) => p.id));
-              onToast(`${sinAcceso.length} pacientes invitados por correo y WhatsApp`);
+              onToast(`${sinAcceso.length === 1 ? "1 paciente" : `${sinAcceso.length} pacientes`} con acceso: mandá cada código con el botón de WhatsApp`);
             }}
           >
             <Send className="size-3.5" />
@@ -483,18 +510,23 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
                     )}
                   </td>
                   <td className="px-3 py-2.5">
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex flex-wrap justify-end gap-1.5">
                       {estado === "Sin acceso" && (
                         <button
                           className={BTN_PRIMARIO}
                           onClick={() => {
                             invitar([p.id]);
-                            onToast(`Invitación enviada a ${p.email}`);
+                            onToast(`${p.nombre} ya tiene acceso: mandale su código por WhatsApp`);
                           }}
                         >
                           <Send className="size-3.5" />
                           Invitar
                         </button>
+                      )}
+                      {(estado === "Invitado" || estado === "Activo") && a && p.telefono && (
+                        <a href={waPortal(p, a.codigo)} target="_blank" rel="noreferrer" className="btn-wa !h-8 !px-3 !text-xs" title="Mandarle el link del portal y su código">
+                          <IconoWhatsApp className="size-3.5" /> Mandar código
+                        </a>
                       )}
                       {(estado === "Invitado" || estado === "Activo") && (
                         <button
@@ -508,8 +540,8 @@ export function Accesos({ onToast }: { onToast: (m: string) => void }) {
                             });
                             onToast(
                               a?.clave
-                                ? `Nuevo código enviado a ${p.email}. Su contraseña se blanqueó: entra con el código y crea otra.`
-                                : `Nuevo código enviado a ${p.email}`,
+                                ? `Nuevo código listo. Su contraseña se blanqueó: mandale el código por WhatsApp.`
+                                : `Nuevo código listo: mandáselo por WhatsApp`,
                             );
                           }}
                         >

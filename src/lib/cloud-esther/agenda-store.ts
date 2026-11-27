@@ -35,7 +35,7 @@ export type Turno = {
   /** Turno que el paciente sacó solo en la página pública de turnos (con su WhatsApp). */
   reservaOnline?: { telefono: string; email?: string; fecha: string; avisada?: boolean };
   /** Lo que respondió el paciente con el enlace del recordatorio (confirmó, pidió cambiar o canceló). */
-  respuestaPaciente?: { tipo: "confirmo" | "cambiar" | "cancelo"; fecha: string; nota?: string; avisada?: boolean };
+  respuestaPaciente?: { tipo: "confirmo" | "cambiar" | "cancelo"; fecha: string; nota?: string; avisada?: boolean; via?: "portal" };
   /** Día en que se le pidió su opinión (encuesta después del turno). */
   encuestaEnviada?: string;
   /** Lo que respondió en la encuesta después del turno (1 a 5). */

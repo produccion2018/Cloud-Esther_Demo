@@ -479,9 +479,9 @@ export function useRespuestasTurnos() {
           titulo,
           detalle:
             r.tipo === "confirmo"
-              ? "Lo confirmó con el enlace del recordatorio. Ya figura «Confirmada» en la Agenda."
+              ? `Lo confirmó ${r.via === "portal" ? "desde su portal" : "con el enlace del recordatorio"}. Ya figura «Confirmada» en la Agenda.`
               : r.tipo === "cancelo"
-                ? `Lo canceló con el enlace del recordatorio: el horario quedó libre en la Agenda.${r.nota ? ` Dijo: «${r.nota}».` : ""}`
+                ? `Lo canceló ${r.via === "portal" ? "desde su portal" : "con el enlace del recordatorio"}: el horario quedó libre en la Agenda.${r.nota ? ` Dijo: «${r.nota}».` : ""}`
                 : `Escribile para darle otro horario.${r.nota ? ` Dijo: «${r.nota}».` : ""}`,
           categoria: "Agenda" as const,
           prioridad: r.tipo === "confirmo" ? ("Normal" as const) : ("Alta" as const),

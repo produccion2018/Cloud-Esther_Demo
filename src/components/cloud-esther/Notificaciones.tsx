@@ -19,6 +19,7 @@ import {
   FlaskConical,
   History,
   Mail,
+  Sunrise,
   MessageCircle,
   MessagesSquare,
   Moon,
@@ -64,6 +65,7 @@ import { useNotificaciones, type Notif } from "@/components/cloud-esther/useNoti
 import { normalizarBusqueda } from "@/lib/utils";
 import { Seleccion } from "@/components/ui/seleccion";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import {
   TIPOS_AVISO,
   activarAvisos,
@@ -824,6 +826,9 @@ function Bandeja({
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
+        {/* Tu día (desde la hora del resumen diario) */}
+        <TuDia usuario={usuario} miRol={miRol} mias={mias} hoy={hoyBandeja} />
+
         {/* Mis tareas */}
         {mias.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/[0.07] to-fuchsia-500/[0.04] px-3.5 py-2.5">
@@ -1083,16 +1088,100 @@ function Bandeja({
 
         <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.09] via-primary/[0.04] to-transparent p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
-            <Mail className="size-4 text-primary" /> Resumen diario
+            <Sunrise className="size-4 text-primary" /> Resumen diario
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {preferencias.resumenDiario.activo
-              ? `Todos los días a las ${preferencias.resumenDiario.hora} hs llega por correo un resumen con los ${pendientes.length} avisos pendientes.`
-              : "Apagado. Activalo en Preferencias para recibir un resumen por correo cada mañana."}
+              ? `Todos los días desde las ${preferencias.resumenDiario.hora} hs: «Tu día» acá arriba y en el celular de quien activó los avisos (hoy hay ${pendientes.length} avisos pendientes).`
+              : "Apagado. Activalo en Preferencias para tener «Tu día» cada mañana."}
           </p>
         </div>
       </aside>
     </div>
+  );
+}
+
+/* ───────────── TU DÍA: el resumen de cada mañana, adentro del sistema ───────────── */
+const sinTituloNombre = (n: string) => normalizarBusqueda(n).replace(/^(dra?|lic|od)\.?\s+/, "");
+function TuDia({ usuario, miRol, mias, hoy }: { usuario: string; miRol: string; mias: Notif[]; hoy: string }) {
+  const { preferencias } = storeNotificaciones.usar();
+  const { turnos } = storeAgenda.usar();
+  const clave = `ce:tu-dia:${hoy}`;
+  const [cerrado, setCerrado] = useState(() => {
+    try {
+      return localStorage.getItem(clave) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const r = preferencias.resumenDiario;
+  const ahora = new Date();
+  const hhmm = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  if (!r.activo || cerrado || hhmm < (r.hora || "08:00")) return null;
+  const yo = sinTituloNombre(usuario);
+  const deHoy = turnos
+    .filter((t) => t.fecha === hoy && t.estado !== "Cancelada" && t.estado !== "Ausente")
+    .sort((a, b) => a.hora.localeCompare(b.hora));
+  const atiende = miRol === "odontologo";
+  const mios = atiende
+    ? deHoy.filter((t) => {
+        const o = sinTituloNombre(t.odontologo ?? "");
+        return !!o && (o.includes(yo) || yo.includes(o));
+      })
+    : deHoy;
+  const proximos = mios.filter((t) => t.hora >= hhmm).slice(0, 3);
+  const tareas = mias.filter((n) => !n.vence || n.vence <= hoy);
+  const vencidas = tareas.filter((n) => n.vence && n.vence < hoy).length;
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-50 via-white to-primary/[0.05] p-3.5" aria-label="Tu día">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-[0_10px_22px_-12px_rgba(245,158,11,0.9)]">
+          <Sunrise className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">
+            Tu día{usuario && !["recepcion", "administracion", "direccion", "invitado"].includes(normalizarBusqueda(usuario)) ? `, ${usuario.split(" ")[0]}` : ""}
+          </p>
+          <p className="text-[12px] text-muted-foreground">
+            {mios.length ? `${mios.length} turno${mios.length === 1 ? "" : "s"}${atiende ? " tuyos" : " en la clínica"}` : atiende ? "Sin turnos tuyos" : "Sin turnos"}
+            {" · "}
+            {tareas.length ? `${tareas.length} tarea${tareas.length === 1 ? "" : "s"}${vencidas ? ` (${vencidas} vencida${vencidas === 1 ? "" : "s"})` : ""}` : "sin tareas pendientes"}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setCerrado(true);
+            try {
+              localStorage.setItem(clave, "1");
+            } catch {
+              /* sin almacenamiento */
+            }
+          }}
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground"
+        >
+          Listo
+        </button>
+      </div>
+      {proximos.length > 0 && (
+        <ul className="mt-2.5 space-y-1">
+          {proximos.map((t) => (
+            <li key={t.id} className="flex items-center gap-2.5 rounded-xl bg-white/80 px-2.5 py-1.5 text-[12.5px] ring-1 ring-primary/10">
+              <span className="w-11 shrink-0 font-bold tabular-nums text-primary">{t.hora}</span>
+              <span className="min-w-0 flex-1 truncate font-semibold">{t.paciente}</span>
+              <span className="hidden shrink-0 truncate text-[11px] text-muted-foreground sm:block">
+                {t.tratamiento}
+                {!atiende && t.odontologo ? ` · ${t.odontologo}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {mios.length > 0 && (
+        <Link to="/demo/agenda" className="mt-2 inline-flex items-center gap-1 text-[11.5px] font-semibold text-primary hover:underline">
+          <CalendarDays className="size-3.5" /> Ver la agenda de hoy
+        </Link>
+      )}
+    </section>
   );
 }
 
@@ -2103,7 +2192,7 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
         <div className="card-grad space-y-3 p-4">
           <p className="flex items-center justify-between gap-2 text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <Mail className="size-4 text-primary" /> Resumen diario por correo
+              <Sunrise className="size-4 text-primary" /> Tu día (resumen diario)
             </span>
             <Interruptor
               etiqueta="Resumen diario"
@@ -2114,9 +2203,11 @@ function PreferenciasSec({ onToast }: { onToast: (m: string) => void }) {
             />
           </p>
           <p className="text-xs text-muted-foreground">
-            Una vez por día, con todo lo pendiente ordenado por prioridad.
+            Cada mañana, a cada persona: sus turnos del día y sus tareas (las de hoy y las vencidas). Aparece en
+            Notificaciones y en el celular de quien activó «Tu día». Desde Plus, también por WhatsApp (flujo «Resumen del día
+            para el equipo» en Automatizaciones). Por correo, cuando esté el dominio.
           </p>
-          <Field label="Hora de envío">
+          <Field label="Desde qué hora">
             <input
               type="time"
               value={preferencias.resumenDiario.hora}

@@ -448,6 +448,7 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Hola ${n}, te recordamos que tenés pendiente tu ${d.dato}. Cuando lo tengas, mandanos una foto o el archivo por acá y lo sumamos a tu ficha.`;
     case "indicaciones_postoperatorias":
     case "cumpleanos":
+    case "resumen_equipo":
       return d.dato;
     case "encuesta_satisfaccion":
       return `Hola ${n}, ¡gracias por venir! ¿Nos contás cómo te atendimos? Es un toque: ${d.dato}`;

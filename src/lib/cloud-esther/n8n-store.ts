@@ -26,6 +26,7 @@ export type EventoId =
   | "encuesta_satisfaccion"
   | "indicaciones_postoperatorias"
   | "cumpleanos"
+  | "resumen_equipo"
   | "mensaje_contact_center";
 
 export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo: string }> = {
@@ -105,6 +106,11 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Cumpleaños del paciente",
     detalle: "El día de su cumpleaños: saludo con tu plantilla «Feliz cumpleaños»",
     modulo: "Pacientes",
+  },
+  resumen_equipo: {
+    nombre: "Resumen del día para el equipo",
+    detalle: "Cada mañana, a la hora del resumen diario: a cada integrante con teléfono, sus turnos y tareas del día",
+    modulo: "Equipo",
   },
   mensaje_contact_center: {
     nombre: "Mensaje del Contact Center",
@@ -424,6 +430,14 @@ export const PLANTILLAS: {
     descripcion:
       "Cada mañana, a los pacientes que cumplen años se les manda tu plantilla «Feliz cumpleaños». Una vez por año y solo a quienes aceptan recibir novedades.",
     evento: "cumpleanos",
+    pasos: () => [p("whatsapp", { mensaje: "{dato}" })],
+  },
+  {
+    id: "resumen-equipo",
+    nombre: "Tu día por WhatsApp",
+    descripcion:
+      "Cada mañana, a la hora del resumen diario (Notificaciones → Preferencias), le llega por WhatsApp a cada integrante del equipo con teléfono cargado cuántos turnos y tareas tiene. Sin nombres de pacientes.",
+    evento: "resumen_equipo",
     pasos: () => [p("whatsapp", { mensaje: "{dato}" })],
   },
   {

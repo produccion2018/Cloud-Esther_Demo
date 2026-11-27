@@ -13,6 +13,7 @@ export const TIPOS_AVISO = [
   { id: "comunicados", label: "Comunicados", detalle: "Para leer y confirmar" },
   { id: "tareas", label: "Tareas para mí o mi área", detalle: "Cuando te asignan una tarea" },
   { id: "urgentes", label: "Avisos urgentes sin asignar", detalle: "Solo al Administrador" },
+  { id: "resumen", label: "Tu día, cada mañana", detalle: "Tus turnos y tareas del día" },
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number]["id"];
 

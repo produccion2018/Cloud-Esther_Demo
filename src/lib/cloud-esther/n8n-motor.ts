@@ -19,6 +19,7 @@ import {
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { plantillaCumple, plantillasIndicaciones, storeComunicacion } from "@/lib/cloud-esther/comunicacion-store";
 import {
+  deudaDe,
   estadoComprobante,
   paisFiscal,
   saldo,
@@ -229,6 +230,23 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
           monto: saldo(c),
           dato: `saldo de ${$(saldo(c))} vencido el ${fecha(c.vencimiento)}`,
         }));
+      break;
+    case "saldo_pendiente":
+      lista = pacientes.flatMap((p) => {
+        const d = deudaDe(regs[p.id]?.cuenta);
+        if (d.saldo <= 0 || !d.desde || d.desde > diaISO(-15)) return [];
+        return [
+          {
+            titulo: `${nombre(p)} tiene un saldo pendiente`,
+            paciente: nombre(p),
+            pacienteId: p.id,
+            telefono: p.telefono,
+            sede: p.sucursal,
+            monto: d.saldo,
+            dato: `${$(d.saldo)} desde el ${fecha(d.desde)}`,
+          },
+        ];
+      });
       break;
     case "stock_bajo":
       lista = storeInventario
@@ -442,6 +460,8 @@ function redactar(flujo: Flujo, d: Disparo): string {
       return `Hola ${n}, terminamos tu ${d.dato}. Te dejamos las indicaciones de cuidado y te esperamos para el control en 6 meses.`;
     case "factura_vencida":
       return `Hola ${n}, te recordamos que tenés un ${d.dato}. Podés abonarlo desde el link de pago o en la clínica. Si ya lo pagaste, desestimá este mensaje.`;
+    case "saldo_pendiente":
+      return `Hola ${n}, te escribimos de la clínica: te queda un saldo de ${d.dato.split(" desde ")[0]}. Cuando puedas, lo abonás y nos avisás. ¡Gracias!`;
     case "stock_bajo":
       return `Reposición sugerida: ${d.dato}.`;
     case "estudio_pendiente":

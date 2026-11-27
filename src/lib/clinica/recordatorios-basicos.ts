@@ -35,6 +35,7 @@ import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
+import { deudaDe } from "@/lib/cloud-esther/facturacion-store";
 
 /** Turnos atendidos (últimos `dias` días) que todavía no tienen evolución ni nota clínica ese día */
 export function turnosSinEvolucion(
@@ -375,6 +376,29 @@ export function useRecordatoriosBasicos() {
             detalle: `${r.length ? `Sin respuesta: ${r.slice(0, 3).join(", ")}${r.length > 3 ? ` y ${r.length - 3} más` : ""}. ` : ""}${v.length ? `Por vencer: ${v.slice(0, 3).join(", ")}${v.length > 3 ? ` y ${v.length - 3} más` : ""}. ` : ""}Recordales con un toque desde Presupuestos → Seguimiento: les llega el link para aprobarlo desde el celular.`,
             categoria: "Administración",
             prioridad: v.length ? "Alta" : "Normal",
+          });
+      }
+
+      // 5a2) Una vez por semana (los lunes): pacientes que deben hace 30 días o más.
+      //      Con el flujo automático de saldos activo, se lo recuerda Cloud Esther sola.
+      const esLunes = new Date().getDay() === 1;
+      if (conRegistros && esLunes && !flujoActivo("saldo_pendiente") && !existentes.has(`basico-deudas-${hoy}`)) {
+        const pacs = leerPacientes();
+        const deben = Object.entries(leerRegistros())
+          .map(([pid, reg]) => ({ p: pacs.find((x) => x.id === Number(pid)), d: deudaDe(reg?.cuenta) }))
+          .filter((x) => x.p && x.d.saldo > 0 && x.d.desde && x.d.desde <= hoyISO(-30));
+        if (deben.length)
+          nuevos.push({
+            ...base,
+            asignado: "Administración",
+            id: `basico-deudas-${hoy}`,
+            titulo: `${deben.length} paciente${deben.length === 1 ? "" : "s"} con saldo hace más de 30 días`,
+            detalle: `${deben
+              .slice(0, 3)
+              .map((x) => `${x.p!.nombre} ${x.p!.apellido}`)
+              .join(", ")}${deben.length > 3 ? ` y ${deben.length - 3} más` : ""}. Recordales con un toque desde Pagos y facturación → Cobranzas: les llega el link para pagar.`,
+            categoria: "Administración",
+            prioridad: "Normal",
           });
       }
 

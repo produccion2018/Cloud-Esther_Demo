@@ -252,6 +252,8 @@ export type EstadoFacturacion = {
   historico?: { mes: string; facturado: number; cobrado: number }[];
   /** Suscripción de la clínica a Cloud Esther (lo que la clínica le paga a Cloud Esther). */
   suscripcion?: Suscripcion;
+  /** Último recordatorio de saldo enviado a cada paciente (pacienteId → fecha ISO) */
+  recordatoriosDeuda?: Record<string, string>;
 };
 
 /* ───────────── Suscripción a Cloud Esther ───────────── */
@@ -433,4 +435,18 @@ export function siguienteNumero(
       .filter((c) => c.clase === clase && c.puntoVenta === puntoVenta)
       .reduce((a, c) => Math.max(a, c.numero), 0) + 1
   );
+}
+/** Lo que debe un paciente en su cuenta corriente y desde cuándo (la deuda «actual»:
+    desde la última vez que quedó en cero). */
+export function deudaDe(cuenta: { tipo: string; monto: number; fecha: string }[] | undefined): { saldo: number; desde: string } {
+  const movs = [...(cuenta ?? [])].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  let saldo = 0;
+  let desde = "";
+  for (const m of movs) {
+    const antes = saldo;
+    saldo += m.tipo === "Cargo" ? m.monto : -m.monto;
+    if (antes <= 0.009 && saldo > 0.009) desde = m.fecha;
+    if (saldo <= 0.009) desde = "";
+  }
+  return { saldo: Math.max(0, Math.round(saldo * 100) / 100), desde };
 }

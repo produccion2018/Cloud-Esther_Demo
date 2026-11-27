@@ -18,6 +18,7 @@ export type EventoId =
   | "paciente_nuevo"
   | "tratamiento_finalizado"
   | "factura_vencida"
+  | "saldo_pendiente"
   | "stock_bajo"
   | "estudio_pendiente"
   | "laboratorio_listo"
@@ -66,6 +67,11 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
     nombre: "Factura vencida",
     detalle: "Factura con saldo después del vencimiento",
     modulo: "Facturación",
+  },
+  saldo_pendiente: {
+    nombre: "Paciente con saldo pendiente",
+    detalle: "Debe en su cuenta corriente hace 15 días o más (una vez por deuda)",
+    modulo: "Pagos",
   },
   stock_bajo: {
     nombre: "Stock bajo",
@@ -341,6 +347,13 @@ export const PLANTILLAS: {
       p("whatsapp"),
       p("actualizar", { accion: "Crear aviso en Notificaciones" }),
     ],
+  },
+  {
+    id: "saldos",
+    nombre: "Recordatorio de saldos pendientes",
+    descripcion: "A los 15 días con saldo, se le escribe al paciente con el link para ver cómo pagar y avisar «ya pagué».",
+    evento: "saldo_pendiente",
+    pasos: () => [p("whatsapp"), p("actualizar", { accion: "Crear aviso en Notificaciones" })],
   },
   {
     id: "stock",

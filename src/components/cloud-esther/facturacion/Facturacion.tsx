@@ -42,6 +42,7 @@ import {
   MEDIOS_PAGO,
   PAISES_FISCALES,
   codigoAutorizacion,
+  deudaDe,
   diaISO,
   estadoComprobante,
   numeroComprobante,
@@ -71,7 +72,8 @@ import { usePacientes, type Paciente } from "@/lib/cloud-esther/pacientes";
 import { DocPaciente } from "@/components/cloud-esther/EtiquetaPais";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
-import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
+import { MODULES, availableIn, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
+import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { SUCURSALES, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
@@ -1847,6 +1849,7 @@ function Cobranzas({ ctx }: { ctx: Ctx }) {
         titulo="Cobranzas"
         descripcion="Saldos pendientes por antigüedad, recordatorios y cobros recientes."
       />
+      <PacientesQueDeben ctx={ctx} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tramos.map((t, i) => (
           <Mini
@@ -3376,6 +3379,125 @@ function PagosAvisados({ ctx }: { ctx: Ctx }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/* ───────────── Pacientes que deben (cuenta corriente) ───────────── */
+
+function PacientesQueDeben({ ctx }: { ctx: Ctx }) {
+  const registros = useTodosLosRegistros();
+  const { pacientes } = usePacientes();
+  const { recordatoriosDeuda = {} } = storeFacturacion.usar();
+  const { pagosInformados = [] } = storePortal.usar();
+  const { plan } = useCloudEsther();
+  const { flujos } = storeN8n.usar();
+  const modAuto = MODULES.find((m) => m.id === "automatizaciones");
+  const conAuto = !!modAuto && availableIn(modAuto, plan);
+  const autoActivo = conAuto && flujos.some((f) => f.activo && f.evento === "saldo_pendiente");
+  const navigate = useNavigate();
+  const [filtro, setFiltro] = useState<"todos" | "30" | "sin">("todos");
+  const hoy = diaISO();
+  const diasDesde = (f: string) => Math.max(0, Math.round((new Date(`${hoy}T12:00:00`).getTime() - new Date(`${f.slice(0, 10)}T12:00:00`).getTime()) / 86_400_000));
+  const lista = pacientes
+    .map((p) => {
+      const d = deudaDe(registros[p.id]?.cuenta);
+      const avisado = pagosInformados.filter((x) => x.pacienteId === p.id && x.estado === "Pendiente").reduce((a, x) => a + x.monto, 0);
+      const recordado = recordatoriosDeuda[String(p.id)] ?? "";
+      return { p, ...d, dias: d.desde ? diasDesde(d.desde) : 0, avisado, recordado };
+    })
+    .filter((x) => x.saldo > 0)
+    .sort((a, b) => b.dias - a.dias || b.saldo - a.saldo);
+  const visibles = lista.filter((x) =>
+    filtro === "30" ? x.dias >= 30 : filtro === "sin" ? !x.recordado || diasDesde(x.recordado) >= 7 : true,
+  );
+  const total = lista.reduce((a, x) => a + x.saldo, 0);
+  const recordar = (x: (typeof lista)[number]) => {
+    abrirWhatsAppConEnlacePago(telefonoInternacional(x.p.telefono), x.p.id, (enlace) =>
+      `Hola ${x.p.nombre} 👋 ¿Cómo estás? Te escribimos de la clínica para recordarte que te queda un saldo de ${ctx.$(x.saldo)}.${enlace ? ` Acá ves cómo pagarlo y nos avisás cuando lo hagas:\n${enlace}` : " Cuando puedas, lo abonás en la clínica o por transferencia."}\nSi ya lo pagaste, avisanos y lo revisamos. ¡Gracias!`,
+    );
+    setFacturacion("recordatoriosDeuda", (prev) => ({ ...(prev ?? {}), [String(x.p.id)]: hoy }));
+    ctx.onToast(`Recordatorio enviado a ${x.p.nombre}`);
+  };
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Pacientes que deben</p>
+          <p className="text-[11px] text-muted-foreground">
+            {lista.length ? `${lista.length} ${lista.length === 1 ? "paciente debe" : "pacientes deben"} ${ctx.$(total)} en su cuenta corriente.` : "Nadie debe nada en su cuenta corriente."}
+          </p>
+        </div>
+        {lista.length > 0 && (
+          <div className="flex gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+            {(
+              [
+                ["todos", "Todos"],
+                ["30", "+30 días"],
+                ["sin", "Sin recordar"],
+              ] as const
+            ).map(([v, l]) => (
+              <button key={v} type="button" className={CHIP(filtro === v)} onClick={() => setFiltro(v)}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div
+        className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-xs ring-1 ${autoActivo ? "bg-emerald-50 text-emerald-900 ring-emerald-200" : "bg-gradient-to-r from-sky-50 to-violet-50 text-slate-700 ring-primary/10"}`}
+      >
+        <span className="min-w-0">
+          {autoActivo ? (
+            <>
+              <b>Recordatorio automático activo:</b> a los 15 días con saldo, Cloud Esther le escribe sola al paciente con el link para pagar.
+            </>
+          ) : conAuto ? (
+            <>
+              <b>¿Que se haga solo?</b> Activá «Recordatorio de saldos pendientes» en Automatizaciones.
+            </>
+          ) : (
+            <>
+              <b>Un toque por paciente:</b> «Recordar» le manda un mensaje amable con el link para ver cómo pagar y avisar «ya pagué».
+            </>
+          )}
+        </span>
+        {conAuto && !autoActivo && (
+          <button type="button" className="font-semibold text-primary underline-offset-2 hover:underline" onClick={() => void navigate({ to: "/demo/automatizaciones" })}>
+            Activar
+          </button>
+        )}
+      </div>
+      {visibles.length > 0 && (
+        <ul className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+          {visibles.map((x) => (
+            <li key={x.p.id} className="flex items-center gap-3 rounded-2xl bg-white/85 p-3 ring-1 ring-primary/10">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">
+                  {x.p.nombre} {x.p.apellido}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {x.dias ? `Debe hace ${x.dias} ${x.dias === 1 ? "día" : "días"}` : "Debe desde hoy"}
+                  {x.recordado ? ` · recordado ${x.recordado === hoy ? "hoy" : `el ${fecha(x.recordado)}`}` : ""}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <Pill clase={x.dias >= 60 ? "bg-rose-100 text-rose-700" : x.dias >= 30 ? "bg-amber-100 text-amber-800" : "bg-muted text-muted-foreground"}>{ctx.$(x.saldo)}</Pill>
+                  {x.avisado > 0 && <Pill clase="bg-sky-100 text-sky-700">Avisó que pagó {ctx.$(x.avisado)}</Pill>}
+                </div>
+              </div>
+              {x.p.telefono ? (
+                <button type="button" className={BTN_SECUNDARIO} disabled={x.recordado === hoy} onClick={() => recordar(x)}>
+                  <MessageCircle className="size-4" />
+                  {x.recordado === hoy ? "Recordado" : "Recordar"}
+                </button>
+              ) : (
+                <span className="max-w-24 text-right text-[10px] text-muted-foreground">Sin WhatsApp cargado</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {lista.length > 0 && visibles.length === 0 && <p className="mt-3 text-xs text-muted-foreground">Nadie en este filtro.</p>}
     </div>
   );
 }

@@ -27,7 +27,11 @@ import {
   setFinanzas,
   type CategoriaEgreso,
 } from "@/lib/cloud-esther/finanzas-store";
-import { totalesComprobante } from "@/lib/cloud-esther/facturacion-store";
+import { numeroComprobante, totalesComprobante } from "@/lib/cloud-esther/facturacion-store";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { kitDeTratamiento, storeInventario } from "@/lib/cloud-esther/inventario-store";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import {
   delMes,
   porCategoria,
@@ -533,15 +537,8 @@ export function Presupuesto({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
 
 /* ───────────── Rentabilidad y comisiones ───────────── */
 
-const COSTO_DIRECTO: [RegExp, number][] = [
-  [/implante|pilar/i, 0.38],
-  [/corona|carilla|prótesis|protesis/i, 0.32],
-  [/ortodoncia|alineador|bracket/i, 0.25],
-  [/endodoncia/i, 0.14],
-  [/blanqueamiento/i, 0.18],
-  [/alquiler/i, 0.05],
-];
-const costoDe = (d: string) => COSTO_DIRECTO.find(([r]) => r.test(d))?.[1] ?? 0.12;
+/** Nombre del tratamiento sin «(sesión 1 de 3)» para agrupar */
+const baseTrat = (t: string) => t.replace(/\s*\(sesi[oó]n.*\)\s*$/i, "").trim() || "Sin tratamiento";
 
 export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
   const { fin } = libro;
@@ -555,40 +552,95 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
   const enPeriodo = (f: string) => meses.some((m) => f.startsWith(m));
   const comps = deSucursal(libro.comprobantes, ctx.sucursal).filter((c) => enPeriodo(c.fecha));
 
-  const profes = new Map<string, { facturado: number; cobrado: number; n: number }>();
+  // ── Números reales: lo COBRADO (comprobantes y cuenta corriente), los turnos atendidos y lo
+  //    que costó cada uno (insumos del kit con el costo de Inventario y el laboratorio).
+  const { turnos } = storeAgenda.usar();
+  const registros = useTodosLosRegistros();
+  const { kits, insumos } = storeInventario.usar();
+  const { planes } = storePresupuestos.usar();
+  type Fila = { cobrado: number; facturado: number; n: number; insumos: number; lab: number };
+  const nueva = (): Fila => ({ cobrado: 0, facturado: 0, n: 0, insumos: 0, lab: 0 });
+  const profes = new Map<string, Fila>();
+  const trat = new Map<string, Fila>();
+  const de = (m: Map<string, Fila>, k: string) => {
+    let f = m.get(k);
+    if (!f) m.set(k, (f = nueva()));
+    return f;
+  };
+  /** Reparte un cobro entre los tratamientos según el peso de cada línea */
+  const repartir = (monto: number, lineas: { descripcion: string; valor: number }[]) => {
+    const tot = lineas.reduce((a, l) => a + l.valor, 0);
+    if (!lineas.length || tot <= 0) return void (de(trat, "Pagos a cuenta").cobrado += monto);
+    for (const l of lineas) de(trat, baseTrat(l.descripcion)).cobrado += (monto * l.valor) / tot;
+  };
+  // 1) Cobros de comprobantes
   for (const c of deSucursal(libro.comprobantes, ctx.sucursal)) {
-    if (!c.profesional) continue;
-    const p = profes.get(c.profesional) ?? { facturado: 0, cobrado: 0, n: 0 };
+    const prof = c.profesional || "Sin profesional";
     if (enPeriodo(c.fecha)) {
-      p.facturado += totalesComprobante(c).total;
-      p.n += 1;
+      de(profes, prof).facturado += totalesComprobante(c).total;
     }
-    p.cobrado += c.pagos.filter((x) => enPeriodo(x.fecha)).reduce((a, x) => a + x.monto, 0);
-    profes.set(c.profesional, p);
+    const cob = c.pagos.filter((x) => enPeriodo(x.fecha)).reduce((a, x) => a + x.monto, 0);
+    if (!cob) continue;
+    de(profes, prof).cobrado += cob;
+    repartir(cob, c.items.map((i) => ({ descripcion: i.descripcion, valor: i.cantidad * i.precio })));
   }
+  // 2) Cobros de la cuenta corriente (Cobrar hoy, señas, «ya pagué»): por su turno o presupuesto
+  const deComprobante = new Set(libro.comprobantes.map((c) => `Cobro ${c.tipo} ${numeroComprobante(c)}`));
+  const turnoPorId = new Map(turnos.map((t) => [t.id, t]));
+  if (ctx.sucursal === "Todas")
+    for (const [, r] of Object.entries(registros))
+      for (const m of r?.cuenta ?? []) {
+        if (m.tipo !== "Pago" || m.medio === "Obra social" || !enPeriodo(m.fecha) || deComprobante.has(m.concepto)) continue;
+        const t = m.turnoId ? turnoPorId.get(m.turnoId) : undefined;
+        const p = m.presupuestoId ? r.presupuestos.find((x) => x.id === m.presupuestoId) : undefined;
+        de(profes, t?.odontologo || p?.profesional || "Sin profesional").cobrado += m.monto;
+        if (t) de(trat, baseTrat(t.tratamiento)).cobrado += m.monto;
+        else if (p) repartir(m.monto, p.lineas.map((l) => ({ descripcion: l.descripcion, valor: l.cantidad * l.precio })));
+        else de(trat, "Pagos a cuenta").cobrado += m.monto;
+      }
+  void planes;
+  // 3) Turnos atendidos y lo que costaron en insumos (kit del tratamiento × costo en Inventario)
+  const costoKit = (tratamiento: string) => {
+    const k = kitDeTratamiento(kits, tratamiento);
+    return k ? k.items.reduce((a, it) => a + it.cantidad * (insumos.find((i) => i.nombre === it.nombre)?.costo ?? 0), 0) : 0;
+  };
+  for (const t of turnos) {
+    if (t.estado !== "Atendida" || !enPeriodo(t.fecha)) continue;
+    if (ctx.sucursal !== "Todas" && t.sucursal !== ctx.sucursal) continue;
+    const c = costoKit(t.tratamiento);
+    const fp = de(profes, t.odontologo || "Sin profesional");
+    const ft = de(trat, baseTrat(t.tratamiento));
+    fp.n += 1;
+    ft.n += 1;
+    fp.insumos += c;
+    ft.insumos += c;
+  }
+  // 4) Laboratorio: lo que costó cada trabajo entregado
+  if (ctx.sucursal === "Todas")
+    for (const [, r] of Object.entries(registros))
+      for (const l of r?.laboratorio ?? []) {
+        if (!(l.costo > 0) || !["Entregado", "Listo para retirar"].includes(l.estado)) continue;
+        if (!enPeriodo(l.fechaEntregaEstimada || l.fechaEnvio)) continue;
+        de(profes, l.profesional || "Sin profesional").lab += l.costo;
+        de(trat, baseTrat(l.tipo)).lab += l.costo;
+      }
   const filasProf = [...profes.entries()]
-    .filter(([, v]) => v.facturado || v.cobrado)
+    .filter(([, v]) => v.facturado || v.cobrado || v.n)
     .map(([nombre, v]) => {
-      const pct = fin.comisiones[nombre] ?? fin.comisionPorDefecto;
+      const pct = nombre === "Sin profesional" ? 0 : (fin.comisiones[nombre] ?? fin.comisionPorDefecto);
       const liq = fin.liquidaciones.find(
         (l) => l.profesional === nombre && meses.length === 1 && l.periodo === meses[0],
       );
-      return { nombre, ...v, pct, comision: Math.round((v.cobrado * pct) / 100), liq };
+      const comision = Math.round((v.cobrado * pct) / 100);
+      return { nombre, ...v, pct, comision, queda: Math.round(v.cobrado - comision - v.insumos - v.lab), liq };
     })
-    .sort((a, b) => b.facturado - a.facturado);
-
-  const trat = new Map<string, { cant: number; facturado: number }>();
-  for (const c of comps)
-    for (const it of c.items) {
-      const t = trat.get(it.descripcion) ?? { cant: 0, facturado: 0 };
-      t.cant += it.cantidad;
-      t.facturado += it.cantidad * it.precio * (1 - (c.descuentoPct ?? 0) / 100);
-      trat.set(it.descripcion, t);
-    }
+    .sort((a, b) => b.cobrado - a.cobrado);
   const filasTrat = [...trat.entries()]
-    .map(([d, v]) => ({ d, ...v, costo: Math.round(v.facturado * costoDe(d)) }))
-    .sort((a, b) => b.facturado - b.costo - (a.facturado - a.costo))
-    .slice(0, 10);
+    .filter(([, v]) => v.cobrado || v.n || v.lab)
+    .map(([d, v]) => ({ d, ...v, queda: Math.round(v.cobrado - v.insumos - v.lab) }))
+    .sort((a, b) => b.queda - a.queda)
+    .slice(0, 12);
+  void comps;
 
   const ops = libro.operativos.filter((a) => enPeriodo(a.fecha));
   const generales = ops.filter((a) => a.sucursal === GENERAL);
@@ -633,18 +685,18 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
         </div>
       </Encabezado>
 
-      <Tarjeta titulo="Por profesional (comisión sobre lo cobrado)">
+      <Tarjeta titulo="Cuánto deja cada profesional">
         {filasProf.length ? (
           <div className="scroll-sutil overflow-x-auto">
             <table className="w-full min-w-[720px] text-[12.5px]">
               <thead>
                 <tr className="text-left text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">
                   <th className="p-2">Profesional</th>
-                  <th className="p-2 text-right">Facturado</th>
                   <th className="p-2 text-right">Cobrado</th>
                   <th className="p-2 text-center">Comisión %</th>
-                  <th className="p-2 text-right">A pagar</th>
-                  <th className="p-2 text-right">Queda para la clínica</th>
+                  <th className="p-2 text-right">Comisión</th>
+                  <th className="p-2 text-right">Insumos y lab.</th>
+                  <th className="p-2 text-right">Le queda a la clínica</th>
                   <th className="p-2" />
                 </tr>
               </thead>
@@ -656,9 +708,8 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                         <UserRound className="size-4 text-primary" />
                         {f.nombre}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">{f.n} comprobantes</span>
+                      <span className="text-[11px] text-muted-foreground">{f.n} {f.n === 1 ? "paciente atendido" : "pacientes atendidos"}</span>
                     </td>
-                    <td className="p-2 text-right">{ctx.$(f.facturado)}</td>
                     <td className="p-2 text-right">{ctx.$(f.cobrado)}</td>
                     <td className="p-2 text-center">
                       <input
@@ -681,8 +732,9 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                     <td className="p-2 text-right font-semibold text-rose-600">
                       {ctx.$(f.comision)}
                     </td>
-                    <td className="p-2 text-right font-semibold text-emerald-600">
-                      {ctx.$(f.cobrado - f.comision)}
+                    <td className="p-2 text-right text-rose-600">{ctx.$(f.insumos + f.lab)}</td>
+                    <td className={`p-2 text-right font-semibold ${f.queda < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      {ctx.$(f.queda)}
                     </td>
                     <td className="p-2 text-right">
                       {f.liq ? (
@@ -707,38 +759,56 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
             </table>
           </div>
         ) : (
-          <Vacio icon={UserRound} texto="Sin comprobantes con profesional en este período." />
+          <Vacio icon={UserRound} texto="Todavía no hay cobros ni turnos atendidos en este período." />
         )}
+        <label className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          Comisión general (para quien no tiene una propia):
+          <input
+            key={fin.comisionPorDefecto}
+            type="number"
+            min={0}
+            max={100}
+            defaultValue={fin.comisionPorDefecto}
+            aria-label="Comisión general"
+            onBlur={(e) => {
+              const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+              if (v !== fin.comisionPorDefecto) {
+                setFinanzas("comisionPorDefecto", () => v);
+                ctx.onToast(`Comisión general: ${v} %`);
+              }
+            }}
+            className={`${INPUT} h-8 w-20 text-center`}
+          />
+          %
+        </label>
       </Tarjeta>
 
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
-        <Tarjeta titulo="Por tratamiento (margen estimado)">
+        <Tarjeta titulo="Cuánto deja cada tratamiento">
           {filasTrat.length ? (
             <ul className="space-y-2">
-              {filasTrat.map((t) => {
-                const margen = t.facturado - t.costo;
-                return (
-                  <li key={t.d} className="rounded-xl bg-white/85 px-3 py-2 ring-1 ring-primary/10">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <Stethoscope className="size-4 shrink-0 text-primary" />
-                        <b className="truncate text-[12.5px]">{t.d}</b>
-                      </span>
-                      <b className="text-[12.5px] text-emerald-600">{ctx.$(margen)}</b>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {t.cant} × · facturado {ctx.$(t.facturado)} · costo directo {ctx.$(t.costo)} ·{" "}
-                      {Math.round((margen / (t.facturado || 1)) * 100)} % de margen
-                    </p>
-                  </li>
-                );
-              })}
+              {filasTrat.map((t) => (
+                <li key={t.d} className="rounded-xl bg-white/85 px-3 py-2 ring-1 ring-primary/10">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Stethoscope className="size-4 shrink-0 text-primary" />
+                      <b className="truncate text-[12.5px]">{t.d}</b>
+                    </span>
+                    <b className={`text-[12.5px] ${t.queda < 0 ? "text-rose-600" : "text-emerald-600"}`}>{ctx.$(t.queda)}</b>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {t.n ? `${t.n} ${t.n === 1 ? "vez" : "veces"} · ` : ""}cobrado {ctx.$(t.cobrado)}
+                    {t.insumos ? ` · insumos ${ctx.$(t.insumos)}` : ""}
+                    {t.lab ? ` · laboratorio ${ctx.$(t.lab)}` : ""}
+                  </p>
+                </li>
+              ))}
             </ul>
           ) : (
-            <Vacio icon={Stethoscope} texto="Sin tratamientos facturados en el período." />
+            <Vacio icon={Stethoscope} texto="Todavía no hay cobros ni turnos atendidos en este período." />
           )}
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Costo directo estimado por tipo de tratamiento (insumos, laboratorio e implantes).
+            Con los números reales de la clínica: lo cobrado, los insumos de cada kit (Inventario) y los trabajos de laboratorio. Sin la comisión del profesional.
           </p>
         </Tarjeta>
         <Tarjeta titulo="Por sede (con gastos generales prorrateados)">

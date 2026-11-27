@@ -3,6 +3,7 @@ import type { ConfigReservaOnline, EstadoAgenda } from "@/lib/cloud-esther/agend
 import type { TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
 import type { Ausencia } from "@/lib/cloud-esther/equipo-store";
 import { API_URL } from "@/lib/clinica/api";
+import { storeModulosExtra } from "@/lib/cloud-esther/modulos-extra-store";
 
 /* Ubicación: src/lib/cloud-esther/reservas-online.ts
    PÁGINA PÚBLICA DE TURNOS de cada clínica (/turnos/<clínica>).
@@ -18,6 +19,13 @@ export type NivelReserva = "start" | "pro" | "plus" | "grupo";
 
 export const nivelReserva = (plan: PlanId | undefined): NivelReserva =>
   plan === "grupo" ? "grupo" : plan === "avanzada" ? "plus" : plan === "profesional" ? "pro" : "start";
+
+/** Nivel de la página según el plan; un Start que compró «Turnos online» reserva como Pro. */
+export function useNivelReserva(plan: PlanId | undefined): { nivel: NivelReserva; porAdicional: boolean } {
+  const extra = storeModulosExtra.usar().activos.some((a) => a.id === "turnos-online");
+  const base = nivelReserva(plan);
+  return base === "start" && extra ? { nivel: "pro", porAdicional: true } : { nivel: base, porAdicional: false };
+}
 
 export const RESERVA_POR_DEFECTO: ConfigReservaOnline = {
   activa: false,
@@ -154,3 +162,13 @@ export const reservarServidor = (slug: string, datos: DatosReserva) =>
 /** Dirección pública de la página de turnos de la clínica */
 export const enlaceReserva = (slug: string) =>
   `${typeof window !== "undefined" ? window.location.origin : ""}/turnos/${slug}`;
+
+/** Código para pegar en la página web que la clínica YA tiene (cualquier sitio: WordPress, Wix…) */
+export function codigosParaWeb(slug: string, color: string) {
+  const link = enlaceReserva(slug);
+  const boton = `<a href="${link}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 26px;border-radius:999px;background:${color};color:#fff;font:600 16px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 10px 24px -12px ${color}">Sacar turno online</a>`;
+  const turnero =
+    `<iframe id="cloud-esther-turnos" src="${link}?modo=web" title="Sacar turno" style="width:100%;min-height:760px;border:0;border-radius:24px" loading="lazy"></iframe>\n` +
+    `<script>addEventListener("message",function(e){if(e.data&&e.data.cloudEstherAlto){document.getElementById("cloud-esther-turnos").style.height=e.data.cloudEstherAlto+"px"}})</script>`;
+  return { link, boton, turnero };
+}

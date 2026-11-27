@@ -25,7 +25,7 @@ import {
   infoReservaServidor,
   libresLocales,
   libresServidor,
-  nivelReserva,
+  useNivelReserva,
   reservarServidor,
   visibleEnReserva,
   type DatosReserva,
@@ -88,7 +88,7 @@ function useFuenteDemo(activo: boolean): Fuente {
   const ctx = useCloudEstherOpcional();
   const ajustes = useClinicSettings(ctx?.clinic ?? "demo");
   const c = configReserva(agenda.ajustes?.reservaOnline);
-  const nivel = nivelReserva(ctx?.plan);
+  const { nivel } = useNivelReserva(ctx?.plan);
   const visibles = miembros.filter(visibleEnReserva);
   const info: InfoReserva | null = activo
     ? {
@@ -199,7 +199,24 @@ function PaginaTurnos() {
   const servidor = useFuenteServidor(slug, !esDemo);
   const f = esDemo ? demo : servidor;
   const [montado, setMontado] = useState(false);
-  useEffect(() => setMontado(true), []);
+  // ?modo=web: la página va ADENTRO de la web que la clínica ya tiene (sin fondo propio)
+  const [enWeb, setEnWeb] = useState(false);
+  useEffect(() => {
+    setMontado(true);
+    setEnWeb(new URLSearchParams(window.location.search).get("modo") === "web");
+  }, []);
+  // Dentro de otra web: avisa su alto para que el recuadro se acomode solo
+  useEffect(() => {
+    if (!enWeb) return;
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
+    if (window.parent === window) return;
+    const avisar = () => window.parent.postMessage({ cloudEstherAlto: Math.ceil(document.documentElement.scrollHeight) }, "*");
+    const ro = new ResizeObserver(avisar);
+    ro.observe(document.body);
+    avisar();
+    return () => ro.disconnect();
+  }, [enWeb]);
   const info = f.info;
 
   useEffect(() => {
@@ -209,13 +226,13 @@ function PaginaTurnos() {
   const estilo = { "--marca": info?.color ?? "#7c3aed" } as CSSProperties;
 
   return (
-    <div style={estilo} className="relative min-h-screen overflow-hidden bg-[#f7f5ff] text-[#1c1530]">
-      <div className="pointer-events-none absolute inset-0">
+    <div style={estilo} className={`relative overflow-hidden text-[#1c1530] ${enWeb ? "bg-transparent" : "min-h-screen bg-[#f7f5ff]"}`}>
+      <div className={`pointer-events-none absolute inset-0 ${enWeb ? "hidden" : ""}`}>
         <div className="absolute -left-32 -top-40 size-[520px] rounded-full bg-[var(--marca)] opacity-[0.16] blur-3xl" />
         <div className="absolute -right-40 top-40 size-[460px] rounded-full bg-fuchsia-400 opacity-[0.14] blur-3xl" />
         <div className="absolute bottom-0 left-1/3 size-[380px] rounded-full bg-sky-300 opacity-[0.12] blur-3xl" />
       </div>
-      <main className="relative mx-auto w-full max-w-3xl px-4 pb-16 pt-6 sm:pt-10">
+      <main className={`relative mx-auto w-full max-w-3xl ${enWeb ? "px-1 pb-4 pt-1" : "px-4 pb-16 pt-6 sm:pt-10"}`}>
         {!montado || f.cargando ? (
           <div className="space-y-4">
             <div className="h-40 animate-pulse rounded-[28px] bg-white/70" />
@@ -228,9 +245,9 @@ function PaginaTurnos() {
           </Tarjeta>
         ) : (
           <>
-            <Encabezado info={info} />
+            {!enWeb && <Encabezado info={info} />}
             {info.reservaOnline ? <Reserva info={info} fuente={f} /> : <SinReserva info={info} />}
-            {info.profesionales.length > 0 && info.profesionales.some((p) => p.bio || p.foto) && <Equipo info={info} />}
+            {!enWeb && info.profesionales.length > 0 && info.profesionales.some((p) => p.bio || p.foto) && <Equipo info={info} />}
             <p className="mt-8 flex items-center justify-center gap-1.5 text-[11px] text-[#8a83a3]">
               <ShieldCheck className="size-3.5" /> Tus datos solo los ve la clínica · Turnos con Cloud Esther
             </p>

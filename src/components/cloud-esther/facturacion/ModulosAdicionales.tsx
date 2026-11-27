@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Box, Grid2x2 } from "lucide-react";
+import { Box, CalendarCheck2, Grid2x2 } from "lucide-react";
 
 import {
   MODULES,
@@ -255,6 +255,84 @@ function OdontogramaSwitch({ onToast }: { onToast: (m: string) => void }) {
   );
 }
 
+/* ───────────── Turnos online (adicional del plan Start) ───────────── */
+
+/** Start: sumar la página pública de turnos con reserva online (Pro, Plus y Grupo ya la traen).
+    Se activa al instante y va en la próxima factura; el precio lo fija el Dueño en el panel. */
+export function TurnosOnlineAdicional({ onToast, compacto = false }: { onToast: (m: string) => void; compacto?: boolean }) {
+  const { plan, planContratado } = useCloudEsther();
+  const { usuario } = useSesion();
+  const real = useClinicaReal();
+  const { texto: precioDe, recargar } = usePrecioTexto(real?.slug ?? null);
+  const activos = storeModulosExtra.usar().activos;
+  const [confirmar, setConfirmar] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+  if (plan !== "inicial") return null;
+  if (real && real.rol !== "admin") return null;
+  const activo = activos.some((a) => a.id === "turnos-online");
+  const precio = precioDe("turnos-online");
+
+  const cambiar = async () => {
+    if (cambiando) return;
+    if (!activo && !confirmar) return setConfirmar(true);
+    setCambiando(true);
+    try {
+      if (real) {
+        if (!activo && !precio) {
+          onToast("Turnos online todavía no tiene precio publicado. Escribinos y un asesor te pasa la propuesta.");
+          return;
+        }
+        await avisarModuloAdicional(real.slug, "turnos-online", activo ? "quitar" : "agregar");
+        void recargar();
+      }
+      if (activo) quitarModuloExtra("turnos-online");
+      else contratarModuloExtra("turnos-online", "Turnos online", usuario?.nombre ?? "Administración");
+      onToast(
+        activo
+          ? real
+            ? "Turnos online quitado: le avisamos a Cloud Esther"
+            : "Turnos online quitado de tu plan"
+          : real
+            ? "¡Turnos online activo! Se suma a tu próxima factura. Prendelo en Agenda → Turnos online."
+            : "¡Turnos online activo! Prendelo en Agenda → Turnos online.",
+      );
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "No se pudo cambiar. Probá de nuevo.");
+    } finally {
+      setCambiando(false);
+      setConfirmar(false);
+    }
+  };
+
+  return (
+    <div className={compacto ? "rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] to-fuchsia-500/[0.04] p-4" : "card-grad p-4"}>
+      <div className="flex items-start gap-3">
+        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${activo ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" : "bg-primary/10 text-primary"}`}>
+          <CalendarCheck2 className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Turnos online {activo && <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Activo</span>}</p>
+          <p className="text-[12px] text-muted-foreground">
+            Tu página para que los pacientes saquen turno solos, las 24 horas, y el turno cae en tu Agenda. Viene incluido desde el plan Pro; en Start lo podés sumar.
+            {!activo && precio ? ` ${precio}.` : ""}
+            {!activo ? (planContratado ? " Se activa al instante y va en tu próxima factura." : " En el demo se activa al instante.") : ""}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-1.5">
+        {confirmar && !activo && (
+          <button type="button" className={BTN_SECUNDARIO} onClick={() => setConfirmar(false)} disabled={cambiando}>
+            Cancelar
+          </button>
+        )}
+        <button type="button" className={activo ? BTN_SECUNDARIO : BTN_PRIMARIO} onClick={() => void cambiar()} disabled={cambiando}>
+          {activo ? "Quitar" : confirmar ? `Confirmar${precio ? ` · ${precio}` : ""}` : "Sumar a mi plan"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ───────────── Módulos adicionales ───────────── */
 
 /** Start, Pro y Plus pueden sumar módulos que su plan no incluye (el precio lo informa el panel). */
@@ -322,6 +400,8 @@ export function ModulosAdicionales({ onToast }: { onToast: (m: string) => void }
       {(mios ?? facturaDemo) && <ProximaFactura datos={(mios ?? facturaDemo)!} />}
 
       {haySwitch && <OdontogramaSwitch onToast={onToast} />}
+
+      <TurnosOnlineAdicional onToast={onToast} />
 
       {comprables.length > 0 && (
         <div className="card-grad p-4">

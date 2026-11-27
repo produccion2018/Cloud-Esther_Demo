@@ -113,7 +113,11 @@ function PlanesPage() {
 function PreciosModulosAdicionales({ editable }: { editable: boolean }) {
   const precios = usePreciosModulos();
   // Módulos que se pueden sumar como adicional en algún plan (superset = los comprables desde Start).
-  const vendibles = MODULES.filter((m) => comprableEn(m, "inicial") && !m.maxPlan);
+  const vendibles: { id: string; label: string; minPlan: keyof typeof PLANS }[] = [
+    ...MODULES.filter((m) => comprableEn(m, "inicial") && !m.maxPlan).map((m) => ({ id: m.id, label: m.label, minPlan: m.minPlan })),
+    // No es una pantalla del menú: la página pública de turnos (incluida desde Pro; Start la compra)
+    { id: "turnos-online", label: "Turnos online (página pública)", minPlan: "profesional" },
+  ];
   const [f, setF] = useState<Record<string, string>>(() =>
     Object.fromEntries(vendibles.map((m) => [m.id, precios[m.id] !== undefined ? String(precios[m.id]) : ""])),
   );

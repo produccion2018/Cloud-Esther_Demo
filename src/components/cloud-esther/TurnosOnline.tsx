@@ -4,7 +4,9 @@ import { useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { setAjustesAgendaStore, storeAgenda, TRATAMIENTOS, type ConfigReservaOnline } from "@/lib/cloud-esther/agenda-store";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { configReserva, enlaceReserva, nivelReserva, visibleEnReserva, type NivelReserva } from "@/lib/cloud-esther/reservas-online";
+import { codigosParaWeb, configReserva, enlaceReserva, useNivelReserva, visibleEnReserva, type NivelReserva } from "@/lib/cloud-esther/reservas-online";
+import { TurnosOnlineAdicional } from "@/components/cloud-esther/facturacion/ModulosAdicionales";
+import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 
 /* Ubicación: src/components/cloud-esther/TurnosOnline.tsx
@@ -14,7 +16,7 @@ import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 const PLAN_TEXTO: Record<NivelReserva, { nombre: string; texto: string }> = {
   start: {
     nombre: "Start",
-    texto: "Tu página muestra la clínica, el equipo y un botón para escribirte por WhatsApp. Para que los pacientes reserven solos, necesitás el plan Pro o superior.",
+    texto: "Tu página muestra la clínica, el equipo y un botón para escribirte por WhatsApp. Para que los pacientes reserven solos, sumá «Turnos online» acá abajo o pasá al plan Pro.",
   },
   pro: {
     nombre: "Pro",
@@ -40,7 +42,8 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
   const { miembros } = useEquipo();
   const ctx = useCloudEstherOpcional();
   const real = useClinicaReal();
-  const nivel = nivelReserva(ctx?.plan);
+  const { nivel, porAdicional } = useNivelReserva(ctx?.plan);
+  const ajustesClinica = useClinicSettings(ctx?.clinic ?? "demo");
   const puedeEditar = !real || real.rol === "admin";
   const c = configReserva(ajustes?.reservaOnline);
   const slug = real?.slug ?? "demo";
@@ -58,7 +61,7 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-fuchsia-600 p-4 text-white shadow-lg">
         <div className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-white/10 blur-xl" />
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-white/80">
-          <Globe className="size-3.5" /> Tu página de turnos · plan {PLAN_TEXTO[nivel].nombre}
+          <Globe className="size-3.5" /> Tu página de turnos · {porAdicional ? "Start + Turnos online" : `plan ${PLAN_TEXTO[nivel].nombre}`}
         </p>
         <p className="mt-1.5 text-sm leading-relaxed text-white/95">{PLAN_TEXTO[nivel].texto}</p>
         <p className="mt-3 truncate rounded-xl bg-white/15 px-3 py-2 font-mono text-[11px] ring-1 ring-white/25">{link}</p>
@@ -86,6 +89,8 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
           </a>
         </div>
       </div>
+
+      {nivel === "start" && <TurnosOnlineAdicional onToast={onToast} compacto />}
 
       {!puedeEditar && (
         <p className="rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">Solo el dueño o la dirección cambian estos ajustes. Podés copiar y compartir el link.</p>
@@ -235,6 +240,8 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
         </div>
       </fieldset>
 
+      <ParaTuWeb slug={slug} color={ajustesClinica.marca?.color || "#7c3aed"} onToast={onToast} />
+
       <p className="flex items-start gap-2 rounded-xl bg-primary/[0.05] px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
         Los horarios salen de tu agenda real: el horario de cada profesional, sus ausencias, los turnos ya dados, los bloqueos y los feriados. Nunca se da un horario ocupado.
@@ -244,3 +251,70 @@ export function TurnosOnlinePanel({ onToast }: { onToast: (m: string) => void })
 }
 
 
+
+/** ¿La clínica ya tiene su página web? Se conecta sin rehacer nada: un botón o el turnero adentro. */
+function ParaTuWeb({ slug, color, onToast }: { slug: string; color: string; onToast: (m: string) => void }) {
+  const [vista, setVista] = useState<"boton" | "turnero" | "redes">("boton");
+  const { link, boton, turnero } = codigosParaWeb(slug, color);
+  const codigo = vista === "boton" ? boton : vista === "turnero" ? turnero : link;
+  const copiar = () => {
+    navigator.clipboard?.writeText(codigo).catch(() => {});
+    onToast(vista === "redes" ? "Link copiado" : "Código copiado: pegalo en tu web");
+  };
+  const paraElQueHaceLaWeb =
+    `Hola, quiero agregar los turnos online de la clínica a nuestra página web.\n` +
+    (vista === "turnero"
+      ? `Pegá este código en un bloque «HTML» o «Insertar código» (sirve en WordPress, Wix, Tiendanube, Squarespace o cualquier web):\n\n${turnero}`
+      : `Pegá este botón donde diga «Pedir turno» (bloque «HTML» o «Insertar código»):\n\n${boton}\n\nO, si preferís, poné este link en el botón que ya tenemos: ${link}`);
+  return (
+    <div className="rounded-2xl border border-primary/12 bg-white p-4 dark:bg-card">
+      <p className="text-sm font-semibold">¿Tu clínica ya tiene página web?</p>
+      <p className="text-[11px] text-muted-foreground">No hace falta cambiarla ni pagar nada más: se conecta con un botón o con el turnero adentro de tu web.</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {(
+          [
+            ["boton", "Botón «Sacar turno»"],
+            ["turnero", "Turnero dentro de mi web"],
+            ["redes", "Instagram y Google"],
+          ] as const
+        ).map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={vista === k} onClick={() => setVista(k)} className={chip(vista === k)}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-foreground/85">
+        {vista === "boton"
+          ? "Lo más fácil: un botón en tu web que abre tu página de turnos. También podés poner el link en el botón «Pedir turno» que ya tenés."
+          : vista === "turnero"
+            ? "Los pacientes sacan turno sin salir de tu web: el turnero aparece adentro, con los colores de tu clínica y se acomoda solo al alto."
+            : "Pegá el link en la bio de Instagram, en el botón «Reservar» de tu perfil de Google y en la respuesta automática de WhatsApp Business."}
+      </p>
+      {vista === "boton" && (
+        <div className="mt-3 rounded-xl bg-primary/[0.04] p-3 text-center">
+          <span
+            className="inline-block rounded-full px-6 py-3 text-sm font-semibold text-white"
+            style={{ background: color, boxShadow: `0 10px 24px -12px ${color}` }}
+          >
+            Sacar turno online
+          </span>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">Así se ve en tu web</p>
+        </div>
+      )}
+      <pre className="mt-3 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-[#1c1530] p-3 font-mono text-[10.5px] leading-relaxed text-violet-100">{codigo}</pre>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <button type="button" onClick={copiar} className="btn-ce !h-8 !text-xs">
+          <Copy className="size-3.5" /> {vista === "redes" ? "Copiar link" : "Copiar código"}
+        </button>
+        {vista !== "redes" && (
+          <a href={`https://wa.me/?text=${encodeURIComponent(paraElQueHaceLaWeb)}`} target="_blank" rel="noreferrer" className="btn-ce-outline !h-8 !text-xs">
+            <IconoWhatsApp /> Mandárselo a quien hace mi web
+          </a>
+        )}
+      </div>
+      {vista !== "redes" && (
+        <p className="mt-2 text-[10.5px] text-muted-foreground">Sirve en WordPress, Wix, Tiendanube, Squarespace, Webflow o una web hecha a medida: se pega en un bloque «HTML» o «Insertar código».</p>
+      )}
+    </div>
+  );
+}

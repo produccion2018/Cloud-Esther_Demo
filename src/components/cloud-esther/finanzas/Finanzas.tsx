@@ -7,6 +7,9 @@ import {
   ArrowUpRight,
   BadgeCheck,
   BarChart3,
+  Camera,
+  X,
+  Zap,
   Banknote,
   CalendarClock,
   CheckCircle2,
@@ -32,6 +35,8 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { deudaDe, paisFiscal } from "@/lib/cloud-esther/facturacion-store";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { achicarFoto, guardarArchivo } from "@/lib/clinica/subir-imagen";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
 import { sucursalesDelPlan } from "@/lib/cloud-esther/inventario-store";
 import {
@@ -109,6 +114,7 @@ export function Finanzas() {
   const [seccion, setSeccion] = useState<SeccionFin>("resumen");
   const [sucursal, setSucursal] = useState("Todas");
   const [nuevoMov, setNuevoMov] = useState<Partial<MovFin> | null>(null);
+  const [rapido, setRapido] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
   useEffect(() => setMontado(true), []);
@@ -243,11 +249,15 @@ export function Finanzas() {
                 </button>
                 <button
                   type="button"
-                  className={BTN_PRIMARIO}
+                  className={BTN_SECUNDARIO}
                   onClick={() => setNuevoMov({ tipo: "Egreso" })}
                 >
                   <Plus className="size-4" />
                   Registrar gasto
+                </button>
+                <button type="button" className={BTN_PRIMARIO} onClick={() => setRapido(true)}>
+                  <Zap className="size-4" />
+                  Gasto rápido
                 </button>
               </div>
             </div>
@@ -356,6 +366,20 @@ export function Finanzas() {
               onToast(
                 `${m.tipo === "Ingreso" ? "Ingreso" : "Gasto"} registrado · ${ctx.$(m.monto)}`,
               );
+            }}
+          />
+        </M>
+      )}
+      {rapido && (
+        <M titulo="Gasto rápido" onClose={() => setRapido(false)}>
+          <GastoRapido
+            ctx={ctx}
+            cuentas={libro.fin.cuentas}
+            onCancel={() => setRapido(false)}
+            onGuardar={(m) => {
+              setFinanzas("movimientos", (p) => [...p, m]);
+              setRapido(false);
+              onToast(`Gasto registrado · ${ctx.$(m.monto)}${m.foto ? " · con la factura" : ""}`);
             }}
           />
         </M>
@@ -637,6 +661,15 @@ function FilaAsiento({
           {a.sucursal !== GENERAL ? ` · ${a.sucursal}` : ""}
         </p>
       </div>
+      {a.foto && (
+        <a href={a.foto} target="_blank" rel="noreferrer" aria-label="Ver la factura" className="shrink-0">
+          {/^data:image|\.(jpe?g|png|webp|heic)(\?|$)/i.test(a.foto) || a.foto.includes("/image/upload/") ? (
+            <img src={a.foto.replace("/upload/", "/upload/w_80,h_80,c_fill/")} alt="" className="size-8 rounded-lg object-cover ring-1 ring-black/10" />
+          ) : (
+            <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-[9px] font-bold text-primary">PDF</span>
+          )}
+        </a>
+      )}
       <Pill clase={ORIGEN_ESTILO[a.origen]}>{a.origen}</Pill>
       <b className={`shrink-0 text-[13px] ${ing ? "text-emerald-600" : "text-rose-600"}`}>
         {ing ? "+" : "−"}
@@ -663,6 +696,7 @@ const ORIGENES: Asiento["origen"][] = [
   "Facturación",
   "Obras sociales",
   "Caja diaria",
+  "Cobros",
   "Nómina",
   "Proveedores",
   "Comisiones",
@@ -2294,5 +2328,161 @@ function ElMes({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
         </div>
       )}
     </section>
+  );
+}
+
+/* ───────────── Gasto rápido (desde el celular, en 3 toques) ───────────── */
+
+const RAPIDOS: { cat: CategoriaEgreso; corto: string; emoji: string }[] = [
+  { cat: "Insumos", corto: "Insumos", emoji: "🧤" },
+  { cat: "Laboratorio", corto: "Laboratorio", emoji: "🦷" },
+  { cat: "Servicios (luz, agua, internet)", corto: "Luz, agua, internet", emoji: "💡" },
+  { cat: "Alquiler", corto: "Alquiler", emoji: "🏢" },
+  { cat: "Mantenimiento y limpieza", corto: "Limpieza / arreglos", emoji: "🧽" },
+  { cat: "Sueldos y cargas sociales", corto: "Sueldos", emoji: "👥" },
+  { cat: "Honorarios profesionales", corto: "Honorarios", emoji: "🩺" },
+  { cat: "Impuestos y tasas", corto: "Impuestos", emoji: "🧾" },
+  { cat: "Marketing", corto: "Publicidad", emoji: "📣" },
+  { cat: "Otros gastos", corto: "Otro", emoji: "➕" },
+];
+
+function GastoRapido({
+  ctx,
+  cuentas,
+  onCancel,
+  onGuardar,
+}: {
+  ctx: CtxFin;
+  cuentas: CuentaFin[];
+  onCancel: () => void;
+  onGuardar: (m: MovFin) => void;
+}) {
+  const real = useClinicaReal();
+  // Si la clínica todavía no armó sus cuentas, las 3 de siempre (mismos ids que usa el resto)
+  if (!cuentas.length)
+    cuentas = [
+      { id: "efectivo", nombre: "Efectivo", tipo: "Efectivo", detalle: "", saldoInicial: 0 },
+      { id: "banco", nombre: "Banco", tipo: "Banco", detalle: "", saldoInicial: 0 },
+      { id: "mp", nombre: "Mercado Pago", tipo: "Billetera", detalle: "", saldoInicial: 0 },
+    ];
+  const [monto, setMonto] = useState("");
+  const [cat, setCat] = useState<CategoriaEgreso | null>(null);
+  const [cuentaId, setCuentaId] = useState(cuentas.find((c) => c.id === "efectivo")?.id ?? cuentas[0]?.id ?? "");
+  const [detalle, setDetalle] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+  const [vista, setVista] = useState("");
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState("");
+  const input = useRef<HTMLInputElement | null>(null);
+  const n = (() => {
+    const t = monto.trim();
+    return Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t) || 0;
+  })();
+  const elegir = (f: File | undefined) => {
+    if (!f) return;
+    if (!f.type.startsWith("image/") && f.type !== "application/pdf") return setError("Elegí una foto o un PDF de la factura.");
+    if (f.size > 15 * 1024 * 1024) return setError("El archivo pesa más de 15 MB.");
+    setError("");
+    setFoto(f);
+    setVista(f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
+  };
+  const guardar = async () => {
+    if (!(n > 0)) return setError("Escribí cuánto gastaste.");
+    if (!cat) return setError("Elegí en qué fue el gasto.");
+    setError("");
+    let url = "";
+    if (foto) {
+      setSubiendo(true);
+      try {
+        const archivo = foto.type.startsWith("image/") ? await achicarFoto(foto, 1400) : foto;
+        url = await guardarArchivo(archivo, { slug: real?.slug, nombre: `factura-${diaISO()}` });
+      } catch (e) {
+        setSubiendo(false);
+        return setError(e instanceof Error ? e.message : "No se pudo subir la factura.");
+      }
+      setSubiendo(false);
+    }
+    const r = RAPIDOS.find((x) => x.cat === cat);
+    onGuardar({
+      id: `mf-${Date.now()}`,
+      fecha: diaISO(),
+      tipo: "Egreso",
+      categoria: cat,
+      concepto: detalle.trim() || r?.corto || cat,
+      monto: Math.round(n * 100) / 100,
+      cuentaId,
+      sucursal: ctx.sucursal === "Todas" ? GENERAL : ctx.sucursal,
+      origen: "Manual",
+      comprobante: "",
+      ...(url ? { foto: url } : {}),
+    });
+  };
+  return (
+    <div className="space-y-3">
+      <label className="block">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">1 · ¿Cuánto gastaste?</span>
+        <input
+          inputMode="decimal"
+          autoFocus
+          value={monto}
+          onChange={(e) => setMonto(e.target.value)}
+          placeholder="0"
+          className="mt-1 h-14 w-full rounded-2xl border border-primary/15 bg-white px-4 text-2xl font-extrabold tabular-nums outline-none focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+        />
+      </label>
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">2 · ¿En qué?</span>
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {RAPIDOS.map((r) => (
+            <button
+              key={r.cat}
+              type="button"
+              onClick={() => setCat(r.cat)}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold ring-1 transition ${cat === r.cat ? "bg-primary text-white ring-primary" : "bg-white ring-primary/12 hover:bg-primary/[0.04]"}`}
+            >
+              <span className="text-base leading-none">{r.emoji}</span>
+              <span className="truncate">{r.corto}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-semibold text-muted-foreground">Pagado con:</span>
+        {cuentas.map((c) => (
+          <button key={c.id} type="button" className={CHIP(cuentaId === c.id)} onClick={() => setCuentaId(c.id)}>
+            {c.nombre}
+          </button>
+        ))}
+      </div>
+      <input type="file" ref={input} accept="image/*,application/pdf" capture="environment" className="hidden" onChange={(e) => elegir(e.target.files?.[0])} />
+      {foto ? (
+        <div className="flex items-center gap-3 rounded-2xl bg-primary/[0.04] p-2.5 ring-1 ring-primary/10">
+          {vista ? <img src={vista} alt="" className="size-12 rounded-xl object-cover" /> : <span className="grid size-12 place-items-center rounded-xl bg-white text-xs font-bold text-primary">PDF</span>}
+          <span className="min-w-0 flex-1 truncate text-xs">{foto.name}</span>
+          <button type="button" aria-label="Quitar la foto" className={BTN_ICONO} onClick={() => { setFoto(null); setVista(""); }}>
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/20 bg-white py-3 text-sm font-semibold text-primary"
+        >
+          <Camera className="size-5" /> Sacale una foto a la factura (opcional)
+        </button>
+      )}
+      <input value={detalle} onChange={(e) => setDetalle(e.target.value)} maxLength={120} placeholder="Detalle (opcional): proveedor, qué se compró…" className={INPUT} />
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="button" className={`${BTN_SECUNDARIO} flex-1 justify-center`} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="button" disabled={subiendo} className={`${BTN_PRIMARIO} flex-[2] justify-center`} onClick={() => void guardar()}>
+          <CheckCircle2 className="size-4" />
+          {subiendo ? "Subiendo la factura…" : n > 0 ? `3 · Guardar ${ctx.$(n)}` : "3 · Guardar"}
+        </button>
+      </div>
+    </div>
   );
 }

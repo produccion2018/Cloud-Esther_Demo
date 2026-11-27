@@ -53,6 +53,7 @@ export type Asiento = {
   origen: OrigenAsiento;
   editable: boolean;
   comprobante: string;
+  foto?: string;
 };
 
 export function cuentaDeMedio(medio: MedioPago) {

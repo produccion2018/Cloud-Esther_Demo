@@ -67,6 +67,8 @@ export type MovFin = {
   origen: OrigenMov;
   comprobante: string;
   ref?: string;
+  /** Foto o PDF de la factura (Cloudinary) */
+  foto?: string;
 };
 
 export type OrigenPago = "Manual" | "Orden de compra" | "Gasto fijo" | "Laboratorio";

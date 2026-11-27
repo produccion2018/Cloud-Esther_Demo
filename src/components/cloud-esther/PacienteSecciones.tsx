@@ -575,6 +575,10 @@ export type PresupuestoPaciente = {
   respondido?: string;
   motivoRechazo?: string;
   seguimientos?: SeguimientoPresupuesto[];
+  /** Opciones A / B: presupuestos del mismo grupo que el paciente compara y elige uno */
+  grupoOpciones?: string;
+  opcion?: string;
+  opcionNombre?: string;
   /** Firma del paciente al aprobar con el enlace (imagen PNG chica) */
   firmaPaciente?: { nombre: string; imagen: string; fecha: string };
   /** Respuesta del paciente con el enlace: la clínica recibe el aviso una vez */

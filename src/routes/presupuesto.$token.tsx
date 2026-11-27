@@ -18,7 +18,30 @@ export const Route = createFileRoute("/presupuesto/$token")({
   component: PresupuestoPaciente,
 });
 
-type Info = {
+type Opcion = {
+  id: number;
+  opcion: string;
+  opcionNombre: string;
+  numero: string;
+  fecha: string;
+  validez: string;
+  vencido: boolean;
+  estado: string;
+  profesional: string;
+  notas: string;
+  lineas: { descripcion: string; pieza: string; cantidad: number; precio: number }[];
+  descuentoPct: number;
+  subtotal: number;
+  descuento: number;
+  total: number;
+  final: number;
+  cuotas: number;
+  cuota: number;
+  plan: string;
+  firmado: boolean;
+};
+
+type Info = Opcion & {
   clinica: string;
   logo: string;
   color: string;
@@ -45,6 +68,7 @@ type Info = {
   cuota: number;
   plan: string;
   firmado: boolean;
+  opciones: Opcion[];
 };
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise<T> {
@@ -70,6 +94,7 @@ function PresupuestoPaciente() {
   const [info, setInfo] = useState<Info | null>(null);
   const [error, setError] = useState("");
   const [paso, setPaso] = useState<"ver" | "firmar" | "rechazar">("ver");
+  const [elegida, setElegida] = useState<number | null>(null);
 
   useEffect(() => {
     if (!API_URL) return setError("Esta página todavía no está disponible.");
@@ -111,7 +136,11 @@ function PresupuestoPaciente() {
           </div>
         )}
 
-        {info && (
+        {info && (() => {
+          const hayOpciones = (info.opciones?.length ?? 0) > 1;
+          const eligiendo = hayOpciones && info.estado === "Enviado";
+          const ver: Info = eligiendo ? { ...info, ...(info.opciones.find((o) => o.id === (elegida ?? info.id)) ?? {}) } : info;
+          return (
           <>
             {/* Encabezado de la clínica */}
             <section className="relative overflow-hidden rounded-[28px] bg-white p-5 shadow-[0_30px_70px_-40px_rgba(76,29,149,0.55)] ring-1 ring-black/5">
@@ -125,7 +154,7 @@ function PresupuestoPaciente() {
                   </span>
                 )}
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--marca)]">Presupuesto {info.numero}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--marca)]">Presupuesto {ver.numero}</p>
                   <h1 className="truncate text-xl font-bold leading-tight">{info.clinica}</h1>
                 </div>
               </div>
@@ -145,27 +174,56 @@ function PresupuestoPaciente() {
               )}
             </section>
 
+            {eligiendo && (
+              <section className="mt-4">
+                <p className="px-1 text-sm font-bold">{t("Tenés", "Tienes")} {info.opciones.length} opciones · {t("elegí la que prefieras", "elige la que prefieras")}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {info.opciones.map((o) => {
+                    const activa = o.id === (elegida ?? info.id);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => {
+                          setElegida(o.id);
+                          setPaso("ver");
+                        }}
+                        className={`rounded-3xl p-3.5 text-left transition-all ${activa ? "bg-white shadow-[0_18px_40px_-24px_rgba(124,58,237,0.8)] ring-2 ring-[var(--marca)]" : "bg-white/70 ring-1 ring-black/5"}`}
+                      >
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${activa ? "bg-[var(--marca)] text-white" : "bg-[#f1edfb] text-[#6b6385]"}`}>
+                          Opción {o.opcion}
+                        </span>
+                        <p className="mt-1.5 truncate text-sm font-semibold">{o.opcionNombre || o.lineas[0]?.descripcion || o.numero}</p>
+                        <p className="mt-0.5 text-lg font-extrabold tabular-nums text-[var(--marca)]">{plata(o.final)}</p>
+                        {o.cuotas > 1 && <p className="text-[11px] text-[#6b6385]">{o.cuotas} × {plata(o.cuota)}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* Total */}
             <section className="mt-4 rounded-[28px] bg-gradient-to-br from-[var(--marca)] via-violet-600 to-fuchsia-600 p-5 text-white shadow-[0_24px_50px_-28px_rgba(124,58,237,0.9)]">
               <p className="text-sm text-white/85">
                 Hola{info.paciente ? ` ${info.paciente}` : ""} 👋 {t("este es tu presupuesto", "este es tu presupuesto")}
               </p>
-              <p className="mt-2 text-[34px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{plata(info.final)}</p>
-              {info.cuotas > 1 && (
+              <p className="mt-2 text-[34px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{plata(ver.final)}</p>
+              {ver.cuotas > 1 && (
                 <p className="mt-1.5 text-sm font-semibold text-white/95">
-                  {info.cuotas} cuotas de {plata(info.cuota)}
-                  {info.plan ? ` · ${info.plan}` : ""}
+                  {ver.cuotas} cuotas de {plata(ver.cuota)}
+                  {ver.plan ? ` · ${ver.plan}` : ""}
                 </p>
               )}
               <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-                {info.profesional && (
+                {ver.profesional && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 ring-1 ring-white/25">
-                    <Stethoscope className="size-3" /> {info.profesional}
+                    <Stethoscope className="size-3" /> {ver.profesional}
                   </span>
                 )}
-                {info.validez && (
-                  <span className={`rounded-full px-2.5 py-1 ring-1 ${info.vencido ? "bg-rose-500/30 ring-rose-200/50" : "bg-white/15 ring-white/25"}`}>
-                    {info.vencido ? "Venció el" : "Válido hasta el"} {fechaCorta(info.validez)}
+                {ver.validez && (
+                  <span className={`rounded-full px-2.5 py-1 ring-1 ${ver.vencido ? "bg-rose-500/30 ring-rose-200/50" : "bg-white/15 ring-white/25"}`}>
+                    {ver.vencido ? "Venció el" : "Válido hasta el"} {fechaCorta(ver.validez)}
                   </span>
                 )}
               </div>
@@ -175,7 +233,7 @@ function PresupuestoPaciente() {
             <section className="mt-4 rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <p className="text-sm font-bold">Qué incluye</p>
               <ul className="mt-3 divide-y divide-[#efeaf9]">
-                {info.lineas.map((l, i) => (
+                {ver.lineas.map((l, i) => (
                   <li key={i} className="flex items-start justify-between gap-3 py-2.5">
                     <div className="min-w-0">
                       <p className="text-sm font-medium leading-snug">{l.descripcion}</p>
@@ -189,19 +247,19 @@ function PresupuestoPaciente() {
                 ))}
               </ul>
               <div className="mt-2 space-y-1 border-t border-[#efeaf9] pt-3 text-sm">
-                {info.descuento > 0 && (
+                {ver.descuento > 0 && (
                   <>
-                    <Fila a="Subtotal" b={plata(info.subtotal)} />
-                    <Fila a={`Descuento ${info.descuentoPct}%`} b={`−${plata(info.descuento)}`} verde />
+                    <Fila a="Subtotal" b={plata(ver.subtotal)} />
+                    <Fila a={`Descuento ${ver.descuentoPct}%`} b={`−${plata(ver.descuento)}`} verde />
                   </>
                 )}
-                {info.final !== info.total && <Fila a={info.plan || "Plan de pago"} b={plata(info.final - info.total)} />}
+                {ver.final !== ver.total && <Fila a={ver.plan || "Plan de pago"} b={plata(ver.final - ver.total)} />}
                 <div className="flex justify-between pt-1 text-base font-extrabold text-[var(--marca)]">
                   <span>Total</span>
-                  <span className="tabular-nums">{plata(info.final)}</span>
+                  <span className="tabular-nums">{plata(ver.final)}</span>
                 </div>
               </div>
-              {info.notas && <p className="mt-3 rounded-2xl bg-[#f6f3fd] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#4b4466]">{info.notas}</p>}
+              {ver.notas && <p className="mt-3 rounded-2xl bg-[#f6f3fd] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#4b4466]">{ver.notas}</p>}
               {info.condiciones && (
                 <details className="mt-3 text-[12px] text-[#6b6385]">
                   <summary className="cursor-pointer font-semibold text-[#4b4466]">Condiciones</summary>
@@ -212,15 +270,21 @@ function PresupuestoPaciente() {
 
             {/* Respuesta */}
             <section className="mt-4 rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5">
-              {info.estado === "Aprobado" ? (
+              {ver.estado === "Aprobado" ? (
                 <div className="py-2 text-center">
                   <CheckCircle2 className="mx-auto size-14 text-emerald-500" />
                   <p className="mt-2 text-xl font-extrabold">¡Presupuesto aprobado!</p>
+                  {hayOpciones && ver.opcion && (
+                    <p className="mt-1 text-sm font-semibold text-[var(--marca)]">
+                      {t("Elegiste", "Elegiste")} la opción {ver.opcion}
+                      {ver.opcionNombre ? ` · ${ver.opcionNombre}` : ""}
+                    </p>
+                  )}
                   <p className="mx-auto mt-1 max-w-xs text-sm text-[#6b6385]">
                     {t("Gracias. La clínica ya lo sabe y te escribe para coordinar los turnos.", "Gracias. La clínica ya lo sabe y te escribirá para coordinar los turnos.")}
                   </p>
                 </div>
-              ) : info.estado === "Rechazado" ? (
+              ) : ver.estado === "Rechazado" ? (
                 <div className="py-2 text-center">
                   <XCircle className="mx-auto size-12 text-[#a59dc0]" />
                   <p className="mt-2 text-lg font-bold">{t("Le avisamos a la clínica", "Le avisamos a la clínica")}</p>
@@ -228,12 +292,12 @@ function PresupuestoPaciente() {
                     {t("Si cambiás de idea o querés otra opción, escribinos.", "Si cambias de idea o quieres otra opción, escríbenos.")}
                   </p>
                 </div>
-              ) : info.vencido ? (
+              ) : ver.vencido ? (
                 <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   {t("Este presupuesto venció. Pedile a la clínica uno actualizado.", "Este presupuesto venció. Pídele a la clínica uno actualizado.")}
                 </p>
               ) : paso === "firmar" ? (
-                <Firmar info={info} token={token} t={t} onListo={setInfo} onVolver={() => setPaso("ver")} />
+                <Firmar info={ver} token={token} t={t} onListo={setInfo} onVolver={() => setPaso("ver")} />
               ) : paso === "rechazar" ? (
                 <Rechazar token={token} t={t} onListo={setInfo} onVolver={() => setPaso("ver")} />
               ) : (
@@ -243,7 +307,7 @@ function PresupuestoPaciente() {
                     onClick={() => setPaso("firmar")}
                     className="flex h-13 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--marca)] via-violet-500 to-fuchsia-500 py-3.5 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.9)]"
                   >
-                    <CheckCircle2 className="size-5" /> {t("Lo apruebo", "Lo apruebo")}
+                    <CheckCircle2 className="size-5" /> {eligiendo ? `Elijo la opción ${ver.opcion}` : "Lo apruebo"}
                   </button>
                   <button type="button" onClick={() => setPaso("rechazar")} className="h-11 w-full rounded-full text-sm font-semibold text-[#6b6385] hover:bg-[#f6f3fd]">
                     {t("Ahora no", "Ahora no")}
@@ -261,7 +325,8 @@ function PresupuestoPaciente() {
               <ShieldCheck className="size-3.5" /> {vos(info.pais) ? "Solo vos" : "Solo tú"} y la clínica ven este presupuesto · Cloud Esther
             </p>
           </>
-        )}
+          );
+        })()}
       </div>
     </main>
   );
@@ -340,7 +405,7 @@ function Firmar({
     const firma = chico.toDataURL("image/png");
     setEnviando(true);
     try {
-      onListo(await pedir<Info>(`/public/presupuestos/${token}/responder`, "POST", { respuesta: "aprobar", nombre: nombre.trim(), firma }));
+      onListo(await pedir<Info>(`/public/presupuestos/${token}/responder`, "POST", { respuesta: "aprobar", nombre: nombre.trim(), firma, ...(info.opciones?.length > 1 ? { opcionId: info.id } : {}) }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar. Probá de nuevo.");
     } finally {
@@ -404,7 +469,8 @@ function Firmar({
       <label className="flex items-start gap-2.5 rounded-2xl bg-[#f6f3fd] px-3.5 py-3 text-[13px] leading-snug">
         <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[var(--marca)]" />
         <span>
-          {t("Estoy de acuerdo con el presupuesto", "Estoy de acuerdo con el presupuesto")} {info.numero} {t("y sus condiciones", "y sus condiciones")}.
+          Estoy de acuerdo con el presupuesto {info.numero}
+          {info.opciones?.length > 1 && info.opcion ? ` (opción ${info.opcion}${info.opcionNombre ? ` · ${info.opcionNombre}` : ""})` : ""} y sus condiciones.
         </span>
       </label>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

@@ -6,6 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   AlarmClock,
   ArrowRight,
+  Layers,
   BarChart3,
   BadgePercent,
   Calculator,
@@ -128,6 +129,9 @@ export function totalesPresupuesto(
   const plan = planes.find((x) => x.id === p.planId);
   return { subtotal, descuento, total, plan, ...conPlan(total, plan) };
 }
+/** «Opción A · Económica» (vacío si el presupuesto no tiene opciones) */
+const etiquetaOpcion = (p: PresupuestoPaciente) =>
+  p.grupoOpciones && p.opcion ? `Opción ${p.opcion}${p.opcionNombre ? ` · ${p.opcionNombre}` : ""}` : "";
 const nombrePac = (x: Paciente | undefined) => (x ? `${x.nombre} ${x.apellido}` : "Paciente");
 const vencido = (p: PresupuestoPaciente) =>
   p.estado === "Enviado" && !!p.validez && p.validez < hoyISO();
@@ -184,11 +188,24 @@ export function Presupuestos() {
     })),
   );
   const hace30 = hoyISO(-30);
-  const recientes = filas.filter((f) => f.p.fecha >= hace30);
-  const resueltos = filas.filter((f) => f.p.estado === "Aprobado" || f.p.estado === "Rechazado");
-  const aprobados = filas.filter((f) => f.p.estado === "Aprobado");
-  const enEspera = filas.filter((f) => f.p.estado === "Enviado");
   const t = (f: Fila) => totalesPresupuesto(f.p, planes).total;
+  // Opciones A / B: en los números cuenta una sola por grupo (la de mayor monto), no la suma
+  const unaPorGrupo = (l: Fila[]) => {
+    const mejor = new Map<string, Fila>();
+    for (const f of l) {
+      if (!f.p.grupoOpciones) continue;
+      const k = `${f.pid}:${f.p.grupoOpciones}`;
+      const m = mejor.get(k);
+      if (!m || t(f) > t(m)) mejor.set(k, f);
+    }
+    return l.filter((f) => !f.p.grupoOpciones || mejor.get(`${f.pid}:${f.p.grupoOpciones}`) === f);
+  };
+  const recientes = unaPorGrupo(filas.filter((f) => f.p.fecha >= hace30));
+  const resueltos = filas.filter(
+    (f) => f.p.estado === "Aprobado" || (f.p.estado === "Rechazado" && f.p.motivoRechazo !== "Eligió otra opción"),
+  );
+  const aprobados = filas.filter((f) => f.p.estado === "Aprobado");
+  const enEspera = unaPorGrupo(filas.filter((f) => f.p.estado === "Enviado"));
 
   const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
     { id: "tablero", label: "Tablero", icon: LayoutGrid },
@@ -434,13 +451,21 @@ function useAcciones(ctx: Ctx) {
   });
   return {
     enviar(f: Fila, via: string) {
-      actualizar(f.pid, f.p.id, (p) => ({
-        ...p,
-        estado: p.estado === "Borrador" ? "Enviado" : p.estado,
-        enviado: hoyISO(),
-        validez: p.validez && p.validez >= hoyISO() ? p.validez : hoyISO(config.validezDias),
-        seguimientos: [...(p.seguimientos ?? []), seguimiento(`Enviado por ${via}`)],
-      }));
+      // Con opciones A / B se mandan todas juntas (el paciente las compara en el mismo enlace)
+      const grupo = f.p.grupoOpciones;
+      cambiar(f.pid, "presupuestos", (prev) =>
+        prev.map((p) =>
+          p.id === f.p.id || (grupo && p.grupoOpciones === grupo && (p.estado === "Borrador" || p.estado === "Enviado"))
+            ? {
+                ...p,
+                estado: p.estado === "Borrador" ? "Enviado" : p.estado,
+                enviado: hoyISO(),
+                validez: p.validez && p.validez >= hoyISO() ? p.validez : hoyISO(config.validezDias),
+                seguimientos: [...(p.seguimientos ?? []), seguimiento(`Enviado por ${via}`)],
+              }
+            : p,
+        ),
+      );
       auditar(f.pid, `Envió el presupuesto ${f.p.numero} por ${via}`);
     },
     aprobar(f: Fila, origen = "la clínica") {
@@ -451,6 +476,21 @@ function useAcciones(ctx: Ctx) {
         respondido: hoyISO(),
         seguimientos: [...(p.seguimientos ?? []), seguimiento(`Aprobado por ${origen}`)],
       }));
+      // Las otras opciones del mismo grupo quedan cerradas
+      if (f.p.grupoOpciones)
+        cambiar(f.pid, "presupuestos", (prev) =>
+          prev.map((p) =>
+            p.id !== f.p.id && p.grupoOpciones === f.p.grupoOpciones && (p.estado === "Borrador" || p.estado === "Enviado")
+              ? {
+                  ...p,
+                  estado: "Rechazado",
+                  respondido: hoyISO(),
+                  motivoRechazo: "Eligió otra opción",
+                  seguimientos: [...(p.seguimientos ?? []), seguimiento(`El paciente eligió la opción ${f.p.opcion ?? f.p.numero}`)],
+                }
+              : p,
+          ),
+        );
       cambiar(f.pid, "cuenta", (prev) => [
         ...prev,
         {
@@ -541,7 +581,8 @@ function Tarjeta({ ctx, f }: { ctx: Ctx; f: Fila }) {
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{nombrePac(f.pac)}</p>
           <p className="truncate text-[11px] text-muted-foreground">
-            {f.p.numero} · {f.p.lineas[0]?.descripcion ?? "Sin prestaciones"}
+            {f.p.numero}
+            {etiquetaOpcion(f.p) ? ` · ${etiquetaOpcion(f.p)}` : ""} · {f.p.lineas[0]?.descripcion ?? "Sin prestaciones"}
             {f.p.lineas.length > 1 ? ` +${f.p.lineas.length - 1}` : ""}
           </p>
         </div>
@@ -989,10 +1030,13 @@ function Detalle({
   if (!p) return null;
   const pac = pacientes.find((x) => x.id === pid);
   const f: Fila = { pid, pac, p };
+  const hermanos = p.grupoOpciones
+    ? (registros[pid]?.presupuestos ?? []).filter((x) => x.grupoOpciones === p.grupoOpciones).sort((a, b) => (a.opcion ?? "").localeCompare(b.opcion ?? ""))
+    : [];
   const tot = totalesPresupuesto(p, planes);
   const ev = estadoVisual(p);
   return (
-    <M titulo={`${p.numero} · ${nombrePac(pac)}`} onClose={onClose} ancho="max-w-3xl">
+    <M titulo={`${p.numero}${etiquetaOpcion(p) ? ` · ${etiquetaOpcion(p)}` : ""} · ${nombrePac(pac)}`} onClose={onClose} ancho="max-w-3xl">
       <div className="flex flex-wrap items-center gap-2">
         <Pill clase={ESTILO[ev]}>{ev}</Pill>
         <span className="text-[11px] text-muted-foreground">
@@ -1003,6 +1047,33 @@ function Detalle({
         </span>
         {p.motivoRechazo && <Pill clase="bg-rose-50 text-rose-700">Motivo: {p.motivoRechazo}</Pill>}
       </div>
+      {hermanos.length > 1 && (
+        <div className="mt-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 p-2.5 ring-1 ring-primary/10">
+          <p className="px-1 text-[11px] font-semibold text-muted-foreground">
+            Opciones para el paciente: las ve juntas en el mismo enlace y elige una
+          </p>
+          <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {hermanos.map((h) => {
+              const th = totalesPresupuesto(h, planes);
+              const actual = h.id === p.id;
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => !actual && ctx.abrir(pid, h.id)}
+                  className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left ring-1 ${actual ? "bg-white ring-primary/40" : "bg-white/60 ring-primary/10 hover:bg-white"}`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-semibold">{etiquetaOpcion(h)}</span>
+                    <span className="block text-[10px] text-muted-foreground">{h.numero} · {estadoVisual(h)}</span>
+                  </span>
+                  <b className="shrink-0 text-sm text-primary">{ars(th.final)}</b>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-primary/10">
         <table className="w-full text-xs">
           <thead className="bg-primary/[0.05] text-left text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
@@ -1213,6 +1284,29 @@ function Detalle({
           <Copy className="size-4" />
           Duplicar
         </button>
+        {(p.estado === "Borrador" || p.estado === "Enviado") && hermanos.length < 3 && (
+          <button
+            type="button"
+            className={BTN_SECUNDARIO}
+            title="Armá una alternativa (más económica o más completa) para que el paciente elija"
+            onClick={() => {
+              onClose();
+              ctx.nuevo({
+                pacienteId: pid,
+                lineas: p.lineas,
+                profesional: p.profesional ?? "",
+                descuentoPct: p.descuentoPct ?? 0,
+                planId: p.planId ?? "",
+                notas: p.notas,
+                grupo: p.grupoOpciones || `g-${p.id}`,
+                desdeId: p.id,
+              });
+            }}
+          >
+            <Layers className="size-4" />
+            Otra opción
+          </button>
+        )}
         <button
           type="button"
           className={BTN_SECUNDARIO}
@@ -1306,6 +1400,9 @@ type Borrador = {
   notas: string;
   validez: string;
   plantillaId?: string;
+  /** Opciones A / B: grupo al que se suma esta opción y el presupuesto del que sale */
+  grupo?: string;
+  desdeId?: number;
 };
 
 function Editor({
@@ -1335,6 +1432,11 @@ function Editor({
   const [planId, setPlanId] = useState(base.planId ?? "f2");
   const [validez, setValidez] = useState(base.validez || hoyISO(config.validezDias));
   const [notas, setNotas] = useState(base.notas ?? "");
+  const editado = base.editarId && base.pacienteId ? registros[base.pacienteId]?.presupuestos.find((x) => x.id === base.editarId) : undefined;
+  const grupo = base.grupo ?? editado?.grupoOpciones;
+  const [opcionNombre, setOpcionNombre] = useState(editado?.opcionNombre ?? "");
+  const [nombreOriginal, setNombreOriginal] = useState("");
+  const original = base.desdeId && base.pacienteId ? registros[base.pacienteId]?.presupuestos.find((x) => x.id === base.desdeId) : undefined;
   const [qAr, setQAr] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
@@ -1414,7 +1516,15 @@ function Editor({
       );
     const todos = Object.values(registros).flatMap((r) => r.presupuestos);
     const numMax = todos.reduce((a, x) => Math.max(a, Number(x.numero.replace(/\D/g, "")) || 0), 0);
-    const datos = { lineas, profesional, descuentoPct: pct, planId, validez, notas: notas.trim() };
+    const datos = {
+      lineas,
+      profesional,
+      descuentoPct: pct,
+      planId,
+      validez,
+      notas: notas.trim(),
+      ...(grupo ? { opcionNombre: opcionNombre.trim().slice(0, 40) } : {}),
+    };
     if (base.editarId) {
       const idE = base.editarId;
       cambiar(pid, "presupuestos", (prev) =>
@@ -1440,6 +1550,20 @@ function Editor({
     }
     const id = Date.now();
     const numero = `PR-${String(numMax + 1).padStart(4, "0")}`;
+    // Opciones A / B: la original pasa a ser la «A» (si todavía no tenía letra) y esta la siguiente
+    let letra = "";
+    if (grupo) {
+      const delGrupo = (registros[pid]?.presupuestos ?? []).filter((x) => x.grupoOpciones === grupo || x.id === base.desdeId);
+      const usadas = new Set(delGrupo.map((x) => x.opcion ?? "A"));
+      letra = ["A", "B", "C", "D"].find((l) => !usadas.has(l)) ?? "D";
+      cambiar(pid, "presupuestos", (prev) =>
+        prev.map((x) =>
+          x.id === base.desdeId && !x.grupoOpciones
+            ? { ...x, grupoOpciones: grupo, opcion: "A", ...(nombreOriginal.trim() ? { opcionNombre: nombreOriginal.trim().slice(0, 40) } : {}) }
+            : x,
+        ),
+      );
+    }
     cambiar(pid, "presupuestos", (prev) => [
       ...prev,
       {
@@ -1448,11 +1572,12 @@ function Editor({
         fecha: hoyISO(),
         estado: enviar ? "Enviado" : "Borrador",
         ...datos,
+        ...(grupo ? { grupoOpciones: grupo, opcion: letra } : {}),
         ...(enviar ? { enviado: hoyISO() } : {}),
         seguimientos: [
           {
             fecha: new Date().toISOString(),
-            texto: enviar ? "Creado y enviado al portal del paciente" : "Creado como borrador",
+            texto: enviar ? "Creado y marcado como enviado" : "Creado como borrador",
             autor: ctx.usuario,
           },
         ],
@@ -1470,7 +1595,7 @@ function Editor({
     ]);
     onListo(
       enviar
-        ? `${numero} creado y enviado: el paciente lo ve en su portal`
+        ? `${numero} creado. Mandalo por WhatsApp para que el paciente lo apruebe`
         : `${numero} guardado como borrador`,
       pid,
       id,
@@ -1484,6 +1609,32 @@ function Editor({
       }}
       className="space-y-3"
     >
+      {grupo && (
+        <div className="rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 p-3 ring-1 ring-primary/15">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Layers className="size-4 text-primary" />
+            {base.desdeId ? "Otra opción para que el paciente elija" : `Opción ${editado?.opcion ?? ""}`}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Cambiá las prestaciones (por ejemplo, una más económica o una más completa). El paciente ve las opciones juntas en el
+            mismo enlace y elige una con su firma.
+          </p>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {original && !original.grupoOpciones && (
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  Nombre de la original ({original.numero})
+                </span>
+                <input value={nombreOriginal} onChange={(e) => setNombreOriginal(e.target.value)} maxLength={40} placeholder="Ej: Económica" className={INPUT} />
+              </label>
+            )}
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Nombre de esta opción</span>
+              <input value={opcionNombre} onChange={(e) => setOpcionNombre(e.target.value)} maxLength={40} placeholder="Ej: Completa" className={INPUT} />
+            </label>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -1495,7 +1646,7 @@ function Editor({
                 {nombrePac(pac)}{" "}
                 <span className="font-normal text-muted-foreground">· {pac.obraSocial}</span>
               </span>
-              {!base.editarId && (
+              {!base.editarId && !grupo && (
                 <button
                   type="button"
                   className="text-[11px] font-semibold text-primary"

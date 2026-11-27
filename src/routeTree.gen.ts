@@ -87,6 +87,7 @@ import { Route as DemoTratamientosRouteImport } from './routes/demo_.tratamiento
 import { Route as EncuestaTokenRouteImport } from './routes/encuesta.$token'
 import { Route as LaboratorioEnlaceTokenRouteImport } from './routes/laboratorio-enlace.$token'
 import { Route as MiPortalSlugRouteImport } from './routes/mi-portal.$slug'
+import { Route as PresupuestoTokenRouteImport } from './routes/presupuesto.$token'
 import { Route as SubirEstudioTokenRouteImport } from './routes/subir-estudio.$token'
 import { Route as TurnoTokenRouteImport } from './routes/turno.$token'
 import { Route as TurnosSlugRouteImport } from './routes/turnos.$slug'
@@ -486,6 +487,11 @@ const MiPortalSlugRoute = MiPortalSlugRouteImport.update({
   path: '/mi-portal/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PresupuestoTokenRoute = PresupuestoTokenRouteImport.update({
+  id: '/presupuesto/$token',
+  path: '/presupuesto/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubirEstudioTokenRoute = SubirEstudioTokenRouteImport.update({
   id: '/subir-estudio/$token',
   path: '/subir-estudio/$token',
@@ -606,6 +612,7 @@ export interface FileRoutesByFullPath {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
   '/turnos/$slug': typeof TurnosSlugRoute
@@ -693,6 +700,7 @@ export interface FileRoutesByTo {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
   '/turnos/$slug': typeof TurnosSlugRoute
@@ -782,6 +790,7 @@ export interface FileRoutesById {
   '/encuesta/$token': typeof EncuestaTokenRoute
   '/laboratorio-enlace/$token': typeof LaboratorioEnlaceTokenRoute
   '/mi-portal/$slug': typeof MiPortalSlugRoute
+  '/presupuesto/$token': typeof PresupuestoTokenRoute
   '/subir-estudio/$token': typeof SubirEstudioTokenRoute
   '/turno/$token': typeof TurnoTokenRoute
   '/turnos/$slug': typeof TurnosSlugRoute
@@ -872,6 +881,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
     | '/turnos/$slug'
@@ -959,6 +969,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
     | '/turnos/$slug'
@@ -1047,6 +1058,7 @@ export interface FileRouteTypes {
     | '/encuesta/$token'
     | '/laboratorio-enlace/$token'
     | '/mi-portal/$slug'
+    | '/presupuesto/$token'
     | '/subir-estudio/$token'
     | '/turno/$token'
     | '/turnos/$slug'
@@ -1114,6 +1126,7 @@ export interface RootRouteChildren {
   EncuestaTokenRoute: typeof EncuestaTokenRoute
   LaboratorioEnlaceTokenRoute: typeof LaboratorioEnlaceTokenRoute
   MiPortalSlugRoute: typeof MiPortalSlugRoute
+  PresupuestoTokenRoute: typeof PresupuestoTokenRoute
   SubirEstudioTokenRoute: typeof SubirEstudioTokenRoute
   TurnoTokenRoute: typeof TurnoTokenRoute
   TurnosSlugRoute: typeof TurnosSlugRoute
@@ -1674,6 +1687,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MiPortalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/presupuesto/$token': {
+      id: '/presupuesto/$token'
+      path: '/presupuesto/$token'
+      fullPath: '/presupuesto/$token'
+      preLoaderRoute: typeof PresupuestoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subir-estudio/$token': {
       id: '/subir-estudio/$token'
       path: '/subir-estudio/$token'
@@ -1841,6 +1861,7 @@ const rootRouteChildren: RootRouteChildren = {
   EncuestaTokenRoute: EncuestaTokenRoute,
   LaboratorioEnlaceTokenRoute: LaboratorioEnlaceTokenRoute,
   MiPortalSlugRoute: MiPortalSlugRoute,
+  PresupuestoTokenRoute: PresupuestoTokenRoute,
   SubirEstudioTokenRoute: SubirEstudioTokenRoute,
   TurnoTokenRoute: TurnoTokenRoute,
   TurnosSlugRoute: TurnosSlugRoute,

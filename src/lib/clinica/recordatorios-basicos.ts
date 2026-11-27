@@ -586,3 +586,48 @@ export function useDescuentoKits() {
     descontarKitsDeTurnos(turnos, hoyISO());
   }, [turnos, kits, puede, plan, real]);
 }
+
+/* Lo que el PACIENTE respondió con el enlace del presupuesto (aprobó con firma o rechazó):
+   aviso en Notificaciones (una vez) y el presupuesto queda marcado como avisado. */
+export function useRespuestasPresupuestos() {
+  const real = useClinicaReal();
+  const puede = !real || ["admin", "secretaria"].includes(real.rol);
+  const regs = useTodosLosRegistros();
+  const notifs = storeNotificaciones.usar();
+  useEffect(() => {
+    if (!puede || !cargados(!!real, ["registros", "notificaciones"])) return;
+    const pendientes = Object.entries(regs).flatMap(([pid, r]) =>
+      (r?.presupuestos ?? []).filter((p) => p.respuestaPaciente && !p.respuestaPaciente.avisada).map((p) => ({ pid: Number(pid), p })),
+    );
+    if (!pendientes.length) return;
+    const pacs = leerPacientes();
+    const existentes = new Set(storeNotificaciones.leer().manuales.map((m) => m.id));
+    const ahora = new Date().toISOString();
+    const nuevos: NotifManual[] = pendientes
+      .map(({ pid, p }) => {
+        const pac = pacs.find((x) => x.id === pid);
+        const nombre = pac ? `${pac.nombre} ${pac.apellido}` : "El paciente";
+        const aprobo = p.respuestaPaciente!.tipo === "Aprobado";
+        return {
+          id: `pres-resp-${pid}-${p.id}`,
+          titulo: aprobo ? `${nombre} aprobó y firmó el presupuesto ${p.numero}` : `${nombre} rechazó el presupuesto ${p.numero}`,
+          detalle: aprobo
+            ? "Lo aprobó desde el enlace. El cargo ya está en su cuenta: coordiná la seña y los turnos."
+            : `Lo rechazó desde el enlace${p.respuestaPaciente!.motivo ? `: «${p.respuestaPaciente!.motivo}»` : ""}. Podés llamarlo para ofrecerle otra opción.`,
+          categoria: "Administración" as const,
+          prioridad: aprobo ? ("Alta" as const) : ("Normal" as const),
+          asignado: "Recepción",
+          vence: hoyISO(),
+          horaVence: "",
+          creada: ahora,
+          creadaPor: "Paciente",
+        };
+      })
+      .filter((n) => !existentes.has(n.id));
+    if (nuevos.length) setNotificaciones("manuales", (prev) => [...nuevos, ...prev]);
+    for (const { pid, p } of pendientes)
+      cambiarRegistro(pid, "presupuestos", (prev) =>
+        prev.map((x) => (x.id === p.id && x.respuestaPaciente ? { ...x, respuestaPaciente: { ...x.respuestaPaciente, avisada: true } } : x)),
+      );
+  }, [regs, puede, notifs, real]);
+}

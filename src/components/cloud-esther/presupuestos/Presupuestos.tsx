@@ -1,4 +1,5 @@
 import { telefonoInternacional } from "@/lib/clinica/whatsapp";
+import { crearEnlacePresupuesto } from "@/lib/clinica/enlace-estudio";
 import { useEffect, useRef, useState } from "react";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNavigate } from "@tanstack/react-router";
@@ -134,6 +135,20 @@ const estadoVisual = (p: PresupuestoPaciente) => (vencido(p) ? "Vencido" : p.est
 function wa(tel: string, texto: string) {
   return `https://wa.me/${telefonoInternacional(tel)}?text=${encodeURIComponent(texto)}`;
 }
+/** Abre WhatsApp con el enlace para que el paciente vea y apruebe (con su firma) el presupuesto.
+    La ventana se abre YA (si no, el celular la bloquea) y el enlace se completa en un instante. */
+function abrirWhatsAppConEnlace(tel: string, pid: number, presupuestoId: number, armar: (enlace: string | null) => string) {
+  const ventana = window.open("", "_blank");
+  void crearEnlacePresupuesto(pid, presupuestoId)
+    .catch(() => null)
+    .then((enlace) => {
+      const url = wa(tel, armar(enlace));
+      if (ventana && !ventana.closed) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else window.open(url, "_blank", "noopener,noreferrer");
+    });
+}
 
 /* ───────────── Página ───────────── */
 
@@ -253,7 +268,7 @@ export function Presupuestos() {
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
                   Armá presupuestos con tus aranceles y plantillas, ofrecé planes de cuotas,
-                  enviálos por WhatsApp o al portal del paciente y seguí cada uno hasta que se
+                  mandalos por WhatsApp para que el paciente los apruebe con su firma desde el celular y seguí cada uno hasta que se
                   apruebe.
                 </p>
               </div>
@@ -480,10 +495,9 @@ function useAcciones(ctx: Ctx) {
       cambiar(f.pid, "presupuestos", (prev) => prev.filter((x) => x.id !== f.p.id));
       auditar(f.pid, `Eliminó el presupuesto ${f.p.numero}`);
     },
-    textoWhatsApp(f: Fila) {
+    textoWhatsApp(f: Fila, enlace: string | null = null) {
       const tot = totalesPresupuesto(f.p, planes);
-      const portal = typeof window !== "undefined" ? `${window.location.origin}/portal` : "/portal";
-      return `Hola ${f.pac?.nombre ?? ""}, te enviamos tu presupuesto ${f.p.numero} por ${ars(tot.final)}${tot.plan && tot.cuotas > 1 ? ` (${tot.cuotas} cuotas de ${ars(tot.cuota)})` : ""}. Podés verlo y aprobarlo desde tu portal: ${portal}`;
+      return `Hola ${f.pac?.nombre ?? ""} 👋 Te enviamos tu presupuesto ${f.p.numero} por ${ars(tot.final)}${tot.plan && tot.cuotas > 1 ? ` (${tot.cuotas} cuotas de ${ars(tot.cuota)})` : ""}.${enlace ? ` Miralo y, si estás de acuerdo, aprobalo con tu firma desde el celular:\n${enlace}` : " Cualquier duda, escribinos por acá."}`;
     },
   };
 }
@@ -506,7 +520,7 @@ ${tot.descuento ? `<tr><td colspan="4" class="r">Descuento ${f.p.descuentoPct}%<
 ${tot.plan ? `<tr><td colspan="4" class="r">${tot.plan.nombre} (${tot.plan.recargoPct >= 0 ? "+" : ""}${tot.plan.recargoPct}%)</td><td class="r">${ars(tot.final - tot.total)}</td></tr>` : ""}
 <tr class="tot"><td colspan="4">Total${tot.cuotas > 1 ? ` · ${tot.cuotas} cuotas de ${ars(tot.cuota)}` : ""}</td><td class="r">${ars(tot.final)}</td></tr></tbody></table>
 ${f.p.notas ? `<h2>Observaciones</h2><p>${f.p.notas}</p>` : ""}<h2>Condiciones</h2><p>${condiciones}</p>
-<div class="firma"><span>Profesional</span><span>Conformidad del paciente</span></div>`,
+${f.p.firmaPaciente?.imagen ? `<div class="firma"><span>Profesional</span><span><img src="${f.p.firmaPaciente.imagen}" style="height:48px;display:block;margin:0 auto 4px" alt="">Conformidad: ${f.p.firmaPaciente.nombre.replace(/[<>&"]/g, "")} · ${fecha(f.p.firmaPaciente.fecha.slice(0, 10))}</span></div>` : `<div class="firma"><span>Profesional</span><span>Conformidad del paciente</span></div>`}`,
   );
 }
 
@@ -845,21 +859,20 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
       )}
     </div>
   );
-  const btnWA = (f: Fila, texto: string) =>
+  const btnWA = (f: Fila, texto: (enlace: string | null) => string) =>
     f.pac?.telefono ? (
-      <a
-        href={wa(f.pac.telefono, texto)}
-        target="_blank"
-        rel="noreferrer"
+      <button
+        type="button"
         className={BTN_PRIMARIO}
         onClick={() => {
+          abrirWhatsAppConEnlace(f.pac!.telefono, f.pid, f.p.id, texto);
           acc.nota(f, "Recordatorio enviado por WhatsApp");
           ctx.onToast(`Recordatorio registrado para ${nombrePac(f.pac)}`);
         }}
       >
         <MessageCircle className="size-4" />
         Recordar
-      </a>
+      </button>
     ) : null;
   return (
     <div className="space-y-3">
@@ -877,7 +890,8 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
           accion={(f) =>
             btnWA(
               f,
-              `Hola ${f.pac?.nombre ?? ""}, ¿pudiste ver el presupuesto ${f.p.numero}? Si tenés dudas sobre el tratamiento o las cuotas, escribinos. ¡Te esperamos!`,
+              (enlace) =>
+                `Hola ${f.pac?.nombre ?? ""}, ¿pudiste ver el presupuesto ${f.p.numero}? ${enlace ? `Lo tenés acá para verlo y aprobarlo desde el celular:\n${enlace}\n` : ""}Si tenés dudas sobre el tratamiento o las cuotas, escribinos. ¡Te esperamos!`,
             )
           }
         />
@@ -930,8 +944,14 @@ function Seguimiento({ ctx, filas }: { ctx: Ctx; filas: Fila[] }) {
               type="button"
               className={BTN_PRIMARIO}
               onClick={() => {
-                acc.enviar(f, "portal del paciente");
-                ctx.onToast(`${f.p.numero} enviado: ya aparece en el portal del paciente`);
+                if (f.pac?.telefono) {
+                  abrirWhatsAppConEnlace(f.pac.telefono, f.pid, f.p.id, (enlace) => acc.textoWhatsApp(f, enlace));
+                  acc.enviar(f, "WhatsApp");
+                  ctx.onToast(`${f.p.numero} enviado: el paciente lo aprueba desde el enlace`);
+                } else {
+                  acc.enviar(f, "la clínica");
+                  ctx.onToast(`${f.p.numero} marcado como enviado (el paciente no tiene WhatsApp cargado)`);
+                }
               }}
             >
               <Send className="size-4" />
@@ -1080,23 +1100,32 @@ function Detalle({
         </div>
       </div>
       {p.notas && <p className="mt-2 text-xs italic text-muted-foreground">“{p.notas}”</p>}
+      {p.firmaPaciente?.imagen && (
+        <div className="mt-3 flex items-center gap-3 rounded-xl bg-emerald-50/70 px-3 py-2 ring-1 ring-emerald-200">
+          <img src={p.firmaPaciente.imagen} alt="Firma del paciente" className="h-12 w-28 shrink-0 rounded-lg bg-white object-contain ring-1 ring-emerald-100" />
+          <p className="min-w-0 text-[11px] text-emerald-900">
+            <b>Aprobado y firmado por {p.firmaPaciente.nombre}</b>
+            <br />
+            desde el enlace, el {fecha(p.firmaPaciente.fecha.slice(0, 10))} a las {new Date(p.firmaPaciente.fecha).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+      )}
       <div className="mt-4 flex flex-wrap gap-2 border-t border-primary/10 pt-3">
         {(p.estado === "Borrador" || p.estado === "Enviado") && (
           <>
             {pac?.telefono && (
-              <a
-                href={wa(pac.telefono, acc.textoWhatsApp(f))}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
                 className={BTN_PRIMARIO}
                 onClick={() => {
+                  abrirWhatsAppConEnlace(pac.telefono, f.pid, p.id, (enlace) => acc.textoWhatsApp(f, enlace));
                   acc.enviar(f, "WhatsApp");
-                  ctx.onToast("Enviado por WhatsApp y publicado en el portal del paciente");
+                  ctx.onToast("Enviado por WhatsApp: el paciente lo ve y lo aprueba con su firma desde el celular");
                 }}
               >
                 <MessageCircle className="size-4" />
                 WhatsApp
-              </a>
+              </button>
             )}
             {pac?.email && (
               <a

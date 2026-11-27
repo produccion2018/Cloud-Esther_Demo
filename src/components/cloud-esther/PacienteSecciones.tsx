@@ -575,6 +575,10 @@ export type PresupuestoPaciente = {
   respondido?: string;
   motivoRechazo?: string;
   seguimientos?: SeguimientoPresupuesto[];
+  /** Firma del paciente al aprobar con el enlace (imagen PNG chica) */
+  firmaPaciente?: { nombre: string; imagen: string; fecha: string };
+  /** Respuesta del paciente con el enlace: la clínica recibe el aviso una vez */
+  respuestaPaciente?: { tipo: string; fecha: string; via?: string; avisada?: boolean; motivo?: string };
 };
 
 type TurnoPaciente = {

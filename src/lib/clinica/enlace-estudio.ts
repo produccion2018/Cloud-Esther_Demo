@@ -1,7 +1,7 @@
 import { pedirAClinica } from "./api";
 import { SLUG_DEMO } from "./demo-admin";
 import { clinicaReal } from "./modo-clinica";
-import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, crearEnlaceBajaDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { crearEnlaceEstudioDemo, crearEnlaceLaboratorioDemo, crearEnlaceTurnoDemo, crearEnlaceBajaDemo, crearEnlacePresupuestoDemo, demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 
 /* Ubicación: src/lib/clinica/enlace-estudio.ts
@@ -73,6 +73,24 @@ export async function crearEnlaceBaja(pacienteId: number): Promise<string | null
       token = (await crearEnlaceBajaDemo({ pacienteId, clave: claveDemoServidor("pacientes", tenantActual()) })).token;
     } else return null;
     return `${window.location.origin}/baja/${token}`;
+  } catch {
+    return null;
+  }
+}
+
+/* Enlace para que el PACIENTE vea su presupuesto y lo apruebe con su firma (o lo rechace) desde
+   el celular, sin portal ni cuenta. Sirve en todos los planes. Si no se puede crear (demo sin
+   cuenta o sin conexión) devuelve null y el mensaje sale igual, sin el enlace. */
+export async function crearEnlacePresupuesto(pacienteId: number, presupuestoId: number): Promise<string | null> {
+  const slug = clinicaReal()?.slug;
+  try {
+    let token: string;
+    if (slug && slug !== SLUG_DEMO) {
+      token = (await pedirAClinica<{ token: string }>(slug, "POST", "/presupuestos/enlaces", { pacienteId, presupuestoId })).token;
+    } else if (demoConDatosEnServidor()) {
+      token = (await crearEnlacePresupuestoDemo({ pacienteId, presupuestoId, clave: claveDemoServidor("registros", tenantActual()) })).token;
+    } else return null;
+    return `${window.location.origin}/presupuesto/${token}`;
   } catch {
     return null;
   }

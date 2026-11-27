@@ -424,3 +424,12 @@ export function useEstadoDemoServidor(activo: boolean) {
   }, [activo]);
   return { restanteMs: activo ? restanteDemoServidorMs() : null, avisoMs: avisoDemoServidorMs() };
 }
+
+/** Enlace para que el paciente apruebe (con firma) o rechace su presupuesto del demo. */
+export async function crearEnlacePresupuestoDemo(datos: { clave: string; pacienteId: number; presupuestoId: number }): Promise<{ token: string }> {
+  const token = leerGuardado()?.token;
+  if (!API_URL || !token) throw new ErrorDatosDemo("Entrá al demo con tu cuenta para usar esta opción.", 401);
+  const r = await pedir("POST", "/demo/presupuestos/enlaces", datos, token);
+  if (!r.ok) throw new ErrorDatosDemo(await textoError(r), r.status);
+  return (await r.json()) as { token: string };
+}

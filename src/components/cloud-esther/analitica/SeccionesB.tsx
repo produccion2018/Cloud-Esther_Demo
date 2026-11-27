@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { clinicaReal } from "@/lib/clinica/modo-clinica";
+import { pedirAClinica } from "@/lib/clinica/api";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BadgeDollarSign,
@@ -1029,7 +1031,7 @@ export function Reportes({ ctx }: { ctx: CtxBI }) {
                       aria-label="Enviar ahora"
                       title="Enviar ahora"
                       className={BTN_ICONO}
-                      onClick={() => ctx.onToast(`Reporte enviado a ${e.destinatarios}`)}
+                      onClick={() => void enviarResumenAhora(ctx, e.destinatarios)}
                     >
                       <Send className="size-3.5" />
                     </button>
@@ -1274,4 +1276,17 @@ export function exportarTablero(ctx: CtxBI) {
       filas: r3.map((f) => ({ k: f.etiqueta, v: f.v })),
     },
   ]);
+}
+
+/** Manda ya el resumen de la clínica a los destinatarios de un envío programado. */
+async function enviarResumenAhora(ctx: CtxBI, destinatarios: string) {
+  const real = clinicaReal();
+  if (!real) return ctx.onToast("En el demo el correo no sale: en tu clínica le llega el resumen a cada destinatario");
+  const correos = destinatarios.split(/[,;\s]+/).map((c) => c.trim()).filter((c) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)).slice(0, 5);
+  try {
+    const r = await pedirAClinica<{ destino: string[] }>(real.slug, "POST", "/resumen/enviar", correos.length ? { correos } : {});
+    ctx.onToast(`Resumen enviado a ${r.destino.join(", ")}`);
+  } catch (err) {
+    ctx.onToast(err instanceof Error ? err.message : "No se pudo enviar el resumen");
+  }
 }

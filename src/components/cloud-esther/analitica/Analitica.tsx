@@ -23,6 +23,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
@@ -47,6 +48,9 @@ import {
   type Filtros,
   type Periodo,
 } from "@/components/cloud-esther/analitica/datos";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { pedirAClinica } from "@/lib/clinica/api";
+import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
@@ -74,6 +78,7 @@ import {
   Acciones,
   BTN_PRIMARIO,
   BTN_SECUNDARIO,
+  CHIP,
   Field,
   INPUT,
   Modal as ModalBase,
@@ -485,6 +490,7 @@ function Resumen({ ctx }: { ctx: CtxBI }) {
     <div className="space-y-3">
       <ComoEsta ctx={ctx} />
       <QueHacer ctx={ctx} navegar={(to) => void navigate({ to })} />
+      <ResumenDueno ctx={ctx} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           label="Producción"
@@ -1100,5 +1106,103 @@ function ComoEsta({ ctx }: { ctx: CtxBI }) {
         </ul>
       )}
     </section>
+  );
+}
+
+/* ───────────── Resumen al Dueño/a (semanal o mensual) ───────────── */
+
+function ResumenDueno({ ctx }: { ctx: CtxBI }) {
+  const real = useClinicaReal();
+  const cfg = ctx.cfg.resumenDueno ?? { activo: false, frecuencia: "Semanal" as const, correos: "" };
+  const esAdmin = !real || real.rol === "admin";
+  const [enviando, setEnviando] = useState(false);
+  const set = (c: Partial<typeof cfg>) => setAnalitica("resumenDueno", () => ({ ...cfg, ...c }));
+  const { m } = ctx;
+  const aus = ctx.hs.filter((h) => h.estado === "Ausente").length;
+  const pl = (k: number, uno: string, varios: string) => (k === 1 ? uno : varios.replace("#", String(k)));
+  const texto = [
+    `Resumen de los últimos ${ctx.rango.dias} días`,
+    `• ${pl(m.atenciones, "Se atendió 1 turno", "Se atendieron # turnos")} de ${pl(m.pacientes, "1 paciente", "# pacientes")}`,
+    aus ? `• ${pl(aus, "Faltó 1 paciente", "Faltaron # pacientes")} sin avisar` : "• No faltó nadie sin avisar",
+    m.nuevos ? `• ${pl(m.nuevos, "Llegó 1 paciente nuevo", "Llegaron # pacientes nuevos")}` : "• No llegaron pacientes nuevos",
+    m.produccion ? `• Se produjo ${ctx.$(m.produccion)} en tratamientos` : "",
+    m.presupuestos ? `• Presupuestos: ${m.presupuestos} y se aprobó el ${Math.round(m.conversion)}%` : "",
+    "",
+    "Lo ves completo en Cloud Esther → Analítica.",
+  ]
+    .filter((l, i, a) => l || a[i - 1])
+    .join("\n");
+  const porCorreo = async () => {
+    if (!real) return ctx.onToast("En el demo el correo no sale: en tu clínica llega solo a tu casilla");
+    setEnviando(true);
+    try {
+      const correos = cfg.correos.split(/[,;\s]+/).map((c) => c.trim()).filter((c) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)).slice(0, 5);
+      const r = await pedirAClinica<{ enviados: number; destino: string[] }>(real.slug, "POST", "/resumen/enviar", correos.length ? { correos } : {});
+      ctx.onToast(`Resumen enviado a ${r.destino.join(", ")}`);
+    } catch (e) {
+      ctx.onToast(e instanceof Error ? e.message : "No se pudo enviar el resumen");
+    } finally {
+      setEnviando(false);
+    }
+  };
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Mail className="size-4 text-primary" /> Resumen al Dueño/a
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+            {cfg.activo
+              ? cfg.frecuencia === "Mensual"
+                ? "Llega solo por correo el 1 de cada mes, con el mes anterior."
+                : "Llega solo por correo cada lunes, con la semana anterior."
+              : "Recibí por correo cómo le fue a la clínica, sin entrar a la app."}
+          </p>
+        </div>
+        {esAdmin && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold">
+            <input
+              type="checkbox"
+              checked={cfg.activo}
+              onChange={(e) => {
+                set({ activo: e.target.checked });
+                ctx.onToast(e.target.checked ? "Resumen activado" : "Resumen pausado");
+              }}
+              className="size-4 accent-[var(--color-primary)]"
+            />
+            Mandármelo solo
+          </label>
+        )}
+      </div>
+      {esAdmin && cfg.activo && (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+          <div className="flex gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+            {(["Semanal", "Mensual"] as const).map((f) => (
+              <button key={f} type="button" className={`${CHIP(cfg.frecuencia === f)} flex-1`} onClick={() => set({ frecuencia: f })}>
+                {f === "Semanal" ? "Cada semana" : "Cada mes"}
+              </button>
+            ))}
+          </div>
+          <input
+            value={cfg.correos}
+            onChange={(e) => set({ correos: e.target.value })}
+            placeholder="Correos (vacío = Administradores)"
+            aria-label="Correos para el resumen"
+            className={INPUT}
+          />
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer" className="btn-wa">
+          <IconoWhatsApp /> Mandar por WhatsApp
+        </a>
+        {esAdmin && (
+          <button type="button" className={BTN_SECUNDARIO} disabled={enviando} onClick={() => void porCorreo()}>
+            <Mail className="size-4" /> {enviando ? "Enviando…" : "Mandar ahora por correo"}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

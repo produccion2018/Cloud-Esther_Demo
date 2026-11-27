@@ -49,6 +49,8 @@ export type EstadoAnalitica = {
   };
   reportes: ReporteGuardado[];
   envios: EnvioProgramado[];
+  /** Resumen semanal o mensual al Dueño/a por correo (lo manda el servidor solo) */
+  resumenDueno?: { activo: boolean; frecuencia: "Semanal" | "Mensual"; correos: string };
 };
 
 export const storeAnalitica = crearStorePorEmpresa<EstadoAnalitica>(

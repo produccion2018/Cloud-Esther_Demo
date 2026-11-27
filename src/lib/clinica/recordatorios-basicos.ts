@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { setTareasStore, setTurnosStore, storeAgenda } from "@/lib/cloud-esther/agenda-store";
-import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
+import { MODULES, availableIn, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { storeLaboratorios } from "@/lib/cloud-esther/laboratorios-store";
 import { setNotificaciones, storeNotificaciones, type NotifManual, generarRutinasDeHoy, subirTareasSinAtenderLocal } from "@/lib/cloud-esther/notificaciones-store";
@@ -35,7 +35,9 @@ import type { Turno } from "@/lib/cloud-esther/agenda-store";
 import type { Paciente } from "@/lib/cloud-esther/pacientes";
 import { normalizarBusqueda } from "@/lib/utils";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
-import { deudaDe } from "@/lib/cloud-esther/facturacion-store";
+import { deudaDe, paisFiscal, storeFacturacion } from "@/lib/cloud-esther/facturacion-store";
+import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
+import { generarGastosFijosDelMes, storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
 
 /** Turnos atendidos (últimos `dias` días) que todavía no tienen evolución ni nota clínica ese día */
 export function turnosSinEvolucion(
@@ -400,6 +402,38 @@ export function useRecordatoriosBasicos() {
             categoria: "Administración",
             prioridad: "Normal",
           });
+      }
+
+      // 5a3) Finanzas (Pro o más): los gastos fijos del mes se cargan solos y se avisa antes de
+      //      que venza cada pago (alquiler, proveedores, servicios…) y de lo que ya venció.
+      const modFin = MODULES.find((m) => m.id === "finanzas");
+      if (modFin && availableIn(modFin, plan) && planLevel(plan) >= 2 && (!real || moduloCargado("finanzas"))) {
+        if (storeFinanzas.leer().fijosAuto !== false) generarGastosFijosDelMes();
+        if (!existentes.has(`basico-pagos-${hoy}`)) {
+          const fin = storeFinanzas.leer();
+          const dias = Math.max(1, Math.round(fin.avisoPagosDias ?? 3));
+          const pend = fin.cuentasPagar.filter((c) => c.estado === "Pendiente");
+          const vencidas = pend.filter((c) => c.vence < hoy);
+          const proximas = pend.filter((c) => c.vence >= hoy && c.vence <= hoyISO(dias)).sort((a, b) => a.vence.localeCompare(b.vence));
+          const moneda = paisFiscal(storeFacturacion.leer().config.pais).moneda;
+          const $ = (n: number) => formatoMoneda(n, moneda);
+          const cuando = (f: string) => (f === hoy ? "hoy" : f === hoyISO(1) ? "mañana" : `el ${f.slice(8, 10)}/${f.slice(5, 7)}`);
+          if (vencidas.length || proximas.length)
+            nuevos.push({
+              ...base,
+              asignado: "Administración",
+              id: `basico-pagos-${hoy}`,
+              titulo: vencidas.length
+                ? `${vencidas.length} pago${vencidas.length === 1 ? "" : "s"} vencido${vencidas.length === 1 ? "" : "s"}${proximas.length ? ` y ${proximas.length} por vencer` : ""}`
+                : `${proximas.length} pago${proximas.length === 1 ? "" : "s"} por vencer`,
+              detalle: [
+                ...vencidas.slice(0, 3).map((c) => `Vencido: ${c.proveedor || c.concepto} ${$(c.monto)}`),
+                ...proximas.slice(0, 3).map((c) => `${c.proveedor || c.concepto} ${$(c.monto)} vence ${cuando(c.vence)}`),
+              ].join(" · ") + ". Pagalo desde Finanzas → Cuentas a pagar.",
+              categoria: "Administración",
+              prioridad: vencidas.length || proximas.some((c) => c.vence <= hoyISO(1)) ? "Alta" : "Normal",
+            });
+        }
       }
 
       // 5b) Cumpleaños de hoy (sin el flujo automático: saludo a mano desde Comunicación)

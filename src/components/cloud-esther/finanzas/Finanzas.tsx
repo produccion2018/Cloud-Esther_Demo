@@ -44,6 +44,7 @@ import {
   CATEGORIAS_INGRESO,
   diaDelMes,
   diaISO,
+  generarGastosFijosDelMes,
   mesISO,
   nombreMes,
   setFinanzas,
@@ -1093,30 +1094,8 @@ function CuentasPagar({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
   };
 
   const generarFijos = () => {
-    const mes = mesISO(0);
-    setFinanzas("cuentasPagar", (p) => [
-      ...p,
-      ...sinGenerar.map((g, i) => ({
-        id: `cp-${Date.now()}-${i}`,
-        proveedor: g.proveedor,
-        numero: "",
-        concepto: `${g.concepto} · ${nombreMes(mes, true)}`,
-        categoria: g.categoria,
-        sucursal: g.sucursal,
-        emision: hoy,
-        vence: diaDelMes(0, g.dia) < hoy ? hoy : diaDelMes(0, g.dia),
-        monto: g.monto,
-        estado: "Pendiente" as const,
-        pagada: "",
-        movId: "",
-        origen: "Gasto fijo" as const,
-        ref: `${g.id}:${mes}`,
-      })),
-    ]);
-    setFinanzas("generados", (p) => [...p, ...sinGenerar.map((g) => `${g.id}:${mes}`)]);
-    ctx.onToast(
-      `${sinGenerar.length} gasto${sinGenerar.length > 1 ? "s" : ""} fijo${sinGenerar.length > 1 ? "s" : ""} generado${sinGenerar.length > 1 ? "s" : ""}`,
-    );
+    const n = generarGastosFijosDelMes();
+    ctx.onToast(`${n} gasto${n > 1 ? "s" : ""} fijo${n > 1 ? "s" : ""} generado${n > 1 ? "s" : ""}`);
   };
 
   const exportar = () =>
@@ -1161,6 +1140,7 @@ function CuentasPagar({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
           <Plus className="size-4" /> Factura de proveedor
         </button>
       </Encabezado>
+      <AvisoPagos ctx={ctx} />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Mini
           label="Vencido"
@@ -1243,7 +1223,13 @@ function CuentasPagar({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                     >
                       {c.estado === "Pagada"
                         ? `Pagada ${fecha(c.pagada)}`
-                        : `${vencida ? "Venció" : "Vence"} ${fecha(c.vence)}`}
+                        : vencida
+                          ? `Venció ${fecha(c.vence)}`
+                          : c.vence === hoy
+                            ? "Vence hoy"
+                            : c.vence === diaISO(1)
+                              ? "Vence mañana"
+                              : `Vence ${fecha(c.vence)}`}
                     </span>
                     <b className="text-[13px]">{ctx.$(c.monto)}</b>
                     <Pill
@@ -2482,6 +2468,52 @@ function GastoRapido({
           <CheckCircle2 className="size-4" />
           {subiendo ? "Subiendo la factura…" : n > 0 ? `3 · Guardar ${ctx.$(n)}` : "3 · Guardar"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** Cuándo avisar de cada pago y si los gastos fijos se cargan solos cada mes. */
+function AvisoPagos({ ctx }: { ctx: CtxFin }) {
+  const { avisoPagosDias = 3, fijosAuto = true, gastosFijos } = storeFinanzas.usar();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-sky-50 to-violet-50 px-3.5 py-2.5 ring-1 ring-primary/10">
+      <p className="flex min-w-0 items-center gap-2 text-xs text-slate-700">
+        <AlarmClock className="size-4 shrink-0 text-primary" />
+        <span>
+          <b>Te avisamos en Notificaciones</b> antes de que venza cada pago, y si algo se pasó.
+        </span>
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+          {[1, 3, 7].map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={CHIP(avisoPagosDias === d)}
+              onClick={() => {
+                setFinanzas("avisoPagosDias", () => d);
+                ctx.onToast(`Te avisamos ${d === 1 ? "1 día" : `${d} días`} antes de cada vencimiento`);
+              }}
+            >
+              {d === 1 ? "1 día antes" : `${d} días antes`}
+            </button>
+          ))}
+        </div>
+        {gastosFijos.length > 0 && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
+            <input
+              type="checkbox"
+              checked={fijosAuto}
+              onChange={(e) => {
+                setFinanzas("fijosAuto", () => e.target.checked);
+                ctx.onToast(e.target.checked ? "Los gastos fijos se cargan solos el 1 de cada mes" : "Los gastos fijos se generan a mano");
+              }}
+              className="size-4 accent-[var(--color-primary)]"
+            />
+            Gastos fijos solos cada mes
+          </label>
+        )}
       </div>
     </div>
   );

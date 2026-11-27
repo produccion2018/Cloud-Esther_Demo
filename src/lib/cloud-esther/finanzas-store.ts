@@ -135,6 +135,10 @@ export type EstadoFinanzas = {
   laboratorioRegistrado: string[]; // `${pacienteId}:${trabajoId}`
   historico: { mes: string; ingresos: number; egresos: number }[];
   umbralSaldo: number;
+  /** Cuántos días antes avisar de cada pago (por defecto 3) */
+  avisoPagosDias?: number;
+  /** Los gastos fijos del mes (alquiler, servicios…) se cargan solos el día 1 (por defecto, sí) */
+  fijosAuto?: boolean;
 };
 
 /* ───────────── Fechas ───────────── */
@@ -222,3 +226,37 @@ export function setFinanzas<K extends keyof EstadoFinanzas>(
 }
 
 export const SUCURSAL_GENERAL = GENERAL;
+/** Carga como «cuentas a pagar» los gastos fijos del mes que todavía no se generaron.
+    Devuelve cuántos generó (una sola vez por gasto y mes). */
+export function generarGastosFijosDelMes(): number {
+  const fin = storeFinanzas.leer();
+  const mes = mesISO(0);
+  const hoy = diaISO();
+  const sinGenerar = fin.gastosFijos.filter((g) => g.activo && !fin.generados.includes(`${g.id}:${mes}`));
+  if (!sinGenerar.length) return 0;
+  const ahora = Date.now();
+  storeFinanzas.poner({
+    ...fin,
+    cuentasPagar: [
+      ...fin.cuentasPagar,
+      ...sinGenerar.map((g, i) => ({
+        id: `cp-${ahora}-${i}`,
+        proveedor: g.proveedor,
+        numero: "",
+        concepto: `${g.concepto} · ${nombreMes(mes, true)}`,
+        categoria: g.categoria,
+        sucursal: g.sucursal,
+        emision: hoy,
+        vence: diaDelMes(0, g.dia) < hoy ? hoy : diaDelMes(0, g.dia),
+        monto: g.monto,
+        estado: "Pendiente" as const,
+        pagada: "",
+        movId: "",
+        origen: "Gasto fijo" as const,
+        ref: `${g.id}:${mes}`,
+      })),
+    ],
+    generados: [...fin.generados, ...sinGenerar.map((g) => `${g.id}:${mes}`)],
+  });
+  return sinGenerar.length;
+}

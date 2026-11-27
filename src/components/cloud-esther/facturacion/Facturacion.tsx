@@ -106,6 +106,7 @@ import {
 import { IconoWhatsApp } from "@/components/cloud-esther/IconoWhatsApp";
 import { abrirWhatsAppConEnlacePago } from "@/lib/clinica/enlace-estudio";
 import { setPortal, storePortal } from "@/lib/cloud-esther/portal-store";
+import { setNotificaciones } from "@/lib/cloud-esther/notificaciones-store";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/facturacion/Facturacion.tsx
@@ -1942,8 +1943,14 @@ function Caja({ ctx }: { ctx: Ctx }) {
   const [suc, setSuc] = useState(SUCURSALES[0] ?? "Clínica Centro");
   const [mov, setMov] = useState<"Ingreso" | "Egreso" | null>(null);
   const [cerrar, setCerrar] = useState(false);
-  const [inicial, setInicial] = useState("50000");
   const abierta = sesiones.find((s) => s.sucursal === suc && !s.cerrada);
+  // Para abrir: lo que quedó en la caja al último cierre (nada inventado)
+  const ultimoCierre = sesiones
+    .filter((s) => s.sucursal === suc && s.cerrada)
+    .sort((a, b) => b.cerrada.localeCompare(a.cerrada))[0];
+  const [inicial, setInicial] = useState("");
+  const { miembros } = useEquipo();
+  const [resumen, setResumen] = useState<string | null>(null);
   const movs = movimientos
     .filter((m) => m.sesionId === abierta?.id)
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -1983,6 +1990,7 @@ function Caja({ ctx }: { ctx: Ctx }) {
               <p className="text-sm font-semibold">La caja de {suc} está cerrada</p>
               <p className="text-xs text-muted-foreground">
                 Abrila con el efectivo inicial para registrar los cobros del día.
+                {ultimoCierre ? ` Al último cierre quedaron ${ctx.$(ultimoCierre.contado)}.` : ""}
               </p>
             </div>
           </div>
@@ -1992,6 +2000,7 @@ function Caja({ ctx }: { ctx: Ctx }) {
                 type="number"
                 min={0}
                 value={inicial}
+                placeholder={ultimoCierre ? String(ultimoCierre.contado) : "0"}
                 onChange={(e) => setInicial(e.target.value)}
                 className={INPUT}
                 aria-label="Efectivo inicial"
@@ -2008,7 +2017,7 @@ function Caja({ ctx }: { ctx: Ctx }) {
                   id: `s-${Date.now()}`,
                   sucursal: suc,
                   abierta: new Date().toISOString(),
-                  inicial: Number(inicial) || 0,
+                  inicial: inicial.trim() === "" ? (ultimoCierre?.contado ?? 0) : Number(inicial) || 0,
                   cerrada: "",
                   contado: 0,
                   usuario: ctx.usuario,
@@ -2150,17 +2159,28 @@ function Caja({ ctx }: { ctx: Ctx }) {
                   <span>
                     {fechaHora(s.abierta)} → {fechaHora(s.cerrada).slice(11)} · {s.usuario}
                   </span>
-                  <span>
-                    Contado {ctx.$(s.contado)} ·{" "}
-                    <b className={dif === 0 ? "text-emerald-600" : "text-rose-600"}>
-                      {dif === 0 ? "sin diferencias" : `diferencia ${ctx.$(dif)}`}
-                    </b>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span>
+                      Contado {ctx.$(s.contado)} ·{" "}
+                      <b className={dif === 0 ? "text-emerald-600" : "text-rose-600"}>
+                        {dif === 0 ? "sin diferencias" : `diferencia ${ctx.$(dif)}`}
+                      </b>
+                      {s.notaCierre ? ` · «${s.notaCierre}»` : ""}
+                    </span>
+                    <button type="button" className="font-semibold text-primary" onClick={() => setResumen(textoResumenCaja(ctx, suc, s, ms, esp))}>
+                      Ver resumen
+                    </button>
                   </span>
                 </li>
               );
             })}
           </ul>
         </div>
+      )}
+      {resumen && (
+        <M titulo="Resumen del día" onClose={() => setResumen(null)}>
+          <ResumenCaja texto={resumen} miembros={miembros} onCerrar={() => setResumen(null)} />
+        </M>
       )}
       {mov && abierta && (
         <M titulo={`Registrar ${mov.toLowerCase()}`} onClose={() => setMov(null)}>
@@ -2192,19 +2212,37 @@ function Caja({ ctx }: { ctx: Ctx }) {
           <CierreForm
             esperado={esperado}
             ctx={ctx}
+            movs={movs}
+            inicial={abierta.inicial}
             onCancel={() => setCerrar(false)}
-            onCerrar={(contado) => {
+            onCerrar={(contado, nota) => {
+              const cerrada = new Date().toISOString();
               setFacturacion("sesiones", (p) =>
                 p.map((s) =>
-                  s.id === abierta.id ? { ...s, cerrada: new Date().toISOString(), contado } : s,
+                  s.id === abierta.id ? { ...s, cerrada, contado, cerradaPor: ctx.usuario, ...(nota ? { notaCierre: nota } : {}) } : s,
                 ),
               );
+              const texto = textoResumenCaja(ctx, suc, { ...abierta, cerrada, contado, cerradaPor: ctx.usuario, ...(nota ? { notaCierre: nota } : {}) }, movs, esperado);
+              // Le llega a la Dirección (Dueño/a) en Notificaciones, esté donde esté
+              const dif = contado - esperado;
+              setNotificaciones("manuales", (prev) => [
+                {
+                  id: `caja-cierre-${abierta.id}`,
+                  titulo: `Caja de ${suc} cerrada${dif === 0 ? " sin diferencias" : `: ${dif > 0 ? "sobran" : "faltan"} ${ctx.$(Math.abs(dif))}`}`,
+                  detalle: texto.split("\n").slice(1).join(" · "),
+                  categoria: "Administración",
+                  prioridad: dif === 0 ? "Baja" : "Alta",
+                  asignado: "Dirección",
+                  vence: diaISO(),
+                  horaVence: "",
+                  creada: cerrada,
+                  creadaPor: ctx.usuario,
+                },
+                ...prev.filter((x) => x.id !== `caja-cierre-${abierta.id}`),
+              ]);
               setCerrar(false);
-              ctx.onToast(
-                contado === esperado
-                  ? "Caja cerrada sin diferencias"
-                  : `Caja cerrada con diferencia de ${ctx.$(contado - esperado)}`,
-              );
+              setResumen(texto);
+              ctx.onToast(dif === 0 ? "Caja cerrada sin diferencias" : `Caja cerrada: ${dif > 0 ? "sobran" : "faltan"} ${ctx.$(Math.abs(dif))}`);
             }}
           />
         </M>
@@ -2274,42 +2312,134 @@ function MovCajaForm({
 function CierreForm({
   esperado,
   ctx,
+  movs,
+  inicial,
   onCancel,
   onCerrar,
 }: {
   esperado: number;
   ctx: Ctx;
+  movs: { tipo: string; medio: string; monto: number }[];
+  inicial: number;
   onCancel: () => void;
-  onCerrar: (n: number) => void;
+  onCerrar: (n: number, nota: string) => void;
 }) {
-  const [contado, setContado] = useState(String(esperado));
-  const dif = (Number(contado) || 0) - esperado;
+  const [contado, setContado] = useState("");
+  const [nota, setNota] = useState("");
+  const [error, setError] = useState("");
+  const n = contado.trim() === "" ? null : Number(contado.replace(",", ".")) || 0;
+  const dif = n === null ? 0 : n - esperado;
+  const ef = (t: string) => movs.filter((m) => m.tipo === t && m.medio === "Efectivo").reduce((a, m) => a + m.monto, 0);
+  const otros = movs.filter((m) => m.tipo === "Ingreso" && m.medio !== "Efectivo").reduce((a, m) => a + m.monto, 0);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onCerrar(Number(contado) || 0);
+        if (n === null) return setError("Escribí cuánto efectivo contaste.");
+        if (dif !== 0 && !nota.trim()) return setError("Contá brevemente por qué hay diferencia (sirve para el Dueño/a).");
+        onCerrar(n, nota.trim());
       }}
       className="space-y-3"
     >
-      <p className="text-sm text-muted-foreground">
-        Contá el efectivo de la caja. Esperado: <b className="text-foreground">{ctx.$(esperado)}</b>
-      </p>
+      <div className="rounded-2xl bg-primary/[0.04] p-3 ring-1 ring-primary/10">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Efectivo que debería haber</p>
+        <ul className="mt-1.5 space-y-0.5 text-xs">
+          <li className="flex justify-between"><span>Inicial</span><span>{ctx.$(inicial)}</span></li>
+          <li className="flex justify-between text-emerald-700"><span>+ Cobros en efectivo</span><span>{ctx.$(ef("Ingreso"))}</span></li>
+          <li className="flex justify-between text-rose-700"><span>− Egresos en efectivo</span><span>{ctx.$(ef("Egreso"))}</span></li>
+          <li className="flex justify-between border-t border-primary/10 pt-1 text-sm font-bold"><span>Esperado</span><span>{ctx.$(esperado)}</span></li>
+        </ul>
+        {otros > 0 && <p className="mt-1.5 text-[11px] text-muted-foreground">Además entraron {ctx.$(otros)} por transferencia, tarjeta u otros (no están en la caja).</p>}
+      </div>
       <Field label="Efectivo contado">
         <input
-          type="number"
-          min={0}
+          inputMode="decimal"
           value={contado}
           onChange={(e) => setContado(e.target.value)}
-          className={INPUT}
+          placeholder="Contá los billetes y escribí el total"
+          className={`${INPUT} text-lg font-bold`}
           aria-label="Efectivo contado"
+          autoFocus
         />
       </Field>
-      <p className={`text-sm font-semibold ${dif === 0 ? "text-emerald-600" : "text-rose-600"}`}>
-        {dif === 0 ? "Sin diferencias" : `Diferencia: ${ctx.$(dif)}`}
-      </p>
+      {n !== null && (
+        <p className={`rounded-xl px-3 py-2 text-sm font-semibold ${dif === 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+          {dif === 0 ? "✓ Coincide: sin diferencias" : dif > 0 ? `Sobran ${ctx.$(dif)}` : `Faltan ${ctx.$(-dif)}`}
+        </p>
+      )}
+      {n !== null && dif !== 0 && (
+        <div>
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {["Vuelto mal dado", "Cobro sin registrar", "Gasto sin registrar", "Error al contar"].map((m) => (
+              <button key={m} type="button" className={CHIP(nota === m)} onClick={() => setNota(m)}>
+                {m}
+              </button>
+            ))}
+          </div>
+          <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={160} placeholder="¿Por qué hay diferencia?" className={INPUT} />
+        </div>
+      )}
+      {error && <p className="text-xs text-rose-600">{error}</p>}
       <Acciones etiqueta="Cerrar caja" onCancel={onCancel} icon={Lock} />
     </form>
+  );
+}
+
+/** Texto del resumen del día (para Notificaciones y para mandarle al Dueño/a por WhatsApp) */
+function textoResumenCaja(
+  ctx: Ctx,
+  suc: string,
+  s: { abierta: string; cerrada: string; inicial: number; contado: number; cerradaPor?: string; usuario: string; notaCierre?: string },
+  movs: { tipo: string; medio: string; monto: number }[],
+  esperado: number,
+) {
+  const ingresos = movs.filter((m) => m.tipo === "Ingreso");
+  const egresos = movs.filter((m) => m.tipo === "Egreso").reduce((a, m) => a + m.monto, 0);
+  const porMedio = Object.entries(ingresos.reduce<Record<string, number>>((a, m) => ({ ...a, [m.medio]: (a[m.medio] ?? 0) + m.monto }), {}));
+  const dif = s.contado - esperado;
+  return [
+    `Caja de ${suc} · ${fecha(s.abierta.slice(0, 10))}`,
+    `Cobrado: ${ctx.$(ingresos.reduce((a, m) => a + m.monto, 0))} (${ingresos.length} ${ingresos.length === 1 ? "cobro" : "cobros"})`,
+    ...porMedio.map(([m, v]) => `  ${m}: ${ctx.$(v)}`),
+    `Gastos: ${ctx.$(egresos)}`,
+    `Efectivo contado: ${ctx.$(s.contado)} (esperado ${ctx.$(esperado)})`,
+    dif === 0 ? "Sin diferencias ✓" : `${dif > 0 ? "Sobran" : "Faltan"} ${ctx.$(Math.abs(dif))}${s.notaCierre ? `: ${s.notaCierre}` : ""}`,
+    `Cerró: ${s.cerradaPor || s.usuario}`,
+  ].join("\n");
+}
+
+function ResumenCaja({ texto, miembros, onCerrar }: { texto: string; miembros: { role: string; firstName: string; lastName: string; phone: string; status: string }[]; onCerrar: () => void }) {
+  const duenos = miembros.filter((m) => m.role === "administrador" && m.status !== "inactivo" && m.phone);
+  const [l0, ...resto] = texto.split("\n");
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 p-4 ring-1 ring-emerald-200">
+        <p className="text-sm font-bold">{l0}</p>
+        <ul className="mt-2 space-y-0.5 text-xs text-slate-700">
+          {resto.map((l, i) => (
+            <li key={i} className={l.startsWith("  ") ? "pl-3 text-muted-foreground" : ""}>
+              {l.trim()}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className="text-[11px] text-muted-foreground">Ya le llegó a la Dirección en Notificaciones. Si querés, mandáselo también por WhatsApp.</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        {duenos.map((d) => (
+          <a key={d.phone} href={wa(d.phone, texto)} target="_blank" rel="noreferrer" className="btn-wa">
+            <IconoWhatsApp /> {d.firstName}
+          </a>
+        ))}
+        {!duenos.length && (
+          <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer" className="btn-wa">
+            <IconoWhatsApp /> Mandar por WhatsApp
+          </a>
+        )}
+        <button type="button" className={BTN_SECUNDARIO} onClick={onCerrar}>
+          Listo
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -216,6 +216,10 @@ export type SesionCaja = {
   cerrada: string;
   contado: number;
   usuario: string;
+  /** Por qué hubo diferencia al cerrar (la escribe quien cierra) */
+  notaCierre?: string;
+  /** Quién cerró la caja */
+  cerradaPor?: string;
 };
 export type MovimientoCaja = {
   id: string;

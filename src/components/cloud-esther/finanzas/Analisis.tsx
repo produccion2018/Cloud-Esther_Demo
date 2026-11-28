@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { produccionDe, type CobroProfesional } from "@/components/cloud-esther/finanzas/comisiones";
+import { storeRRHH, legajoDe } from "@/lib/cloud-esther/rrhh-store";
+import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
+import { pdfBlobDeHtml } from "@/lib/descargas";
+import { numeroWhatsApp, telefonoInternacional } from "@/lib/clinica/whatsapp";
+import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import {
   AlarmClock,
   ArrowDownLeft,
   ArrowUpRight,
   BadgeCheck,
   Building2,
+  Receipt,
   Copy,
   FileSpreadsheet,
   HandCoins,
@@ -17,6 +24,7 @@ import {
   Wallet,
 } from "lucide-react";
 import {
+  storeFinanzas,
   CATEGORIAS_EGRESO,
   CATEGORIAS_INGRESO,
   COSTOS_DIRECTOS,
@@ -548,6 +556,16 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
     cobrado: number;
     pct: number;
   } | null>(null);
+  const [recibo, setRecibo] = useState<{ profesional: string; pct: number } | null>(null);
+  const { legajos } = storeRRHH.usar();
+  const { miembros } = storeEquipo.usar();
+  // Quien cobra por comisión o mixto en RRHH se paga en Nómina (así no se paga dos veces)
+  const enNomina = (nombre: string) => {
+    const m = miembros.find((x) => `${x.firstName} ${x.lastName}`.trim().toLowerCase() === nombre.trim().toLowerCase());
+    if (!m || !legajos[m.id]) return false;
+    const e = legajoDe(m, legajos).esquema;
+    return e === "Por comisión" || e === "Mixto";
+  };
   const meses = periodo === "3m" ? [mesISO(0), mesISO(1), mesISO(2)] : [mesISO(Number(periodo))];
   const enPeriodo = (f: string) => meses.some((m) => f.startsWith(m));
   const comps = deSucursal(libro.comprobantes, ctx.sucursal).filter((c) => enPeriodo(c.fecha));
@@ -631,8 +649,10 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
       const liq = fin.liquidaciones.find(
         (l) => l.profesional === nombre && meses.length === 1 && l.periodo === meses[0],
       );
-      const comision = Math.round((v.cobrado * pct) / 100);
-      return { nombre, ...v, pct, comision, queda: Math.round(v.cobrado - comision - v.insumos - v.lab), liq };
+      // Sobre lo cobrado o, si la clínica lo eligió, sobre lo cobrado menos el laboratorio
+      const base = Math.max(0, v.cobrado - (fin.comisionSinLab ? v.lab : 0));
+      const comision = Math.round((base * pct) / 100);
+      return { nombre, ...v, pct, base, comision, queda: Math.round(v.cobrado - comision - v.insumos - v.lab), liq };
     })
     .sort((a, b) => b.cobrado - a.cobrado);
   const filasTrat = [...trat.entries()]
@@ -737,7 +757,10 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                       {ctx.$(f.queda)}
                     </td>
                     <td className="p-2 text-right">
-                      {f.liq ? (
+                      <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                      {f.nombre !== "Sin profesional" && enNomina(f.nombre) ? (
+                        <Pill clase="bg-sky-100 text-sky-700">Se paga en Nómina</Pill>
+                      ) : f.liq ? (
                         <Pill clase="bg-emerald-100 text-emerald-700">
                           <BadgeCheck className="size-3" /> Liquidada
                         </Pill>
@@ -746,12 +769,23 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
                           type="button"
                           className={BTN_SECUNDARIO}
                           onClick={() =>
-                            setLiquidar({ profesional: f.nombre, cobrado: f.cobrado, pct: f.pct })
+                            setLiquidar({ profesional: f.nombre, cobrado: f.base, pct: f.pct })
                           }
                         >
                           <HandCoins className="size-4" /> Liquidar
                         </button>
                       ) : null}
+                      {meses.length === 1 && f.nombre !== "Sin profesional" && f.cobrado > 0 && (
+                        <button
+                          type="button"
+                          className={BTN_SECUNDARIO}
+                          onClick={() => setRecibo({ profesional: f.nombre, pct: f.pct })}
+                          title="Detalle de lo cobrado y su comisión"
+                        >
+                          <Receipt className="size-4" /> Detalle
+                        </button>
+                      )}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -780,6 +814,18 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
             className={`${INPUT} h-8 w-20 text-center`}
           />
           %
+        </label>
+        <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={!!fin.comisionSinLab}
+            onChange={(e) => {
+              setFinanzas("comisionSinLab", () => e.target.checked);
+              ctx.onToast(e.target.checked ? "La comisión se calcula sobre lo cobrado menos el laboratorio" : "La comisión se calcula sobre lo cobrado");
+            }}
+            className="size-4 accent-[var(--color-primary)]"
+          />
+          Calcular la comisión sobre lo cobrado <b className="text-foreground">menos el laboratorio</b> de sus trabajos
         </label>
       </Tarjeta>
 
@@ -842,6 +888,11 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
         </Tarjeta>
       </div>
 
+      {recibo && (
+        <M titulo={`Comisión de ${recibo.profesional}`} onClose={() => setRecibo(null)}>
+          <ReciboComision ctx={ctx} profesional={recibo.profesional} pct={recibo.pct} mes={meses[0]!} onToast={ctx.onToast} />
+        </M>
+      )}
       {liquidar && (
         <M
           titulo={`Liquidar comisión de ${liquidar.profesional}`}
@@ -860,6 +911,136 @@ export function Rentabilidad({ ctx, libro }: { ctx: CtxFin; libro: Libro }) {
           />
         </M>
       )}
+    </div>
+  );
+}
+
+/* El detalle de la comisión de un profesional: cada cobro, la base, el % y lo que se le paga.
+   Se descarga en PDF o se le manda por WhatsApp. */
+function ReciboComision({
+  ctx,
+  profesional,
+  pct,
+  mes,
+  onToast,
+}: {
+  ctx: CtxFin;
+  profesional: string;
+  pct: number;
+  mes: string;
+  onToast: (m: string) => void;
+}) {
+  const p = produccionDe(profesional, mes);
+  const sinLab = !!storeFinanzas.leer().comisionSinLab;
+  const base = Math.max(0, p.cobrado - (sinLab ? p.lab : 0));
+  const monto = Math.round((base * pct) / 100);
+  const clinica = leerSesionActual()?.clinica.nombre || "la clínica";
+  const m = storeEquipo.leer().miembros.find((x) => `${x.firstName} ${x.lastName}`.trim().toLowerCase() === profesional.trim().toLowerCase());
+  const tel = numeroWhatsApp(m?.phone ? telefonoInternacional(m.phone) : null);
+  const fecha = (d: string) => d.split("-").reverse().slice(0, 2).join("/");
+  const texto = [
+    `Hola ${profesional.split(" ")[0]} 👋 Te paso el detalle de tu comisión de ${nombreMes(mes, true)} en ${clinica}:`,
+    `• Cobrado de tus pacientes: ${ctx.$(p.cobrado)} (${p.lineas.length} ${p.lineas.length === 1 ? "cobro" : "cobros"})`,
+    ...(sinLab && p.lab ? [`• Laboratorio: −${ctx.$(p.lab)}`] : []),
+    `• Comisión: ${pct} % → ${ctx.$(monto)}`,
+    "Cualquier duda, avisame.",
+  ].join("\n");
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const html = `<div style="font-family:Arial,sans-serif;color:#1f2937;padding:24px;font-size:12px">
+    <h2 style="margin:0 0 2px;font-size:18px;color:#6d28d9">Comisión · ${esc(nombreMes(mes, true))}</h2>
+    <p style="margin:0 0 14px;color:#6b7280">${esc(clinica)} · ${esc(profesional)}</p>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="background:#f5f3ff"><th style="text-align:left;padding:6px">Fecha</th><th style="text-align:left;padding:6px">Paciente</th><th style="text-align:left;padding:6px">Concepto</th><th style="text-align:right;padding:6px">Cobrado</th></tr>
+      ${p.lineas.map((l: CobroProfesional) => `<tr><td style="padding:5px 6px;border-top:1px solid #eee">${fecha(l.fecha)}</td><td style="padding:5px 6px;border-top:1px solid #eee">${esc(l.paciente || "—")}</td><td style="padding:5px 6px;border-top:1px solid #eee">${esc(l.concepto)}</td><td style="padding:5px 6px;border-top:1px solid #eee;text-align:right">${esc(ctx.$(l.monto))}</td></tr>`).join("")}
+    </table>
+    <table style="width:100%;margin-top:14px;font-size:13px">
+      <tr><td>Total cobrado</td><td style="text-align:right">${esc(ctx.$(p.cobrado))}</td></tr>
+      ${sinLab && p.lab ? `<tr><td>Laboratorio</td><td style="text-align:right">−${esc(ctx.$(p.lab))}</td></tr>` : ""}
+      <tr><td>Comisión ${pct} %</td><td style="text-align:right"></td></tr>
+      <tr><td style="font-weight:bold;font-size:15px;color:#6d28d9;padding-top:6px">A cobrar</td><td style="text-align:right;font-weight:bold;font-size:15px;color:#6d28d9;padding-top:6px">${esc(ctx.$(monto))}</td></tr>
+    </table></div>`;
+  const [blob, setBlob] = useState<Blob | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    void pdfBlobDeHtml(html, "a4").then((b) => vivo && setBlob(b));
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profesional, mes, pct]);
+  const archivo = `comision-${profesional.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${mes}.pdf`;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-primary/[0.05] p-3 text-sm ring-1 ring-primary/10">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Cobrado en {nombreMes(mes, true)}</span>
+          <span>{ctx.$(p.cobrado)}</span>
+        </div>
+        {sinLab && p.lab > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Laboratorio</span>
+            <span>−{ctx.$(p.lab)}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Comisión</span>
+          <span>{pct} %</span>
+        </div>
+        <div className="mt-1 flex justify-between border-t border-primary/10 pt-1 text-base font-bold text-primary">
+          <span>Le corresponde</span>
+          <span>{ctx.$(monto)}</span>
+        </div>
+      </div>
+      <div className="max-h-60 overflow-auto rounded-xl ring-1 ring-primary/10">
+        <table className="w-full text-[12px]">
+          <tbody>
+            {p.lineas.map((l, i) => (
+              <tr key={i} className="border-t border-primary/[0.06] first:border-0">
+                <td className="p-2 text-muted-foreground">{fecha(l.fecha)}</td>
+                <td className="p-2">
+                  <span className="block truncate font-medium">{l.paciente || "—"}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{l.concepto}</span>
+                </td>
+                <td className="p-2 text-right tabular-nums">{ctx.$(l.monto)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          className={BTN_SECUNDARIO}
+          onClick={async () => {
+            const b = blob ?? (await pdfBlobDeHtml(html, "a4"));
+            if (!b) return onToast("No se pudo armar el PDF");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(b);
+            a.download = archivo;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          }}
+        >
+          <FileSpreadsheet className="size-4" /> Descargar PDF
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
+          onClick={() => {
+            const file = blob ? new File([blob], archivo, { type: "application/pdf" }) : null;
+            if (file && typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
+              navigator.share({ files: [file], text: texto }).catch(() => undefined);
+              return;
+            }
+            window.open(`https://wa.me/${tel ?? ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+          }}
+        >
+          Mandar por WhatsApp
+        </button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Sale solo de lo cobrado en Facturación (comprobantes y «Cobrar hoy»). El pago se registra con «Liquidar».
+      </p>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+// Comisiones: la producción de cada profesional sale sola de lo cobrado (Nómina y Rentabilidad)
+import "@/components/cloud-esther/finanzas/comisiones";
 import { fijarPaisTelefonos } from "@/lib/clinica/whatsapp";
 import { usePaisClinica as usePaisClinicaApp } from "@/lib/cloud-esther/coberturas";
 import { useComprasAFinanzas, useDescuentoKits, useNovedadesLaboratorio, useRecordatoriosBasicos, useRespuestasPresupuestos, useRespuestasTurnos } from "@/lib/clinica/recordatorios-basicos";

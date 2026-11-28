@@ -578,6 +578,12 @@ export function tasasDe(contrato: ContratoDef, config: ConfigRRHH) {
 /** Recibo del período según país, tipo de contrato y esquema de pago:
     base (mensual / horas × valor hora / comisión / mixto) + adicionales de convenio (Argentina)
     + horas extra + bono − descuento = bruto; − aportes − retención − adelanto = neto. */
+/** La producción automática (lo cobrado por el profesional) la registra Finanzas → comisiones.ts. */
+let produccionAuto: ((m: TeamMember, periodo: string) => number) | null = null;
+export function setProduccionAutomatica(fn: (m: TeamMember, periodo: string) => number) {
+  produccionAuto = fn;
+}
+
 export function calcularRecibo(
   m: TeamMember,
   lOriginal: Legajo,
@@ -604,7 +610,10 @@ export function calcularRecibo(
   ).length;
   const conAdicionales = deps && pais.adicionalesAR;
   const pierdePresentismo = conAdicionales && (llegadasTarde >= 3 || injustificadas > 1);
-  const produccion = aj.produccion ?? 0;
+  // Producción: la cargada a mano o, si no, lo que cobró en el mes (sale solo de Facturación)
+  const produccion =
+    aj.produccion ??
+    (l.esquema === "Por comisión" || l.esquema === "Mixto" ? (produccionAuto?.(m, periodo.periodo) ?? 0) : 0);
   const porHora = l.esquema === "Por hora";
   const basico =
     l.esquema === "Por hora"

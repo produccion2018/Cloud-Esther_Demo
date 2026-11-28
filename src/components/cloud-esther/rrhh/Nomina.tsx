@@ -1082,7 +1082,7 @@ function AjusteForm({
         {recibo.esquema === "Por hora" &&
           campo("horas", "Horas trabajadas", `${recibo.horasTrabajadas} (fichadas)`)}
         {(recibo.esquema === "Por comisión" || recibo.esquema === "Mixto") &&
-          campo("produccion", `Producción (${mon})`)}
+          campo("produccion", `Producción (${mon})`, "Sola: lo que cobró")}
         {campo("horasExtra", "Horas extra")}
         {campo("bono", `Bono (${mon})`)}
         {campo("descuento", `Descuento (${mon})`)}

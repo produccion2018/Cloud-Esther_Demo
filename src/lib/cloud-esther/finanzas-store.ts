@@ -128,6 +128,8 @@ export type EstadoFinanzas = {
   presupuesto: Partial<Record<CategoriaEgreso, number>>;
   comisiones: Record<string, number>; // profesional → %
   comisionPorDefecto: number;
+  /** La comisión se calcula sobre lo cobrado menos el laboratorio de sus trabajos */
+  comisionSinLab?: boolean;
   liquidaciones: LiquidacionComision[];
   extracto: LineaExtracto[];
   conciliados: string[]; // ids de asientos conciliados con el banco

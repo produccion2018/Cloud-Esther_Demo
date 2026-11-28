@@ -37,6 +37,18 @@ import { moduloCargado } from "@/lib/clinica/sincronizar";
 import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
 import type { Libro } from "@/components/cloud-esther/finanzas/libro";
+import { setTurnosStore, tiemposAgenda, aMinutos, turnoSolapa, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { setFacturacion } from "@/lib/cloud-esther/facturacion-store";
+import { setComunicacion } from "@/lib/cloud-esther/comunicacion-store";
+import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
+import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
+import {
+  abrirRecordatorioWhatsApp,
+  noQuiereRecordatorios,
+  numeroWhatsApp,
+  telefonoInternacional,
+} from "@/lib/clinica/whatsapp";
+import { abrirWhatsAppConEnlacePago } from "@/lib/clinica/enlace-estudio";
 
 /* ───────────── Tipos de respuesta ───────────── */
 
@@ -51,7 +63,11 @@ export type Bloque =
     }
   | { tipo: "informe"; titulo: string; secciones: { titulo: string; texto: string }[] }
   | { tipo: "acciones"; items: { label: string; to?: string; pregunta?: string }[] }
-  | { tipo: "aviso"; texto: string };
+  | { tipo: "aviso"; texto: string }
+  /** Algo que Esther va a HACER: se muestra y solo se hace si la persona toca «Confirmar». */
+  | { tipo: "confirmar"; accionId: string; titulo: string; lineas: string[]; boton: string; aviso?: string }
+  /** Mensajes para mandar de a uno (cada botón abre WhatsApp: la persona toca «Enviar» ahí). */
+  | { tipo: "envios"; titulo?: string; items: { accionId: string; texto: string; detalle?: string }[] };
 
 export type RespuestaEsther = {
   texto: string;
@@ -60,6 +76,8 @@ export type RespuestaEsther = {
   resultado: "Respondida" | "Sin permiso" | "Fuera del plan" | "Sin datos";
   /** Los datos todavía no llegaron del servidor: no se reescribe ni se audita como respuesta. */
   cargando?: boolean;
+  /** Respuesta con una acción para confirmar: el texto queda tal cual (no lo reescribe la IA). */
+  sinIA?: boolean;
 };
 
 export type ContextoIA = {
@@ -1667,6 +1685,296 @@ function aLaPantalla(q: string, ctx: ContextoIA): RespuestaEsther | null {
   };
 }
 
+
+/* ───────────── Acciones: Esther HACE cosas, siempre con tu confirmación ───────────── */
+
+export type ResultadoAccion = { texto: string; bloques?: Bloque[] };
+const ACCIONES = new Map<string, () => ResultadoAccion>();
+let nAccion = 0;
+function registrarAccion(fn: () => ResultadoAccion) {
+  const id = `acc-${Date.now()}-${++nAccion}`;
+  ACCIONES.set(id, fn);
+  return id;
+}
+/** La pantalla la llama cuando la persona confirma (o toca «Mandar»). */
+export function ejecutarAccionEsther(id: string): ResultadoAccion {
+  const fn = ACCIONES.get(id);
+  if (!fn) return { texto: "Esa acción ya no está disponible. Pedímela de nuevo y la preparo." };
+  ACCIONES.delete(id);
+  try {
+    return fn();
+  } catch {
+    return { texto: "No pude hacerlo. Probá de nuevo desde la pantalla correspondiente." };
+  }
+}
+
+const nombreClinica = () => leerSesionActual()?.clinica.nombre || "la clínica";
+const DIAS_SEMANA = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+function diaLindo(f: string) {
+  if (f === dia()) return "hoy";
+  if (f === dia(1)) return "mañana";
+  const d = new Date(`${f}T12:00:00`);
+  return `el ${["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"][d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+/** Fecha pedida en la frase: hoy, mañana, pasado mañana, un día de la semana o 5/12. */
+function fechaPedida(q: string): string | null {
+  if (/pasado manana/.test(q)) return dia(2);
+  if (/\bmanana\b/.test(q)) return dia(1);
+  if (/\bhoy\b/.test(q)) return dia();
+  const num = q.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (num) {
+    const hoy = new Date();
+    let anio = num[3] ? Number(num[3].length === 2 ? `20${num[3]}` : num[3]) : hoy.getFullYear();
+    const f = new Date(anio, Number(num[2]) - 1, Number(num[1]));
+    if (!num[3] && iso(f) < dia()) f.setFullYear(++anio);
+    return iso(f);
+  }
+  const ds = DIAS_SEMANA.findIndex((d) => new RegExp(`\\b${d}\\b`).test(q));
+  if (ds >= 0) {
+    const hoy = new Date();
+    let suma = (ds - hoy.getDay() + 7) % 7;
+    if (suma === 0) suma = 7;
+    return dia(suma);
+  }
+  return null;
+}
+/** Hora pedida: «a las 10», «10:30», «a las 5 y media», «17 hs». A la tarde si dice 1 a 7. */
+function horaPedida(q: string): string | null {
+  const m =
+    q.match(/a las? (\d{1,2})(?:[:.](\d{2}))?( y media| y cuarto)?/) ??
+    q.match(/\b(\d{1,2})[:.](\d{2})\b()/) ??
+    q.match(/\b(\d{1,2})\s*(?:hs|horas)\b()()/);
+  if (!m) return null;
+  let h = Number(m[1]);
+  let min = m[2] ? Number(m[2]) : m[3] === " y media" ? 30 : m[3] === " y cuarto" ? 15 : 0;
+  if (h >= 1 && h <= 7) h += 12;
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+function accionAgendar(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (
+    !/^(che |por favor |esther )?(agenda|anota|reserva)(le|me)?\b/.test(q) &&
+    !/\b(agendale|agendame|agendar|anotale|anotar|reservale|reservar|dale (un )?turno|dar(le)? (un )?turno|sacale (un )?turno)\b/.test(q)
+  )
+    return null;
+  if (/\b(cuant|que turnos|cuales)\b/.test(q)) return null;
+  const b = verificar("agenda", ctx) ?? cargando(["agenda", "pacientes", "equipo"], "la agenda");
+  if (b) return b;
+  const pac = pacienteMencionado(q, ctx);
+  if (!pac)
+    return {
+      texto: "¿A qué paciente le doy el turno? Escribime nombre y apellido como figura en Pacientes. Por ejemplo: «Agendá a Laura Gómez el martes a las 10».",
+      modulo: "agenda",
+      resultado: "Sin datos",
+      sinIA: true,
+    };
+  const fecha = fechaPedida(q);
+  const hora = horaPedida(q);
+  if (!fecha || !hora)
+    return {
+      texto: `¿Para qué día y a qué hora le doy el turno a ${nombreCompleto(pac)}? Por ejemplo: «Agendá a ${nombreCompleto(pac)} el martes a las 10».`,
+      modulo: "agenda",
+      resultado: "Sin datos",
+      sinIA: true,
+    };
+  const agenda = storeAgenda.leer();
+  const odontos = storeEquipo
+    .leer()
+    .miembros.filter((m) => m.role === "odontologo" && m.status !== "inactivo")
+    .map((m) => `${m.firstName} ${m.lastName}`.trim());
+  const prof =
+    odontos.find((o) => o.split(" ").some((w) => w.length > 2 && new RegExp(`\\b${norm(w)}\\b`).test(q))) ??
+    agenda.turnos.filter((t) => t.paciente === nombreCompleto(pac) && t.odontologo).sort((a, c) => c.fecha.localeCompare(a.fecha))[0]?.odontologo ??
+    odontos[0] ??
+    "";
+  const aranceles = storePresupuestos.leer().aranceles?.filter((a) => a.activo !== false).map((a) => a.nombre) ?? [];
+  const trat =
+    [...aranceles].sort((a, c) => c.length - a.length).find((n) => q.includes(norm(n))) ??
+    (/limpieza/.test(q) ? "Limpieza dental" : /control/.test(q) ? "Control" : /urgencia/.test(q) ? "Urgencia" : "Consulta");
+  const { duracion } = tiemposAgenda(agenda.ajustes);
+  const sede = ctx.sede !== "Todas" ? ctx.sede : (sucursalesDelPlan(ctx.plan)[0] ?? "");
+  const ini = aMinutos(hora);
+  const choca = agenda.turnos.find(
+    (t) =>
+      t.fecha === fecha &&
+      t.estado !== "Cancelada" &&
+      (!prof || t.odontologo === prof) &&
+      turnoSolapa(t, ini, ini + duracion, duracion),
+  );
+  const yaTiene = agenda.turnos.find((t) => t.fecha === fecha && t.paciente === nombreCompleto(pac) && t.estado !== "Cancelada");
+  const pasado = fecha < dia() || (fecha === dia() && ini < new Date().getHours() * 60 + new Date().getMinutes());
+  const avisos = [
+    pasado ? "Ese horario ya pasó." : "",
+    choca ? `${prof || "La agenda"} ya tiene a ${choca.paciente} a las ${choca.hora}.` : "",
+    yaTiene ? `${nombreCompleto(pac)} ya tiene un turno ese día a las ${yaTiene.hora}.` : "",
+    !prof ? "Todavía no hay odontólogos cargados en Equipo: el turno queda sin profesional." : "",
+  ].filter(Boolean);
+  const accionId = registrarAccion(() => {
+    const nuevo: Turno = {
+      id: Date.now(),
+      fecha,
+      hora,
+      paciente: nombreCompleto(pac),
+      tratamiento: trat,
+      odontologo: prof,
+      sucursal: sede,
+      gabinete: "",
+      estado: "Pendiente",
+      notas: "Agendado por Esther",
+      duracion,
+    };
+    setTurnosStore((prev) => [...prev, nuevo]);
+    const tel = numeroWhatsApp(pac.telefono ? telefonoInternacional(pac.telefono) : null);
+    return {
+      texto: `Listo: agendé a ${nombreCompleto(pac)} ${diaLindo(fecha)} a las ${hora}${prof ? ` con ${prof}` : ""}. Ya está en la Agenda.`,
+      bloques: [
+        ...(tel
+          ? [
+              {
+                tipo: "envios" as const,
+                items: [
+                  {
+                    accionId: registrarAccion(() => {
+                      abrirRecordatorioWhatsApp(nuevo, nombreClinica());
+                      return { texto: `Se abrió WhatsApp con el aviso para ${pac.nombre}. Tocá «Enviar» ahí.` };
+                    }),
+                    texto: `Avisarle a ${pac.nombre} por WhatsApp`,
+                  },
+                ],
+              },
+            ]
+          : []),
+        { tipo: "acciones" as const, items: [{ label: "Ver en la Agenda", to: "/demo/agenda" }] },
+      ],
+    };
+  });
+  return {
+    texto: `Te preparo este turno. ¿Lo agendo?`,
+    bloques: [
+      {
+        tipo: "confirmar",
+        accionId,
+        titulo: "Nuevo turno",
+        lineas: [
+          `Paciente: ${nombreCompleto(pac)}`,
+          `Día: ${diaLindo(fecha)} (${fecha.split("-").reverse().join("/")})`,
+          `Hora: ${hora} · ${duracion} min`,
+          `Profesional: ${prof || "sin asignar"}`,
+          `Tratamiento: ${trat}`,
+          ...(sucursalesDelPlan(ctx.plan).length > 1 && sede ? [`Sede: ${sede}`] : []),
+        ],
+        boton: "Sí, agendalo",
+        ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
+      },
+    ],
+    modulo: "agenda",
+    resultado: "Respondida",
+    sinIA: true,
+  };
+}
+
+function accionRecordatorios(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/(manda|envia|recorda)(le|les|r|me)?\b.*(recordatorio|turno)|recordatorios?\b.*(manana|hoy)|recordale(s)? (el|los|a)/.test(q)) return null;
+  if (/debe|deuda|saldo|pag/.test(q)) return null;
+  const b = verificar("agenda", ctx) ?? cargando(["agenda", "pacientes"], "la agenda");
+  if (b) return b;
+  const fecha = /\bhoy\b/.test(q) ? dia() : (fechaPedida(q) ?? dia(1));
+  const pac = pacienteMencionado(q, ctx);
+  const turnos = turnosVisibles(ctx)
+    .filter(
+      (t) =>
+        t.fecha === fecha &&
+        (t.estado === "Pendiente" || t.estado === "Confirmada") &&
+        (!pac || t.paciente === nombreCompleto(pac)),
+    )
+    .sort((a, c) => a.hora.localeCompare(c.hora));
+  const sinConfirmar = turnos.filter((t) => t.estado !== "Confirmada" && !t.respuestaPaciente);
+  const lista = (pac ? turnos : sinConfirmar).filter((t) => !noQuiereRecordatorios(t.paciente));
+  const noQuieren = (pac ? turnos : sinConfirmar).length - lista.length;
+  if (!lista.length)
+    return {
+      texto: turnos.length
+        ? `Los turnos de ${diaLindo(fecha)} ya están confirmados${noQuieren ? ` (o el paciente pidió no recibir recordatorios)` : ""}. No hace falta mandar nada.`
+        : `No hay turnos ${diaLindo(fecha)}${pac ? ` para ${nombreCompleto(pac)}` : ""}.`,
+      modulo: "agenda",
+      resultado: "Sin datos",
+      sinIA: true,
+    };
+  const clinica = nombreClinica();
+  return {
+    texto: `${lista.length === 1 ? "Hay 1 turno" : `Hay ${lista.length} turnos`} ${diaLindo(fecha)} para recordar. Tocá «Mandar» en cada uno: se abre WhatsApp con el mensaje y el enlace para confirmar, y vos tocás «Enviar».${noQuieren ? ` (${noQuieren} ${noQuieren === 1 ? "paciente pidió" : "pacientes pidieron"} no recibir recordatorios.)` : ""}`,
+    bloques: [
+      {
+        tipo: "envios",
+        titulo: `Recordatorios de ${diaLindo(fecha)}`,
+        items: lista.map((t) => ({
+          accionId: registrarAccion(() => {
+            if (!abrirRecordatorioWhatsApp(t, clinica))
+              return { texto: `${t.paciente} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.` };
+            setComunicacion("recordatorios", (prev) => ({
+              ...prev,
+              [t.id]: { estado: "Enviado", fecha: new Date().toISOString(), canal: "WhatsApp" },
+            }));
+            return { texto: `Se abrió WhatsApp para ${t.paciente}. Tocá «Enviar» ahí.` };
+          }),
+          texto: t.paciente,
+          detalle: `${t.hora}${t.odontologo ? ` · ${t.odontologo}` : ""}`,
+        })),
+      },
+    ],
+    modulo: "agenda",
+    resultado: "Respondida",
+    sinIA: true,
+  };
+}
+
+function accionCobrar(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/(recorda|reclama|cobra|manda|avisa)(le|les|r)?\b.*(debe|deuda|saldo|pagar|pague)/.test(q)) return null;
+  const b = verificar("facturacion", ctx) ?? cargando(["registros", "pacientes"], "las cuentas de los pacientes");
+  if (b) return b;
+  const regs = leerRegistros();
+  const pac = pacienteMencionado(q, ctx);
+  const deben = (pac ? [pac] : pacientesVisibles(ctx))
+    .map((p) => ({ p, saldo: deudaDe(regs[p.id]?.cuenta).saldo }))
+    .filter((x) => x.saldo > 0)
+    .sort((a, c) => c.saldo - a.saldo);
+  if (!deben.length)
+    return {
+      texto: pac ? `${nombreCompleto(pac)} no debe nada: su cuenta está al día.` : "Nadie debe nada: no hay a quién recordarle.",
+      modulo: "facturacion",
+      resultado: "Sin datos",
+      sinIA: true,
+    };
+  const clinica = nombreClinica();
+  return {
+    texto: `${deben.length === 1 ? `${nombreCompleto(deben[0]!.p)} debe ${$(deben[0]!.saldo)}` : `Te deben ${deben.length} pacientes`}. Tocá «Mandar»: se abre WhatsApp con el saldo y el enlace para pagar, y vos tocás «Enviar».`,
+    bloques: [
+      {
+        tipo: "envios",
+        titulo: "Recordatorios de pago",
+        items: deben.slice(0, 30).map((x) => ({
+          accionId: registrarAccion(() => {
+            const numero = numeroWhatsApp(x.p.telefono ? telefonoInternacional(x.p.telefono) : null);
+            if (!numero) return { texto: `${nombreCompleto(x.p)} no tiene teléfono cargado. Agregalo en su ficha de Pacientes.` };
+            abrirWhatsAppConEnlacePago(numero, x.p.id, (enlace) =>
+              `Hola ${x.p.nombre} 👋 ¿Cómo estás? Te escribimos de ${clinica} para recordarte que te queda un saldo de ${$(x.saldo)}.${enlace ? ` Acá ves cómo pagarlo y nos avisás cuando lo hagas:\n${enlace}` : " Cuando puedas, lo abonás en la clínica o por transferencia."}\nSi ya lo pagaste, avisanos y lo revisamos. ¡Gracias!`,
+            );
+            setFacturacion("recordatoriosDeuda", (prev) => ({ ...(prev ?? {}), [String(x.p.id)]: dia() }));
+            return { texto: `Se abrió WhatsApp para ${x.p.nombre}. Tocá «Enviar» ahí.` };
+          }),
+          texto: nombreCompleto(x.p),
+          detalle: `Debe ${$(x.saldo)}`,
+        })),
+      },
+    ],
+    modulo: "facturacion",
+    resultado: "Respondida",
+    sinIA: true,
+  };
+}
+
 /* ───────────── Ayuda ───────────── */
 
 export const EJEMPLOS = [
@@ -1703,6 +2011,11 @@ function ayuda(ctx: ContextoIA, pregunta: string, intro = false): RespuestaEsthe
 
 export function responder(pregunta: string, ctx: ContextoIA, interno = false): RespuestaEsther {
   const q = norm(pregunta.replace(/^\s*esther[,:]?\s*/i, ""));
+  // Primero lo que Esther tiene que HACER (con confirmación), después las consultas
+  for (const f of [accionCobrar, accionRecordatorios, accionAgendar]) {
+    const r = f(q, ctx);
+    if (r) return r;
+  }
   if (!interno) {
     const r = reporte(q, ctx);
     if (r) return r;

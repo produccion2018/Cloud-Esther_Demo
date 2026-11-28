@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Download, FileText, Info, Printer } from "lucide-react";
-import type { Bloque } from "@/lib/cloud-esther/esther-motor";
+import { ejecutarAccionEsther, type Bloque, type ResultadoAccion } from "@/lib/cloud-esther/esther-motor";
 import { descargarExcel } from "@/components/cloud-esther/rrhh/excel";
 import { imprimirHTML } from "@/components/cloud-esther/rrhh/ui";
 
@@ -229,6 +230,8 @@ export function EstherBloques({
               )}
             </div>
           );
+        if (b.tipo === "confirmar") return <ConfirmarAccion key={i} b={b} onPregunta={onPregunta} />;
+        if (b.tipo === "envios") return <EnviosAccion key={i} b={b} />;
         return (
           <p
             key={i}
@@ -238,6 +241,96 @@ export function EstherBloques({
           </p>
         );
       })}
+    </div>
+  );
+}
+
+/* Lo que Esther va a hacer: se ve todo antes y recién se hace al tocar el botón. */
+function ConfirmarAccion({
+  b,
+  onPregunta,
+}: {
+  b: Extract<Bloque, { tipo: "confirmar" }>;
+  onPregunta: (q: string) => void;
+}) {
+  const [hecho, setHecho] = useState<ResultadoAccion | "cancelado" | null>(null);
+  if (hecho === "cancelado")
+    return <p className="rounded-xl bg-muted/60 px-3 py-2 text-[12px] text-muted-foreground">Listo, no hice nada.</p>;
+  if (hecho)
+    return (
+      <div className="space-y-2">
+        <p className="flex items-start gap-1.5 rounded-xl border border-emerald-300/50 bg-emerald-500/10 px-3 py-2 text-[12.5px] font-medium text-emerald-800">
+          <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+          {hecho.texto}
+        </p>
+        {hecho.bloques && <EstherBloques bloques={hecho.bloques} onPregunta={onPregunta} />}
+      </div>
+    );
+  return (
+    <div className="rounded-xl border border-primary/25 bg-primary/[0.06] p-3">
+      <p className="text-[12.5px] font-semibold">{b.titulo}</p>
+      <ul className="mt-1.5 space-y-0.5 text-[12px]">
+        {b.lineas.map((l) => (
+          <li key={l}>{l}</li>
+        ))}
+      </ul>
+      {b.aviso && (
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11.5px] text-amber-800">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+          {b.aviso}
+        </p>
+      )}
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setHecho(ejecutarAccionEsther(b.accionId))}
+          className="rounded-full bg-primary px-3.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition hover:brightness-110"
+        >
+          {b.boton}
+        </button>
+        <button
+          type="button"
+          onClick={() => setHecho("cancelado")}
+          className="rounded-full border border-primary/25 px-3.5 py-1.5 text-[12px] font-semibold text-primary transition hover:bg-primary/10"
+        >
+          No, dejalo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Mensajes para mandar de a uno: cada botón abre WhatsApp (ahí la persona toca «Enviar»). */
+function EnviosAccion({ b }: { b: Extract<Bloque, { tipo: "envios" }> }) {
+  const [hechos, setHechos] = useState<Record<string, string>>({});
+  return (
+    <div className="overflow-hidden rounded-xl border border-primary/15">
+      {b.titulo && (
+        <p className="border-b border-primary/10 bg-primary/[0.05] px-2.5 py-1.5 text-[11px] font-semibold">{b.titulo}</p>
+      )}
+      <ul className="divide-y divide-primary/10">
+        {b.items.map((x) => (
+          <li key={x.accionId} className="flex items-center gap-2 px-2.5 py-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12px] font-semibold">{x.texto}</span>
+              {hechos[x.accionId] ? (
+                <span className={`block text-[11px] ${/no tiene tel|no pude|ya no est/i.test(hechos[x.accionId] ?? "") ? "text-amber-700" : "text-emerald-700"}`}>{hechos[x.accionId]}</span>
+              ) : (
+                x.detalle && <span className="block text-[11px] text-muted-foreground">{x.detalle}</span>
+              )}
+            </span>
+            {!hechos[x.accionId] && (
+              <button
+                type="button"
+                onClick={() => setHechos((h) => ({ ...h, [x.accionId]: ejecutarAccionEsther(x.accionId).texto }))}
+                className="shrink-0 rounded-full bg-[#25D366] px-3 py-1 text-[11.5px] font-semibold text-white transition hover:brightness-105"
+              >
+                Mandar
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

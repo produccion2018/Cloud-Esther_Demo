@@ -198,7 +198,7 @@ export async function askEsther(
   auditarConsulta({ ...base, pregunta: message, modulo: r.modulo, resultado: r.resultado });
   let bloques = r.bloques;
   const auto = AUTOMATIZABLE[r.modulo];
-  if (context.n8n && auto && r.resultado === "Respondida")
+  if (context.n8n && auto && r.resultado === "Respondida" && !r.sinIA)
     bloques = [
       ...(bloques ?? []),
       { tipo: "acciones", items: [{ label: auto, to: "/demo/automatizaciones" }] },
@@ -207,10 +207,10 @@ export async function askEsther(
   // Cerebro real (solo planes con IA): el modelo redacta usando el dato ya aterrizado por el
   // motor + un resumen real de la clínica. Nunca sobre respuestas restringidas, y con respaldo:
   // si no hay clave o falla, queda la respuesta del motor interno.
-  let texto = conCierre(r.texto, r.modulo, r.resultado);
+  let texto = r.sinIA ? r.texto : conCierre(r.texto, r.modulo, r.resultado);
   const plan = context.plan ?? "avanzada";
   const tieneIA = plan === "avanzada" || plan === "grupo";
-  if (tieneIA && !r.cargando && r.resultado !== "Sin permiso" && r.resultado !== "Fuera del plan") {
+  if (tieneIA && !r.cargando && !r.sinIA && r.resultado !== "Sin permiso" && r.resultado !== "Fuera del plan") {
     try {
       const resumen = hallazgosEsther(plan)
         .map((h) => `- ${h.texto}: ${h.detalle}`)

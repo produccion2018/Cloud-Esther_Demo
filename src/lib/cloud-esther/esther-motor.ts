@@ -32,7 +32,8 @@ import type { RolIA } from "@/lib/cloud-esther/ia-store";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
 import { deudaDe } from "@/lib/cloud-esther/facturacion-store";
 import { storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
-import { esClinicaReal } from "@/lib/clinica/modo-clinica";
+import { clinicaReal, esClinicaReal } from "@/lib/clinica/modo-clinica";
+import { puedeVer } from "@/lib/clinica/permisos";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
 import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
 import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
@@ -146,6 +147,14 @@ const NOMBRE_MODULO: Record<string, string> = {
   bi: "Reportes",
   configuracion: "Configuración",
   rrhh: "Recursos humanos",
+  finanzas: "Finanzas",
+  recetas: "Recetas",
+  laboratorio: "Laboratorio",
+  marketing: "Marketing",
+  comunicaciones: "Comunicación",
+  estudios: "Estudios",
+  automatizaciones: "Automatizaciones",
+  odontograma: "Odontograma",
 };
 
 function verificar(modulo: string, ctx: ContextoIA): RespuestaEsther | null {
@@ -161,10 +170,15 @@ function verificar(modulo: string, ctx: ContextoIA): RespuestaEsther | null {
       modulo,
       resultado: "Fuera del plan",
     };
-  const permitidos = PERMISOS_ROL[ctx.rol];
-  if (!permitidos.includes("*") && !permitidos.includes(modulo))
+  // Clínica real: lo que esta persona tiene en su menú (rol + lo que eligió el Administrador).
+  // Es lo mismo que el servidor le deja leer; en el demo se simula con el rol elegido.
+  const real = clinicaReal();
+  const sinPermiso = real
+    ? !puedeVer(real.sesion.usuario.rol, modulo, real.sesion.usuario.modulos)
+    : !PERMISOS_ROL[ctx.rol].includes("*") && !PERMISOS_ROL[ctx.rol].includes(modulo);
+  if (sinPermiso)
     return {
-      texto: `Con el rol ${ROL_IA_LABEL[ctx.rol]} no tenés permiso para consultar ${NOMBRE_MODULO[modulo] ?? modulo}. Pedíselo a un administrador.`,
+      texto: `Con tu usuario (${ROL_IA_LABEL[ctx.rol]}) no tenés acceso a ${NOMBRE_MODULO[modulo] ?? modulo}, así que no te lo puedo mostrar. Si lo necesitás, pedíselo al Administrador.`,
       modulo,
       resultado: "Sin permiso",
     };
@@ -2009,7 +2023,13 @@ function ayuda(ctx: ContextoIA, pregunta: string, intro = false): RespuestaEsthe
 
 /* ───────────── Entrada principal ───────────── */
 
-export function responder(pregunta: string, ctx: ContextoIA, interno = false): RespuestaEsther {
+/** Rol de quien pregunta: en una clínica real, el de su sesión (no se puede elegir otro). */
+export function rolDeQuienPregunta(pedido: RolIA | undefined): RolIA {
+  return clinicaReal()?.sesion.usuario.rol ?? pedido ?? "admin";
+}
+
+export function responder(pregunta: string, ctxPedido: ContextoIA, interno = false): RespuestaEsther {
+  const ctx: ContextoIA = { ...ctxPedido, rol: rolDeQuienPregunta(ctxPedido.rol) };
   const q = norm(pregunta.replace(/^\s*esther[,:]?\s*/i, ""));
   // Primero lo que Esther tiene que HACER (con confirmación), después las consultas
   for (const f of [accionCobrar, accionRecordatorios, accionAgendar]) {

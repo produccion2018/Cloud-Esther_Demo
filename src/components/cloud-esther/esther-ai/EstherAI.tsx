@@ -23,7 +23,9 @@ import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { conexionesEsther, hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
 import { ROL_IA_LABEL } from "@/lib/cloud-esther/esther-motor";
-import type { RolIA } from "@/lib/cloud-esther/ia-store";
+import { storeIA, type ConsultaIA, type RolIA } from "@/lib/cloud-esther/ia-store";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { pedirAClinica } from "@/lib/clinica/api";
 import { Modal } from "@/components/cloud-esther/rrhh/ui";
 import { RayosXIA } from "@/components/cloud-esther/odontograma3d/RayosXIA";
 import { SimuladorSonrisa } from "@/components/cloud-esther/simulador/SimuladorSonrisa";
@@ -100,9 +102,13 @@ export function EstherAI({
   const { usuario } = useSesion();
   const navigate = useNavigate();
   const [pacienteId, setPacienteId] = useState<number | undefined>(undefined);
-  const [rol, setRol] = useState<RolIA>(() =>
+  // En una clínica real se pregunta SIEMPRE con el usuario de la sesión (no se puede elegir otro rol);
+  // «Consultar como» queda solo en el demo, para probar qué ve cada rol.
+  const real = useClinicaReal();
+  const [rolDemo, setRol] = useState<RolIA>(() =>
     context?.rol && context.rol in ROL_IA_LABEL ? (context.rol as RolIA) : "admin",
   );
+  const rol: RolIA = real?.rol ?? rolDemo;
   const [sede, setSede] = useState("Todas");
   const [herramienta, setHerramienta] = useState<"imagen" | "sonrisa" | null>(null);
   const [aviso, setAviso] = useState("");
@@ -266,17 +272,28 @@ export function EstherAI({
                     </option>
                   ))}
                 </Selector>
-                <Selector
-                  etiqueta="Consultar como"
-                  value={rol}
-                  onChange={(v) => setRol(v as RolIA)}
-                >
-                  {(Object.keys(ROL_IA_LABEL) as RolIA[]).map((r2) => (
-                    <option key={r2} value={r2}>
-                      {ROL_IA_LABEL[r2]}
-                    </option>
-                  ))}
-                </Selector>
+                {real ? (
+                  <div>
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                      Consultás como
+                    </span>
+                    <p className="flex h-9 items-center rounded-xl border border-primary/10 bg-primary/[0.03] px-3 text-xs font-medium text-muted-foreground">
+                      {nombreUsuario} · {ROL_IA_LABEL[rol]}
+                    </p>
+                  </div>
+                ) : (
+                  <Selector
+                    etiqueta="Consultar como"
+                    value={rol}
+                    onChange={(v) => setRol(v as RolIA)}
+                  >
+                    {(Object.keys(ROL_IA_LABEL) as RolIA[]).map((r2) => (
+                      <option key={r2} value={r2}>
+                        {ROL_IA_LABEL[r2]}
+                      </option>
+                    ))}
+                  </Selector>
+                )}
                 {sedes.length > 1 ? (
                   <Selector etiqueta="Sede" value={sede} onChange={setSede}>
                     <option value="Todas">Todas las sedes</option>
@@ -535,10 +552,11 @@ export function EstherAI({
                 </h2>
                 <EstherQuickActionsBlock disabled={esther.isBusy} onAction={handleAction} />
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                  Esther responde solo con datos de esta empresa, según el rol y la sede elegidos.
-                  Cada consulta queda registrada en auditoría.
+                  Esther responde solo con lo que {real ? "tu usuario puede ver" : "puede ver el rol elegido"}.
+                  Cada consulta queda registrada y la ve solo el Administrador.
                 </p>
               </div>
+              {rol === "admin" && <ConsultasAEsther real={real} />}
             </div>
           </div>
         )}
@@ -572,5 +590,94 @@ export function EstherAI({
         </div>
       )}
     </section>
+  );
+}
+
+/* Qué le preguntaron a Esther (solo el Administrador). En una clínica real lo guarda el servidor
+   con quién y con qué rol; en el demo, las consultas de esta prueba. */
+function ConsultasAEsther({ real }: { real: ReturnType<typeof useClinicaReal> }) {
+  const locales = storeIA.usar().consultas;
+  const [servidor, setServidor] = useState<ConsultaIA[] | null>(null);
+  const [error, setError] = useState("");
+  const [filtro, setFiltro] = useState<"todas" | "sin">("todas");
+  const [abierto, setAbierto] = useState(false);
+  useEffect(() => {
+    if (!real || !abierto) return;
+    let vivo = true;
+    pedirAClinica<{ consultas: ConsultaIA[] }>(real.slug, "GET", "/ia/consultas")
+      .then((r) => vivo && setServidor(r.consultas))
+      .catch((e: unknown) => vivo && setError(e instanceof Error ? e.message : "No se pudieron traer las consultas."));
+    return () => {
+      vivo = false;
+    };
+  }, [real, abierto]);
+  const todas = real ? (servidor ?? []) : locales;
+  const lista = todas.filter((c) => filtro === "todas" || c.resultado === "Sin permiso");
+  const sinPermiso = todas.filter((c) => c.resultado === "Sin permiso").length;
+  const fecha = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  return (
+    <div className="card-grad p-4">
+      <button type="button" onClick={() => setAbierto((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left">
+        <span>
+          <span className="block text-sm font-semibold">Qué le preguntaron a Esther</span>
+          <span className="block text-[11px] text-muted-foreground">Solo lo ves vos (Administrador): quién preguntó, qué y si tenía permiso.</span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-primary">{abierto ? "Ocultar" : "Ver"}</span>
+      </button>
+      {abierto && (
+        <div className="mt-3">
+          <div className="mb-2 flex gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+            {(
+              [
+                ["todas", `Todas (${todas.length})`],
+                ["sin", `Sin permiso (${sinPermiso})`],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setFiltro(k)}
+                className={`flex-1 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition ${filtro === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          {error ? (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{error}</p>
+          ) : real && servidor === null ? (
+            <p className="text-[12px] text-muted-foreground">Cargando…</p>
+          ) : lista.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">
+              {filtro === "sin" ? "Nadie pidió algo que no podía ver." : "Todavía nadie le preguntó nada a Esther."}
+            </p>
+          ) : (
+            <ul className="scroll-sutil max-h-80 space-y-1.5 overflow-auto">
+              {lista.slice(0, 100).map((c) => (
+                <li key={c.id} className="rounded-xl border border-primary/10 bg-white/80 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2 text-[10.5px] text-muted-foreground">
+                    <span className="truncate">
+                      {c.usuario} · {ROL_IA_LABEL[c.rol as RolIA] ?? c.rol}
+                    </span>
+                    <span className="shrink-0 tabular-nums">{fecha(c.fecha)}</span>
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] font-medium">{c.pregunta}</p>
+                  {c.resultado !== "Respondida" && (
+                    <span
+                      className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.resultado === "Sin permiso" ? "bg-amber-100 text-amber-800" : "bg-primary/10 text-primary"}`}
+                    >
+                      {c.resultado}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

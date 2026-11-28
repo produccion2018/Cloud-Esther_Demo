@@ -1,4 +1,6 @@
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { clinicaReal } from "@/lib/clinica/modo-clinica";
+import { pedirAClinica } from "@/lib/clinica/api";
 
 /* Ubicación: src/lib/cloud-esther/ia-store.ts
    Datos de Cloud Esther Infinity por empresa: auditoría de consultas, análisis de imágenes,
@@ -81,7 +83,12 @@ export type EstadoIA = {
 
 export const storeIA = crearStorePorEmpresa<EstadoIA>(
   () => ({ consultas: [], analisis: [], simulaciones: [], conversaciones: [] }),
-  { persistir: "ia" },
+  {
+    persistir: "ia",
+    // En una clínica real las consultas a Esther van al servidor (solo las ve el Administrador):
+    // las que hubieran quedado acá se borran para que nadie del equipo las lea.
+    normalizar: (e) => (e && clinicaReal() && e.consultas?.length ? { ...e, consultas: [] } : e),
+  },
 );
 
 export function setIA<K extends keyof EstadoIA>(clave: K, fn: (prev: EstadoIA[K]) => EstadoIA[K]) {
@@ -90,6 +97,19 @@ export function setIA<K extends keyof EstadoIA>(clave: K, fn: (prev: EstadoIA[K]
 }
 
 export function auditarConsulta(c: Omit<ConsultaIA, "id" | "fecha">) {
+  // Clínica real: la guarda el SERVIDOR (quién y con qué rol lo pone él) en un lugar que solo
+  // lee el Administrador. Así nadie del equipo ve lo que preguntó otro.
+  const real = clinicaReal();
+  if (real) {
+    if (real.sesion.soporte) return;
+    void pedirAClinica(real.slug, "POST", "/ia/consultas", {
+      pregunta: c.pregunta.slice(0, 500),
+      modulo: c.modulo.slice(0, 40),
+      resultado: c.resultado,
+      sede: c.sede.slice(0, 80),
+    }).catch(() => undefined);
+    return;
+  }
   setIA("consultas", (p) =>
     [{ ...c, id: `q-${Date.now()}-${p.length}`, fecha: new Date().toISOString() }, ...p].slice(
       0,

@@ -1,5 +1,5 @@
 import { responderRRHH } from "@/lib/cloud-esther/rrhh-store";
-import { responder, type Bloque } from "@/lib/cloud-esther/esther-motor";
+import { responder, rolDeQuienPregunta, type Bloque } from "@/lib/cloud-esther/esther-motor";
 import { auditarConsulta, type RolIA } from "@/lib/cloud-esther/ia-store";
 import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
 import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
@@ -161,7 +161,7 @@ export async function askEsther(
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   const section = context.section ?? "general";
-  const rol = context.rol ?? "admin";
+  const rol = rolDeQuienPregunta(context.rol);
   const base = {
     usuario: context.usuario ?? "Usuario",
     rol,

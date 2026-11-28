@@ -12,6 +12,7 @@ import {
 import { normalizarBusqueda } from "@/lib/utils";
 import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { puedeVer } from "@/lib/clinica/permisos";
 import { MODULES, availableIn, useCloudEstherOpcional } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { responder, type RespuestaEsther } from "@/lib/cloud-esther/esther-motor";
@@ -474,6 +475,7 @@ function PreguntasRapidas({
   const plan = ce?.plan;
   const ia = MODULES.find((m) => m.id === "ia");
   if (!plan || !ia || !availableIn(ia, plan)) return null;
+  if (real && !puedeVer(real.rol, "ia", real.sesion.usuario.modulos)) return null;
   const rol = real?.rol ?? "admin";
   const preguntas = RAPIDAS[moduloId] ?? RAPIDAS["dashboard"]!;
   const preguntar = (q: string) => {
@@ -582,7 +584,8 @@ export function AyudaEsther({ moduloId, modulo }: { moduloId: string; modulo: st
   const [rapida, setRapida] = useState<Rapida | null>(null);
   const ce = useCloudEstherOpcional();
   const moduloIA = MODULES.find((m) => m.id === "ia");
-  const conIA = !!ce?.plan && !!moduloIA && availableIn(moduloIA, ce.plan);
+  const conIA =
+    !!ce?.plan && !!moduloIA && availableIn(moduloIA, ce.plan) && (!real || puedeVer(real.rol, "ia", real.sesion.usuario.modulos));
   const ayuda = AYUDA_MODULO[ALIAS[moduloId] ?? moduloId] ?? {
     ...GENERAL,
     titulo: modulo || GENERAL.titulo,

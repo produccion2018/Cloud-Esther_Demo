@@ -256,6 +256,11 @@ export type Ejecucion = {
   modo: "Prueba" | "Automática" | "Manual";
   /** Clínica real: cuándo se retoma un paso «Esperar» */
   retomaEl?: string | null;
+  /** Clínica real: para medir resultados (¿confirmó, pagó, volvió?) */
+  evento?: string;
+  clave?: string;
+  pacienteId?: number | null;
+  presupuestoId?: number | null;
 };
 
 export type Credencial = { id: string; nombre: string; conectada: boolean; detalle: string };

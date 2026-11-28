@@ -55,7 +55,10 @@ import {
 import { candidatos, ejecutarFlujo, vistaPrevia } from "@/lib/cloud-esther/n8n-motor";
 import { AgenteIA } from "@/components/cloud-esther/automatizaciones/AgenteIA";
 import { ConexionReal } from "@/components/cloud-esther/automatizaciones/ConexionReal";
-import { leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { leerPacientes, usePacientes } from "@/lib/cloud-esther/pacientes";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { deudaDe, estadoComprobante, storeFacturacion } from "@/lib/cloud-esther/facturacion-store";
 import { ejecutarFlujoEnServidor, guardarCuidadoServidor, verEjecucionesServidor, type Cuidado } from "@/lib/clinica/api";
 import { ponerEstadoAutomatizaciones, useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
@@ -1081,6 +1084,118 @@ function ListasParaUsar({
 }
 
 
+
+/* ───────────── ¿Funciona? Resultados de los mensajes ───────────── */
+
+type GrupoResultado = { id: string; nombre: string; eventos: string[]; logro: string };
+const GRUPOS_RESULTADO: GrupoResultado[] = [
+  { id: "turnos", nombre: "Recordatorios de turno", eventos: ["turno_proximo", "turno_creado"], logro: "confirmaron" },
+  { id: "presupuestos", nombre: "Seguimiento de presupuestos", eventos: ["presupuesto_sin_respuesta", "presupuesto_creado"], logro: "aprobaron" },
+  { id: "cobros", nombre: "Recordatorios de pago", eventos: ["saldo_pendiente", "factura_vencida"], logro: "pagaron" },
+  { id: "vuelven", nombre: "Pacientes que vuelven", eventos: ["paciente_inactivo", "tratamiento_inconcluso", "laboratorio_listo"], logro: "sacaron turno" },
+  { id: "encuesta", nombre: "Encuesta después del turno", eventos: ["encuesta_satisfaccion"], logro: "respondieron" },
+];
+
+function Resultados({ ejecuciones }: { ejecuciones: Ejecucion[] }) {
+  const real = useClinicaReal();
+  const { turnos } = storeAgenda.usar();
+  const { pacientes } = usePacientes();
+  const registros = useTodosLosRegistros();
+  const { comprobantes } = storeFacturacion.usar();
+  const filas = useMemo(() => {
+    const desde = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    // Solo lo que salió de verdad (las pruebas simuladas no cuentan)
+    const runs = ejecuciones.filter(
+      (e) =>
+        e.modo !== "Prueba" &&
+        e.fecha >= desde &&
+        e.evento &&
+        e.pasos.some((p) => (p.tipo === "whatsapp" || p.tipo === "email") && p.estado === "ok"),
+    );
+    const nombreDe = (id: number | null | undefined) => {
+      const p = pacientes.find((x) => x.id === id);
+      return p ? `${p.nombre} ${p.apellido}`.trim().toLowerCase() : "";
+    };
+    const logrado = (e: Ejecucion): boolean => {
+      const dia = e.fecha.slice(0, 10);
+      const partes = (e.clave ?? "").split(":");
+      switch (e.evento) {
+        case "turno_proximo":
+        case "turno_creado": {
+          const t = turnos.find((x) => String(x.id) === partes[1]);
+          return !!t && (t.respuestaPaciente?.tipo === "confirmo" || t.estado === "Confirmada" || t.estado === "Atendida");
+        }
+        case "encuesta_satisfaccion": {
+          const t = turnos.find((x) => String(x.id) === partes[1]);
+          return !!t?.encuesta;
+        }
+        case "presupuesto_sin_respuesta":
+        case "presupuesto_creado": {
+          const pr = (registros[e.pacienteId ?? -1]?.presupuestos ?? []).find((x) => x.id === e.presupuestoId);
+          return pr?.estado === "Aprobado";
+        }
+        case "saldo_pendiente": {
+          const cuenta = registros[e.pacienteId ?? -1]?.cuenta ?? [];
+          return deudaDe(cuenta).saldo <= 0 || cuenta.some((m) => m.tipo === "Pago" && m.fecha >= dia);
+        }
+        case "factura_vencida": {
+          const c = comprobantes.find((x) => String(x.id) === partes[1]);
+          return !!c && estadoComprobante(c) === "Pagada";
+        }
+        default: {
+          const n = nombreDe(e.pacienteId);
+          return !!n && turnos.some((t) => t.paciente.trim().toLowerCase() === n && t.estado !== "Cancelada" && t.fecha >= dia);
+        }
+      }
+    };
+    return GRUPOS_RESULTADO.map((g) => {
+      const del = runs.filter((e) => g.eventos.includes(e.evento!));
+      const ok = del.filter(logrado).length;
+      return { ...g, mandados: del.length, ok };
+    }).filter((g) => g.mandados > 0);
+  }, [ejecuciones, turnos, pacientes, registros, comprobantes]);
+  return (
+    <div className="card-grad p-4">
+      <p className="text-sm font-semibold">¿Funciona? Resultados de los últimos 30 días</p>
+      {!real ? (
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          En el demo no salen mensajes de verdad, así que no hay resultados. En tu clínica vas a ver, por cada automatización,
+          cuántos pacientes confirmaron, aprobaron, pagaron o volvieron después del mensaje.
+        </p>
+      ) : filas.length === 0 ? (
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Todavía no salió ningún mensaje automático en estos 30 días. Cuando salgan, acá vas a ver cuántos confirmaron, aprobaron,
+          pagaron o volvieron.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-3">
+          {filas.map((g) => {
+            const pct = Math.round((g.ok / g.mandados) * 100);
+            return (
+              <li key={g.id}>
+                <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                  <span className="font-medium">{g.nombre}</span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    <b className="text-foreground">{g.ok}</b> de {g.mandados} {g.logro} · {pct}%
+                  </span>
+                </div>
+                <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-primary/10">
+                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(2, pct)}%` }} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {real && filas.length > 0 && (
+        <p className="mt-2 text-[10.5px] text-muted-foreground">
+          Se cuenta a quien hizo eso después de recibir el mensaje (con los datos de hoy). Es una guía: puede que algunos lo hubieran hecho igual.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ───────────── Cuidar al paciente ───────────── */
 
 const CUIDADO_DEFECTO: Cuidado = { desde: "09:00", hasta: "20:00", domingos: false, maxPorDia: 1 };
@@ -1332,6 +1447,7 @@ function Mensajes({ ejecuciones, onConexion }: { ejecuciones: Ejecucion[]; onCon
   );
   return (
     <div className="space-y-4">
+      <Resultados ejecuciones={ejecuciones} />
       <ComoSalen canales={canales} onConexion={onConexion} />
       <div className="card-grad p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

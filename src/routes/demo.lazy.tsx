@@ -1504,7 +1504,7 @@ function DashboardInner() {
         <PendientesHoy profesional={profesional} />
 
         {/* Quién está trabajando, quién llegó tarde y quién no fichó (solo el Administrador) */}
-        <HoyEquipo />
+        <HoyEquipo onToast={show} />
 
         {/* Ocupación de hoy y horarios libres para ofrecer a la lista de espera */}
         <OcupacionHoy onToast={show} profesional={profesional} />

@@ -407,6 +407,14 @@ export type EstadoFichaje = {
   tarde?: number;
 };
 export const verFichaje = (slug: string) => http<EstadoFichaje>(slug, "GET", "/fichaje");
+export type MisLicencias = {
+  miembroId: string;
+  solicitudes: { id: string; tipo: string; desde: string; hasta: string; motivo: string; estado: "Pendiente" | "Aprobada" | "Rechazada"; respuesta: string; creada: string }[];
+  aprobadas: { tipo: string; desde: string; hasta: string }[];
+};
+export const verMisLicencias = (slug: string) => http<MisLicencias>(slug, "GET", "/licencias/mias");
+export const pedirLicencia = (slug: string, p: { tipo: string; desde: string; hasta: string; motivo: string }) =>
+  http<MisLicencias>(slug, "POST", "/licencias", p);
 export const ficharServidor = (slug: string, accion: "entrada" | "salida") => http<EstadoFichaje>(slug, "POST", "/fichaje", { accion });
 
 export const enlaceInvitacion = (slug: string, id: string) =>

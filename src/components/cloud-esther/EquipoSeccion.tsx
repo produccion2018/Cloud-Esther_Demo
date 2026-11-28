@@ -23,6 +23,8 @@ import {
   type TeamRole,
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { useCloudEsther } from "@/lib/cloud-esther/data";
 import { fueraDeHorario } from "@/lib/cloud-esther/equipo-profesional-data";
 import { tiemposAgenda } from "@/lib/cloud-esther/agenda-store";
 import { pedirAbrir } from "@/lib/clinica/chat";
@@ -715,6 +717,8 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
               Total semanal: {horasTexto(totalSemana)}
             </span>
           </div>
+
+          <SedesDelMiembro miembro={miembro} onToast={onToast} />
 
           <div className="mt-4 space-y-2">
             {miembro.schedule.length === 0 && (
@@ -1446,6 +1450,67 @@ function TurnosFueraDeHorario({ miembro }: { miembro: TeamMember }) {
         ))}
       </ul>
       {lista.length > 8 && <p className="mt-1 text-[11px] text-amber-800/80">Y {lista.length - 8} más.</p>}
+    </div>
+  );
+}
+
+/* En qué sedes trabaja cada persona (solo si la clínica tiene más de una sede).
+   Sin ninguna marcada = trabaja en todas. */
+function SedesDelMiembro({ miembro, onToast }: { miembro: TeamMember; onToast: (m: string) => void }) {
+  const { clinic } = useCloudEsther();
+  const { sucursales } = useClinicSettings(clinic);
+  const { actualizarMiembro } = useEquipo();
+  if (sucursales.length < 2) return null;
+  const mias = (miembro.sedes ?? []).filter((x) => sucursales.includes(x));
+  const todas = mias.length === 0;
+  const cambiar = (sede: string) => {
+    const base = todas ? [] : mias;
+    const next = base.includes(sede) ? base.filter((x) => x !== sede) : [...base, sede];
+    const final = next.length === sucursales.length ? [] : next;
+    actualizarMiembro(miembro.id, (m) => ({ ...m, sedes: final }));
+    onToast(final.length ? `${miembro.firstName} trabaja en: ${final.join(", ")}` : `${miembro.firstName} trabaja en todas las sedes`);
+  };
+  const esAdmin = miembro.role === "administrador";
+  return (
+    <div className="mt-4 rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
+      <p className="text-xs font-semibold">Sedes donde trabaja</p>
+      <p className="text-[11px] text-muted-foreground">
+        {esAdmin
+          ? "El Administrador ve todas las sedes."
+          : miembro.role === "odontologo"
+            ? "Solo se le dan turnos en estas sedes (también en los turnos online)."
+            : "Ve la agenda y la caja solo de estas sedes."}{" "}
+        Sin ninguna marcada, trabaja en todas.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            if (todas) return;
+            actualizarMiembro(miembro.id, (m) => ({ ...m, sedes: [] }));
+            onToast(`${miembro.firstName} trabaja en todas las sedes`);
+          }}
+          aria-pressed={todas}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${todas ? "border-primary bg-primary text-primary-foreground" : "border-primary/20 bg-white text-foreground/80 hover:border-primary/40"}`}
+        >
+          Todas
+        </button>
+        {sucursales.map((sede) => {
+          const on = !todas && mias.includes(sede);
+          return (
+            <button
+              key={sede}
+              type="button"
+              disabled={esAdmin}
+              onClick={() => cambiar(sede)}
+              aria-pressed={on}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition disabled:opacity-50 ${on ? "border-primary bg-primary text-primary-foreground" : "border-primary/20 bg-white text-foreground/80 hover:border-primary/40"}`}
+            >
+              {sede}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

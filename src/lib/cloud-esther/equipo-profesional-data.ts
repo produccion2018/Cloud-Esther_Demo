@@ -42,6 +42,9 @@ export interface TeamMember {
   /** Mostrarlo en el portal del paciente (por defecto, sí) */
   mostrarEnPortal?: boolean;
   status: MemberStatus;
+  /** Sedes donde trabaja (vacío o sin dato = en todas). La secretaria ve solo la agenda y la
+      caja de sus sedes; el profesional solo se ofrece para turnos en sus sedes. */
+  sedes?: string[];
   schedule: ScheduleDay[];
   assistantOf?: string[];
   assistants?: string[];
@@ -154,4 +157,15 @@ export function fueraDeHorario(m: Pick<TeamMember, "schedule">, fecha: string, h
   if (d.breakStart && d.breakEnd && t0 < minutosDe(d.breakEnd) && t1 > minutosDe(d.breakStart))
     return `tiene pausa de ${d.breakStart} a ${d.breakEnd}`;
   return null;
+}
+
+/** Sedes en las que trabaja (de las que existen); sin asignar = todas. */
+export function sedesDeMiembro(m: Pick<TeamMember, "sedes"> | undefined | null, todas: string[]): string[] {
+  const mias = (m?.sedes ?? []).filter((s) => todas.includes(s));
+  return mias.length ? mias : todas;
+}
+/** ¿Atiende en esa sede? (sin sedes asignadas, en todas) */
+export function trabajaEnSede(m: Pick<TeamMember, "sedes"> | undefined | null, sede: string | undefined, todas: string[]): boolean {
+  if (!sede || !todas.includes(sede)) return true;
+  return sedesDeMiembro(m, todas).includes(sede);
 }

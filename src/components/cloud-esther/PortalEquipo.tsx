@@ -144,7 +144,7 @@ import { ComunicacionInterna } from "@/components/clinica/comunicacion-interna";
 import { AvisosChatGlobal } from "@/components/clinica/avisos-chat";
 import { useAvisosChat } from "@/lib/clinica/chat";
 import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
-import { permsFor } from "@/lib/cloud-esther/equipo-profesional-data";
+import { permsFor, sedesDeMiembro } from "@/lib/cloud-esther/equipo-profesional-data";
 import { leerSesionActual } from "@/lib/cloud-esther/auth-store";
 import { ajustarCatalogosClinica } from "@/lib/cloud-esther/agenda-store";
 import { cargarSettings } from "@/lib/cloud-esther/settings-store";
@@ -791,12 +791,15 @@ function AppEquipo({
 
   // Qué turnos ve cada rol: el odontólogo los suyos, el asistente los de sus odontólogos, administración todos.
   const asistidos = miembros.filter((m) => miembro.assistantOf?.includes(m.id)).map(nombreDe);
+  // Y solo de las sedes donde trabaja (sin sedes asignadas, todas)
+  const misSedesPortal = sedesDeMiembro(miembro, SUCURSALES);
   const turnosVisibles = turnos.filter((t) =>
-    miembro.role === "odontologo"
+    (misSedesPortal.length === SUCURSALES.length || misSedesPortal.includes(t.sucursal)) &&
+    (miembro.role === "odontologo"
       ? t.odontologo === nombreDe(miembro)
       : miembro.role === "asistente"
         ? asistidos.includes(t.odontologo)
-        : true,
+        : true),
   );
   const odontologos = miembros.filter((m) => m.role === "odontologo" && m.status === "activo");
   const profesionalesVisibles = administrativo

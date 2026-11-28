@@ -76,7 +76,7 @@ type Fuente = {
   info: InfoReserva | null;
   error: string;
   cargando: boolean;
-  libres: (profesionalId?: string) => Promise<Libre[]>;
+  libres: (profesionalId?: string, sede?: string) => Promise<Libre[]>;
   reservar: (d: DatosReserva) => Promise<ResultadoReserva>;
 };
 
@@ -112,6 +112,7 @@ function useFuenteDemo(activo: boolean): Fuente {
           especialidades: m.specialties ?? [],
           foto: c.mostrarEquipo ? (m.avatarUrl ?? "") : "",
           bio: c.mostrarEquipo ? (m.bioPublica ?? "") : "",
+          sedes: (m.sedes ?? []).filter((x) => ajustes.sucursales.includes(x)),
         })),
       }
     : null;
@@ -119,14 +120,22 @@ function useFuenteDemo(activo: boolean): Fuente {
     info,
     error: "",
     cargando: false,
-    libres: async (profesionalId) => libresLocales({ agenda: storeAgenda.leer(), miembros, ausencias, ...(profesionalId ? { profesionalId } : {}) }),
+    libres: async (profesionalId, sede) =>
+      libresLocales({ agenda: storeAgenda.leer(), miembros, ausencias, ...(profesionalId ? { profesionalId } : {}), ...(sede ? { sede } : {}) }),
     reservar: async (d) => {
-      const libres = libresLocales({ agenda: storeAgenda.leer(), miembros, ausencias, ...(d.profesionalId ? { profesionalId: d.profesionalId } : {}) });
+      const libres = libresLocales({
+        agenda: storeAgenda.leer(),
+        miembros,
+        ausencias,
+        ...(d.profesionalId ? { profesionalId: d.profesionalId } : {}),
+        ...(d.sede ? { sede: d.sede } : {}),
+      });
       const l = libres.find((x) => x.fecha === d.fecha && x.hora === d.hora);
       if (!l) throw new Error("Ese horario se acaba de ocupar. Elegí otro, por favor.");
       const prof = info!.profesionales.find((p) => p.id === l.profesionalId)!;
       const estado = info!.confirmaSolo ? "Confirmada" : "Pendiente";
-      const sede = d.sede || ajustes.sucursales[0] || info!.clinica;
+      // Sin sede elegida: la primera sede donde atiende ese profesional
+      const sede = d.sede || prof.sedes?.[0] || ajustes.sucursales[0] || info!.clinica;
       setTurnosStore((prev) => [
         ...prev,
         {
@@ -164,7 +173,7 @@ function useFuenteServidor(slug: string, activo: boolean): Fuente {
     info,
     error,
     cargando,
-    libres: (profesionalId) => libresServidor(slug, profesionalId),
+    libres: (profesionalId, sede) => libresServidor(slug, profesionalId, sede),
     reservar: (d) => reservarServidor(slug, d),
   };
 }
@@ -433,7 +442,7 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
     setLibres(null);
     setErrorLibres("");
     fuente
-      .libres(pid ?? undefined)
+      .libres(pid ?? undefined, info.sedes.length > 1 && sede ? sede : undefined)
       .then((l) => {
         setLibres(l);
         const primero = l[0]?.fecha ?? "";
@@ -456,6 +465,9 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
   ].filter((x) => x.h.length);
   const elegido = horasDelDia.find((l) => l.hora === hora);
   const prof = info.profesionales.find((p) => p.id === (elegido?.profesionalId ?? profesionalId));
+  // Con varias sedes, solo los profesionales que atienden en la sede elegida
+  const profesionalesDeLaSede =
+    info.sedes.length > 1 && sede ? info.profesionales.filter((p) => !p.sedes?.length || p.sedes.includes(sede)) : info.profesionales;
 
   const ir = (n: number) => {
     setError("");
@@ -558,7 +570,7 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a83a3]">Sede</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {info.sedes.map((s) => (
-                  <button key={s} type="button" onClick={() => setSede(s)} aria-pressed={sede === s} className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition ${sede === s ? "border-[var(--marca)] bg-[var(--marca)] text-white shadow-md" : "border-[#e6e1f5] bg-white hover:border-[var(--marca)]/50"}`}>
+                  <button key={s} type="button" onClick={() => { setSede(s); setProfesionalId(null); setLibres(null); }} aria-pressed={sede === s} className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition ${sede === s ? "border-[var(--marca)] bg-[var(--marca)] text-white shadow-md" : "border-[#e6e1f5] bg-white hover:border-[var(--marca)]/50"}`}>
                     <MapPin className="size-3.5" /> {s}
                   </button>
                 ))}
@@ -611,7 +623,7 @@ function Reserva({ info, fuente }: { info: InfoReserva; fuente: Fuente }) {
               </span>
               <ArrowRight className="size-4 text-[var(--marca)]" />
             </button>
-            {info.profesionales.map((p) => (
+            {profesionalesDeLaSede.map((p) => (
               <button
                 key={p.id}
                 type="button"

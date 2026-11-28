@@ -9,6 +9,8 @@ import { capitalizarNombre, capitalizarSede } from "@/lib/utils";
 import { cargarSettings, guardarSettings } from "@/lib/cloud-esther/settings-store";
 import { storeEquipo } from "@/lib/cloud-esther/equipo-store";
 import { moduloCargado } from "@/lib/clinica/sincronizar";
+import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { sedesDeMiembro } from "@/lib/cloud-esther/equipo-profesional-data";
 import { storeRegistros } from "@/components/cloud-esther/PacienteSecciones";
 
 /* Ubicación: src/lib/cloud-esther/sedes.ts
@@ -54,6 +56,9 @@ function reemplazar<T>(
       for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
         let y: unknown;
         if (campos.includes(k) && x === viejo) y = nuevo;
+        // Listas de sedes (ej. las sedes donde trabaja cada persona del equipo)
+        else if (campos.includes("sucursal") && k === "sedes" && Array.isArray(x) && x.includes(viejo))
+          y = x.map((v) => (v === viejo ? nuevo : v));
         else y = ir(x, k);
         // Mapas por sede (ej. último conteo de inventario por sucursal)
         const k2 = clave && mapas.includes(clave) && k === viejo ? nuevo : k;
@@ -69,7 +74,7 @@ function reemplazar<T>(
   return { valor: r, cambio };
 }
 
-const STORES = [storeAgenda, storeFinanzas, storeFacturacion, storeInventario, storeRRHH, storePacientes, storeRegistros] as {
+const STORES = [storeAgenda, storeFinanzas, storeFacturacion, storeInventario, storeRRHH, storePacientes, storeRegistros, storeEquipo] as {
   leer: () => unknown;
   poner: (v: unknown) => void;
 }[];
@@ -165,4 +170,16 @@ export function useMayusculaEnNombres(clinic: string, puedeEscribir: boolean, es
     }, 750);
     return () => window.clearInterval(id);
   }, [clinic, puedeEscribir, esReal]);
+}
+
+/** Las sedes que puede ver quien está usando la app: el Administrador (y el dueño del demo)
+    ve todas; el resto, las sedes que le asignaron en Equipo (sin asignar = todas). */
+export function useMisSedes(todas: string[]): { sedes: string[]; limitado: boolean } {
+  const real = useClinicaReal();
+  const { miembros } = storeEquipo.usar();
+  if (!real || real.rol === "admin") return { sedes: todas, limitado: false };
+  const email = (real.sesion.usuario.email ?? "").trim().toLowerCase();
+  const yo = miembros.find((m) => m.id === real.sesion.usuario.id || (email && (m.email ?? "").trim().toLowerCase() === email));
+  const sedes = sedesDeMiembro(yo, todas);
+  return { sedes, limitado: sedes.length < todas.length };
 }

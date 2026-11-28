@@ -76,6 +76,7 @@ import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { MODULES, availableIn, planLevel, useCloudEsther } from "@/lib/cloud-esther/data";
 import { storeN8n } from "@/lib/cloud-esther/n8n-store";
 import { SUCURSALES, storeAgenda, type Turno } from "@/lib/cloud-esther/agenda-store";
+import { useMisSedes } from "@/lib/cloud-esther/sedes";
 import { storePresupuestos } from "@/lib/cloud-esther/presupuestos-store";
 import { CoberturasNomenclador } from "@/components/cloud-esther/coberturas/Coberturas";
 import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
@@ -1027,7 +1028,8 @@ function Emitir({
   useEffect(() => setTipo(tipoSugerido(cfg, receptor)), [receptor, cfg]);
   const [items, setItems] = useState<ItemFactura[]>(base.items ?? []);
   const [descuento, setDescuento] = useState("0");
-  const [sucursal, setSucursal] = useState(SUCURSALES[0] ?? "Clínica Centro");
+  const { sedes: misSedesFac } = useMisSedes(SUCURSALES);
+  const [sucursal, setSucursal] = useState(misSedesFac[0] ?? SUCURSALES[0] ?? "Clínica Centro");
   const [profesional, setProfesional] = useState(base.profesional ?? odontologos[0] ?? "");
   const [vto, setVto] = useState(diaISO(cfg.vencimientoDias));
   const [cobrarYa, setCobrarYa] = useState(false);
@@ -1237,7 +1239,7 @@ function Emitir({
           />
         </Field>
         <Field label="Sucursal">
-          <Sel value={sucursal} onChange={setSucursal} opciones={SUCURSALES} />
+          <Sel value={sucursal} onChange={setSucursal} opciones={misSedesFac} />
         </Field>
         <Field label="Profesional">
           <Sel
@@ -1943,7 +1945,9 @@ function Cobranzas({ ctx }: { ctx: Ctx }) {
 
 function Caja({ ctx }: { ctx: Ctx }) {
   const { sesiones, movimientos } = storeFacturacion.usar();
-  const [suc, setSuc] = useState(SUCURSALES[0] ?? "Clínica Centro");
+  // Cada uno ve la caja de sus sedes (Equipo → Sedes donde trabaja); el Administrador, todas
+  const { sedes: misSedesCaja } = useMisSedes(SUCURSALES);
+  const [suc, setSuc] = useState(misSedesCaja[0] ?? SUCURSALES[0] ?? "Clínica Centro");
   const [mov, setMov] = useState<"Ingreso" | "Egreso" | null>(null);
   const [cerrar, setCerrar] = useState(false);
   const abierta = sesiones.find((s) => s.sucursal === suc && !s.cerrada);
@@ -1980,7 +1984,7 @@ function Caja({ ctx }: { ctx: Ctx }) {
         descripcion="Apertura, ingresos y egresos del día y arqueo al cierre. Los cobros en el mostrador entran solos."
       >
         <div className="w-52">
-          <Sel value={suc} onChange={setSuc} opciones={SUCURSALES} etiqueta="Sucursal de la caja" />
+          <Sel value={suc} onChange={setSuc} opciones={misSedesCaja} etiqueta="Sucursal de la caja" />
         </div>
       </Encabezado>
       {!abierta ? (

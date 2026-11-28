@@ -51,7 +51,8 @@ import { CloudEstherProvider, MODULES, availableIn, useCloudEsther } from "@/lib
 import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { recuperarTurno, vencerOfertas } from "@/lib/cloud-esther/recuperacion-turnos";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
-import { fueraDeHorario } from "@/lib/cloud-esther/equipo-profesional-data";
+import { fueraDeHorario, sedesDeMiembro, trabajaEnSede } from "@/lib/cloud-esther/equipo-profesional-data";
+import { useMisSedes } from "@/lib/cloud-esther/sedes";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { normalizarBusqueda as normBusq } from "@/lib/utils";
@@ -675,7 +676,10 @@ function CitaForm({
   onSubmit: (c: NuevaCita, repetir?: Repeticion) => void;
   onCancel: () => void;
 }) {
-  const { odontologos, duracion: duracionHabitual } = useOpcionesAgenda();
+  const { odontologos: todosOdontologos, duracion: duracionHabitual } = useOpcionesAgenda();
+  // Sedes de quien usa la agenda, y los profesionales que atienden en la sede elegida
+  const { sedes: misSedes } = useMisSedes(SUCURSALES);
+  const { miembros: delEquipo } = useEquipo();
   // Turnos repetidos (solo al crear): cada N días/semanas/meses, X veces. A criterio de la clínica.
   const [repetir, setRepetir] = useState(false);
   const [cada, setCada] = useState("1");
@@ -683,7 +687,11 @@ function CitaForm({
   const [veces, setVeces] = useState("6");
   const [duracion, setDuracion] = useState(String(inicial?.duracion ?? prefill?.duracion ?? duracionHabitual));
   const [paciente, setPaciente] = useState(inicial?.paciente ?? prefill?.paciente ?? "");
-  const [sucursal, setSucursal] = useState(inicial?.sucursal ?? prefill?.sucursal ?? SUCURSALES[0]);
+  const [sucursal, setSucursal] = useState(inicial?.sucursal ?? prefill?.sucursal ?? misSedes[0] ?? SUCURSALES[0]);
+  const odontologos = todosOdontologos.filter((n) => {
+    const m = delEquipo.find((x) => `${x.firstName} ${x.lastName}`.trim() === n);
+    return !m || trabajaEnSede(m, sucursal, SUCURSALES) || n === inicial?.odontologo;
+  });
   const [odontologo, setOdontologo] = useState(
     inicial?.odontologo ?? prefill?.odontologo ?? odontologos[0] ?? "",
   );
@@ -743,7 +751,22 @@ function CitaForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Sucursal">
-          <SelectField value={sucursal} onChange={setSucursal} options={SUCURSALES} />
+          <SelectField
+            value={sucursal}
+            onChange={(v) => {
+              setSucursal(v);
+              // Si el profesional elegido no atiende en esa sede, se pasa al primero que sí
+              const m = delEquipo.find((x) => `${x.firstName} ${x.lastName}`.trim() === odontologo);
+              if (m && !trabajaEnSede(m, v, SUCURSALES)) {
+                const otro = todosOdontologos.find((n) => {
+                  const y = delEquipo.find((x) => `${x.firstName} ${x.lastName}`.trim() === n);
+                  return !y || trabajaEnSede(y, v, SUCURSALES);
+                });
+                setOdontologo(otro ?? "");
+              }
+            }}
+            options={misSedes}
+          />
         </Field>
 
         <Field label="Odontólogo">
@@ -1011,7 +1034,8 @@ function EsperaForm({
   const [nombre, setNombre] = useState("");
   const [motivo, setMotivo] = useState(TRATAMIENTOS[0]);
   const [franja, setFranja] = useState("Cualquiera");
-  const [sucursal, setSucursal] = useState(SUCURSALES[0]);
+  const { sedes: misSedesEspera } = useMisSedes(SUCURSALES);
+  const [sucursal, setSucursal] = useState(misSedesEspera[0] ?? SUCURSALES[0]);
   const [odontologo, setOdontologo] = useState("Cualquiera");
   const [prioridad, setPrioridad] = useState("Normal");
   const [dias, setDias] = useState<number[]>([]);
@@ -2652,6 +2676,8 @@ function AgendaInner() {
 
   // Odontólogos del equipo de la empresa y pacientes de su listado.
   const { miembros, ausencias } = useEquipo();
+  // Quien no es Administrador ve solo la agenda de sus sedes (Equipo → Sedes donde trabaja)
+  const { sedes: misSedes, limitado: sedesLimitadas } = useMisSedes(SUCURSALES);
   /** Ausencia (vacaciones, licencia…) de un profesional en esa fecha, si tiene */
   const ausenciaDe = (odontologo: string, fecha: string) => {
     const m = miembros.find((x) => `${x.firstName} ${x.lastName}`.trim() === odontologo);
@@ -2816,6 +2842,9 @@ function AgendaInner() {
       .filter((m) => {
         // De vacaciones o licencia ese día: no atiende
         if (ausencias.some((a) => a.miembroId === m.id && a.desde <= fecha && a.hasta >= fecha)) return false;
+        // Mirando una sede: solo los que atienden en esa sede
+        if (filtros.sucursal && !trabajaEnSede(m, filtros.sucursal, SUCURSALES)) return false;
+        if (sedesLimitadas && !sedesDeMiembro(m, SUCURSALES).some((x) => misSedes.includes(x))) return false;
         if (!m.schedule?.length) return true;
         const d = m.schedule.find((x) => x.day === dia);
         if (!d?.active) return false;
@@ -2859,6 +2888,7 @@ function AgendaInner() {
   /* Datos derivados */
 
   const pasaFiltros = (t: Turno) =>
+    (!sedesLimitadas || misSedes.includes(t.sucursal)) &&
     (!filtros.sucursal || t.sucursal === filtros.sucursal) &&
     (!filtros.odontologo || t.odontologo === filtros.odontologo) &&
     (!filtros.gabinete || t.gabinete === filtros.gabinete) &&
@@ -2868,7 +2898,10 @@ function AgendaInner() {
 
   // Las tarjetas de hoy siguen al profesional elegido
   const turnosHoy = turnos.filter(
-    (t) => t.fecha === hoy && (!filtros.odontologo || t.odontologo === filtros.odontologo),
+    (t) =>
+      t.fecha === hoy &&
+      (!sedesLimitadas || misSedes.includes(t.sucursal)) &&
+      (!filtros.odontologo || t.odontologo === filtros.odontologo),
   );
 
   const contar = (estado: EstadoTurno) => turnosHoy.filter((t) => t.estado === estado).length;
@@ -3016,9 +3049,14 @@ function AgendaInner() {
     const prof = c.odontologo
       ? miembros.find((m) => `${m.firstName} ${m.lastName}`.trim() === c.odontologo)
       : undefined;
-    const fuera = prof ? fueraDeHorario(prof, c.fecha, c.hora, c.duracion ?? duracionHabitual) : null;
-    const claveFuera = `${c.odontologo}|${c.fecha}|${c.hora}`;
-    const mismoQueAntes = editando && editando.odontologo === c.odontologo && editando.fecha === c.fecha && editando.hora === c.hora;
+    const fuera = prof
+      ? !trabajaEnSede(prof, c.sucursal, SUCURSALES)
+        ? `no atiende en ${c.sucursal}`
+        : fueraDeHorario(prof, c.fecha, c.hora, c.duracion ?? duracionHabitual)
+      : null;
+    const claveFuera = `${c.odontologo}|${c.fecha}|${c.hora}|${c.sucursal}`;
+    const mismoQueAntes =
+      editando && editando.odontologo === c.odontologo && editando.fecha === c.fecha && editando.hora === c.hora && editando.sucursal === c.sucursal;
     if (fuera && !mismoQueAntes && avisoFueraRef.current !== claveFuera) {
       avisoFueraRef.current = claveFuera;
       show(`${c.odontologo} ${fuera}. Si igual querés darlo, tocá guardar de nuevo.`);
@@ -3282,8 +3320,8 @@ function AgendaInner() {
                           sucursal: v,
                         }))
                       }
-                      options={SUCURSALES}
-                      placeholder="Todas las sucursales"
+                      options={misSedes}
+                      placeholder={sedesLimitadas ? "Mis sedes" : "Todas las sucursales"}
                     />
                     )}
 

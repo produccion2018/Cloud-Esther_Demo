@@ -61,7 +61,7 @@ export type InfoReserva = {
   diasAdelante: number;
   confirmaSolo: boolean;
   sedes: string[];
-  profesionales: { id: string; nombre: string; especialidades: string[]; foto: string; bio: string }[];
+  profesionales: { id: string; nombre: string; especialidades: string[]; foto: string; bio: string; sedes?: string[] }[];
 };
 export type Libre = { fecha: string; hora: string; profesionalId: string };
 export type DatosReserva = {
@@ -94,6 +94,8 @@ export function libresLocales(o: {
   miembros: TeamMember[];
   ausencias: Ausencia[];
   profesionalId?: string;
+  /** Sede elegida por el paciente: solo los profesionales que atienden ahí */
+  sede?: string;
   ahora?: Date;
 }): Libre[] {
   const config = configReserva(o.agenda.ajustes?.reservaOnline);
@@ -104,7 +106,10 @@ export function libresLocales(o: {
   const desdeMin = ahoraMin + config.horasAnticipacion * 60;
   const turnos = o.agenda.turnos.filter((t) => t.estado !== "Cancelada");
   const feriados = new Set((o.agenda.feriados ?? []).map((f) => f.fecha));
-  const profs = o.miembros.filter(visibleEnReserva).filter((p) => !o.profesionalId || p.id === o.profesionalId);
+  const profs = o.miembros
+    .filter(visibleEnReserva)
+    .filter((p) => !o.profesionalId || p.id === o.profesionalId)
+    .filter((p) => !o.sede || !p.sedes?.length || p.sedes.includes(o.sede));
   const out: Libre[] = [];
   for (let i = 0; i <= config.diasAdelante; i++) {
     const d = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + i, 12);
@@ -155,8 +160,10 @@ async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise
   return (await r.json()) as T;
 }
 export const infoReservaServidor = (slug: string) => pedir<InfoReserva>(`/public/reservas/${slug}`);
-export const libresServidor = (slug: string, profesionalId?: string) =>
-  pedir<{ libres: Libre[] }>(`/public/reservas/${slug}/libres${profesionalId ? `?profesional=${encodeURIComponent(profesionalId)}` : ""}`).then((r) => r.libres);
+export const libresServidor = (slug: string, profesionalId?: string, sede?: string) =>
+  pedir<{ libres: Libre[] }>(
+    `/public/reservas/${slug}/libres?${new URLSearchParams({ ...(profesionalId ? { profesional: profesionalId } : {}), ...(sede ? { sede } : {}) }).toString()}`,
+  ).then((r) => r.libres);
 export const reservarServidor = (slug: string, datos: DatosReserva) =>
   pedir<ResultadoReserva>(`/public/reservas/${slug}`, "POST", datos);
 

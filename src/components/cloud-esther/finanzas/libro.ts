@@ -1,3 +1,5 @@
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
 import {
   estadoComprobante,
@@ -79,6 +81,8 @@ export function useLibro() {
   const inv = storeInventario.usar();
   const registros = useTodosLosRegistros();
   const { miembros, ausencias } = useEquipo();
+  const agenda = storeAgenda.usar();
+  const { pacientes } = usePacientes();
 
   const asientos: Asiento[] = fin.movimientos.map((m) => ({
     ...m,
@@ -109,9 +113,14 @@ export function useLibro() {
   // «ya pagué» confirmados): están en la cuenta corriente. Los cobros de un comprobante ya
   // entraron arriba, así que se saltean (nada se cuenta dos veces).
   const deComprobante = new Set(fac.comprobantes.map((c) => `Cobro ${c.tipo} ${numeroComprobante(c)}`));
+  // Cada cobro va a la sede de su turno (o la del paciente): así Finanzas y Multiempresa ven
+  // cuánto entró en cada sede
+  const turnosPorId = new Map(agenda.turnos.map((t) => [t.id, t.sucursal]));
+  const sedePac = new Map(pacientes.map((p) => [p.id, p.sucursal]));
   for (const [pid, r] of Object.entries(registros)) {
     for (const m of r?.cuenta ?? []) {
       if (m.tipo !== "Pago" || m.medio === "Obra social" || deComprobante.has(m.concepto)) continue;
+      const sedeCobro = (m.turnoId ? turnosPorId.get(m.turnoId) : "") || sedePac.get(Number(pid)) || SUCURSAL_GENERAL;
       asientos.push({
         id: `cc:${pid}:${m.id}`,
         fecha: m.fecha.slice(0, 10),
@@ -120,7 +129,7 @@ export function useLibro() {
         concepto: m.concepto,
         monto: m.monto,
         cuentaId: cuentaDeMedio(m.medio as MedioPago),
-        sucursal: SUCURSAL_GENERAL,
+        sucursal: sedeCobro,
         origen: "Cobros",
         editable: false,
         comprobante: m.notas,

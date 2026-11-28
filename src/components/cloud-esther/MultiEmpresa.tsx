@@ -28,6 +28,7 @@ import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
 import { SedesEditor } from "@/components/cloud-esther/SedesEditor";
+import { TableroSedes } from "@/components/cloud-esther/TableroSedes";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
@@ -1631,6 +1632,7 @@ export function MultiEmpresa() {
       {/* ───────────── RESUMEN ───────────── */}
       {tab === "resumen" && (
         <div className="space-y-5">
+          {activa.id === idPropia && <TableroSedes nombreClinica={activa.nombre} />}
           <Panel
             title="Clínicas del sistema"
             action={

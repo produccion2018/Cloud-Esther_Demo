@@ -21,7 +21,7 @@ export interface Conector {
 
 /* De ejemplo quedan conectados n8n y WhatsApp Business (este último lo usa el módulo
    Comunicación); el resto queda listo para conectar de verdad más adelante. */
-const DATOS_INICIALES: Conector[] = [
+export const DATOS_INICIALES: Conector[] = [
   {
     id: "whatsapp",
     nombre: "WhatsApp Business",

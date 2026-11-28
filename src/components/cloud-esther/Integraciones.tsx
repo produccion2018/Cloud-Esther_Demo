@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -29,16 +29,14 @@ import {
   type PlanId,
 } from "@/lib/cloud-esther/data";
 import {
+  DATOS_INICIALES,
   useIntegraciones,
   type CategoriaConector,
   type Conector,
 } from "@/lib/cloud-esther/integraciones";
-import { probarUrl } from "@/lib/cloud-esther/integraciones-probar";
 import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
 import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
-import { Seleccion } from "@/components/ui/seleccion";
 
 /* Ubicación: src/components/cloud-esther/Integraciones.tsx
    Conectores externos por empresa. Cada uno tiene su configuración (credenciales, cuenta,
@@ -62,106 +60,82 @@ const CATEGORIAS: CategoriaConector[] = [
   "Automatización",
 ];
 
-type Campo = {
-  k: string;
-  l: string;
-  tipo?: "text" | "password" | "select";
-  opciones?: string[];
-  placeholder?: string;
-  opcional?: boolean;
+/* Lo que hace HOY cada conector, sin vender humo.
+   · «funciona»: está conectado de verdad (se configura donde dice «ir», con las claves cifradas
+     en el servidor).
+   · «proximamente»: todavía no se conecta a nada; no se piden datos que no se usan. «mientras»
+     dice qué se puede usar hoy en su lugar. */
+type Definicion = {
+  minPlan: PlanId;
+  hoy: "funciona" | "proximamente";
+  detalle: string;
+  ir?: { label: string; to: string };
+  mientras?: { texto: string; to?: string; label?: string };
 };
-
-/** Plan mínimo y datos que pide cada conector. */
-const DEFINICION: Record<
-  string,
-  { minPlan: PlanId; campos: Campo[]; ayuda: string; ir?: { label: string; to: string } }
-> = {
+const DEFINICION: Record<string, Definicion> = {
   whatsapp: {
-    minPlan: "profesional",
-    campos: [
-      { k: "numero", l: "Número de WhatsApp Business", placeholder: "+54 9 11 4455-1200" },
-      { k: "token", l: "Token de acceso (Meta)", tipo: "password", placeholder: "EAAG…" },
-    ],
-    ayuda: "Se usa en Comunicación, recordatorios de turnos y el Contact Center de Esther.",
-    ir: { label: "Abrir Comunicación", to: "/demo/comunicaciones" },
-  },
-  "google-calendar": {
-    minPlan: "profesional",
-    campos: [
-      { k: "cuenta", l: "Cuenta de Google", placeholder: "agenda@tuclinica.com" },
-      {
-        k: "sentido",
-        l: "Sincronización",
-        tipo: "select",
-        opciones: ["Cloud Esther → Google", "En ambos sentidos"],
-      },
-    ],
-    ayuda: "Cada profesional ve sus turnos en su calendario.",
-  },
-  "pasarela-pagos": {
-    minPlan: "profesional",
-    campos: [
-      {
-        k: "proveedor",
-        l: "Proveedor",
-        tipo: "select",
-        opciones: ["Mercado Pago", "Stripe", "Payway"],
-      },
-      { k: "clave", l: "Clave pública", placeholder: "APP_USR-…" },
-      { k: "secreto", l: "Clave secreta", tipo: "password" },
-    ],
-    ayuda: "Habilita links de pago en Facturación, presupuestos y el portal del paciente.",
-    ir: { label: "Abrir Facturación", to: "/demo/facturacion" },
-  },
-  "facturacion-electronica": {
-    minPlan: "profesional",
-    campos: [
-      { k: "cuit", l: "CUIT / identificación fiscal", placeholder: "30-12345678-9" },
-      { k: "puntoVenta", l: "Punto de venta", placeholder: "0003" },
-      {
-        k: "certificado",
-        l: "Certificado digital",
-        placeholder: "certificado.crt",
-        opcional: true,
-      },
-    ],
-    ayuda: "Los comprobantes de Facturación se autorizan ante el organismo fiscal de tu país.",
-    ir: { label: "Datos fiscales", to: "/demo/facturacion" },
-  },
-  doctoralia: {
-    minPlan: "profesional",
-    campos: [{ k: "perfil", l: "ID de perfil de Doctoralia", placeholder: "dra-paula-arriaga" }],
-    ayuda: "Los turnos reservados online entran directo a la Agenda.",
-  },
-  dicom: {
-    minPlan: "avanzada",
-    campos: [
-      { k: "aeTitle", l: "AE Title", placeholder: "CLOUDESTHER" },
-      { k: "host", l: "Servidor PACS / equipo", placeholder: "192.168.0.20" },
-      { k: "puerto", l: "Puerto", placeholder: "104" },
-    ],
-    ayuda: "Las imágenes llegan a Estudios y al análisis de rayos X del Odontograma 3D.",
-  },
-  webhooks: {
-    minPlan: "avanzada",
-    campos: [
-      { k: "url", l: "URL de destino", placeholder: "https://tu-sistema.com/webhooks" },
-      {
-        k: "eventos",
-        l: "Eventos",
-        tipo: "select",
-        opciones: ["Turnos", "Turnos y pacientes", "Turnos, pacientes y facturación"],
-      },
-    ],
-    ayuda: "Cada evento se envía firmado con la clave de tu clínica.",
+    minPlan: "inicial",
+    hoy: "funciona",
+    detalle:
+      "Manda los recordatorios y mensajes desde el número de WhatsApp Business de tu clínica.",
+    ir: { label: "Configurar en Automatizaciones", to: "/demo/automatizaciones" },
   },
   n8n: {
     minPlan: "grupo",
-    campos: [
-      { k: "instancia", l: "URL de la instancia del motor", placeholder: "https://automatizacion.tuclinica.com" },
-    ],
-    ayuda: "Los flujos, plantillas y ejecuciones se manejan desde Automatizaciones.",
-    ir: { label: "Abrir Automatizaciones", to: "/demo/automatizaciones" },
+    hoy: "funciona",
+    detalle: "Dispara los flujos de Automatizaciones (incluido el agente de WhatsApp 24/7).",
+    ir: { label: "Configurar en Automatizaciones", to: "/demo/automatizaciones" },
+  },
+  "google-calendar": {
+    minPlan: "profesional",
+    hoy: "proximamente",
+    detalle: "Cada profesional va a ver sus turnos en el calendario de su celular.",
+  },
+  "pasarela-pagos": {
+    minPlan: "profesional",
+    hoy: "proximamente",
+    detalle:
+      "Cobros online con link de pago (Mercado Pago) que entran solos a la cuenta corriente.",
+    mientras: {
+      texto:
+        "Hoy podés mandar el enlace «Ya pagué»: el paciente sube su comprobante y vos lo confirmás.",
+      to: "/demo/facturacion",
+      label: "Ir a Facturación",
+    },
+  },
+  "facturacion-electronica": {
+    minPlan: "profesional",
+    hoy: "proximamente",
+    detalle: "Autorizar los comprobantes ante el organismo fiscal de tu país (ARCA, SII, SAT…).",
+    mientras: {
+      texto:
+        "Hoy los comprobantes salen en modo prueba: sirven como recibo, pero no tienen validez fiscal.",
+    },
+  },
+  doctoralia: {
+    minPlan: "profesional",
+    hoy: "proximamente",
+    detalle: "Los turnos que te reservan en Doctoralia van a entrar solos a la Agenda.",
+    mientras: {
+      texto: "Hoy tus pacientes pueden reservar en tu propia página de turnos online.",
+      to: "/demo/agenda",
+      label: "Ir a la Agenda",
+    },
+  },
+  dicom: {
+    minPlan: "avanzada",
+    hoy: "proximamente",
+    detalle: "Las radiografías van a llegar solas desde el equipo de rayos o el PACS.",
+    mientras: {
+      texto: "Hoy subís las imágenes en Estudios y diagnóstico (también desde el celular).",
+      to: "/demo/estudios",
+      label: "Ir a Estudios",
+    },
+  },
+  webhooks: {
+    minPlan: "avanzada",
+    hoy: "proximamente",
+    detalle: "Avisarle a tu propio sistema cada turno, paciente o cobro nuevo.",
   },
 };
 
@@ -181,8 +155,9 @@ function IntegracionesInner() {
   const { conectores, setConectores } = useIntegraciones();
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<"Todas" | CategoriaConector>("Todas");
-  const [abierto, setAbierto] = useState<Conector | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
 
   const aviso = (m: string) => {
     setToast(m);
@@ -197,18 +172,31 @@ function IntegracionesInner() {
   // Automatizaciones › Conexión, con las llaves cifradas en el servidor)
   const real = useClinicaReal();
   const estServ = useEstadoAutomatizaciones();
-  const DEL_SERVIDOR = ["whatsapp", "n8n"];
-  const vista: Conector[] = real
-    ? conectores.map((c) =>
-        c.id === "whatsapp"
-          ? { ...c, estado: estServ?.whatsapp.conectado ? "Conectado" : "Desconectado" }
-          : c.id === "n8n"
-            ? { ...c, estado: estServ?.n8n.eventosUrl ? "Conectado" : "Desconectado" }
-            : c,
-      )
-    : conectores;
+  // Los que funcionan muestran su estado REAL (del servidor). En el demo se simulan.
+  const estadoReal = (c: Conector): "conectado" | "sin-conectar" | "demo" | "proximamente" => {
+    if (DEFINICION[c.id]?.hoy !== "funciona") return "proximamente";
+    if (!real) return "demo";
+    if (c.id === "whatsapp") return estServ?.whatsapp.conectado ? "conectado" : "sin-conectar";
+    if (c.id === "n8n") return estServ?.n8n.eventosUrl ? "conectado" : "sin-conectar";
+    return "sin-conectar";
+  };
+  // Siempre el catálogo completo (lo guardado ya no decide qué se muestra)
+  const vista = DATOS_INICIALES;
+  // Datos que se habían cargado en conectores que no se usaban (incluidas claves): se borran
+  useEffect(() => {
+    if (!montado || (real && real.rol !== "admin")) return;
+    if (conectores.some((c) => c.config || c.ultimaPrueba || c.estado !== "Desconectado"))
+      setConectores((prev) =>
+        prev.map((c) => ({
+          ...c,
+          estado: "Desconectado",
+          config: undefined,
+          ultimaPrueba: undefined,
+        })),
+      );
+  }, [montado, conectores.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const delPlan = vista.filter(incluido);
-  const ocultos = conectores.length - delPlan.length;
+  const ocultos = vista.length - delPlan.length;
   const proximoPlan: PlanId | null = planLevel(plan) < 3 ? "avanzada" : !conN8n ? "grupo" : null;
 
   const filtrados = useMemo(() => {
@@ -220,30 +208,18 @@ function IntegracionesInner() {
     );
   }, [delPlan, filtro, busqueda]);
 
-  const conectadas = delPlan.filter((c) => c.estado === "Conectado");
-  const actualizar = (id: string, cambio: Partial<Conector>) =>
-    setConectores((prev) => prev.map((x) => (x.id === id ? { ...x, ...cambio } : x)));
-
+  const funcionan = delPlan.filter((c) => estadoReal(c) !== "proximamente");
+  const conectadas = delPlan.filter((c) => estadoReal(c) === "conectado");
   const kpis = [
-    { l: "Conectadas", v: conectadas.length, s: `de ${delPlan.length} del plan`, i: CheckCircle2 },
     {
-      l: "Disponibles",
-      v: delPlan.length - conectadas.length,
-      s: "listas para conectar",
-      i: Circle,
+      l: "Conectadas",
+      v: conectadas.length,
+      s: real ? "funcionando ahora" : "en el demo se simulan",
+      i: CheckCircle2,
     },
-    {
-      l: "Automatización",
-      v: delPlan.filter((c) => c.categoria === "Automatización" && c.estado === "Conectado").length,
-      s: "conectores activos",
-      i: Workflow,
-    },
-    {
-      l: "Configuradas",
-      v: delPlan.filter((c) => c.config && Object.keys(c.config).length).length,
-      s: "con datos cargados",
-      i: Settings2,
-    },
+    { l: "Listas para usar", v: funcionan.length, s: "en tu plan", i: Circle },
+    { l: "Próximamente", v: delPlan.length - funcionan.length, s: "en camino", i: Workflow },
+    { l: "Del plan", v: delPlan.length, s: `plan ${PLANS[plan].name}`, i: Settings2 },
   ];
 
   return (
@@ -269,33 +245,55 @@ function IntegracionesInner() {
             <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
               {kpis.map((k, idx) => {
                 const tonos = [
-                  { icon: "from-primary to-fuchsia-500", val: "text-primary", orb: "from-primary/20 to-fuchsia-400/10" },
-                  { icon: "from-sky-400 to-blue-600", val: "text-sky-600", orb: "from-sky-400/20 to-blue-500/10" },
-                  { icon: "from-emerald-400 to-teal-600", val: "text-emerald-600", orb: "from-emerald-400/20 to-teal-500/10" },
-                  { icon: "from-amber-400 to-orange-500", val: "text-amber-600", orb: "from-amber-400/20 to-orange-500/10" },
+                  {
+                    icon: "from-primary to-fuchsia-500",
+                    val: "text-primary",
+                    orb: "from-primary/20 to-fuchsia-400/10",
+                  },
+                  {
+                    icon: "from-sky-400 to-blue-600",
+                    val: "text-sky-600",
+                    orb: "from-sky-400/20 to-blue-500/10",
+                  },
+                  {
+                    icon: "from-emerald-400 to-teal-600",
+                    val: "text-emerald-600",
+                    orb: "from-emerald-400/20 to-teal-500/10",
+                  },
+                  {
+                    icon: "from-amber-400 to-orange-500",
+                    val: "text-amber-600",
+                    orb: "from-amber-400/20 to-orange-500/10",
+                  },
                 ];
                 const t = tonos[idx % 4];
                 return (
-                <div
-                  key={k.l}
-                  className="group relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.04] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-26px_rgba(124,58,237,0.6)]"
-                >
-                  <div className={`pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-gradient-to-br opacity-70 transition-transform duration-300 group-hover:scale-110 ${t.orb}`} />
-                  <div className="relative flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-muted-foreground">
-                        {k.l}
-                      </p>
-                      <p className={`mt-2 text-[27px] font-bold leading-none tracking-tight ${t.val}`}>
-                        {k.v}
-                      </p>
-                      <p className="mt-2 text-[11px] text-muted-foreground">{k.s}</p>
+                  <div
+                    key={k.l}
+                    className="group relative min-h-[100px] overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-white via-white to-primary/[0.04] p-4 shadow-[0_12px_28px_-20px_rgba(124,58,237,0.48)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-26px_rgba(124,58,237,0.6)]"
+                  >
+                    <div
+                      className={`pointer-events-none absolute -right-7 -top-9 size-[100px] rounded-full bg-gradient-to-br opacity-70 transition-transform duration-300 group-hover:scale-110 ${t.orb}`}
+                    />
+                    <div className="relative flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-muted-foreground">
+                          {k.l}
+                        </p>
+                        <p
+                          className={`mt-2 text-[27px] font-bold leading-none tracking-tight ${t.val}`}
+                        >
+                          {k.v}
+                        </p>
+                        <p className="mt-2 text-[11px] text-muted-foreground">{k.s}</p>
+                      </div>
+                      <span
+                        className={`grid size-9 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${t.icon}`}
+                      >
+                        <k.i className="size-4" />
+                      </span>
                     </div>
-                    <span className={`grid size-9 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_8px_16px_-8px_rgba(0,0,0,0.35)] ${t.icon}`}>
-                      <k.i className="size-4" />
-                    </span>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -327,67 +325,87 @@ function IntegracionesInner() {
         </section>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filtrados.map((c) => {
-            const Icon = ICONOS[c.icon] ?? Plug;
-            const on = c.estado === "Conectado";
-            const configurado = c.estado === "Configurado";
-            const badge = on
-              ? "bg-emerald-50 text-emerald-700"
-              : configurado
-                ? "bg-amber-50 text-amber-700"
-                : "bg-muted text-muted-foreground";
-            const punto = on ? "bg-emerald-500" : configurado ? "bg-amber-500" : "bg-muted-foreground/50";
-            return (
-              <div key={c.id} className="card-grad flex flex-col p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-5" />
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${badge}`}
-                  >
-                    <span className={`size-1.5 rounded-full ${punto}`} />
-                    {on ? "Conectado" : configurado ? "Configurado" : "Sin conectar"}
-                  </span>
-                </div>
-                <p className="mt-3 font-semibold">{c.nombre}</p>
-                <p className="mt-1 flex-1 text-[13px] leading-5 text-muted-foreground">
-                  {c.descripcion}
-                </p>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  {c.categoria}
-                  {c.ultimaPrueba
-                    ? ` · probada ${new Date(c.ultimaPrueba).toLocaleDateString("es-AR")}`
-                    : ""}
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-ce flex-1 justify-center"
-                    onClick={() =>
-                      real && DEL_SERVIDOR.includes(c.id)
-                        ? aviso(`${c.nombre} se configura en Automatizaciones › Conexión`)
-                        : setAbierto(c)
-                    }
-                  >
-                    <Settings2 className="size-4" /> {on || configurado ? "Configuración" : "Conectar"}
-                  </button>
-                  {(on || configurado) && (
-                    <button
-                      type="button"
-                      className="btn-ce-outline"
-                      onClick={() => {
-                        actualizar(c.id, { estado: "Desconectado", config: undefined, ultimaPrueba: undefined });
-                        aviso(`${c.nombre} desconectado`);
-                      }}
+          {[...filtrados]
+            .sort(
+              (a, b) =>
+                Number(estadoReal(a) === "proximamente") - Number(estadoReal(b) === "proximamente"),
+            )
+            .map((c) => {
+              const Icon = ICONOS[c.icon] ?? Plug;
+              const def = DEFINICION[c.id];
+              const e = estadoReal(c);
+              const badge =
+                e === "conectado"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : e === "sin-conectar"
+                    ? "bg-amber-50 text-amber-700"
+                    : e === "demo"
+                      ? "bg-sky-50 text-sky-700"
+                      : "bg-muted text-muted-foreground";
+              const punto =
+                e === "conectado"
+                  ? "bg-emerald-500"
+                  : e === "sin-conectar"
+                    ? "bg-amber-500"
+                    : e === "demo"
+                      ? "bg-sky-500"
+                      : "bg-muted-foreground/50";
+              const texto =
+                e === "conectado"
+                  ? "Conectado"
+                  : e === "sin-conectar"
+                    ? "Sin conectar"
+                    : e === "demo"
+                      ? "En el demo se simula"
+                      : "Próximamente";
+              return (
+                <div
+                  key={c.id}
+                  className={`card-grad flex flex-col p-4 ${e === "proximamente" ? "opacity-90" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span
+                      className={`grid size-10 place-items-center rounded-xl ${e === "proximamente" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}
                     >
-                      Desconectar
-                    </button>
+                      <Icon className="size-5" />
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${badge}`}
+                    >
+                      <span className={`size-1.5 rounded-full ${punto}`} />
+                      {texto}
+                    </span>
+                  </div>
+                  <p className="mt-3 font-semibold">{c.nombre}</p>
+                  <p className="mt-1 flex-1 text-[13px] leading-5 text-muted-foreground">
+                    {def?.detalle ?? c.descripcion}
+                  </p>
+                  {def?.mientras && (
+                    <p className="mt-2 rounded-xl bg-primary/[0.04] px-3 py-2 text-[11.5px] leading-5 text-foreground/80">
+                      {def.mientras.texto}
+                      {def.mientras.to && (
+                        <>
+                          {" "}
+                          <Link
+                            to={def.mientras.to as never}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            {def.mientras.label ?? "Ir"} →
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
+                  <p className="mt-2 text-[11px] text-muted-foreground">{c.categoria}</p>
+                  {def?.ir && e !== "proximamente" && (
+                    <Link to={def.ir.to as never} className="btn-ce mt-3 justify-center">
+                      <Settings2 className="size-4" />{" "}
+                      {e === "conectado" ? "Ver conexión" : def.ir.label}
+                    </Link>
                   )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           {!filtrados.length && (
             <p className="card-grad p-8 text-center text-sm text-muted-foreground md:col-span-2 xl:col-span-3">
               No hay integraciones con ese filtro.
@@ -402,7 +420,8 @@ function IntegracionesInner() {
               <b>{ocultos} integraciones más</b>{" "}
               <span className="text-muted-foreground">
                 ({planLevel(plan) < 3 ? "DICOM, Webhooks" : ""}
-                {planLevel(plan) < 3 ? " y Automatización" : "Automatización"}) vienen con los planes superiores.
+                {planLevel(plan) < 3 ? " y Automatización" : "Automatización"}) vienen con los
+                planes superiores.
               </span>
             </p>
             {!planContratado && (
@@ -413,188 +432,18 @@ function IntegracionesInner() {
           </div>
         )}
         <p className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <ShieldCheck className="size-3.5 text-primary" />
-          Las credenciales quedan solo en esta clínica (tenant {clinicaActualId() ?? "demo"}). En
-          producción se guardan cifradas.
+          <ShieldCheck className="size-3.5 shrink-0 text-primary" />
+          Las claves de WhatsApp y del motor de automatización se guardan cifradas en el servidor y
+          no se vuelven a mostrar. Lo que dice «Próximamente» todavía no se conecta: no te pedimos
+          datos que no se usan.
         </p>
       </div>
 
-      {abierto && (
-        <ConfigConector
-          c={conectores.find((x) => x.id === abierto.id) ?? abierto}
-          onClose={() => setAbierto(null)}
-          onGuardar={(cambio, msg) => {
-            actualizar(abierto.id, cambio);
-            aviso(msg);
-          }}
-        />
-      )}
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl">
           {toast}
         </div>
       )}
-    </div>
-  );
-}
-
-function ConfigConector({
-  c,
-  onClose,
-  onGuardar,
-}: {
-  c: Conector;
-  onClose: () => void;
-  onGuardar: (cambio: Partial<Conector>, msg: string) => void;
-}) {
-  const def = DEFINICION[c.id];
-  const campos = def?.campos ?? [];
-  const [valores, setValores] = useState<Record<string, string>>(() => {
-    const base: Record<string, string> = {};
-    campos.forEach(
-      (f) => (base[f.k] = c.config?.[f.k] ?? (f.tipo === "select" ? (f.opciones?.[0] ?? "") : "")),
-    );
-    return base;
-  });
-  const [probando, setProbando] = useState(false);
-  const [error, setError] = useState("");
-  const faltan = campos.filter((f) => !f.opcional && !valores[f.k]?.trim());
-
-  // Conectores basados en URL: se pueden PROBAR de verdad (pingear). El resto no se puede
-  // verificar sin construir la integración completa, así que se guarda la config con un estado
-  // honesto «Configurado» (nunca un «Conectado» que mienta).
-  const esPorUrl = c.id === "webhooks" || c.id === "n8n";
-
-  const probarYConectar = async () => {
-    if (faltan.length) {
-      setError(`Completá: ${faltan.map((f) => f.l).join(", ")}.`);
-      return;
-    }
-    setError("");
-
-    if (esPorUrl) {
-      const url = (valores["url"] ?? valores["instancia"] ?? "").trim();
-      if (!/^https:\/\/.+\..+/.test(url)) {
-        setError("La URL tiene que empezar con https://");
-        return;
-      }
-      setProbando(true);
-      const res = await probarUrl({ data: { url } }).catch(() => ({ ok: false }));
-      setProbando(false);
-      if (!res.ok) {
-        setError("La URL no respondió. Revisá que sea correcta y esté accesible desde internet.");
-        return;
-      }
-      onGuardar(
-        { estado: "Conectado", config: valores, ultimaPrueba: new Date().toISOString() },
-        `${c.nombre}: la URL respondió. Conectado.`,
-      );
-      onClose();
-      return;
-    }
-
-    // Sin prueba real posible: se guarda la configuración, sin fingir que está conectado.
-    onGuardar(
-      { estado: "Configurado", config: valores, ultimaPrueba: new Date().toISOString() },
-      `${c.nombre}: configuración guardada. La conexión real se activa cuando esté disponible.`,
-    );
-    onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
-      onMouseDown={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Configurar ${c.nombre}`}
-        className="w-full max-w-lg rounded-3xl border border-border bg-card p-5 shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Integraciones
-            </p>
-            <h2 className="mt-1 text-lg font-semibold">{c.nombre}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{def?.ayuda ?? c.descripcion}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-muted"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <div className="mt-4 space-y-3">
-          {campos.map((f) => (
-            <label key={f.k} className="block">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {f.l}
-                {f.opcional ? " (opcional)" : ""}
-              </span>
-              {f.tipo === "select" ? (
-                <Seleccion
-                  value={valores[f.k] ?? ""}
-                  onChange={(e) => setValores((v) => ({ ...v, [f.k]: e.target.value }))}
-                  className="h-10 w-full rounded-xl border border-primary/15 bg-white px-3 text-sm outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-                >
-                  {f.opciones?.map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </Seleccion>
-              ) : (
-                <input
-                  type={f.tipo === "password" ? "password" : "text"}
-                  value={valores[f.k] ?? ""}
-                  placeholder={f.placeholder}
-                  autoComplete="off"
-                  onChange={(e) => setValores((v) => ({ ...v, [f.k]: e.target.value }))}
-                  className="h-10 w-full rounded-xl border border-primary/15 bg-white px-3 text-sm outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-                />
-              )}
-            </label>
-          ))}
-        </div>
-        {error && (
-          <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
-            {error}
-          </p>
-        )}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-          {def?.ir ? (
-            <Link
-              to={def.ir.to as never}
-              className="text-xs font-semibold text-primary hover:underline"
-            >
-              {def.ir.label} →
-            </Link>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <button type="button" className="btn-ce-outline" onClick={onClose}>
-              Cancelar
-            </button>
-            <button type="button" className="btn-ce" onClick={probarYConectar} disabled={probando}>
-              {probando ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="size-4" />
-              )}
-              {probando
-                ? "Probando…"
-                : esPorUrl
-                  ? "Probar y conectar"
-                  : "Guardar configuración"}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

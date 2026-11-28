@@ -415,12 +415,17 @@ export const storeFacturacion = crearStorePorEmpresa<EstadoFacturacion>(
       puntoVenta: 3,
       domicilio: "",
       inicioActividades: "",
-      conectado: true,
+      conectado: false,
       vencimientoDias: 15,
       leyenda: "Prestaciones de salud exentas de IVA (Ley 23.349, art. 7).",
     },
   }),
-  { persistir: "facturacion" },
+  {
+    persistir: "facturacion",
+    // La conexión con el organismo fiscal (ARCA, SII, SAT…) todavía no existe: nunca se muestra
+    // «conectado» ni un comprobante «autorizado» que no lo está (los comprobantes son de prueba).
+    normalizar: (e) => (e?.config?.conectado ? { ...e, config: { ...e.config, conectado: false } } : e),
+  },
 );
 
 export function setFacturacion<K extends keyof EstadoFacturacion>(

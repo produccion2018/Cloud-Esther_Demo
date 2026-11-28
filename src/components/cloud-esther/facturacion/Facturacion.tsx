@@ -3069,7 +3069,6 @@ function Reportes({ ctx }: { ctx: Ctx }) {
 function DatosFiscales({ ctx }: { ctx: Ctx }) {
   const { config } = storeFacturacion.usar();
   const [f, setF] = useState<ConfigFiscal>(config);
-  const [conectando, setConectando] = useState(false);
   const pf = paisFiscal(f.pais);
   const set = (c: Partial<ConfigFiscal>) => setF((p) => ({ ...p, ...c }));
   return (
@@ -3169,35 +3168,16 @@ function DatosFiscales({ ctx }: { ctx: Ctx }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              {pf.bandera} {pf.ente}: {f.conectado ? "conectado" : "sin conectar (modo prueba)"}
+              {pf.bandera} {pf.ente}: {f.conectado ? "conectado" : "modo prueba (sin validez fiscal)"}
             </p>
             <p className="text-[11px] text-muted-foreground">
               Comprobantes: {pf.comprobantes.join(", ")} · código de autorización:{" "}
               {pf.codigoAutorizacion} · moneda {pf.moneda}
             </p>
           </div>
-          <button
-            type="button"
-            className={f.conectado ? BTN_SECUNDARIO : BTN_PRIMARIO}
-            onClick={() => {
-              if (f.conectado) {
-                set({ conectado: false });
-                return;
-              }
-              setConectando(true);
-              window.setTimeout(() => {
-                setConectando(false);
-                set({ conectado: true });
-                ctx.onToast(`Certificado validado con ${pf.ente}`);
-              }, 900);
-            }}
-          >
-            {conectando
-              ? "Validando certificado…"
-              : f.conectado
-                ? "Desconectar"
-                : "Conectar certificado"}
-          </button>
+          <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">
+            Conexión fiscal: próximamente
+          </span>
         </div>
         <div className="flex justify-end gap-2">
           <button type="button" className={BTN_SECUNDARIO} onClick={() => setF(config)}>

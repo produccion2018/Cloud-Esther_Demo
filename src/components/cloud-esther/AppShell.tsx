@@ -1526,10 +1526,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         )}
       {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla. Con IA Esther (Plus y
-          Enterprise) suma las preguntas rápidas con los datos de la clínica; en el inicio de esos
-          planes ya está Esther con su resumen, así que ahí no se duplica el botón. */}
+          Enterprise) suma las preguntas rápidas con los datos de la clínica. El «buen día» del
+          inicio sale una vez por día, así que el botón queda siempre a mano. */}
       {planListo &&
-        (!iaDisponible || (modulo?.id ?? "dashboard") !== "dashboard") &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
         !pathname.startsWith("/demo/rrhh") && (

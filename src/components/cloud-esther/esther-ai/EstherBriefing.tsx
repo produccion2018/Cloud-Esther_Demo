@@ -3,10 +3,18 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowUpRight, CalendarDays, CloudSun, AlertTriangle, Activity, Volume2, Square, PhoneCall } from "lucide-react";
 import estherSaludando from "@/assets/esther-pose-waving.png";
-import { useCloudEsther } from "@/lib/cloud-esther/data";
+import { MODULES, availableIn, useCloudEsther } from "@/lib/cloud-esther/data";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
+import { puedeVer } from "@/lib/clinica/permisos";
+import { moduloCargado } from "@/lib/clinica/sincronizar";
+import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
+import { usePacientes } from "@/lib/cloud-esther/pacientes";
+import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
+import { deudaDe, paisFiscal, storeFacturacion } from "@/lib/cloud-esther/facturacion-store";
+import { nivelStock, storeInventario } from "@/lib/cloud-esther/inventario-store";
+import { formatoMoneda } from "@/lib/cloud-esther/nomina-paises";
+import { tenantActual } from "@/lib/cloud-esther/tenant-store";
 import {
   primerNombreDe,
   saludoHora,
@@ -21,7 +29,110 @@ import {
    poco (se va solo) o se cierra con la X. No inventa datos: hallazgos reales del plan.
    Solo se monta en el dashboard (lo decide AppShell). */
 
-const SEGUNDOS_VISIBLE = 14;
+const SEGUNDOS_VISIBLE = 16;
+
+type ItemDia = { texto: string; tono: "alerta" | "info"; to?: string };
+const isoDe = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const pl = (n: number, uno: string, varios: string) => (n === 1 ? `1 ${uno}` : `${n} ${varios}`);
+const normal = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/* El día de la clínica en pocas líneas, con lo que ESA persona puede ver (rol + su menú):
+   turnos de hoy (el odontólogo, los suyos), sin confirmar, deudas, laboratorio, presupuestos
+   y stock. Todo sale de los datos reales; nada inventado. */
+function useResumenDelDia(): { items: ItemDia[]; listo: boolean } {
+  const { plan } = useCloudEsther();
+  const real = useClinicaReal();
+  const { usuario } = useSesion();
+  const { turnos } = storeAgenda.usar();
+  const { pacientes } = usePacientes();
+  const registros = useTodosLosRegistros();
+  const fac = storeFacturacion.usar();
+  const inv = storeInventario.usar();
+  // En una clínica real los datos llegan del servidor: se espera a tenerlos (nunca «0 turnos» falso)
+  const [listo, setListo] = useState(!real);
+  useEffect(() => {
+    if (!real) return setListo(true);
+    const claves = ["agenda", "pacientes", "registros"];
+    const ya = () => claves.every(moduloCargado);
+    if (ya()) return setListo(true);
+    const t = window.setInterval(() => ya() && (setListo(true), window.clearInterval(t)), 400);
+    const fin = window.setTimeout(() => window.clearInterval(t), 20000);
+    return () => {
+      window.clearInterval(t);
+      window.clearTimeout(fin);
+    };
+  }, [real]);
+
+  const items = useMemo(() => {
+    const ve = (id: string) => {
+      const m = MODULES.find((x) => x.id === id);
+      return !!m && availableIn(m, plan) && (!real || puedeVer(real.rol, id, real.sesion.usuario.modulos));
+    };
+    const $ = (n: number) => formatoMoneda(n, paisFiscal(fac.config.pais).moneda);
+    const hoy = isoDe(new Date());
+    const manana = isoDe(new Date(Date.now() + 86_400_000));
+    // El odontólogo ve SUS turnos; el resto, los de toda la clínica
+    const yo = normal(real?.sesion.usuario.nombre ?? usuario?.nombre ?? "");
+    const mios = real?.rol === "odontologo" && yo ? (t: { odontologo: string }) => normal(t.odontologo) === yo : () => true;
+    const out: ItemDia[] = [];
+    if (ve("agenda")) {
+      const deHoy = turnos
+        .filter((t) => t.fecha === hoy && t.estado !== "Cancelada" && mios(t))
+        .sort((a, b) => a.hora.localeCompare(b.hora));
+      const ahora = new Date().toTimeString().slice(0, 5);
+      const quedan = deHoy.filter((t) => t.hora >= ahora && t.estado !== "Atendida" && t.estado !== "Ausente");
+      out.push({
+        texto: deHoy.length
+          ? `Hoy ${real?.rol === "odontologo" ? "tenés" : "hay"} ${pl(deHoy.length, "turno", "turnos")}${quedan[0] ? ` · el próximo a las ${quedan[0].hora} (${quedan[0].paciente.split(" ")[0]})` : " · ya pasaron todos"}`
+          : "Hoy no hay turnos en la agenda",
+        tono: "info",
+        to: "/demo/agenda",
+      });
+      const sinConf = turnos.filter(
+        (t) => t.fecha === manana && t.estado === "Pendiente" && !t.respuestaPaciente && mios(t),
+      ).length;
+      if (sinConf)
+        out.push({ texto: `${pl(sinConf, "turno de mañana sin confirmar", "turnos de mañana sin confirmar")}`, tono: "alerta", to: "/demo/comunicaciones" });
+    }
+    if (ve("laboratorio")) {
+      const trabajos = pacientes.flatMap((p) => registros[p.id]?.laboratorio ?? []).filter((x) => x.estado !== "Entregado");
+      const listos = trabajos.filter((x) => x.estado === "Listo para retirar").length;
+      const atrasados = trabajos.filter(
+        (x) => x.estado !== "Listo para retirar" && x.fechaEntregaEstimada && x.fechaEntregaEstimada < hoy,
+      ).length;
+      if (listos || atrasados)
+        out.push({
+          texto: [listos ? pl(listos, "trabajo de laboratorio listo para retirar", "trabajos de laboratorio listos para retirar") : "", atrasados ? pl(atrasados, "trabajo atrasado", "trabajos atrasados") : ""]
+            .filter(Boolean)
+            .join(" y "),
+          tono: "alerta",
+          to: "/demo/laboratorio",
+        });
+    }
+    if (ve("facturacion")) {
+      const deben = pacientes.map((p) => deudaDe(registros[p.id]?.cuenta).saldo).filter((v) => v > 0);
+      if (deben.length)
+        out.push({
+          texto: `${deben.length === 1 ? "1 paciente debe" : `${deben.length} pacientes deben`} ${$(deben.reduce((a, b) => a + b, 0))}`,
+          tono: "alerta",
+          to: "/demo/facturacion",
+        });
+    }
+    if (ve("presupuestos")) {
+      const esperan = pacientes.flatMap((p) => (registros[p.id]?.presupuestos ?? []).filter((x) => x.estado === "Enviado")).length;
+      if (esperan)
+        out.push({ texto: pl(esperan, "presupuesto espera respuesta", "presupuestos esperan respuesta"), tono: "info", to: "/demo/presupuestos" });
+    }
+    if (ve("inventario")) {
+      const bajos = inv.insumos.filter((i) => nivelStock(i) === "Bajo" || nivelStock(i) === "Agotado").length;
+      if (bajos) out.push({ texto: pl(bajos, "insumo para reponer", "insumos para reponer"), tono: "alerta", to: "/demo/inventario" });
+    }
+    return out.slice(0, 4);
+  }, [plan, real, usuario, turnos, pacientes, registros, fac, inv]);
+  return { items, listo };
+}
 
 /** Voz en español (síntesis del navegador) para que Esther "hable" el mensaje.
     Recibe la lista de voces ya cargada (llegan asíncronas: no sirve pedirlas en el momento). */
@@ -48,7 +159,9 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
   // Clínica real: el saludo usa el nombre de la sesión real (igual que el resto de la app).
   const primerNombre = primerNombreDe(esReal?.sesion.usuario.nombre ?? usuario?.nombre ?? "");
 
-  const hallazgos = useMemo(() => hallazgosEsther(plan), [plan]);
+  void plan;
+  const { items: hallazgos, listo } = useResumenDelDia();
+  const puedeChat = !esReal || puedeVer(esReal.rol, "ia", esReal.sesion.usuario.modulos);
   const frase = fraseClima(clima);
   const fecha = useMemo(
     () =>
@@ -60,7 +173,7 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
     [],
   );
 
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [hablando, setHablando] = useState(false);
   const [voces, setVoces] = useState<SpeechSynthesisVoice[]>([]);
   const [avisoAudio, setAvisoAudio] = useState<string | null>(null);
@@ -83,11 +196,37 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
     return `${saludo}${clima}${items}`;
   }, [frase, hallazgos, primerNombre]);
 
+  // Aparece una vez por día y por persona (al primer ingreso del día), recién con los datos listos
+  const clave = `cloud-esther:buen-dia:${tenantActual()}:${esReal?.sesion.usuario.id ?? usuario?.email ?? "demo"}`;
   useEffect(() => {
-    setVisible(true);
+    if (!listo) return;
+    const hoy = new Date().toDateString();
+    try {
+      if (localStorage.getItem(clave) === hoy) return;
+    } catch {
+      /* sin almacenamiento: se muestra igual */
+    }
+    // Si hay una ventana abierta (por ejemplo, la configuración inicial), espera a que se cierre
+    const mostrar = () => {
+      const abierta = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].some((d) => d.getClientRects().length > 0);
+      if (abierta) return false;
+      try {
+        localStorage.setItem(clave, hoy);
+      } catch {
+        /* nada */
+      }
+      setVisible(true);
+      return true;
+    };
+    if (mostrar()) return;
+    const t = window.setInterval(() => mostrar() && window.clearInterval(t), 1000);
+    return () => window.clearInterval(t);
+  }, [listo, clave]);
+  useEffect(() => {
+    if (!visible) return;
     const t = window.setTimeout(() => setVisible(false), SEGUNDOS_VISIBLE * 1000);
     return () => window.clearTimeout(t);
-  }, [moduloId]);
+  }, [visible]);
 
   // Al salir de la pantalla, cortar la voz si estaba hablando.
   useEffect(
@@ -227,7 +366,7 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-lavender/70 px-2 py-0.5 text-[11px] font-medium text-primary">
                 <CalendarDays className="size-3" />
-                <span className="capitalize">{fecha}</span>
+                <span>{fecha.charAt(0).toUpperCase() + fecha.slice(1)}</span>
               </span>
               {frase && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-600 dark:text-sky-300">
@@ -251,9 +390,11 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                   const alerta = h.tono === "alerta";
                   const Icono = alerta ? AlertTriangle : Activity;
                   return (
-                    <div
+                    <Link
                       key={h.texto}
-                      className="flex items-center gap-2 rounded-xl border border-primary/10 bg-lavender/30 px-2.5 py-1.5"
+                      to={(h.to ?? "/demo") as never}
+                      onClick={cerrar}
+                      className="flex items-center gap-2 rounded-xl border border-primary/10 bg-lavender/30 px-2.5 py-1.5 transition hover:border-primary/30 hover:bg-lavender/60"
                     >
                       <span
                         className={`grid size-6 shrink-0 place-items-center rounded-lg ${
@@ -267,7 +408,8 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
                       <span className="min-w-0 flex-1 text-[12px] font-medium leading-tight text-foreground/90">
                         {h.texto}
                       </span>
-                    </div>
+                      <ArrowUpRight className="size-3.5 shrink-0 text-primary/60" />
+                    </Link>
                   );
                 })}
               </div>
@@ -275,7 +417,7 @@ export function EstherBriefing({ moduloId, modulo }: { moduloId: string; modulo:
 
             {/* CTA — solo en el demo: lleva al chat de Esther (/demo/ia).
                 En una clínica real el chat es otro módulo, así que acá no se muestra. */}
-            {!esReal && (
+            {puedeChat && (
               <div className="mt-3">
                 <Link
                   to={"/demo/ia" as never}

@@ -56,8 +56,8 @@ import { candidatos, ejecutarFlujo, vistaPrevia } from "@/lib/cloud-esther/n8n-m
 import { AgenteIA } from "@/components/cloud-esther/automatizaciones/AgenteIA";
 import { ConexionReal } from "@/components/cloud-esther/automatizaciones/ConexionReal";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
-import { ejecutarFlujoEnServidor, verEjecucionesServidor } from "@/lib/clinica/api";
-import { useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
+import { ejecutarFlujoEnServidor, guardarCuidadoServidor, verEjecucionesServidor, type Cuidado } from "@/lib/clinica/api";
+import { ponerEstadoAutomatizaciones, useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import {
   Acciones,
@@ -994,6 +994,7 @@ function ListasParaUsar({
   return (
     <div className="space-y-4">
       <ComoSalen canales={canales} onConexion={onConexion} />
+      <CuidarAlPaciente onToast={onToast} />
       <div className="card-grad p-4">
         <p className="text-sm font-semibold">Prendé las que quieras, en un toque</p>
         <p className="mt-0.5 text-[12px] text-muted-foreground">
@@ -1075,6 +1076,113 @@ function ListasParaUsar({
           Ver más plantillas
         </button>
       </div>
+    </div>
+  );
+}
+
+
+/* ───────────── Cuidar al paciente ───────────── */
+
+const CUIDADO_DEFECTO: Cuidado = { desde: "09:00", hasta: "20:00", domingos: false, maxPorDia: 1 };
+
+function CuidarAlPaciente({ onToast }: { onToast: (m: string) => void }) {
+  const real = useClinicaReal();
+  const est = useEstadoAutomatizaciones();
+  const local = storeN8n.usar().cuidado;
+  const actual: Cuidado = (real ? est?.cuidado : local) ?? CUIDADO_DEFECTO;
+  const puede = !real || real.rol === "admin";
+  const [editando, setEditando] = useState(false);
+  const [b, setB] = useState<Cuidado>(actual);
+  const [guardando, setGuardando] = useState(false);
+  const guardar = async () => {
+    if (b.desde >= b.hasta) return onToast("El horario «desde» tiene que ser antes que «hasta»");
+    setGuardando(true);
+    try {
+      if (real) {
+        const r = await guardarCuidadoServidor(real.slug, b);
+        if (est) ponerEstadoAutomatizaciones({ ...est, cuidado: r.cuidado });
+      } else setN8n("cuidado", () => b);
+      setEditando(false);
+      onToast("Listo: así se va a cuidar a tus pacientes");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "No se pudo guardar");
+    } finally {
+      setGuardando(false);
+    }
+  };
+  const dias = actual.domingos ? "todos los días" : "de lunes a sábado";
+  return (
+    <div className="card-grad p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <ShieldCheck className="size-4 text-primary" /> Cuidar al paciente
+          </p>
+          <ul className="mt-1.5 space-y-0.5 text-[12px] text-muted-foreground">
+            <li>
+              Se le escribe de <b className="text-foreground">{actual.desde}</b> a <b className="text-foreground">{actual.hasta}</b>, {dias}.
+            </li>
+            <li>
+              Como mucho <b className="text-foreground">{actual.maxPorDia === 1 ? "1 mensaje" : `${actual.maxPorDia} mensajes`}</b> automático{actual.maxPorDia === 1 ? "" : "s"} por día a cada paciente.
+            </li>
+            <li>Si no se puede ahora, el mensaje sale en el próximo horario permitido: no se pierde.</li>
+            <li>A quien pidió no recibir mensajes no se le escribe.</li>
+          </ul>
+        </div>
+        {puede && !editando && (
+          <button
+            type="button"
+            className={BTN_SECUNDARIO}
+            onClick={() => {
+              setB(actual);
+              setEditando(true);
+            }}
+          >
+            <Pencil className="size-3.5" /> Cambiar
+          </button>
+        )}
+      </div>
+      {editando && (
+        <div className="mt-3 rounded-2xl bg-white/85 p-3 ring-1 ring-primary/10">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Field label="Desde">
+              <input type="time" value={b.desde} onChange={(e) => setB({ ...b, desde: e.target.value })} className={INPUT} />
+            </Field>
+            <Field label="Hasta">
+              <input type="time" value={b.hasta} onChange={(e) => setB({ ...b, hasta: e.target.value })} className={INPUT} />
+            </Field>
+            <Field label="Mensajes por día">
+              <select value={b.maxPorDia} onChange={(e) => setB({ ...b, maxPorDia: Number(e.target.value) })} className={INPUT}>
+                {[1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? "1 (recomendado)" : n}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <label className="mt-3 flex items-center gap-2 text-[12.5px]">
+            <input
+              type="checkbox"
+              checked={b.domingos}
+              onChange={(e) => setB({ ...b, domingos: e.target.checked })}
+              className="size-4 accent-[var(--color-primary)]"
+            />
+            También los domingos
+          </label>
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            <button type="button" className={BTN_SECUNDARIO} onClick={() => setEditando(false)}>
+              Cancelar
+            </button>
+            <button type="button" className={BTN_PRIMARIO} disabled={guardando} onClick={() => void guardar()}>
+              {guardando ? "Guardando…" : "Guardar"}
+            </button>
+          </div>
+        </div>
+      )}
+      <p className="mt-2 text-[10.5px] text-muted-foreground">
+        Vale para todo lo que sale solo. Los avisos al equipo y el reclamo al laboratorio no tienen este límite. «Ejecutar de verdad» manda en el momento.
+      </p>
     </div>
   );
 }
@@ -1172,7 +1280,7 @@ type MensajeEnviado = {
   flujo: string;
   aQuien: string;
   canal: "WhatsApp" | "Correo";
-  estado: "Enviado" | "No salió" | "Prueba" | "Simulado";
+  estado: "Enviado" | "No salió" | "Prueba" | "Simulado" | "Pospuesto";
   detalle: string;
 };
 
@@ -1195,6 +1303,8 @@ function mensajesDe(ejecuciones: Ejecucion[], real: boolean): MensajeEnviado[] {
               ? ("Simulado" as const)
               : p.estado === "ok"
                 ? ("Enviado" as const)
+                : p.estado === "espera"
+                  ? ("Pospuesto" as const)
                 : p.estado === "omitido" && /^Prueba/.test(p.resultado)
                   ? ("Prueba" as const)
                   : ("No salió" as const),
@@ -1210,6 +1320,7 @@ const ESTADO_MSJ: Record<MensajeEnviado["estado"], string> = {
   "No salió": "bg-rose-100 text-rose-700",
   Prueba: "bg-amber-100 text-amber-800",
   Simulado: "bg-sky-100 text-sky-700",
+  Pospuesto: "bg-amber-100 text-amber-800",
 };
 
 function Mensajes({ ejecuciones, onConexion }: { ejecuciones: Ejecucion[]; onConexion: () => void }) {

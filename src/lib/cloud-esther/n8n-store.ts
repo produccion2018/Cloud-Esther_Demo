@@ -268,6 +268,8 @@ export type EstadoN8n = {
   flujos: Flujo[];
   ejecuciones: Ejecucion[];
   credenciales: Credencial[];
+  /** Demo: cómo se cuida al paciente (en la clínica real lo guarda el servidor). */
+  cuidado?: { desde: string; hasta: string; domingos: boolean; maxPorDia: number };
 };
 
 const p = (tipo: TipoPaso, config: ConfigPaso = {}): Paso => ({

@@ -505,6 +505,8 @@ export type EstadoAutomatizaciones = {
   agente: { activo: boolean };
   /** ¿El correo le llega de verdad al paciente? «prueba» = falta el dominio de correo. */
   correo?: { estado: "listo" | "prueba" | "apagado" };
+  /** Cuidar al paciente: horario para escribirle, domingos y tope de mensajes por día. */
+  cuidado?: Cuidado;
   flujosActivos: number;
 };
 export type EjecucionServidor = {
@@ -549,6 +551,9 @@ export const sincronizarFlujos = (slug: string, d: { flujos: unknown[]; agente?:
 export const ejecutarFlujoEnServidor = (slug: string, flujoId: string, disparo: Record<string, unknown>) =>
   http<EjecucionServidor>(slug, "POST", `/automatizaciones/flujos/${encodeURIComponent(flujoId)}/ejecutar`, { disparo });
 export const verEjecucionesServidor = (slug: string) => http<EjecucionServidor[]>(slug, "GET", "/automatizaciones/ejecuciones");
+export type Cuidado = { desde: string; hasta: string; domingos: boolean; maxPorDia: number };
+export const guardarCuidadoServidor = (slug: string, c: Cuidado) =>
+  http<{ ok: boolean; cuidado: Cuidado }>(slug, "PUT", "/automatizaciones/cuidado", c);
 export const tomarBandejaAutomatizaciones = (slug: string) => http<ItemBandeja[]>(slug, "POST", "/automatizaciones/bandeja");
 export const verMensajesWhatsapp = (slug: string, telefono?: string) =>
   http<MensajeWhatsapp[]>(slug, "GET", `/whatsapp/mensajes${telefono ? `?telefono=${encodeURIComponent(telefono)}` : ""}`);

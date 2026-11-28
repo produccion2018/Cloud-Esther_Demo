@@ -62,6 +62,7 @@ import { deudaDe, estadoComprobante, storeFacturacion } from "@/lib/cloud-esther
 import { ejecutarFlujoEnServidor, guardarCuidadoServidor, verEjecucionesServidor, type Cuidado } from "@/lib/clinica/api";
 import { ponerEstadoAutomatizaciones, useEstadoAutomatizaciones } from "@/lib/clinica/automatizaciones";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
+import { useConN8n } from "@/lib/cloud-esther/n8n-acceso";
 import {
   Acciones,
   BTN_ICONO,
@@ -154,6 +155,9 @@ export function Automatizaciones() {
   const est = storeN8n.usar();
   const real = useClinicaReal();
   const estServ = useEstadoAutomatizaciones();
+  // Start, Pro y Plus: el básico (recordatorios). Enterprise o el adicional: todo.
+  const conCompleto = useConN8n();
+  const basico = real ? (estServ?.nivel ?? (estServ?.habilitado ? "completo" : "basico")) === "basico" : !conCompleto;
   const [ejecServ, setEjecServ] = useState<Ejecucion[]>([]);
   const [montado, setMontado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("listas");
@@ -226,7 +230,7 @@ export function Automatizaciones() {
       i: Timer,
     },
   ];
-  const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
+  const TODAS: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
     { id: "listas", label: "Listas para usar", icon: Zap },
     { id: "agente", label: "Agente IA 24/7", icon: Bot },
     { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
@@ -246,6 +250,7 @@ export function Automatizaciones() {
     },
     { id: "conexion", label: "Conexión", icon: Plug },
   ];
+  const SECCIONES = basico ? TODAS.filter((x) => ["listas", "mensajes", "ejecuciones", "conexion"].includes(x.id)) : TODAS;
 
   const guardar = (f: Flujo) => {
     setN8n("flujos", (prev) =>
@@ -296,7 +301,7 @@ export function Automatizaciones() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
                     <Workflow className="size-3.5" />
-                    Enterprise
+                    {basico ? "Básico de tu plan" : "Completo"}
                   </span>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${activas ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
@@ -309,9 +314,7 @@ export function Automatizaciones() {
                     {real
                       ? activas
                         ? `${estServ?.flujosActivos} ${estServ?.flujosActivos === 1 ? "flujo activo" : "flujos activos"} en el servidor`
-                        : estServ && !estServ.habilitado
-                          ? "No incluido en tu plan"
-                          : "Sin flujos activos"
+                        : "Sin automatizaciones encendidas"
                       : est.conectado
                         ? "Automatizaciones activas"
                         : "En modo prueba"}
@@ -321,12 +324,12 @@ export function Automatizaciones() {
                   Automatizaciones
                 </h1>
                 <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground md:text-sm">
-                  Las 126 automatizaciones de Esther Infinity: cuando pasa algo en tu clínica, Esther
-                  Infinity actúa sola —avisa, recuerda, hace el seguimiento y prepara informes— y el
-                  resultado vuelve a la ficha del paciente, la Agenda o Notificaciones.
+                  {basico
+                    ? "Tu plan trae los recordatorios que salen solos: turno 24 h antes, saldo pendiente y saludo de cumpleaños. Con Automatizaciones completo se suman los seguimientos, la reactivación de pacientes, el Agente IA 24/7 por WhatsApp y tus propios flujos."
+                    : "Cuando pasa algo en tu clínica, Esther Infinity actúa sola —avisa, recuerda, hace el seguimiento y prepara informes— y el resultado vuelve a la ficha del paciente, la Agenda o Notificaciones."}
                 </p>
               </div>
-              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+              <div className={`${basico ? "hidden" : "flex"} w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0`}>
                 <button
                   type="button"
                   className={BTN_SECUNDARIO}
@@ -411,6 +414,7 @@ export function Automatizaciones() {
             <div className="card-grad h-[480px] animate-pulse" />
           ) : seccion === "listas" ? (
             <ListasParaUsar
+              basico={basico}
               flujos={est.flujos}
               onToast={onToast}
               onEditar={setEditando}
@@ -440,7 +444,7 @@ export function Automatizaciones() {
           ) : seccion === "ejecuciones" ? (
             <Ejecuciones ejecuciones={ejecuciones} flujos={est.flujos} />
           ) : (
-            <Conexion onToast={onToast} />
+            <ConexionReal onToast={onToast} basico={basico} />
           )}
         </div>
       </div>
@@ -957,13 +961,17 @@ const EN_UN_TOQUE = [
   "cumpleanos",
 ];
 
+const BASICAS = ["recordatorio-turno", "saldos", "cumpleanos"];
+
 function ListasParaUsar({
+  basico,
   flujos,
   onToast,
   onEditar,
   onConexion,
   onMas,
 }: {
+  basico: boolean;
   flujos: Flujo[];
   onToast: (m: string) => void;
   onEditar: (f: Flujo) => void;
@@ -974,7 +982,9 @@ function ListasParaUsar({
   const canales = useCanales();
   const puede = !real || real.rol === "admin";
   const [abierta, setAbierta] = useState<string | null>(null);
-  const lista = EN_UN_TOQUE.map((id) => PLANTILLAS.find((t) => t.id === id)).filter((t): t is (typeof PLANTILLAS)[number] => !!t);
+  const lista = (basico ? [...BASICAS, ...EN_UN_TOQUE.filter((x) => !BASICAS.includes(x))] : EN_UN_TOQUE)
+    .map((id) => PLANTILLAS.find((t) => t.id === id))
+    .filter((t): t is (typeof PLANTILLAS)[number] => !!t);
   const prender = (t: (typeof PLANTILLAS)[number], on: boolean) => {
     const ya = flujos.find((f) => f.plantilla === t.id);
     if (ya) setN8n("flujos", (prev) => prev.map((f) => (f.id === ya.id ? { ...f, activo: on } : f)));
@@ -1018,6 +1028,7 @@ function ListasParaUsar({
               creado: "",
             };
             const sale = comoSale({ ...modelo, activo: true }, canales);
+            const cerrada = basico && !BASICAS.includes(t.id);
             const vista = abierta === t.id ? vistaPrevia(modelo) : null;
             return (
               <li key={t.id} className={`rounded-2xl border px-3.5 py-3 transition ${on ? "border-primary/30 bg-primary/[0.04]" : "border-primary/10 bg-white/80"}`}>
@@ -1025,7 +1036,12 @@ function ListasParaUsar({
                   <div className="min-w-0 flex-1">
                     <p className="text-[13.5px] font-semibold">{t.nombre}</p>
                     <p className="mt-0.5 text-[11.5px] text-muted-foreground">{EVENTOS[t.evento].detalle}</p>
-                    {on && (
+                    {cerrada && (
+                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+                        <Lock className="size-3" /> Con Automatizaciones completo
+                      </p>
+                    )}
+                    {on && !cerrada && (
                       <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${TONO_SALE[sale.tono]}`}>
                         {sale.tono === "ok" ? <CheckCircle2 className="size-3" /> : sale.tono === "falta" ? <XCircle className="size-3" /> : <Bell className="size-3" />}
                         {sale.texto}
@@ -1037,7 +1053,7 @@ function ListasParaUsar({
                     role="switch"
                     aria-checked={on}
                     aria-label={`${on ? "Apagar" : "Encender"} ${t.nombre}`}
-                    disabled={!puede}
+                    disabled={!puede || cerrada}
                     onClick={() => prender(t, !on)}
                     className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-gradient-to-r from-primary to-fuchsia-500" : "bg-muted-foreground/25"}`}
                   >
@@ -1048,7 +1064,7 @@ function ListasParaUsar({
                   <button type="button" onClick={() => setAbierta(abierta === t.id ? null : t.id)} className="hover:underline">
                     {abierta === t.id ? "Ocultar mensaje" : "Ver cómo sale el mensaje"}
                   </button>
-                  {f && puede && (
+                  {f && puede && !basico && (
                     <button type="button" onClick={() => onEditar(f)} className="hover:underline">
                       Cambiar el mensaje
                     </button>
@@ -1075,9 +1091,16 @@ function ListasParaUsar({
             );
           })}
         </ul>
-        <button type="button" onClick={onMas} className="mt-3 text-[12px] font-semibold text-primary hover:underline">
-          Ver más plantillas
-        </button>
+        {basico ? (
+          <p className="mt-3 rounded-xl bg-primary/[0.05] px-3 py-2 text-[12px] text-muted-foreground">
+            Las que tienen candado vienen con <b className="text-foreground">Automatizaciones completo</b> (incluido en Enterprise o como
+            módulo adicional desde Mi plan), junto con el Agente IA 24/7 por WhatsApp y tus propios flujos.
+          </p>
+        ) : (
+          <button type="button" onClick={onMas} className="mt-3 text-[12px] font-semibold text-primary hover:underline">
+            Ver más plantillas
+          </button>
+        )}
       </div>
     </div>
   );

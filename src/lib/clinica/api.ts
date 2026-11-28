@@ -507,6 +507,8 @@ export type EstadoAutomatizaciones = {
   correo?: { estado: "listo" | "prueba" | "apagado" };
   /** Cuidar al paciente: horario para escribirle, domingos y tope de mensajes por día. */
   cuidado?: Cuidado;
+  /** «basico» (Start, Pro y Plus): solo los recordatorios básicos; «completo»: todo. */
+  nivel?: "basico" | "completo";
   flujosActivos: number;
 };
 export type EjecucionServidor = {

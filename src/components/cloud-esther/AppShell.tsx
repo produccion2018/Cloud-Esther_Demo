@@ -231,8 +231,11 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
       {GROUPS.map((group) => {
         const items = MODULES.filter((m) => m.group === group);
         // Cada plan ve solo sus módulos (sin mostrar los de otros planes).
+        // Automatizaciones: todos los planes tienen el básico (recordatorios); el completo es Enterprise o adicional
         const visible = items.filter(
-          (m) => availableIn(m, plan) && (!real || puedeVer(real.rol, m.id, real.sesion.usuario.modulos)),
+          (m) =>
+            (availableIn(m, plan) || m.id === "automatizaciones") &&
+            (!real || puedeVer(real.rol, m.id, real.sesion.usuario.modulos)),
         );
         if (!visible.length) return null;
 
@@ -244,7 +247,7 @@ function NavList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
             </p>
             <ul className="space-y-0.5">
               {visible.map((m) => {
-                const unlocked = availableIn(m, plan);
+                const unlocked = availableIn(m, plan) || m.id === "automatizaciones";
                 const off = disabled.includes(m.id);
                 const active =
                   m.path === "/demo"
@@ -1367,7 +1370,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       (pathname === x.path || pathname.startsWith(`${x.path}/`)) &&
       planLevel(x.minPlan) > planLevel(plan),
   );
-  const bloqueado = modulo && !availableIn(modulo, plan) ? modulo : null;
+  const bloqueado = modulo && !availableIn(modulo, plan) && modulo.id !== "automatizaciones" ? modulo : null;
   /* La clínica usa un solo odontograma: si entra a la página del otro (por cambiar de plan o por
      contratar/quitar el 3D), se lleva directo al que corresponde. Nunca se muestran los dos. */
   const irAl3D = bloqueado?.id === "odontograma" && usa3D(plan);

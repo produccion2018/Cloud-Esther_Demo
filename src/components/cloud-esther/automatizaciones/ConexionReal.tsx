@@ -92,7 +92,7 @@ const DEMO_INICIAL: EstadoAutomatizaciones = {
   flujosActivos: 0,
 };
 
-export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
+export function ConexionReal({ onToast, basico = false }: { onToast: (m: string) => void; basico?: boolean }) {
   const real = useClinicaReal();
   const estServ = useEstadoAutomatizaciones();
   const [estDemo, setEstDemo] = useState<EstadoAutomatizaciones>(DEMO_INICIAL);
@@ -275,7 +275,8 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
         )}
       </Tarjeta>
 
-      {/* ───────── n8n ───────── */}
+      {/* ───────── n8n (solo con Automatizaciones completo) ───────── */}
+      {!basico && (
       <Tarjeta icono={<Workflow className="size-4" />} titulo="n8n (opcional)" estado={<Estado ok={!!est.n8n.eventosUrl} si="Recibe los eventos" no="Sin conectar" />}>
         <p className="mb-3 text-[12.5px] text-muted-foreground">
           No hace falta para que las automatizaciones funcionen: Cloud Esther las ejecuta solo. Si usás n8n, cada evento de tu clínica
@@ -355,6 +356,7 @@ export function ConexionReal({ onToast }: { onToast: (m: string) => void }) {
           </div>
         </div>
       </Tarjeta>
+      )}
 
       {/* ───────── IA ───────── */}
       <Tarjeta

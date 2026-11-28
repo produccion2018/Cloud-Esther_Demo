@@ -150,7 +150,7 @@ export function Lineas({
   area?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(1, ...series.flatMap((s) => s.valores)) * 1.1;
+  const max = maxRedondo(Math.max(0, ...series.flatMap((s) => s.valores)) * 1.05);
   const n = Math.max(1, etiquetas.length - 1);
   const x = (i: number) => (etiquetas.length === 1 ? 50 : (i / n) * 100);
   const y = (v: number) => 100 - (v / max) * 100;
@@ -265,7 +265,7 @@ export function Barras({
   const [hover, setHover] = useState<number | null>(null);
   const cols = series.map((s, i) => s.color ?? color(i));
   const totales = etiquetas.map((_, i) => series.reduce((a, s) => a + (s.valores[i] ?? 0), 0));
-  const max = Math.max(1, ...(apilado ? totales : series.flatMap((s) => s.valores)));
+  const max = maxRedondo(Math.max(0, ...(apilado ? totales : series.flatMap((s) => s.valores))));
   return (
     <div>
       <div
@@ -518,4 +518,13 @@ export function Sparkline({
       />
     </svg>
   );
+}
+
+/** Tope del eje redondeado para que las 3 guías (¼, ½, ¾) caigan en números redondos y distintos. */
+function maxRedondo(m: number) {
+  const x = Math.max(1, m / 4);
+  const pot = 10 ** Math.floor(Math.log10(x));
+  const f = x / pot;
+  const paso = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * pot;
+  return Math.max(1, paso) * 4;
 }

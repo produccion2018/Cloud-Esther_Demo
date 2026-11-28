@@ -57,3 +57,28 @@ export function normalizarBusqueda(texto: string) {
     .replace(/[̀-ͯ]/g, "")
     .trim();
 }
+
+/** Igual que capitalizarNombre pero sin recortar espacios: sirve mientras se escribe
+ *  («juan » → «Juan », así se puede seguir tipeando el apellido). */
+export function capitalizarEnVivo(texto: string) {
+  let n = 0;
+  return texto.replace(/\S+/g, (p) => {
+    const primera = n++ === 0;
+    return !primera && CONECTORES.has(p.toLocaleLowerCase("es")) ? p.toLocaleLowerCase("es") : capitalizarPalabra(p);
+  });
+}
+
+/** Nombre de una sede: mayúscula inicial en cada palabra como sea que la escriban
+ *  («sede centro», «SEDE CENTRO» → «Sede Centro»), pero respeta siglas cortas escritas en
+ *  mayúscula dentro de un nombre normal («Sede CABA»). */
+export function capitalizarSede(texto: string) {
+  const limpio = texto.trim().replace(/\s+/g, " ");
+  if (!limpio) return "";
+  const todoMayuscula = limpio === limpio.toLocaleUpperCase("es") && /\p{L}{5,}/u.test(limpio);
+  let n = 0;
+  return limpio.replace(/\S+/g, (p) => {
+    const primera = n++ === 0;
+    if (!todoMayuscula && /^\p{Lu}{2,4}$/u.test(p)) return p;
+    return !primera && CONECTORES.has(p.toLocaleLowerCase("es")) ? p.toLocaleLowerCase("es") : capitalizarPalabra(p);
+  });
+}

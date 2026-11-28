@@ -1,3 +1,4 @@
+import { capitalizarNombre } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 
 import { useSesion } from "@/lib/cloud-esther/auth-store";
@@ -72,7 +73,7 @@ const ROL_A_CLINICO: Record<RolClinica, TeamRole> = {
 };
 
 function miembroDesdeAcceso(p: PersonaEquipo): TeamMember {
-  const partes = p.nombre.trim().split(/\s+/);
+  const partes = capitalizarNombre(p.nombre).split(/\s+/);
   return {
     id: p.id,
     firstName: partes[0] ?? p.nombre,

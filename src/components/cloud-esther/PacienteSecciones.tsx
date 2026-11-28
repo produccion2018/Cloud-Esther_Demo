@@ -1526,7 +1526,7 @@ const REGISTROS_INICIALES: Record<number, Registros> = {
 /* Los registros se comparten entre la página de Pacientes y las páginas de acceso directo del
    sidebar (Historia, Recetas, Estudios…), separados por empresa: cada clínica tiene su propia
    copia y nunca ve los datos de otra. Al conectar el backend se reemplaza por la API. */
-const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES, {
+export const storeRegistros = crearStorePorEmpresa<Record<number, Registros>>(() => REGISTROS_INICIALES, {
   persistir: "registros",
 });
 

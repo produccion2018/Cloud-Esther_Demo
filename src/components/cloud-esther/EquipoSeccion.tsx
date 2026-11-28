@@ -1,3 +1,4 @@
+import { capitalizarNombre } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -454,7 +455,7 @@ const ROL_ACCESO_A_CLINICO: Record<RolClinica, TeamRole> = {
   asistente: "asistente",
 };
 function integranteDesdeAcceso(p: PersonaEquipo): TeamMember {
-  const partes = p.nombre.trim().split(/\s+/);
+  const partes = capitalizarNombre(p.nombre).split(/\s+/);
   return {
     id: p.id,
     firstName: partes[0] ?? p.nombre,

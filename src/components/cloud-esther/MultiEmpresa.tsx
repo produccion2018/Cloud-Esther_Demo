@@ -26,6 +26,8 @@ import { useCloudEsther, type PlanId as PlanDemoId } from "@/lib/cloud-esther/da
 import { leerConfigPlanes, MENSAJE_LIMITE, mostrarLimite } from "@/lib/cloud-esther/planes-config";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
+import { useClinicSettings } from "@/lib/cloud-esther/settings-store";
+import { SedesEditor } from "@/components/cloud-esther/SedesEditor";
 import { Seleccion } from "@/components/ui/seleccion";
 
 /** Traza de auditoría (demo: consola). TODO backend: POST /auditoria. */
@@ -1200,7 +1202,7 @@ export function MultiEmpresa() {
   const [tab, setTab] = useState<TabId>("resumen");
   // Fuente de verdad persistida (reemplaza el estado local que se perdía al recargar). La
   // empresa que se registró se agrega sola más abajo (useEffect) y queda como clínica activa.
-  const { clinicas, sucursales } = storeMultiempresa.usar();
+  const { clinicas, sucursales: sucursalesGuardadas } = storeMultiempresa.usar();
   const setClinicas = (fn: Clinica[] | ((prev: Clinica[]) => Clinica[])) => {
     const prev = storeMultiempresa.leer();
     const clinicas = typeof fn === "function" ? (fn as (p: Clinica[]) => Clinica[])(prev.clinicas) : fn;
@@ -1214,7 +1216,21 @@ export function MultiEmpresa() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [activaId, setActivaId] = useState("");
   const { usuario: usuarioSesion, clinica: clinicaSesion } = useSesion();
-  const { plan: planDemo } = useCloudEsther();
+  const { plan: planDemo, clinic: clinicSettings } = useCloudEsther();
+  // Las sedes de la clínica propia son UNA sola lista (la de Configuración → Sucursales): la
+  // usan la Agenda, los turnos online, Finanzas e Inventario. Acá se muestran y editan esas.
+  const ajustes = useClinicSettings(clinicSettings);
+  const idPropia = clinicaSesion?.id ?? "";
+  const sedesPropias: Sucursal[] = (ajustes.sucursales.length ? ajustes.sucursales : clinicaSesion ? [clinicaSesion.nombre] : []).map((n) => ({
+    id: `sede:${n}`,
+    clinic_id: idPropia,
+    nombre: n,
+    direccion: ajustes.sedesDatos?.[n]?.direccion ?? "",
+    responsable: "",
+    boxes: 0,
+    activa: true,
+  }));
+  const sucursales = [...sedesPropias, ...sucursalesGuardadas.filter((s) => s.clinic_id !== idPropia)];
 
   // La clínica de la sesión (la empresa que se registró) se suma como tenant,
   // con su usuario como administrador, y queda como clínica activa.
@@ -1807,7 +1823,16 @@ export function MultiEmpresa() {
       )}
 
       {/* ───────────── SUCURSALES ───────────── */}
-      {tab === "sucursales" && (
+      {tab === "sucursales" && activa.id === idPropia && (
+        <Panel title={`Sedes — ${activa.nombre}`}>
+          <p className="mb-4 rounded-2xl bg-primary/[0.035] p-3 text-xs leading-relaxed text-muted-foreground">
+            Es la misma lista que Configuración → Sucursales. Cada sede que cargás acá aparece en la Agenda, los turnos
+            online, Finanzas, Inventario y Equipo. Si le cambiás el nombre, lo ya cargado pasa al nombre nuevo.
+          </p>
+          <SedesEditor onToast={(m) => toast.success(m)} nombreClinica={activa.nombre} />
+        </Panel>
+      )}
+      {tab === "sucursales" && activa.id !== idPropia && (
         <Panel
           title={`Sucursales — ${activa.nombre}`}
           action={

@@ -1,3 +1,4 @@
+import { capitalizarNombre } from "@/lib/utils";
 import { crearStorePorEmpresa } from "@/lib/cloud-esther/tenant-store";
 import { ESPECIALIDADES, emptyMember, permsFor, type TeamMember } from "@/lib/cloud-esther/equipo-profesional-data";
 
@@ -109,7 +110,7 @@ export function asegurarAdminEnEquipo(usuario: { id?: string; nombre: string; em
   const actual = store.leer();
   const yaEsta = actual.miembros.some((m) => (m.email ?? "").trim().toLowerCase() === correo);
   if (yaEsta) return;
-  const partes = usuario.nombre.trim().split(/\s+/);
+  const partes = capitalizarNombre(usuario.nombre).split(/\s+/);
   const firstName = partes[0] ?? usuario.nombre.trim();
   const lastName = partes.slice(1).join(" ");
   const admin: TeamMember = {

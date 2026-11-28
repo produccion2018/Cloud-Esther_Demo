@@ -72,7 +72,7 @@ type Estado = {
 
 /* Separado por empresa: cada clínica tiene su propio listado de pacientes.
    Arranca vacío, igual que producción. */
-const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: [], activoId: null }), {
+export const storePacientes = crearStorePorEmpresa<Estado>(() => ({ pacientes: [], activoId: null }), {
   persistir: "pacientes",
   vacio: () => ({ pacientes: [], activoId: null }),
   // El paciente elegido es de cada pantalla: no se comparte con el resto de la clínica
@@ -92,6 +92,7 @@ const store = crearStorePorEmpresa<Estado>(() => ({ pacientes: [], activoId: nul
     return cambio ? { ...e, pacientes } : e;
   },
 });
+const store = storePacientes;
 
 /** Lectura sin hooks (Esther Infinity). */
 export function leerPacientes(): Paciente[] {

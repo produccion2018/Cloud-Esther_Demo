@@ -8,6 +8,7 @@ import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { Bell, CalendarDays, Check, ChevronDown, LayoutDashboard, LifeBuoy, Lock, LogOut, Menu, MoreHorizontal, RotateCcw, Settings, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMayusculaEnNombres } from "@/lib/cloud-esther/sedes";
 import { useMarca } from "@/lib/cloud-esther/marca";
 import {
   MODULES,
@@ -1337,6 +1338,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const [montadoShell, setMontadoShell] = useState(false);
   useEffect(() => setMontadoShell(true), []);
+  // Sedes y nombres del equipo siempre con mayúscula inicial (arregla lo ya guardado una vez)
+  useMayusculaEnNombres(clinic, montadoShell && (!real || real.rol === "admin") && !real?.sesion.soporte, !!real);
   // Clínica real: odontograma, radiografías y configuración llegan del servidor antes de mostrarse
   const almacenListo = useAlmacenClinicoListo();
   // Clínica real: si se cierra la pestaña con algo sin guardar todavía, el navegador avisa

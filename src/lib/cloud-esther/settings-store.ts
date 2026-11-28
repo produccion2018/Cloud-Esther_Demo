@@ -79,6 +79,8 @@ export interface ClinicSettings {
   /** Sucursales (sedes) de la clínica, con los nombres que elige el dueño (ej. "Sede Centro").
       Vacío = una sola sede con el nombre de la clínica. El límite depende del plan. */
   sucursales: string[];
+  /** Datos de cada sede (por nombre): dirección, teléfono y horario. */
+  sedesDatos?: Record<string, { direccion?: string; telefono?: string; horario?: string }>;
   /** Marca propia (white label, Plus y Enterprise): logo y color de la clínica */
   marca?: MarcaClinica;
   /** Plantillas de evolución propias de la clínica (se suman a las de Cloud Esther). */

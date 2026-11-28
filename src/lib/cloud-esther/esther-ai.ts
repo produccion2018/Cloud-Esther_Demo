@@ -4,6 +4,7 @@ import { auditarConsulta, type RolIA } from "@/lib/cloud-esther/ia-store";
 import { hallazgosEsther } from "@/lib/cloud-esther/esther-conexiones";
 import { preguntarIA } from "@/lib/cloud-esther/esther-llm";
 import type { PlanId } from "@/lib/cloud-esther/data";
+import type { Libro } from "@/components/cloud-esther/finanzas/libro";
 
 export type EstherContext = {
   section?: EstherSection;
@@ -16,6 +17,8 @@ export type EstherContext = {
   pacienteId?: number | undefined;
   /** n8n (solo Enterprise o con el módulo adicional): ofrece automatizar lo consultado. */
   n8n?: boolean;
+  /** Libro de Finanzas armado en pantalla, para responder cobros y gastos como los ve Finanzas. */
+  libro?: Libro | undefined;
 };
 
 export type EstherSection =
@@ -190,6 +193,7 @@ export async function askEsther(
     usuario: base.usuario,
     pacienteId: context.pacienteId,
     seccion: section,
+    libro: context.libro,
   });
   auditarConsulta({ ...base, pregunta: message, modulo: r.modulo, resultado: r.resultado });
   let bloques = r.bloques;
@@ -206,7 +210,7 @@ export async function askEsther(
   let texto = conCierre(r.texto, r.modulo, r.resultado);
   const plan = context.plan ?? "avanzada";
   const tieneIA = plan === "avanzada" || plan === "grupo";
-  if (tieneIA && r.resultado !== "Sin permiso" && r.resultado !== "Fuera del plan") {
+  if (tieneIA && !r.cargando && r.resultado !== "Sin permiso" && r.resultado !== "Fuera del plan") {
     try {
       const resumen = hallazgosEsther(plan)
         .map((h) => `- ${h.texto}: ${h.detalle}`)

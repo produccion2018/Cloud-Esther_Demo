@@ -7,6 +7,7 @@ import {
 } from "@/lib/cloud-esther/esther-ai";
 import type { Bloque } from "@/lib/cloud-esther/esther-motor";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
+import { useLibro } from "@/components/cloud-esther/finanzas/libro";
 import { escenaPara, estherStates, type EstherPose, type EstherState } from "./esther-states";
 
 export type ChatMessage = {
@@ -57,6 +58,10 @@ export function useEstherAI({ initialState = "idle", context = {}, saludo }: Opt
   // El contexto (paciente, rol, sede) cambia desde la pantalla: se lee siempre el último.
   const contextRef = useRef(context);
   contextRef.current = context;
+  // Cobros y gastos armados igual que en Finanzas, para que Esther dé los mismos números.
+  const libro = useLibro();
+  const libroRef = useRef(libro);
+  libroRef.current = libro;
   const stateRef = useRef(state);
   stateRef.current = state;
   const vozRef = useRef(leerEnVoz);
@@ -137,7 +142,7 @@ export function useEstherAI({ initialState = "idle", context = {}, saludo }: Opt
         });
         await wait(escena.saludo ? 700 : estherStates.processing.duration);
 
-        const reply = await askEsther(prompt, { ...contextRef.current, section: target });
+        const reply = await askEsther(prompt, { ...contextRef.current, section: target, libro: libroRef.current });
         setMessages((prev) => [
           ...prev,
           {

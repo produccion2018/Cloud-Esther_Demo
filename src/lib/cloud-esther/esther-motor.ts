@@ -30,6 +30,13 @@ import { odontogramKey } from "@/lib/odontograma2d/types";
 import { clinicaActualId } from "@/lib/cloud-esther/auth-store";
 import type { RolIA } from "@/lib/cloud-esther/ia-store";
 import { almacenClinico } from "@/lib/clinica/almacen-clinico";
+import { deudaDe } from "@/lib/cloud-esther/facturacion-store";
+import { storeFinanzas } from "@/lib/cloud-esther/finanzas-store";
+import { esClinicaReal } from "@/lib/clinica/modo-clinica";
+import { moduloCargado } from "@/lib/clinica/sincronizar";
+import { demoConDatosEnServidor } from "@/lib/cloud-esther/demo-servidor";
+import { claveDemoServidor, tenantActual } from "@/lib/cloud-esther/tenant-store";
+import type { Libro } from "@/components/cloud-esther/finanzas/libro";
 
 /* ───────────── Tipos de respuesta ───────────── */
 
@@ -51,6 +58,8 @@ export type RespuestaEsther = {
   bloques?: Bloque[];
   modulo: string;
   resultado: "Respondida" | "Sin permiso" | "Fuera del plan" | "Sin datos";
+  /** Los datos todavía no llegaron del servidor: no se reescribe ni se audita como respuesta. */
+  cargando?: boolean;
 };
 
 export type ContextoIA = {
@@ -60,6 +69,8 @@ export type ContextoIA = {
   usuario: string;
   pacienteId?: number | undefined;
   seccion?: string | undefined;
+  /** Libro de Finanzas ya armado por la pantalla (cobros, gastos, cuentas a pagar). */
+  libro?: Libro | undefined;
 };
 
 /* ───────────── Permisos ───────────── */
@@ -214,7 +225,8 @@ function pacientesVisibles(ctx: ContextoIA) {
 }
 function turnosVisibles(ctx: ContextoIA) {
   const sedes = sedesVisibles(ctx);
-  return storeAgenda.leer().turnos.filter((t) => sedes.includes(t.sucursal));
+  if (ctx.sede === "Todas") return storeAgenda.leer().turnos;
+  return storeAgenda.leer().turnos.filter((t) => sedes.includes(t.sucursal) || !t.sucursal);
 }
 const nombreCompleto = (p: Paciente) => `${p.nombre} ${p.apellido}`.trim();
 function registrosDe(id: number): Registros | undefined {
@@ -789,7 +801,7 @@ function clinicas(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function turnos(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/cita|turno|agenda|cancelad|ausent|ocupacion|hueco|libre/.test(q)) return null;
-  const b = verificar("agenda", ctx);
+  const b = verificar("agenda", ctx) ?? cargando(["agenda"], "la agenda");
   if (b) return b;
   const p = periodoDe(q, /cancel|ausent/.test(q) ? "mes" : "hoy");
   const t = turnosVisibles(ctx)
@@ -854,7 +866,7 @@ function turnos(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function pacientesConsulta(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/pacientes?/.test(q)) return null;
-  const b = verificar("pacientes", ctx);
+  const b = verificar("pacientes", ctx) ?? cargando(["pacientes"], "los pacientes");
   if (b) return b;
   const pacs = pacientesVisibles(ctx);
   const turnosT = storeAgenda.leer().turnos;
@@ -950,7 +962,7 @@ function pacientesConsulta(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function presupuestos(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/presupuesto/.test(q)) return null;
-  const b = verificar("presupuestos", ctx);
+  const b = verificar("presupuestos", ctx) ?? cargando(["registros", "pacientes"], "los presupuestos");
   if (b) return b;
   const pacs = pacientesVisibles(ctx);
   const regs = leerRegistros();
@@ -1015,7 +1027,7 @@ function presupuestos(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function facturacion(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/factur|cobr|ingres|venta|deuda|por cobrar/.test(q)) return null;
-  const b = verificar("facturacion", ctx);
+  const b = verificar("facturacion", ctx) ?? cargando(["facturacion", "registros"], "los cobros");
   if (b) return b;
   const per = periodoDe(q, "mes");
   const sedes = sedesVisibles(ctx);
@@ -1027,11 +1039,17 @@ function facturacion(q: string, ctx: ContextoIA): RespuestaEsther | null {
     );
   const delPer = comps.filter((c) => enPeriodo(c.fecha, per));
   const facturado = delPer.reduce((a, c) => a + totalesComprobante(c).total, 0);
-  const cobrado = comps
-    .flatMap((c) => c.pagos)
-    .filter((p) => enPeriodo(p.fecha, per))
-    .reduce((a, p) => a + p.monto, 0);
-  const porCobrar = comps.reduce((a, c) => a + saldo(c), 0);
+  // Cobrado = lo mismo que ve Finanzas: cobros de comprobantes + cobros en la cuenta del paciente
+  const cobrado = ctx.libro
+    ? ctx.libro.asientos
+        .filter((a) => a.tipo === "Ingreso" && (a.origen === "Facturación" || a.origen === "Cobros") && enPeriodo(a.fecha, per))
+        .reduce((x, a) => x + a.monto, 0)
+    : comps
+        .flatMap((c) => c.pagos)
+        .filter((p) => enPeriodo(p.fecha, per))
+        .reduce((a, p) => a + p.monto, 0);
+  const deudaPacientes = Object.values(leerRegistros()).reduce((a, r) => a + deudaDe(r?.cuenta).saldo, 0);
+  const porCobrar = comps.reduce((a, c) => a + saldo(c), 0) + deudaPacientes;
   const vencido = comps
     .filter((c) => estadoComprobante(c) === "Vencida")
     .reduce((a, c) => a + saldo(c), 0);
@@ -1042,7 +1060,7 @@ function facturacion(q: string, ctx: ContextoIA): RespuestaEsther | null {
     return { nombre: pr, valor: v, etiqueta: $(v) };
   });
   return {
-    texto: `${per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1)} se facturaron ${$(facturado)} en ${delPer.length} comprobantes y se cobraron ${$(cobrado)}. Quedan ${$(porCobrar)} por cobrar${vencido ? `, ${$(vencido)} vencidos` : ""}.`,
+    texto: `${per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1)} ${facturado ? `se facturaron ${$(facturado)} en ${delPer.length} ${delPer.length === 1 ? "comprobante" : "comprobantes"} y ` : ""}se ${cobrado === 1 ? "cobró" : "cobraron"} ${$(cobrado)}. ${porCobrar ? `Quedan ${$(porCobrar)} por cobrar${vencido ? `, ${$(vencido)} vencidos` : ""}.` : "No hay nada pendiente de cobro."}`,
     bloques: [
       {
         tipo: "kpis",
@@ -1062,7 +1080,13 @@ function facturacion(q: string, ctx: ContextoIA): RespuestaEsther | null {
             },
           ]
         : []),
-      { tipo: "acciones", items: [{ label: "Ir a Facturación", to: "/demo/facturacion" }] },
+      {
+        tipo: "acciones",
+        items: [
+          { label: "Ir a Facturación", to: "/demo/facturacion" },
+          ...(deudaPacientes ? [{ label: "¿Quién me debe?", pregunta: "¿Quién me debe?" }] : []),
+        ],
+      },
     ],
     modulo: "facturacion",
     resultado: "Respondida",
@@ -1071,7 +1095,7 @@ function facturacion(q: string, ctx: ContextoIA): RespuestaEsther | null {
 
 function tratamientosPendientes(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/tratamientos?/.test(q) || !/pendiente|en curso|planificad|abierto/.test(q)) return null;
-  const b = verificar("tratamientos", ctx);
+  const b = verificar("tratamientos", ctx) ?? cargando(["registros", "pacientes"], "los tratamientos");
   if (b) return b;
   const regs = leerRegistros();
   const filas = pacientesVisibles(ctx).flatMap((p) =>
@@ -1120,10 +1144,12 @@ function tratamientosPendientes(q: string, ctx: ContextoIA): RespuestaEsther | n
 
 function inventario(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/inventario|stock|insumo|faltante|reponer|vencid/.test(q)) return null;
-  const b = verificar("inventario", ctx);
+  const b = verificar("inventario", ctx) ?? cargando(["inventario"], "el inventario");
   if (b) return b;
   const sedes = sedesVisibles(ctx);
-  const ins = storeInventario.leer().insumos.filter((i) => sedes.includes(i.sucursal));
+  const ins = storeInventario
+    .leer()
+    .insumos.filter((i) => ctx.sede === "Todas" || sedes.includes(i.sucursal) || !i.sucursal);
   const bajos = ins.filter((i) => nivelStock(i) === "Bajo" || nivelStock(i) === "Agotado");
   return {
     texto: `${bajos.length} insumo${bajos.length === 1 ? "" : "s"} con stock bajo o agotado de ${ins.length} en total.`,
@@ -1299,22 +1325,346 @@ function pendientes(q: string, ctx: ContextoIA): RespuestaEsther | null {
   };
 }
 
+
+/* ───────────── Datos todavía cargando (clínica real) ───────────── */
+
+/** En una clínica real los datos llegan del servidor: mientras tanto no se responde «0». */
+function cargando(claves: string[], que: string): RespuestaEsther | null {
+  const listo = esClinicaReal()
+    ? claves.every(moduloCargado)
+    : demoConDatosEnServidor()
+      ? claves.every((k) => moduloCargado(claveDemoServidor(k, tenantActual())))
+      : true;
+  if (listo) return null;
+  return {
+    texto: `Estoy terminando de traer ${que} de la clínica. Preguntame de nuevo en unos segundos así te respondo con los números reales.`,
+    modulo: "general",
+    resultado: "Sin datos",
+    cargando: true,
+  };
+}
+
+/* ───────────── Quién debe ───────────── */
+
+function deudores(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/quien(es)? (me |nos )?deben?|me deben|nos deben|deudor|deudas? de (los )?pacientes|pacientes? (que|con) deuda|saldos? (pendiente|a favor)/.test(q))
+    return null;
+  const b = verificar("facturacion", ctx) ?? cargando(["registros", "pacientes"], "las cuentas de los pacientes");
+  if (b) return b;
+  const regs = leerRegistros();
+  const filas = pacientesVisibles(ctx)
+    .map((p) => ({ p, d: deudaDe(regs[p.id]?.cuenta) }))
+    .filter((x) => x.d.saldo > 0)
+    .sort((a, c) => c.d.saldo - a.d.saldo);
+  const total = filas.reduce((a, x) => a + x.d.saldo, 0);
+  if (!filas.length)
+    return {
+      texto: "Nadie te debe: todas las cuentas de los pacientes están al día.",
+      bloques: [{ tipo: "acciones", items: [{ label: "Ir a Cobranzas", to: "/demo/facturacion" }] }],
+      modulo: "facturacion",
+      resultado: "Respondida",
+    };
+  return {
+    texto: `${filas.length === 1 ? "Te debe 1 paciente" : `Te deben ${filas.length} pacientes`}: ${$(total)} en total.${filas[0] ? ` El saldo más alto es de ${nombreCompleto(filas[0].p)} (${$(filas[0].d.saldo)}).` : ""}`,
+    bloques: [
+      {
+        tipo: "tabla",
+        columnas: ["Paciente", "Debe", "Desde"],
+        filas: filas.slice(0, 30).map((x) => [nombreCompleto(x.p), $(x.d.saldo), fecha(x.d.desde)]),
+      },
+      { tipo: "acciones", items: [{ label: "Mandar recordatorios desde Cobranzas", to: "/demo/facturacion" }] },
+    ],
+    modulo: "facturacion",
+    resultado: "Respondida",
+  };
+}
+
+/* ───────────── Caja del día ───────────── */
+
+function caja(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/\bcaja\b/.test(q)) return null;
+  const b = verificar("facturacion", ctx) ?? cargando(["facturacion"], "la caja");
+  if (b) return b;
+  const { sesiones, movimientos } = storeFacturacion.leer();
+  const visibles = sesiones.filter((s) => ctx.sede === "Todas" || s.sucursal === ctx.sede || !s.sucursal);
+  const abiertas = visibles.filter((s) => !s.cerrada);
+  const resumen = (s: (typeof sesiones)[number]) => {
+    const movs = movimientos.filter((m) => m.sesionId === s.id);
+    const ing = movs.filter((m) => m.tipo === "Ingreso").reduce((a, m) => a + m.monto, 0);
+    const egr = movs.filter((m) => m.tipo === "Egreso").reduce((a, m) => a + m.monto, 0);
+    const efectivo =
+      s.inicial +
+      movs.filter((m) => m.medio === "Efectivo").reduce((a, m) => a + (m.tipo === "Ingreso" ? m.monto : -m.monto), 0);
+    return { ing, egr, efectivo, n: movs.filter((m) => m.tipo === "Ingreso").length };
+  };
+  if (abiertas.length) {
+    const filas = abiertas.map((s) => ({ s, r: resumen(s) }));
+    const ing = filas.reduce((a, x) => a + x.r.ing, 0);
+    const ef = filas.reduce((a, x) => a + x.r.efectivo, 0);
+    return {
+      texto: `La caja está abierta. Van ${$(ing)} cobrados y tendría que haber ${$(ef)} en efectivo.`,
+      bloques: [
+        {
+          tipo: "kpis",
+          items: [
+            { label: "Cobrado", valor: $(ing), sub: `${filas.reduce((a, x) => a + x.r.n, 0)} cobros` },
+            { label: "Gastos", valor: $(filas.reduce((a, x) => a + x.r.egr, 0)) },
+            { label: "Efectivo esperado", valor: $(ef) },
+          ],
+        },
+        { tipo: "acciones", items: [{ label: "Ir a la Caja", to: "/demo/facturacion" }] },
+      ],
+      modulo: "facturacion",
+      resultado: "Respondida",
+    };
+  }
+  const ultima = [...visibles].sort((a, c) => c.cerrada.localeCompare(a.cerrada))[0];
+  if (!ultima)
+    return {
+      texto: "Todavía no se abrió ninguna caja. Se abre desde Facturación → Caja al empezar el día.",
+      bloques: [{ tipo: "acciones", items: [{ label: "Abrir la caja", to: "/demo/facturacion" }] }],
+      modulo: "facturacion",
+      resultado: "Sin datos",
+    };
+  const r = resumen(ultima);
+  const dif = ultima.contado - r.efectivo;
+  return {
+    texto: `La caja está cerrada. La última se cerró el ${fecha(ultima.cerrada)}: se cobraron ${$(r.ing)} y ${dif === 0 ? "el efectivo dio justo" : `${dif > 0 ? "sobraron" : "faltaron"} ${$(Math.abs(dif))}`}.`,
+    bloques: [{ tipo: "acciones", items: [{ label: "Ir a la Caja", to: "/demo/facturacion" }] }],
+    modulo: "facturacion",
+    resultado: "Respondida",
+  };
+}
+
+/* ───────────── Gastos y cuánto quedó (Finanzas) ───────────── */
+
+function finanzas(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (
+    !/gast|ganancia|ganamos|gane|(me|nos|te) quedo|cuanto quedo|resultado|egreso|finanzas|cuentas? a pagar|(que|cuanto) (tengo|tenemos|hay) que pagar|por pagar|proveedor/.test(
+      q,
+    )
+  )
+    return null;
+  const b = verificar("finanzas", ctx) ?? cargando(["finanzas", "facturacion", "registros"], "los números de Finanzas");
+  if (b) return b;
+  if (!ctx.libro) return null;
+  const per = periodoDe(q, "mes");
+  const ops = ctx.libro.operativos.filter((a) => enPeriodo(a.fecha, per));
+  const ing = ops.filter((a) => a.tipo === "Ingreso").reduce((x, a) => x + a.monto, 0);
+  const egr = ops.filter((a) => a.tipo === "Egreso").reduce((x, a) => x + a.monto, 0);
+  const cats = new Map<string, number>();
+  for (const a of ops) if (a.tipo === "Egreso") cats.set(a.categoria, (cats.get(a.categoria) ?? 0) + a.monto);
+  const porPagar = storeFinanzas
+    .leer()
+    .cuentasPagar.filter((c) => c.estado === "Pendiente" && c.vence <= per.hasta)
+    .sort((a, c) => a.vence.localeCompare(c.vence));
+  const totalPagar = porPagar.reduce((a, c) => a + c.monto, 0);
+  const quedo = ing - egr;
+  const Per = per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1);
+  const texto = /pagar|proveedor/.test(q)
+    ? porPagar.length
+      ? `Tenés ${porPagar.length} ${porPagar.length === 1 ? "pago pendiente" : "pagos pendientes"} por ${$(totalPagar)}. El primero vence el ${fecha(porPagar[0]!.vence)}.`
+      : "No tenés pagos pendientes en ese período."
+    : !ops.length
+      ? `${Per} todavía no hay movimientos cargados en Finanzas.`
+      : `${Per} entraron ${$(ing)} y se gastaron ${$(egr)}: ${quedo >= 0 ? `quedaron ${$(quedo)}` : `salió ${$(-quedo)} más de lo que entró`}.`;
+  return {
+    texto,
+    bloques: [
+      {
+        tipo: "kpis",
+        items: [
+          { label: "Entró", valor: $(ing) },
+          { label: "Gastos", valor: $(egr) },
+          { label: "Quedó", valor: $(quedo) },
+          { label: "Por pagar", valor: $(totalPagar), sub: `${porPagar.length} ${porPagar.length === 1 ? "pago" : "pagos"}` },
+        ],
+      },
+      ...(cats.size
+        ? [
+            {
+              tipo: "barras" as const,
+              titulo: "En qué se gastó",
+              items: [...cats.entries()]
+                .sort((a, c) => c[1] - a[1])
+                .slice(0, 6)
+                .map(([nombre, v]) => ({ nombre, valor: v, etiqueta: $(v) })),
+            },
+          ]
+        : []),
+      ...(porPagar.length && /pagar|proveedor/.test(q)
+        ? [
+            {
+              tipo: "tabla" as const,
+              columnas: ["Vence", "Proveedor", "Concepto", "Monto"],
+              filas: porPagar.slice(0, 20).map((c) => [fecha(c.vence), c.proveedor || "—", c.concepto, $(c.monto)]),
+            },
+          ]
+        : []),
+      { tipo: "acciones", items: [{ label: "Ir a Finanzas", to: "/demo/finanzas" }] },
+    ],
+    modulo: "finanzas",
+    resultado: "Respondida",
+  };
+}
+
+/* ───────────── Recetas ───────────── */
+
+function recetas(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/receta/.test(q)) return null;
+  const b = verificar("recetas", ctx) ?? cargando(["registros", "pacientes"], "las recetas");
+  if (b) return b;
+  const per = periodoDe(q, "mes");
+  const regs = leerRegistros();
+  const filas = pacientesVisibles(ctx)
+    .flatMap((p) => (regs[p.id]?.recetas ?? []).map((r) => ({ p, r })))
+    .filter((x) => x.r.estado !== "Anulada" && x.r.estado !== "Borrador" && enPeriodo(x.r.fecha, per))
+    .sort((a, c) => c.r.fecha.localeCompare(a.r.fecha));
+  return {
+    texto: filas.length
+      ? `${per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1)} se ${filas.length === 1 ? "hizo 1 receta" : `hicieron ${filas.length} recetas`}.`
+      : `No hay recetas ${per.nombre === "hoy" ? "de hoy" : per.nombre}.`,
+    bloques: [
+      ...(filas.length
+        ? [
+            {
+              tipo: "tabla" as const,
+              columnas: ["Fecha", "Paciente", "Medicamentos", "Profesional"],
+              filas: filas.slice(0, 30).map((x) => [
+                fecha(x.r.fecha),
+                nombreCompleto(x.p),
+                x.r.medicamentos.map((m) => m.nombre).join(", ") || "—",
+                x.r.profesional || "—",
+              ]),
+            },
+          ]
+        : []),
+      { tipo: "acciones", items: [{ label: "Ir a Recetas", to: "/demo/recetas" }] },
+    ],
+    modulo: "recetas",
+    resultado: filas.length ? "Respondida" : "Sin datos",
+  };
+}
+
+/* ───────────── Laboratorio ───────────── */
+
+function laboratorio(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/laboratorio|trabajos? (de|del) lab|\blab\b|protesis/.test(q)) return null;
+  const b = verificar("laboratorio", ctx) ?? cargando(["registros", "pacientes"], "los trabajos de laboratorio");
+  if (b) return b;
+  const hoy = dia();
+  const regs = leerRegistros();
+  const filas = pacientesVisibles(ctx)
+    .flatMap((p) => (regs[p.id]?.laboratorio ?? []).map((t) => ({ p, t })))
+    .filter((x) => x.t.estado !== "Entregado")
+    .sort((a, c) => (a.t.fechaEntregaEstimada || "9").localeCompare(c.t.fechaEntregaEstimada || "9"));
+  const listos = filas.filter((x) => x.t.estado === "Listo para retirar").length;
+  const atrasados = filas.filter((x) => x.t.estado !== "Listo para retirar" && x.t.fechaEntregaEstimada && x.t.fechaEntregaEstimada < hoy).length;
+  return {
+    texto: filas.length
+      ? `Hay ${filas.length} ${filas.length === 1 ? "trabajo" : "trabajos"} en el laboratorio${listos ? `, ${listos} ${listos === 1 ? "listo" : "listos"} para retirar` : ""}${atrasados ? ` y ${atrasados} ${atrasados === 1 ? "atrasado" : "atrasados"}` : ""}.`
+      : "No hay trabajos pendientes en el laboratorio.",
+    bloques: [
+      ...(filas.length
+        ? [
+            {
+              tipo: "tabla" as const,
+              columnas: ["Paciente", "Trabajo", "Laboratorio", "Estado", "Llega"],
+              filas: filas.slice(0, 30).map((x) => [
+                nombreCompleto(x.p),
+                `${x.t.tipo}${x.t.pieza ? ` (${x.t.pieza})` : ""}`,
+                x.t.proveedor || "—",
+                x.t.estado,
+                fecha(x.t.fechaEntregaEstimada),
+              ]),
+            },
+          ]
+        : []),
+      { tipo: "acciones", items: [{ label: "Ir a Laboratorio", to: "/demo/laboratorio" }] },
+    ],
+    modulo: "laboratorio",
+    resultado: filas.length ? "Respondida" : "Sin datos",
+  };
+}
+
+/* ───────────── Turnos sacados por internet ───────────── */
+
+function turnosOnline(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  if (!/online|por internet|por la web|reservas?\b|reservaron/.test(q)) return null;
+  const b = verificar("agenda", ctx) ?? cargando(["agenda"], "la agenda");
+  if (b) return b;
+  const per = periodoDe(q, "mes");
+  const t = turnosVisibles(ctx)
+    .filter((x) => x.reservaOnline && enPeriodo(x.reservaOnline.fecha || x.fecha, per))
+    .sort((a, c) => (a.fecha + a.hora).localeCompare(c.fecha + c.hora));
+  return {
+    texto: t.length
+      ? `${per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1)} se ${t.length === 1 ? "sacó 1 turno" : `sacaron ${t.length} turnos`} por internet.`
+      : `${per.nombre.charAt(0).toUpperCase() + per.nombre.slice(1)} no se sacaron turnos por internet.`,
+    bloques: [
+      ...(t.length
+        ? [
+            {
+              tipo: "tabla" as const,
+              columnas: ["Turno", "Paciente", "Tratamiento", "Estado"],
+              filas: t.slice(0, 30).map((x) => [`${fecha(x.fecha)} ${x.hora}`, x.paciente, x.tratamiento, x.estado]),
+            },
+          ]
+        : []),
+      { tipo: "acciones", items: [{ label: "Ver Turnos online", to: "/demo/agenda" }] },
+    ],
+    modulo: "agenda",
+    resultado: t.length ? "Respondida" : "Sin datos",
+  };
+}
+
+/* ───────────── Lo que no sé: te llevo a la pantalla ───────────── */
+
+const PANTALLAS: [RegExp, string, string, string][] = [
+  [/marketing|campana|publicidad|redes|instagram|captacion/, "marketing", "Marketing", "/demo/marketing"],
+  [/mensaje|whatsapp|comunicacion|mail|correo/, "comunicaciones", "Comunicaciones", "/demo/comunicaciones"],
+  [/estudio|radiograf|tomograf|placa/, "estudios", "Estudios y diagnóstico", "/demo/estudios"],
+  [/odontograma|diente|pieza/, "odontograma", "Odontograma", "/demo/odontograma"],
+  [/historia|evolucion|antecedente|alergi/, "historia", "Historia clínica", "/demo/historia"],
+  [/automatiz|recordatorio automatic/, "automatizaciones", "Automatizaciones", "/demo/automatizaciones"],
+  [/precio|arancel|lista de precios|cuanto cobr/, "presupuestos", "Presupuestos → Aranceles", "/demo/presupuestos"],
+  [/factura electronica|afip|arca|cae|comprobante/, "facturacion", "Facturación", "/demo/facturacion"],
+  [/sueldo|liquidacion|vacacion|licencia|empleado/, "rrhh", "Recursos humanos", "/demo/rrhh"],
+  [/usuario|permiso|contrasena|clave/, "equipo", "Equipo", "/demo/equipo-profesional"],
+  [/grafico|estadistica|comparar|evolucion de|analitica|metas?\b/, "bi", "Analítica", "/demo/bi"],
+  [/logo|horario|datos de la clinica|configur|pais|moneda/, "configuracion", "Configuración", "/demo/configuracion"],
+];
+
+function aLaPantalla(q: string, ctx: ContextoIA): RespuestaEsther | null {
+  const hit = PANTALLAS.find(([re]) => re.test(q));
+  if (!hit) return null;
+  const [, modulo, nombre, to] = hit;
+  const b = verificar(modulo, ctx);
+  if (b) return b;
+  return {
+    texto: `Eso no lo puedo responder yo todavía, pero lo encontrás en ${nombre}. Te llevo:`,
+    bloques: [{ tipo: "acciones", items: [{ label: `Ir a ${nombre.split(" →")[0]}`, to }] }],
+    modulo,
+    resultado: "Sin datos",
+  };
+}
+
 /* ───────────── Ayuda ───────────── */
 
 export const EJEMPLOS = [
-  "¿Cuántos pacientes tenemos?",
   "¿Cuántos turnos tenemos mañana?",
+  "¿Quién me debe?",
+  "¿Cuánto cobramos este mes?",
+  "¿Cuánto gastamos este mes?",
+  "¿Cómo está la caja?",
   "¿Cuántos presupuestos pendientes hay?",
-  "¿Cuánto facturamos este mes?",
-  "¿Quién tiene acceso al módulo de facturación?",
-  "¿Qué tratamientos están pendientes?",
-  "Prepárame un reporte de los presupuestos pendientes",
+  "¿Qué trabajos hay en el laboratorio?",
   "Pacientes que no regresaron",
 ];
 
 function ayuda(ctx: ContextoIA, pregunta: string, intro = false): RespuestaEsther {
   return {
-    texto: `${intro ? "Puedo ayudarte con los datos de la clínica." : `No encontré datos para "${pregunta}" y prefiero no inventar.`} Puedo responder sobre pacientes, agenda, presupuestos, tratamientos, facturación, inventario, usuarios y accesos, y preparar reportes. Probá con alguna de estas:`,
+    texto: `${intro ? "Puedo ayudarte con los datos de la clínica." : `No tengo una respuesta para "${pregunta}" y prefiero no inventar.`} Sé de pacientes, agenda, turnos online, presupuestos, tratamientos, cobros y deudas, caja, gastos, recetas, laboratorio, inventario y equipo. Probá con alguna de estas:`,
     bloques: [
       { tipo: "acciones", items: EJEMPLOS.map((e) => ({ label: e, pregunta: e })) },
       ...(ctx.pacienteId
@@ -1417,12 +1767,19 @@ export function responder(pregunta: string, ctx: ContextoIA, interno = false): R
     equipo,
     portal,
     clinicas,
+    deudores,
+    caja,
+    finanzas,
+    recetas,
+    laboratorio,
+    turnosOnline,
     tratamientosPendientes,
     presupuestos,
     facturacion,
     inventario,
     turnos,
     pacientesConsulta,
+    aLaPantalla,
   ]) {
     const r = f(q, ctx);
     if (r) return r;

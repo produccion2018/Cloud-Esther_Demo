@@ -16,6 +16,7 @@ import { mesISO } from "@/lib/cloud-esther/finanzas-store";
 import { sedesDeMiembro, type TeamMember, type TeamRole } from "@/lib/cloud-esther/equipo-profesional-data";
 import { SedesEditor } from "@/components/cloud-esther/SedesEditor";
 import { TableroSedes } from "@/components/cloud-esther/TableroSedes";
+import { CajasDeLasSedes, MoverTurnosDeSede } from "@/components/cloud-esther/MoverEntreSedes";
 import { CapacidadDeMiPlan } from "@/components/clinica/pedir-capacidad";
 
 /* Ubicación: src/components/cloud-esther/MultiEmpresa.tsx
@@ -166,7 +167,12 @@ export function MultiEmpresa() {
         ))}
       </nav>
 
-      {tab === "resumen" && <TableroSedes nombreClinica={nombreClinica} />}
+      {tab === "resumen" && (
+        <div className="space-y-5">
+          <TableroSedes nombreClinica={nombreClinica} />
+          <CajasDeLasSedes sedes={sedes} />
+        </div>
+      )}
 
       {tab === "sedes" && (
         <Panel title="Sedes">
@@ -176,6 +182,12 @@ export function MultiEmpresa() {
           </p>
           <SedesEditor onToast={(m) => toast.success(m)} nombreClinica={nombreClinica} />
         </Panel>
+      )}
+      {tab === "sedes" && <MoverTurnosDeSede sedes={sedes} onToast={(m) => toast.success(m)} />}
+      {tab === "sedes" && sedes.length > 1 && (
+        <p className="px-1 text-xs text-muted-foreground">
+          Para pasar insumos de una sede a otra: Inventario → Comparativo por sede (te sugiere cuánto pasar).
+        </p>
       )}
 
       {tab === "equipo" && <EquipoPorSede sedes={sedes} miembros={activos} />}

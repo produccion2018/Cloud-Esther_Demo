@@ -333,6 +333,10 @@ export function Facturacion() {
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
   useEffect(() => setMontado(true), []);
+  // Desde Multiempresa → «Ir a la caja» (#caja): abre directo la caja
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#caja") setSeccion("caja");
+  }, []);
   const pf = paisFiscal(est.config.pais);
   const nivel = planLevel(plan);
   const onToast = (m: string) => {
@@ -1947,7 +1951,17 @@ function Caja({ ctx }: { ctx: Ctx }) {
   const { sesiones, movimientos } = storeFacturacion.usar();
   // Cada uno ve la caja de sus sedes (Equipo → Sedes donde trabaja); el Administrador, todas
   const { sedes: misSedesCaja } = useMisSedes(SUCURSALES);
-  const [suc, setSuc] = useState(misSedesCaja[0] ?? SUCURSALES[0] ?? "Clínica Centro");
+  const [suc, setSuc] = useState(() => {
+    // Desde Multiempresa: la sede que se tocó
+    let pedida = "";
+    try {
+      pedida = sessionStorage.getItem("cloud-esther:caja-sede") ?? "";
+      sessionStorage.removeItem("cloud-esther:caja-sede");
+    } catch {
+      pedida = "";
+    }
+    return misSedesCaja.includes(pedida) ? pedida : (misSedesCaja[0] ?? SUCURSALES[0] ?? "Clínica Centro");
+  });
   const [mov, setMov] = useState<"Ingreso" | "Egreso" | null>(null);
   const [cerrar, setCerrar] = useState(false);
   const abierta = sesiones.find((s) => s.sucursal === suc && !s.cerrada);

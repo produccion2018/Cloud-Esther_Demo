@@ -396,6 +396,19 @@ export const guardarPermisosPorRol = (slug: string, roles: Partial<Record<RolCon
 
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});
 /** Enlace de invitación para mandarlo por WhatsApp (no sale correo; el del correo deja de valer). */
+/* ───────────── Fichar desde el celular (cualquiera del equipo; la hora la pone el servidor) ───────────── */
+export type EstadoFichaje = {
+  fecha: string;
+  hora: string;
+  abierto: { entrada: string } | null;
+  fichajes: { entrada: string; salida?: string }[];
+  minutos: number;
+  horario: { desde: string; hasta: string } | null;
+  tarde?: number;
+};
+export const verFichaje = (slug: string) => http<EstadoFichaje>(slug, "GET", "/fichaje");
+export const ficharServidor = (slug: string, accion: "entrada" | "salida") => http<EstadoFichaje>(slug, "POST", "/fichaje", { accion });
+
 export const enlaceInvitacion = (slug: string, id: string) =>
   http<{ enlace: string; horas: number; nombre: string; rol: string; clinica: string }>(slug, "POST", `/equipo/${id}/enlace`, {});
 

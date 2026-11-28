@@ -1,6 +1,7 @@
 import { PendientesHoy } from "@/components/cloud-esther/dashboard/PendientesHoy";
 import { OcupacionHoy } from "@/components/cloud-esther/dashboard/OcupacionHoy";
 import { PresupuestosMes } from "@/components/cloud-esther/dashboard/PresupuestosMes";
+import { HoyEquipo, MiJornada } from "@/components/cloud-esther/dashboard/MiJornada";
 import { capitalizarNombre, normalizarBusqueda } from "@/lib/utils";
 import { CaraEsther } from "@/components/cloud-esther/esther-ai/CaraEsther";
 import { useNombresCobertura } from "@/lib/cloud-esther/coberturas";
@@ -1468,6 +1469,8 @@ function DashboardInner() {
         )}
         {/* Configuración guiada: checklist de primeros pasos (solo el Administrador) */}
         {(!real || real.rol === "admin") && <PrimerosPasos />}
+        {/* Fichar entrada y salida con un toque (cada uno, desde el celular o la PC) */}
+        <MiJornada onToast={show} />
         {q && (
           <p className="mt-2 px-2 text-xs text-muted-foreground">
             {turnosFiltrados.length} turno(s) y {actividadFiltrada.length} movimiento(s) coinciden con «{query}»
@@ -1499,6 +1502,9 @@ function DashboardInner() {
         <div className="mb-5 space-y-4">
         {/* Lo que hay que atender hoy: alertas médicas, cumpleaños, presupuestos, laboratorio y stock */}
         <PendientesHoy profesional={profesional} />
+
+        {/* Quién está trabajando, quién llegó tarde y quién no fichó (solo el Administrador) */}
+        <HoyEquipo />
 
         {/* Ocupación de hoy y horarios libres para ofrecer a la lista de espera */}
         <OcupacionHoy onToast={show} profesional={profesional} />

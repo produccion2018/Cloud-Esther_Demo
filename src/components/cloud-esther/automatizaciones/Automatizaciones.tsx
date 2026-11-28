@@ -85,7 +85,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
   return <ModalBase {...props} modulo="Automatizaciones" />;
 }
 
-type Seccion = "agente" | "catalogo" | "flujos" | "plantillas" | "ejecuciones" | "conexion";
+type Seccion = "agente" | "catalogo" | "flujos" | "mensajes" | "plantillas" | "ejecuciones" | "conexion";
 
 const ICONO: Record<TipoPaso, LucideIcon> = {
   ia: CaraEsther,
@@ -188,7 +188,8 @@ export function Automatizaciones() {
   };
 
   const mes = new Date().toISOString().slice(0, 7);
-  const delMes = ejecuciones.filter((e) => e.fecha.startsWith(mes));
+  // En la clínica real los números son solo de lo que hizo el servidor (las «Probar» se simulan)
+  const delMes = (real ? ejecServ : ejecuciones).filter((e) => e.fecha.startsWith(mes));
   const acciones = delMes
     .flatMap((e) => e.pasos)
     .filter((p) => p.estado === "ok" && p.tipo !== "esperar" && p.tipo !== "condicion");
@@ -197,7 +198,7 @@ export function Automatizaciones() {
       l: "Flujos activos",
       v: String(est.flujos.filter((f) => f.activo).length),
       s1: `${est.flujos.length}`,
-      s2: "flujos creados",
+      s2: est.flujos.length === 1 ? "flujo creado" : "flujos creados",
       i: Workflow,
     },
     {
@@ -226,6 +227,12 @@ export function Automatizaciones() {
     { id: "agente", label: "Agente IA 24/7", icon: Bot },
     { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
     { id: "flujos", label: "Flujos", icon: Workflow },
+    {
+      id: "mensajes",
+      label: "Qué se mandó",
+      icon: MessageCircle,
+      badge: mensajesDe(real ? ejecServ : ejecuciones, !!real).filter((m) => m.estado === "No salió").length,
+    },
     { id: "plantillas", label: "Plantillas", icon: LayoutTemplate },
     {
       id: "ejecuciones",
@@ -402,6 +409,8 @@ export function Automatizaciones() {
             <AgenteIA plan={plan} usuario={usuario} onToast={onToast} />
           ) : seccion === "catalogo" ? (
             <CatalogoAutomatizaciones plan={plan} onToast={onToast} />
+          ) : seccion === "mensajes" ? (
+            <Mensajes ejecuciones={real ? ejecServ : ejecuciones} onConexion={() => setSeccion("conexion")} />
           ) : seccion === "flujos" ? (
             <Flujos
               flujos={est.flujos}
@@ -412,6 +421,7 @@ export function Automatizaciones() {
               onToast={onToast}
               usuario={usuario}
               onNuevo={() => setSeccion("plantillas")}
+              onConexion={() => setSeccion("conexion")}
             />
           ) : seccion === "plantillas" ? (
             <Plantillas flujos={est.flujos} onUsar={desdePlantilla} />
@@ -603,6 +613,7 @@ function Flujos({
   onToast,
   usuario,
   onNuevo,
+  onConexion,
 }: {
   flujos: Flujo[];
   ejecuciones: Ejecucion[];
@@ -612,9 +623,11 @@ function Flujos({
   onToast: (m: string) => void;
   usuario: string;
   onNuevo: () => void;
+  onConexion: () => void;
 }) {
   const f = flujos.find((x) => x.id === sel) ?? flujos[0];
   const real = useClinicaReal();
+  const canales = useCanales();
   const [ejecutando, setEjecutando] = useState(false);
   const [disparo, setDisparo] = useState(0);
   const [ultima, setUltima] = useState<Ejecucion | null>(null);
@@ -687,11 +700,14 @@ function Flujos({
   const ejecDelFlujo = ejecuciones.filter((e) => e.flujoId === f.id);
 
   return (
+    <div className="space-y-4">
+    <ComoSalen canales={canales} onConexion={onConexion} />
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
       <div className="space-y-3">
         <div className="scroll-sutil space-y-2 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
           {flujos.map((x) => {
             const n = ejecuciones.filter((e) => e.flujoId === x.id).length;
+            const sale = comoSale(x, canales);
             return (
               <button
                 key={x.id}
@@ -717,6 +733,10 @@ function Flujos({
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {x.pasos.length} pasos · {x.sedes === "Todas" ? "Todas las sedes" : x.sedes} · {n}{" "}
                   {n === 1 ? "ejecución" : "ejecuciones"}
+                </p>
+                <p className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${TONO_SALE[sale.tono]}`}>
+                  {sale.tono === "ok" ? <CheckCircle2 className="size-3" /> : sale.tono === "falta" ? <XCircle className="size-3" /> : <Bell className="size-3" />}
+                  {sale.texto}
                 </p>
               </button>
             );
@@ -906,6 +926,203 @@ function Flujos({
             )}
           </div>
         </div>
+      </div>
+    </div>
+    </div>
+  );
+}
+
+/* ───────────── ¿Sale de verdad? (honestidad de los envíos) ───────────── */
+
+type Canales = { real: boolean; whatsapp: boolean; correo: "listo" | "prueba" | "apagado" };
+
+function useCanales(): Canales {
+  const real = useClinicaReal();
+  const est = useEstadoAutomatizaciones();
+  if (!real) return { real: false, whatsapp: false, correo: "apagado" };
+  return { real: true, whatsapp: !!est?.whatsapp.conectado, correo: est?.correo?.estado ?? "apagado" };
+}
+
+const TONO_SALE = {
+  ok: "bg-emerald-50 text-emerald-700",
+  falta: "bg-amber-50 text-amber-800",
+  interno: "bg-primary/[0.07] text-primary",
+  demo: "bg-sky-50 text-sky-700",
+} as const;
+
+/** Qué pasa de verdad cuando corre este flujo: sale solo, no sale (falta conectar) o es interno. */
+function comoSale(f: Flujo, c: Canales): { tono: keyof typeof TONO_SALE; texto: string } {
+  const wa = f.pasos.some((p) => p.tipo === "whatsapp");
+  const mail = f.pasos.some((p) => p.tipo === "email");
+  if (!wa && !mail) return { tono: "interno", texto: "Solo avisos y tareas del equipo" };
+  if (!c.real) return { tono: "demo", texto: "Demo: los mensajes se simulan" };
+  if (!f.activo) return { tono: "interno", texto: "Pausado: no sale nada" };
+  const faltas = [wa && !c.whatsapp ? "conectar WhatsApp" : "", mail && c.correo !== "listo" ? "el correo a pacientes" : ""].filter(Boolean);
+  if (faltas.length) return { tono: "falta", texto: `No sale todavía: falta ${faltas.join(" y ")}` };
+  return { tono: "ok", texto: `Sale solo por ${[wa ? "WhatsApp" : "", mail ? "correo" : ""].filter(Boolean).join(" y ")}` };
+}
+
+function ComoSalen({ canales: c, onConexion }: { canales: Canales; onConexion: () => void }) {
+  const filas = c.real
+    ? [
+        {
+          ok: c.whatsapp,
+          t: "WhatsApp",
+          d: c.whatsapp
+            ? "Conectado: los mensajes salen solos desde el número de la clínica."
+            : "Sin conectar: los mensajes por WhatsApp NO salen. Conectá WhatsApp Business para que salgan solos.",
+        },
+        {
+          ok: c.correo === "listo",
+          t: "Correo",
+          d:
+            c.correo === "listo"
+              ? "Listo: los correos llegan a los pacientes."
+              : "Todavía no llega a los pacientes: se habilita cuando esté el dominio de correo de Cloud Esther.",
+        },
+      ]
+    : [];
+  return (
+    <div className="card-grad p-4">
+      <p className="text-sm font-semibold">Cómo salen tus mensajes</p>
+      {!c.real ? (
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          En el demo no se manda nada de verdad: los WhatsApp y correos se simulan para que pruebes. En tu clínica, cada
+          flujo te dice si sale solo o qué falta conectar.
+        </p>
+      ) : (
+        <>
+          <ul data-movil="1col" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {filas.map((x) => (
+              <li
+                key={x.t}
+                className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] ${x.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}
+              >
+                {x.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> : <XCircle className="mt-0.5 size-4 shrink-0" />}
+                <span>
+                  <b>{x.t}.</b> {x.d}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {!c.whatsapp && (
+            <button type="button" className={`${BTN_SECUNDARIO} mt-2`} onClick={onConexion}>
+              <Plug className="size-4" /> Conectar WhatsApp
+            </button>
+          )}
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Los avisos y tareas para el equipo siempre funcionan. Nada se marca como enviado si no salió.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+type MensajeEnviado = {
+  id: string;
+  fecha: string;
+  flujo: string;
+  aQuien: string;
+  canal: "WhatsApp" | "Correo";
+  estado: "Enviado" | "No salió" | "Prueba" | "Simulado";
+  detalle: string;
+};
+
+/** Cada WhatsApp o correo que intentó mandar una automatización, con lo que pasó de verdad. */
+function mensajesDe(ejecuciones: Ejecucion[], real: boolean): MensajeEnviado[] {
+  return ejecuciones
+    .filter((e) => !real || e.modo !== "Prueba")
+    .flatMap((e) =>
+      e.pasos
+        .map((p, i) => ({ p, i }))
+        .filter(({ p }) => p.tipo === "whatsapp" || p.tipo === "email")
+        .map(({ p, i }) => ({
+          id: `${e.id}-${i}`,
+          fecha: e.fecha,
+          flujo: e.flujo,
+          aQuien: e.disparador.split(": ").slice(1).join(": ") || e.disparador,
+          canal: p.tipo === "whatsapp" ? ("WhatsApp" as const) : ("Correo" as const),
+          estado:
+            e.modo === "Prueba"
+              ? ("Simulado" as const)
+              : p.estado === "ok"
+                ? ("Enviado" as const)
+                : p.estado === "omitido" && /^Prueba/.test(p.resultado)
+                  ? ("Prueba" as const)
+                  : ("No salió" as const),
+          detalle: p.resultado,
+        })),
+    )
+    .filter((m) => !(m.estado === "No salió" && /no se cumple|detiene/i.test(m.detalle)))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+const ESTADO_MSJ: Record<MensajeEnviado["estado"], string> = {
+  Enviado: "bg-emerald-100 text-emerald-700",
+  "No salió": "bg-rose-100 text-rose-700",
+  Prueba: "bg-amber-100 text-amber-800",
+  Simulado: "bg-sky-100 text-sky-700",
+};
+
+function Mensajes({ ejecuciones, onConexion }: { ejecuciones: Ejecucion[]; onConexion: () => void }) {
+  const canales = useCanales();
+  const [filtro, setFiltro] = useState<"todos" | "enviados" | "fallidos">("todos");
+  const todos = useMemo(() => mensajesDe(ejecuciones, canales.real), [ejecuciones, canales.real]);
+  const lista = todos.filter((m) =>
+    filtro === "todos" ? true : filtro === "enviados" ? m.estado === "Enviado" : m.estado === "No salió",
+  );
+  return (
+    <div className="space-y-4">
+      <ComoSalen canales={canales} onConexion={onConexion} />
+      <div className="card-grad p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold">Qué se mandó y a quién</p>
+          <div className="flex gap-1 rounded-full bg-white/80 p-1 ring-1 ring-primary/10">
+            {(
+              [
+                ["todos", `Todos (${todos.length})`],
+                ["enviados", `Enviados (${todos.filter((m) => m.estado === "Enviado").length})`],
+                ["fallidos", `No salieron (${todos.filter((m) => m.estado === "No salió").length})`],
+              ] as const
+            ).map(([k, l]) => (
+              <button key={k} type="button" className={CHIP(filtro === k)} onClick={() => setFiltro(k)}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+        {lista.length === 0 ? (
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            {todos.length
+              ? "No hay mensajes con este filtro."
+              : canales.real
+                ? "Todavía no se mandó ningún mensaje automático. Cuando un flujo activo mande un WhatsApp o un correo, aparece acá con lo que pasó."
+                : "Todavía no probaste ningún flujo. En el demo, los mensajes de las pruebas aparecen acá marcados como «Simulado»."}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {lista.slice(0, 150).map((m) => (
+              <li key={m.id} className="rounded-xl border border-primary/10 bg-white/80 px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold">
+                    {m.canal === "WhatsApp" ? (
+                      <MessageCircle className="size-3.5 shrink-0 text-emerald-600" />
+                    ) : (
+                      <Mail className="size-3.5 shrink-0 text-sky-600" />
+                    )}
+                    <span className="truncate">{m.aQuien}</span>
+                  </span>
+                  <Pill clase={ESTADO_MSJ[m.estado]}>{m.estado}</Pill>
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {fechaHora(m.fecha)} · {m.flujo} · {m.canal}
+                </p>
+                <p className={`mt-1 text-[11.5px] ${m.estado === "No salió" ? "text-rose-700" : "text-foreground/80"}`}>{m.detalle}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

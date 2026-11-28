@@ -503,6 +503,8 @@ export type EstadoAutomatizaciones = {
   };
   n8n: { eventosUrl: string; webhookAcciones: string; secreto: string };
   agente: { activo: boolean };
+  /** ¿El correo le llega de verdad al paciente? «prueba» = falta el dominio de correo. */
+  correo?: { estado: "listo" | "prueba" | "apagado" };
   flujosActivos: number;
 };
 export type EjecucionServidor = {

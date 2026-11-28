@@ -1525,10 +1525,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             modulo={modulo?.label ?? "el inicio"}
           />
         )}
-      {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla, sin datos de pacientes.
-          Donde ya está Esther Infinity (Plus y Enterprise en el demo) no se duplica el botón. */}
+      {/* Ayuda de Esther (todos los planes): cómo usar cada pantalla. Con IA Esther (Plus y
+          Enterprise) suma las preguntas rápidas con los datos de la clínica; en el inicio de esos
+          planes ya está Esther con su resumen, así que ahí no se duplica el botón. */}
       {planListo &&
-        !iaDisponible &&
+        (!iaDisponible || (modulo?.id ?? "dashboard") !== "dashboard") &&
         !bloqueado &&
         !pathname.startsWith("/demo/ia") &&
         !pathname.startsWith("/demo/rrhh") && (

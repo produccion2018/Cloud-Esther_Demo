@@ -167,8 +167,8 @@ export function EstherAI({
       ]
     : [
         "¿Qué turnos hay hoy?",
-        "¿Cuánto facturamos este mes?",
-        "Pacientes que no regresaron",
+        "¿Quién me debe?",
+        "¿Cuánto gastamos este mes?",
         "Revisar pendientes",
       ];
   const ultimaEj = n8n.ejecuciones[0];

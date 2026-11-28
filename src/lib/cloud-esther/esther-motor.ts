@@ -682,7 +682,9 @@ function equipo(q: string, ctx: ContextoIA): RespuestaEsther | null {
       (m) => m.status === "activo" && m.permissions.some((p) => p.key === acceso[1] && p.enabled),
     );
     return {
-      texto: `${con.length} persona${con.length === 1 ? "" : "s"} activa${con.length === 1 ? "" : "s"} tiene${con.length === 1 ? "" : "n"} acceso a ${acceso[2]}.`,
+      texto: con.length
+      ? `${con.length} persona${con.length === 1 ? "" : "s"} activa${con.length === 1 ? "" : "s"} tiene${con.length === 1 ? "" : "n"} acceso a ${acceso[2]}.`
+      : `Por ahora nadie del equipo tiene acceso a ${acceso[2]} (además del Administrador).`,
       bloques: [
         {
           tipo: "tabla",
@@ -750,14 +752,16 @@ function portal(q: string, ctx: ContextoIA): RespuestaEsther | null {
   if (!/portal/.test(q)) return null;
   const b = verificar("portal-paciente", ctx);
   if (b) return b;
-  const accesos = storePortal.leer().accesos;
+  const accesos = storePortal.leer().accesos ?? {};
   const pacs = pacientesVisibles(ctx);
   const filas = Object.entries(accesos)
     .map(([id, a]) => ({ p: pacs.find((x) => x.id === Number(id)), a }))
     .filter((x) => x.p);
   const activos = filas.filter((x) => x.a.estado === "Activo");
   return {
-    texto: `${activos.length} paciente${activos.length === 1 ? "" : "s"} tiene${activos.length === 1 ? "" : "n"} acceso activo al portal; ${(() => {
+    texto: !filas.length
+      ? "Todavía ningún paciente tiene acceso al portal. Se lo das desde la carpeta del paciente o desde Portal del paciente."
+      : `${activos.length} paciente${activos.length === 1 ? "" : "s"} tiene${activos.length === 1 ? "" : "n"} acceso activo al portal; ${(() => {
       const n = filas.filter((x) => x.a.estado === "Invitado").length;
       return n === 1
         ? "1 está invitado sin entrar todavía"
@@ -818,8 +822,12 @@ function turnos(q: string, ctx: ContextoIA): RespuestaEsther | null {
   }));
   return {
     texto: estado
-      ? `${lista.length} turno${lista.length === 1 ? "" : "s"} ${estado === "Cancelada" ? "cancelado" : "con ausente"}${lista.length === 1 ? "" : "s"} ${p.nombre}.`
-      : `Hay ${lista.length} turno${lista.length === 1 ? "" : "s"} ${p.nombre}${ctx.sede !== "Todas" ? ` en ${ctx.sede}` : ""}.`,
+      ? lista.length
+        ? `${lista.length} turno${lista.length === 1 ? "" : "s"} ${estado === "Cancelada" ? "cancelado" : "con ausente"}${lista.length === 1 ? "" : "s"} ${p.nombre}.`
+        : `No hubo turnos ${estado === "Cancelada" ? "cancelados" : "con ausentes"} ${p.nombre}.`
+      : lista.length
+        ? `Hay ${lista.length} turno${lista.length === 1 ? "" : "s"} ${p.nombre}${ctx.sede !== "Todas" ? ` en ${ctx.sede}` : ""}.`
+        : `No hay turnos ${p.nombre}${ctx.sede !== "Todas" ? ` en ${ctx.sede}` : ""}.`,
     bloques: [
       ...(estado
         ? []
@@ -892,7 +900,9 @@ function pacientesConsulta(q: string, ctx: ContextoIA): RespuestaEsther | null {
       ];
     });
     return {
-      texto: `${lista.length} paciente${lista.length === 1 ? "" : "s"} no tiene${lista.length === 1 ? "" : "n"} un turno próximo agendado (o están inactivos). Son candidatos para recontactar.`,
+      texto: lista.length
+        ? `${lista.length} paciente${lista.length === 1 ? "" : "s"} no tiene${lista.length === 1 ? "" : "n"} un turno próximo agendado (o ${lista.length === 1 ? "está inactivo" : "están inactivos"}). ${lista.length === 1 ? "Es candidato" : "Son candidatos"} para recontactar.`
+        : "Todos los pacientes tienen un turno próximo: no hay nadie para recontactar.",
       bloques: [
         { tipo: "tabla", columnas: ["Paciente", "Teléfono", "Última visita", "Estado"], filas },
         { tipo: "acciones", items: [{ label: "Campaña de reactivación", to: "/demo/marketing" }] },
@@ -988,7 +998,9 @@ function presupuestos(q: string, ctx: ContextoIA): RespuestaEsther | null {
   return {
     texto: creados
       ? `Se crearon ${lista.length} presupuesto${lista.length === 1 ? "" : "s"} ${per.nombre} por ${$(monto)}.`
-      : `Hay ${lista.length} presupuesto${lista.length === 1 ? "" : "s"} ${estado} (${pacientesUnicos} paciente${pacientesUnicos === 1 ? "" : "s"}) por ${$(monto)}.`,
+      : lista.length
+        ? `Hay ${lista.length} presupuesto${lista.length === 1 ? "" : "s"} ${estado} (${pacientesUnicos} paciente${pacientesUnicos === 1 ? "" : "s"}) por ${$(monto)}.`
+        : `No hay presupuestos ${estado}.`,
     bloques: [
       {
         tipo: "kpis",
@@ -1109,7 +1121,9 @@ function tratamientosPendientes(q: string, ctx: ContextoIA): RespuestaEsther | n
     etiqueta: String(filas.filter((x) => x.t.nombre === n).length),
   }));
   return {
-    texto: `Hay ${filas.length} tratamiento${filas.length === 1 ? "" : "s"} pendiente${filas.length === 1 ? "" : "s"} en ${new Set(filas.map((x) => x.p.id)).size} paciente${new Set(filas.map((x) => x.p.id)).size === 1 ? "" : "s"}.`,
+    texto: filas.length
+      ? `Hay ${filas.length} tratamiento${filas.length === 1 ? "" : "s"} pendiente${filas.length === 1 ? "" : "s"} en ${new Set(filas.map((x) => x.p.id)).size} paciente${new Set(filas.map((x) => x.p.id)).size === 1 ? "" : "s"}.`
+      : "No hay tratamientos pendientes.",
     bloques: [
       ...(porTipo.length
         ? [
@@ -1152,7 +1166,11 @@ function inventario(q: string, ctx: ContextoIA): RespuestaEsther | null {
     .insumos.filter((i) => ctx.sede === "Todas" || sedes.includes(i.sucursal) || !i.sucursal);
   const bajos = ins.filter((i) => nivelStock(i) === "Bajo" || nivelStock(i) === "Agotado");
   return {
-    texto: `${bajos.length} insumo${bajos.length === 1 ? "" : "s"} con stock bajo o agotado de ${ins.length} en total.`,
+    texto: !ins.length
+      ? "Todavía no hay insumos cargados en Inventario."
+      : bajos.length
+        ? `${bajos.length} insumo${bajos.length === 1 ? "" : "s"} con stock bajo o agotado de ${ins.length} en total.`
+        : `Todo el stock está bien: ninguno de los ${ins.length} insumos está bajo.`,
     bloques: [
       ...(bajos.length
         ? [

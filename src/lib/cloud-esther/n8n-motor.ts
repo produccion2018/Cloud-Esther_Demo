@@ -441,6 +441,24 @@ export function candidatos(flujo: Pick<Flujo, "evento" | "sedes">): Disparo[] {
 
 /* ───────────── Esther Infinity dentro del flujo ───────────── */
 
+/** Cómo va a salir el mensaje de un flujo, con el primer caso real que hay hoy (o un modelo si no hay). */
+export function vistaPrevia(flujo: Flujo): { texto: string; con: string } | null {
+  const paso = flujo.pasos.find((p) => p.tipo === "whatsapp" || p.tipo === "email");
+  if (!paso) return null;
+  const real = candidatos(flujo)[0];
+  const d: Disparo = real ?? {
+    titulo: "",
+    paciente: "[Nombre]",
+    pacienteId: null,
+    telefono: "",
+    sede: "",
+    monto: 0,
+    dato: "[detalle]",
+  };
+  const texto = mensajeDelPaso(paso.config.mensaje, d, flujo.evento === "laboratorio_atrasado") || redactar(flujo, d);
+  return { texto, con: real ? real.titulo : "" };
+}
+
 function redactar(flujo: Flujo, d: Disparo): string {
   const n = primerNombre(d.paciente);
   switch (flujo.evento) {

@@ -52,7 +52,7 @@ import {
   type TipoPaso,
   type Ejecucion,
 } from "@/lib/cloud-esther/n8n-store";
-import { candidatos, ejecutarFlujo } from "@/lib/cloud-esther/n8n-motor";
+import { candidatos, ejecutarFlujo, vistaPrevia } from "@/lib/cloud-esther/n8n-motor";
 import { AgenteIA } from "@/components/cloud-esther/automatizaciones/AgenteIA";
 import { ConexionReal } from "@/components/cloud-esther/automatizaciones/ConexionReal";
 import { leerPacientes } from "@/lib/cloud-esther/pacientes";
@@ -85,7 +85,7 @@ function M(props: Parameters<typeof ModalBase>[0]) {
   return <ModalBase {...props} modulo="Automatizaciones" />;
 }
 
-type Seccion = "agente" | "catalogo" | "flujos" | "mensajes" | "plantillas" | "ejecuciones" | "conexion";
+type Seccion = "listas" | "agente" | "catalogo" | "flujos" | "mensajes" | "plantillas" | "ejecuciones" | "conexion";
 
 const ICONO: Record<TipoPaso, LucideIcon> = {
   ia: CaraEsther,
@@ -153,7 +153,7 @@ export function Automatizaciones() {
   const estServ = useEstadoAutomatizaciones();
   const [ejecServ, setEjecServ] = useState<Ejecucion[]>([]);
   const [montado, setMontado] = useState(false);
-  const [seccion, setSeccion] = useState<Seccion>("agente");
+  const [seccion, setSeccion] = useState<Seccion>("listas");
   // Clínica real: las ejecuciones de verdad las hace el servidor (aunque nadie tenga la app abierta)
   useEffect(() => {
     if (!real || real.rol !== "admin") return;
@@ -224,6 +224,7 @@ export function Automatizaciones() {
     },
   ];
   const SECCIONES: { id: Seccion; label: string; icon: LucideIcon; badge?: number }[] = [
+    { id: "listas", label: "Listas para usar", icon: Zap },
     { id: "agente", label: "Agente IA 24/7", icon: Bot },
     { id: "catalogo", label: "Catálogo (126)", icon: ListChecks },
     { id: "flujos", label: "Flujos", icon: Workflow },
@@ -405,6 +406,14 @@ export function Automatizaciones() {
         <div className="mt-5">
           {!montado ? (
             <div className="card-grad h-[480px] animate-pulse" />
+          ) : seccion === "listas" ? (
+            <ListasParaUsar
+              flujos={est.flujos}
+              onToast={onToast}
+              onEditar={setEditando}
+              onConexion={() => setSeccion("conexion")}
+              onMas={() => setSeccion("plantillas")}
+            />
           ) : seccion === "agente" ? (
             <AgenteIA plan={plan} usuario={usuario} onToast={onToast} />
           ) : seccion === "catalogo" ? (
@@ -497,9 +506,7 @@ function CatalogoAutomatizaciones({
 }) {
   const grupo4 = plan === "grupo";
   const puedeActivar = plan === "grupo" || plan === "avanzada";
-  useEffect(() => {
-    if (grupo4) inicializarAutoActivas(true);
-  }, [grupo4]);
+  void inicializarAutoActivas;
   const { activas } = storeAutoActivas.usar();
   const act = new Set(activas);
   const totalActivas = activas.length;
@@ -515,13 +522,13 @@ function CatalogoAutomatizaciones({
             <p className="font-display text-base font-bold">Las {TOTAL_AUTOMATIZACIONES} automatizaciones de Esther Infinity</p>
             <p className="text-xs text-muted-foreground">
               {grupo4 || puedeActivar
-                ? "Ideas listas para tu clínica: marcá las que querés usar y armalas en «Flujos» (o desde «Plantillas»). Los flujos activos los ejecuta el servidor solo, aunque nadie tenga la app abierta."
+                ? "Ideas para tu clínica. Marcar una NO la enciende: es tu lista para armarla en «Flujos». Las que ya funcionan de verdad están en «Listas para usar»."
                 : "Son parte de Esther Infinity completo (plan avanzado o grupo)."}
             </p>
           </div>
         </div>
         <span className="rounded-full border border-primary/15 bg-primary/[0.05] px-3 py-1.5 text-[12px] font-bold text-primary">
-          {totalActivas} / {TOTAL_AUTOMATIZACIONES} activas
+          {totalActivas} {totalActivas === 1 ? "marcada" : "marcadas"} para armar
         </span>
       </div>
 
@@ -540,7 +547,7 @@ function CatalogoAutomatizaciones({
                   <div>
                     <p className="font-display text-[15px] font-bold leading-tight">{g.titulo}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {activasGrupo} de {nums.length} activas
+                      {activasGrupo} de {nums.length} {activasGrupo === 1 ? "marcada" : "marcadas"}
                     </p>
                   </div>
                 </div>
@@ -549,11 +556,11 @@ function CatalogoAutomatizaciones({
                     type="button"
                     onClick={() => {
                       activarGrupo(nums, !todas);
-                      onToast(todas ? `${g.titulo}: automatizaciones pausadas` : `${g.titulo}: automatizaciones activadas`);
+                      onToast(todas ? `${g.titulo}: desmarcadas` : `${g.titulo}: marcadas para armar en «Flujos»`);
                     }}
                     className="rounded-full border border-primary/20 bg-card px-3 py-1.5 text-[11px] font-bold text-primary transition hover:-translate-y-0.5 hover:border-primary/40"
                   >
-                    {todas ? "Pausar todas" : "Activar todas"}
+                    {todas ? "Desmarcar todas" : "Marcar todas"}
                   </button>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-semibold text-muted-foreground">
@@ -577,7 +584,7 @@ function CatalogoAutomatizaciones({
                           type="button"
                           role="switch"
                           aria-checked={on}
-                          aria-label={`${on ? "Desactivar" : "Activar"} ${it.nombre}`}
+                          aria-label={`${on ? "Desmarcar" : "Marcar"} ${it.nombre}`}
                           onClick={() => alternarAuto(it.n)}
                           className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-gradient-to-r from-primary to-fuchsia-500 shadow-[0_4px_12px_-4px_rgba(124,58,237,0.8)]" : "bg-muted-foreground/25"}`}
                         >
@@ -928,6 +935,146 @@ function Flujos({
         </div>
       </div>
     </div>
+    </div>
+  );
+}
+
+
+/* ───────────── Listas para usar: prender en un toque ───────────── */
+
+const EN_UN_TOQUE = [
+  "recordatorio-turno",
+  "seguimiento-presupuesto",
+  "saldos",
+  "reactivacion",
+  "tratamiento-inconcluso",
+  "laboratorio-listo",
+  "encuesta-satisfaccion",
+  "indicaciones-postoperatorias",
+  "cumpleanos",
+];
+
+function ListasParaUsar({
+  flujos,
+  onToast,
+  onEditar,
+  onConexion,
+  onMas,
+}: {
+  flujos: Flujo[];
+  onToast: (m: string) => void;
+  onEditar: (f: Flujo) => void;
+  onConexion: () => void;
+  onMas: () => void;
+}) {
+  const real = useClinicaReal();
+  const canales = useCanales();
+  const puede = !real || real.rol === "admin";
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const lista = EN_UN_TOQUE.map((id) => PLANTILLAS.find((t) => t.id === id)).filter((t): t is (typeof PLANTILLAS)[number] => !!t);
+  const prender = (t: (typeof PLANTILLAS)[number], on: boolean) => {
+    const ya = flujos.find((f) => f.plantilla === t.id);
+    if (ya) setN8n("flujos", (prev) => prev.map((f) => (f.id === ya.id ? { ...f, activo: on } : f)));
+    else if (on)
+      setN8n("flujos", (prev) => [
+        ...prev,
+        {
+          id: `f-${Date.now()}`,
+          nombre: t.nombre,
+          evento: t.evento,
+          pasos: t.pasos(),
+          activo: true,
+          sedes: "Todas",
+          creado: new Date().toISOString(),
+          plantilla: t.id,
+        },
+      ]);
+    onToast(on ? `«${t.nombre}» encendida` : `«${t.nombre}» apagada`);
+  };
+  return (
+    <div className="space-y-4">
+      <ComoSalen canales={canales} onConexion={onConexion} />
+      <div className="card-grad p-4">
+        <p className="text-sm font-semibold">Prendé las que quieras, en un toque</p>
+        <p className="mt-0.5 text-[12px] text-muted-foreground">
+          Ya vienen armadas. Mirá cómo sale el mensaje con un caso real de tu clínica y encendela.
+          {!puede && " Solo el Administrador puede encenderlas o apagarlas."}
+        </p>
+        <ul className="mt-3 space-y-2">
+          {lista.map((t) => {
+            const f = flujos.find((x) => x.plantilla === t.id);
+            const on = !!f?.activo;
+            const modelo: Flujo = f ?? {
+              id: t.id,
+              nombre: t.nombre,
+              evento: t.evento,
+              pasos: t.pasos(),
+              activo: false,
+              sedes: "Todas",
+              creado: "",
+            };
+            const sale = comoSale({ ...modelo, activo: true }, canales);
+            const vista = abierta === t.id ? vistaPrevia(modelo) : null;
+            return (
+              <li key={t.id} className={`rounded-2xl border px-3.5 py-3 transition ${on ? "border-primary/30 bg-primary/[0.04]" : "border-primary/10 bg-white/80"}`}>
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-semibold">{t.nombre}</p>
+                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">{EVENTOS[t.evento].detalle}</p>
+                    {on && (
+                      <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${TONO_SALE[sale.tono]}`}>
+                        {sale.tono === "ok" ? <CheckCircle2 className="size-3" /> : sale.tono === "falta" ? <XCircle className="size-3" /> : <Bell className="size-3" />}
+                        {sale.texto}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    aria-label={`${on ? "Apagar" : "Encender"} ${t.nombre}`}
+                    disabled={!puede}
+                    onClick={() => prender(t, !on)}
+                    className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-gradient-to-r from-primary to-fuchsia-500" : "bg-muted-foreground/25"}`}
+                  >
+                    <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-[11.5px] font-semibold text-primary">
+                  <button type="button" onClick={() => setAbierta(abierta === t.id ? null : t.id)} className="hover:underline">
+                    {abierta === t.id ? "Ocultar mensaje" : "Ver cómo sale el mensaje"}
+                  </button>
+                  {f && puede && (
+                    <button type="button" onClick={() => onEditar(f)} className="hover:underline">
+                      Cambiar el mensaje
+                    </button>
+                  )}
+                </div>
+                {abierta === t.id &&
+                  (vista ? (
+                    <div className="mt-2 rounded-xl bg-[#e7f7ec] px-3 py-2">
+                      <p className="whitespace-pre-line text-[12.5px] leading-relaxed text-foreground/90">{vista.texto}</p>
+                      <p className="mt-1 text-[10.5px] text-muted-foreground">
+                        {vista.con
+                          ? `Así le llegaría hoy: ${vista.con}.`
+                          : "Modelo: todavía no hay un caso real para mostrar; [Nombre] y [detalle] se completan solos."}
+                        {/\{dato\}/.test(modelo.pasos.find((p) => p.tipo === "whatsapp")?.config.mensaje ?? "") &&
+                        (t.evento === "cumpleanos" || t.evento === "indicaciones_postoperatorias")
+                          ? " El texto sale de tus plantillas de mensajes."
+                          : ""}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11.5px] text-muted-foreground">Esta no le manda mensajes al paciente: avisa al equipo.</p>
+                  ))}
+              </li>
+            );
+          })}
+        </ul>
+        <button type="button" onClick={onMas} className="mt-3 text-[12px] font-semibold text-primary hover:underline">
+          Ver más plantillas
+        </button>
+      </div>
     </div>
   );
 }

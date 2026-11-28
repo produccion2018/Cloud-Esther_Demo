@@ -38,7 +38,7 @@ export const EVENTOS: Record<EventoId, { nombre: string; detalle: string; modulo
   },
   presupuesto_sin_respuesta: {
     nombre: "Presupuesto sin respuesta",
-    detalle: "Enviado y sin respuesta después de X días",
+    detalle: "Al enviarlo: espera los días del flujo y, si no respondió, le escribe",
     modulo: "Presupuestos",
   },
   turno_creado: { nombre: "Turno creado", detalle: "Cuando se agenda un turno", modulo: "Agenda" },

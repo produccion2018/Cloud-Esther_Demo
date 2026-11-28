@@ -395,6 +395,30 @@ export const guardarPermisosPorRol = (slug: string, roles: Partial<Record<RolCon
   http<PermisosPorRol>(slug, "PUT", "/equipo/permisos", roles);
 
 export const reenviarInvitacion = (slug: string, id: string) => http<void>(slug, "POST", `/equipo/${id}/reenviar`, {});
+/** Enlace de invitación para mandarlo por WhatsApp (no sale correo; el del correo deja de valer). */
+export const enlaceInvitacion = (slug: string, id: string) =>
+  http<{ enlace: string; horas: number; nombre: string; rol: string; clinica: string }>(slug, "POST", `/equipo/${id}/enlace`, {});
+
+/** Abre WhatsApp con la invitación (la ventana se abre ya, para que el celular no la bloquee). */
+export function invitarPorWhatsApp(slug: string, id: string, telefono?: string): Promise<void> {
+  const ventana = window.open("", "_blank");
+  return enlaceInvitacion(slug, id).then(
+    (r) => {
+      const primer = (r.nombre || "").split(" ")[0] || "";
+      const texto = `Hola${primer ? ` ${primer}` : ""} 👋 Te sumé al equipo de ${r.clinica} en Cloud Esther como ${r.rol}.\nEntrá desde este enlace y elegí tu contraseña (vale ${r.horas} h):\n${r.enlace}`;
+      const numero = (telefono ?? "").replace(/\D/g, "");
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+      if (ventana && !ventana.closed) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else window.open(url, "_blank", "noopener,noreferrer");
+    },
+    (e: unknown) => {
+      ventana?.close();
+      throw e;
+    },
+  );
+}
 
 /** Las mismas reglas que el servidor */
 export function problemaClaveClinica(c: string): string | null {

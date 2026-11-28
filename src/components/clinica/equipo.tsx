@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Loader2,
   MailPlus,
+  MessageCircle,
   MoreHorizontal,
   Plus,
   Search,
@@ -44,6 +45,7 @@ import {
   cambiarPersonaEquipo,
   invitarVarios,
   nombrePersona,
+  invitarPorWhatsApp,
   reenviarInvitacion,
   verEquipo,
   type EquipoClinica,
@@ -185,6 +187,14 @@ export function EquipoClinicaPanel({
     } finally {
       setOcupado(null);
     }
+  };
+
+  const porWhatsApp = (p: PersonaEquipo) => {
+    setOcupado(p.id);
+    invitarPorWhatsApp(slug, p.id)
+      .then(() => toast.success(`Se abrió WhatsApp con la invitación para ${p.nombre}. El enlace del correo deja de valer.`))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "No se pudo armar la invitación."))
+      .finally(() => setOcupado(null));
   };
 
   const visibles = useMemo(() => {
@@ -362,6 +372,18 @@ export function EquipoClinicaPanel({
               <span className="hidden w-[118px] shrink-0 md:block" />
             )}
 
+            {p.estado === "invitada" && (
+              <button
+                type="button"
+                onClick={() => porWhatsApp(p)}
+                disabled={ocupado === p.id}
+                title="Mandarle la invitación por WhatsApp"
+                aria-label={`Invitar a ${p.nombre} por WhatsApp`}
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-[#25D366] text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+              >
+                {ocupado === p.id ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+              </button>
+            )}
             {p.soyYo ? (
               <span className="w-9" />
             ) : (
@@ -408,9 +430,14 @@ export function EquipoClinicaPanel({
                     </>
                   )}
                   {p.estado === "invitada" && (
-                    <DropdownMenuItem onSelect={() => void reenviar(p)}>
-                      <MailPlus className="mr-2 h-4 w-4" /> Reenviar invitación
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onSelect={() => porWhatsApp(p)}>
+                        <MessageCircle className="mr-2 h-4 w-4" /> Invitar por WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => void reenviar(p)}>
+                        <MailPlus className="mr-2 h-4 w-4" /> Reenviar invitación por correo
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {p.estado === "activa" && (
                     <DropdownMenuItem onSelect={() => void reenviar(p)}>
@@ -783,7 +810,7 @@ function SumarPersonas({
         completas.map((f) => ({ nombre: f.nombre.trim(), email: f.email.trim().toLowerCase(), rol: f.rol })),
       );
       if (r.sinCorreo.length > 0) {
-        toast.warning(`Quedaron invitadas, pero a ${r.sinCorreo.join(", ")} no le salió el correo. Usá «Reenviar invitación».`);
+        toast.warning(`Quedaron invitadas, pero a ${r.sinCorreo.join(", ")} no le salió el correo. Mandales la invitación por WhatsApp desde «…» en su fila.`);
       } else {
         toast.success(r.enviadas === 1 ? "Invitación enviada." : `${r.enviadas} invitaciones enviadas.`);
       }

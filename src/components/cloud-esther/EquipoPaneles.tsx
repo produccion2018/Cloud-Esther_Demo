@@ -3,7 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useSesion } from "@/lib/cloud-esther/auth-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
-import { reenviarInvitacion, verEquipo, type PersonaEquipo } from "@/lib/clinica/api";
+import { invitarAlEquipo, invitarPorWhatsApp, reenviarInvitacion, verEquipo, type PersonaEquipo } from "@/lib/clinica/api";
 import { abrirAvisoAusenciaWhatsApp } from "@/lib/clinica/whatsapp";
 import { pedirAbrir } from "@/lib/clinica/chat";
 import {
@@ -1094,6 +1094,21 @@ function SinEntrar({ personas, slug, onToast }: { personas: PersonaEquipo[]; slu
             </div>
             {p.estado === "invitada" && (
               <button
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+                disabled={enviando === p.id}
+                onClick={() => {
+                  setEnviando(p.id);
+                  invitarPorWhatsApp(slug, p.id)
+                    .then(() => onToast(`Se abrió WhatsApp con la invitación para ${p.nombre || p.email}`))
+                    .catch((e: unknown) => onToast(e instanceof Error ? e.message : "No se pudo armar la invitación"))
+                    .finally(() => setEnviando(null));
+                }}
+              >
+                <MessageCircle className="size-3.5" /> WhatsApp
+              </button>
+            )}
+            {p.estado === "invitada" && (
+              <button
                 className={BTN_SECUNDARIO}
                 disabled={enviando === p.id}
                 onClick={async () => {
@@ -1136,44 +1151,70 @@ export function InvitacionesEquipo({ onToast, onEditar }: { onToast: (m: string)
   const [email, setEmail] = useState("");
   const [rol, setRol] = useState<TeamRole>("odontologo");
   const [error, setError] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const esAdminReal = !real || real.rol === "admin";
 
-  const invitar = (e: FormEvent) => {
+  const invitar = async (e: FormEvent) => {
     e.preventDefault();
     const limpio = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) return setError("Ingresá un correo válido.");
-    if (miembros.some((m) => m.email.toLowerCase() === limpio))
+    if (miembros.some((m) => m.email.toLowerCase() === limpio && m.status !== "pendiente"))
       return setError("Ese correo ya es parte del equipo.");
-    if (!dentroDelLimite(plan, "usuarios", usuariosInternos(miembros)))
+    if (!real && !dentroDelLimite(plan, "usuarios", usuariosInternos(miembros)))
       return setError(MENSAJE_LIMITE.usuarios);
-    const [firstName = "", ...resto] = capitalizarNombre(
-      nombre.trim() || limpio.split("@")[0] || "",
-    ).split(" ");
-    setMiembros((prev) => [
-      ...prev,
-      {
-        ...emptyMember(),
-        firstName,
-        lastName: resto.join(" "),
-        email: limpio,
-        role: rol,
-        status: "pendiente",
-        permissions: permsFor(rol),
-      },
-    ]);
+    const completo = capitalizarNombre(nombre.trim() || limpio.split("@")[0] || "");
+    const [firstName = "", ...resto] = completo.split(" ");
+    if (real) {
+      // Clínica real: se crea su usuario de verdad (le llega el correo y se lo podés mandar por WhatsApp)
+      if (completo.length < 2) return setError("Escribí el nombre y apellido.");
+      setEnviando(true);
+      try {
+        const eq = await invitarAlEquipo(real.slug, {
+          nombre: completo,
+          email: limpio,
+          rol: rol === "administrador" ? "admin" : rol,
+        });
+        setPersonas(eq.personas);
+      } catch (err) {
+        setEnviando(false);
+        return setError(err instanceof Error ? err.message : "No se pudo invitar.");
+      }
+      setEnviando(false);
+    }
+    // Su ficha en el equipo (horario, matrícula, firma…)
+    if (!miembros.some((m) => m.email.toLowerCase() === limpio))
+      setMiembros((prev) => [
+        ...prev,
+        {
+          ...emptyMember(),
+          firstName,
+          lastName: resto.join(" "),
+          email: limpio,
+          role: rol,
+          status: real ? "activo" : "pendiente",
+          permissions: permsFor(rol),
+        },
+      ]);
     setNombre("");
     setEmail("");
     setError("");
-    onToast(`Invitación enviada a ${limpio}`);
+    onToast(
+      real
+        ? `Listo: le mandamos el correo a ${limpio}. Si no le llega, mandale la invitación por WhatsApp desde «Todavía no entraron».`
+        : `Demo: en tu clínica le llega un correo a ${limpio} y también se la podés mandar por WhatsApp`,
+    );
   };
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form onSubmit={invitar} className="card-grad h-fit space-y-3 p-4">
+      {esAdminReal ? (
+      <form onSubmit={(e) => void invitar(e)} className="card-grad h-fit space-y-3 p-4">
         <p className="flex items-center gap-2 text-sm font-semibold">
           <UserPlus className="size-4 text-primary" /> Invitar al equipo
         </p>
         <p className="text-xs text-muted-foreground">
-          Le llega un correo para crear su usuario con el rol y los permisos elegidos.
+          Le llega un correo para elegir su contraseña, y también se lo podés mandar por WhatsApp. Lo que ve cada
+          uno se elige en Accesos.
         </p>
         <Field label="Nombre y apellido">
           <input
@@ -1205,13 +1246,17 @@ export function InvitacionesEquipo({ onToast, onEditar }: { onToast: (m: string)
           </Seleccion>
         </Field>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <button type="submit" className={`${BTN_PRIMARIO} w-full`}>
+        <button type="submit" className={`${BTN_PRIMARIO} w-full`} disabled={enviando}>
           <Send className="size-3.5" />
-          Enviar invitación
+          {enviando ? "Invitando…" : "Enviar invitación"}
         </button>
       </form>
+      ) : (
+        <p className="card-grad h-fit p-4 text-sm text-muted-foreground">Solo el Administrador puede invitar al equipo.</p>
+      )}
 
       <div className="space-y-2">
+        {!real && (<>
         <p className="px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
           Invitaciones pendientes{" "}
           <span className="rounded-full bg-primary/10 px-1.5 text-primary">
@@ -1236,7 +1281,7 @@ export function InvitacionesEquipo({ onToast, onEditar }: { onToast: (m: string)
               <div className="flex flex-wrap gap-1.5">
                 <button
                   className={BTN_SECUNDARIO}
-                  onClick={() => onToast(`Invitación reenviada a ${m.email}`)}
+                  onClick={() => onToast(`Demo: en tu clínica se le reenvía el correo a ${m.email}`)}
                 >
                   <RefreshCcw className="size-3.5" />
                   Reenviar
@@ -1265,6 +1310,7 @@ export function InvitacionesEquipo({ onToast, onEditar }: { onToast: (m: string)
             </div>
           ))
         )}
+        </>)}
         {real && personas && <SinEntrar personas={personas} slug={real.slug} onToast={onToast} />}
         <PuestaAPunto onEditar={onEditar} personas={personas} />
       </div>

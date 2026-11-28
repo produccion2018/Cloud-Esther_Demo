@@ -137,3 +137,21 @@ export function emptyMember(): TeamMember {
 }
 
 export { permsFor };
+const DIAS_SEMANA_HORARIO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const minutosDe = (h?: string) => {
+  const [x = 0, y = 0] = (h ?? "").split(":").map(Number);
+  return x * 60 + y;
+};
+/** Si un turno cae fuera del horario cargado del profesional, dice por qué (o null si está dentro).
+    Sin horario cargado no se marca nada (no se ocultan turnos de quien todavía no lo cargó). */
+export function fueraDeHorario(m: Pick<TeamMember, "schedule">, fecha: string, hora: string, duracion: number): string | null {
+  if (!m.schedule?.some((d) => d.active)) return null;
+  const d = m.schedule.find((x) => x.day === DIAS_SEMANA_HORARIO[new Date(`${fecha}T12:00:00`).getDay()]);
+  if (!d?.active) return `no atiende los ${(d?.day ?? DIAS_SEMANA_HORARIO[new Date(`${fecha}T12:00:00`).getDay()]!).toLowerCase()}`;
+  const t0 = minutosDe(hora);
+  const t1 = t0 + Math.max(1, duracion);
+  if (t0 < minutosDe(d.start) || t1 > minutosDe(d.end)) return `atiende de ${d.start} a ${d.end}`;
+  if (d.breakStart && d.breakEnd && t0 < minutosDe(d.breakEnd) && t1 > minutosDe(d.breakStart))
+    return `tiene pausa de ${d.breakStart} a ${d.breakEnd}`;
+  return null;
+}

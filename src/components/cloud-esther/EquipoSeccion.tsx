@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,6 +22,9 @@ import {
   type TeamRole,
 } from "@/lib/cloud-esther/equipo-profesional-data";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { fueraDeHorario } from "@/lib/cloud-esther/equipo-profesional-data";
+import { tiemposAgenda } from "@/lib/cloud-esther/agenda-store";
+import { pedirAbrir } from "@/lib/clinica/chat";
 import { storeAgenda } from "@/lib/cloud-esther/agenda-store";
 import { useClinicaReal } from "@/lib/clinica/modo-clinica";
 import { SLUG_DEMO } from "@/lib/clinica/demo-admin";
@@ -823,8 +826,9 @@ function Agendas({ onToast }: { onToast: (m: string) => void }) {
           </div>
           <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Check className="size-3.5 text-emerald-600" />
-            Los cambios se guardan solos y la Agenda los usa al momento.
+            Los cambios se guardan solos: la Agenda y los turnos online los usan al momento.
           </p>
+          <TurnosFueraDeHorario miembro={miembro} />
         </div>
       </div>
       <CoberturaSemanal miembros={miembros} />
@@ -1386,6 +1390,61 @@ function MatrizAccesos({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/* Turnos ya dados que, con el horario actual, quedan afuera (cambió el horario o el día libre).
+   Se ven al momento y cada uno se pasa desde la Agenda. */
+function TurnosFueraDeHorario({ miembro }: { miembro: TeamMember }) {
+  const { turnos, ajustes } = storeAgenda.usar();
+  const navigate = useNavigate();
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  if (!montado) return null;
+  const n = `${miembro.firstName} ${miembro.lastName}`.trim();
+  const { duracion } = tiemposAgenda(ajustes);
+  const d = new Date();
+  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const lista = turnos
+    .filter((t) => t.odontologo === n && t.fecha >= hoy && !["Cancelada", "Atendida", "Ausente"].includes(t.estado))
+    .map((t) => ({ t, motivo: fueraDeHorario(miembro, t.fecha, t.hora, t.duracion ?? duracion) }))
+    .filter((x): x is { t: (typeof turnos)[number]; motivo: string } => !!x.motivo)
+    .sort((a, b) => `${a.t.fecha}${a.t.hora}`.localeCompare(`${b.t.fecha}${b.t.hora}`));
+  if (!lista.length) return null;
+  const fecha = (iso: string) => iso.split("-").reverse().slice(0, 2).join("/");
+  return (
+    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-3">
+      <p className="text-sm font-semibold text-amber-900">
+        {lista.length === 1 ? "1 turno ya dado queda" : `${lista.length} turnos ya dados quedan`} fuera de este horario
+      </p>
+      <p className="text-[11px] text-amber-800/80">Pasalos a otro horario o a otro profesional, y avisale al paciente.</p>
+      <ul className="mt-2 space-y-1.5">
+        {lista.slice(0, 8).map(({ t, motivo }) => (
+          <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/85 px-3 py-2 text-xs ring-1 ring-amber-100">
+            <span className="min-w-0">
+              <b>{fecha(t.fecha)} {t.hora}</b> · {t.paciente}
+              <span className="block text-[11px] text-muted-foreground">{motivo.charAt(0).toUpperCase() + motivo.slice(1)}</span>
+            </span>
+            <button
+              type="button"
+              className="rounded-full border border-primary/20 bg-white px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/[0.05]"
+              onClick={() => {
+                pedirAbrir({ tipo: "turno", id: t.id, nombre: t.paciente, detalle: "" });
+                try {
+                  sessionStorage.setItem("cloud-esther:abrir-turno-editar", "1");
+                } catch {
+                  /* sin almacenamiento */
+                }
+                void navigate({ to: "/demo/agenda" });
+              }}
+            >
+              Pasarlo
+            </button>
+          </li>
+        ))}
+      </ul>
+      {lista.length > 8 && <p className="mt-1 text-[11px] text-amber-800/80">Y {lista.length - 8} más.</p>}
     </div>
   );
 }

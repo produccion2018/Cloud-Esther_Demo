@@ -51,6 +51,7 @@ import { CloudEstherProvider, MODULES, availableIn, useCloudEsther } from "@/lib
 import { storePortal } from "@/lib/cloud-esther/portal-store";
 import { recuperarTurno, vencerOfertas } from "@/lib/cloud-esther/recuperacion-turnos";
 import { useEquipo } from "@/lib/cloud-esther/equipo-store";
+import { fueraDeHorario } from "@/lib/cloud-esther/equipo-profesional-data";
 import { usePacientes } from "@/lib/cloud-esther/pacientes";
 import { useTodosLosRegistros } from "@/components/cloud-esther/PacienteSecciones";
 import { normalizarBusqueda as normBusq } from "@/lib/utils";
@@ -2939,6 +2940,7 @@ function AgendaInner() {
     show(`${t.paciente}: ${estado.toLowerCase()}`);
   };
 
+  const avisoFueraRef = useRef("");
   /* Motivo por el que no se puede dar ese turno (o null si está libre) */
   const conflictoCita = (c: NuevaCita, excluirId?: number): string | null => {
     // El profesional no está ese día (vacaciones, licencia…: Equipo → Ausencias)
@@ -3010,6 +3012,19 @@ function AgendaInner() {
       show(motivo);
       return;
     }
+    // Fuera del horario del profesional (Equipo → Agendas y horarios): se avisa y, si se insiste, se da igual
+    const prof = c.odontologo
+      ? miembros.find((m) => `${m.firstName} ${m.lastName}`.trim() === c.odontologo)
+      : undefined;
+    const fuera = prof ? fueraDeHorario(prof, c.fecha, c.hora, c.duracion ?? duracionHabitual) : null;
+    const claveFuera = `${c.odontologo}|${c.fecha}|${c.hora}`;
+    const mismoQueAntes = editando && editando.odontologo === c.odontologo && editando.fecha === c.fecha && editando.hora === c.hora;
+    if (fuera && !mismoQueAntes && avisoFueraRef.current !== claveFuera) {
+      avisoFueraRef.current = claveFuera;
+      show(`${c.odontologo} ${fuera}. Si igual querés darlo, tocá guardar de nuevo.`);
+      return;
+    }
+    avisoFueraRef.current = "";
 
     if (editando) {
       setTurnos((prev) => prev.map((t) => (t.id === editando.id ? { ...t, ...c } : t)));
